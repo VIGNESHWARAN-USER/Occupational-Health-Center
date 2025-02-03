@@ -9,7 +9,7 @@ import MedicalHistory from "./MedicalHistory"
 import { FaSearch } from "react-icons/fa";
 
 
-const NewVisit = () => {
+const NewVisit = ({data}) => {
   const [type, setType] = useState("Employee");
   const [visit, setVisit] = useState("Preventive");
   const [register, setRegister] = useState("");
@@ -199,12 +199,12 @@ const NewVisit = () => {
               </button>
             ))}
           </nav>
-          {activeTab === "BasicDetails" && (<BasicDetails/>)}
-          {activeTab === "Fitness" && (<Fitness/>)}
-          {activeTab === "Investigations" && (<Investigation/>)}
-          {activeTab === "Vaccination" && (<Vaccination/>)}
-          {activeTab === "Vitals" && (<Vitals/>)}
-          {activeTab === "MedicalHistory" && (<MedicalHistory/>)}
+          {activeTab === "DocBasicDetails" && <BasicDetails data={data}/>}
+            {activeTab === "DocFitness" && <Fitness data={data}/>}
+            {activeTab === "DocInvestigations" && <Investigation data={data}/>}
+            {activeTab === "DocVaccination" && <Vaccination data={data}/>}
+            {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
+            {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
         </div>
 
         
@@ -227,3 +227,5 @@ const NewVisit = () => {
 };
 
 export default NewVisit;
+
+

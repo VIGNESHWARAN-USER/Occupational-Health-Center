@@ -4,6 +4,9 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from . import models 
 import logging
+from datetime import datetime
+
+
 @csrf_exempt
 def login(request):
     if request.method == "POST":
@@ -112,3 +115,111 @@ def fetchdata(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+# @csrf_exempt  # Disable CSRF for this API (for testing; use CSRF token in production)
+# def BookAppointment(request):
+#     if request.method == "POST":
+#         try:
+#             data = json.loads(request.body)
+#             print("Hi")
+#             #Create an appointment instance and save it
+#             appointment = models.Appointment.objects.create(
+#                 role=data.get("role"),
+#                 name=data.get("name"),
+#                 employee_id=data.get("employeeId"),
+#                 organization=data.get("organization"),
+#                 aadhar_no=data.get("aadharNo"),
+#                 contractor_name=data.get("contractorName"),
+#                 purpose=data.get("purpose"),
+#                 appointment_date=data.get("appointmentDate"),
+#                 date=data.get("date"),
+#                 time=data.get("time"),
+#                 booked_by=data.get("bookedBy"),
+#             )
+#             print(data.get("role"))
+
+#             return JsonResponse({"message": f"Appointment booked successfully for {appointment.name} on {appointment.appointment_date}"})
+
+#         except Exception as e:
+#             return JsonResponse({"error": str(e)}, status=400)
+
+#     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+# @csrf_exempt  # Disable CSRF for testing; use CSRF token in production
+# def uploadAppointment(request):
+#     if request.method == "POST":
+#         try:
+#             data = json.loads(request.body)  # Load JSON data
+#             print("Received data:", data)  # Debugging: Verify structure
+
+#             appointments_data = data.get("appointments", [])
+#             print(appointments_data)
+
+#             for i, appointment_data in enumerate(appointments_data):
+#                 if i == 0:  # Skip header row
+#                     continue  
+
+#                 try:
+#                     role = appointment_data[1].strip()
+#                     name = appointment_data[2].strip()
+#                     employee_id = appointment_data[3].strip()
+#                     organization = appointment_data[4].strip()
+#                     aadhar_no = str(appointment_data[5]).strip()  # Ensure it's a string
+#                     contractor_name = appointment_data[6].strip()
+#                     purpose = appointment_data[7].strip()
+
+#                     # Parse date in 'YYYY-MM-DD' format
+#                     appointment_date = datetime.strptime(appointment_data[8].strip(), "%Y-%m-%d").date()
+#                     date = datetime.strptime(appointment_data[9].strip(), "%Y-%m-%d").date()
+
+#                     # Parse time in 'HH:MM:SS' format
+#                     time = datetime.strptime(appointment_data[10].strip(), "%H:%M:%S").time()
+
+#                     booked_by = appointment_data[11].strip()
+
+#                 except IndexError as ie:
+#                     print("Index Error:", str(ie))
+#                     return JsonResponse({"error": "Data is missing required fields."}, status=400)
+#                 except ValueError as ve:
+#                     print("Value Error:", str(ve))
+#                     return JsonResponse({"error": f"Invalid date or time format: {ve}"}, status=400)
+
+#                 # Create and save the appointment
+#                 models.Appointment.objects.create(
+#                     role=role,
+#                     name=name,
+#                     employee_id=employee_id,
+#                     organization=organization,
+#                     aadhar_no=aadhar_no,
+#                     contractor_name=contractor_name,
+#                     purpose=purpose,
+#                     appointment_date=appointment_date,
+#                     date=date,
+#                     time=time,
+#                     booked_by=booked_by
+#                 )
+
+#             return JsonResponse({"message": "Appointments uploaded successfully."})
+
+#         except Exception as e:
+#             print("Error:", str(e))
+#             return JsonResponse({"error": str(e)}, status=400)
+
+#     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+
+# @api_view(['GET'])
+# def get_appointments(request):
+#     date_filter = request.GET.get('date')
+#     if date_filter:
+#         appointments = Appointment.objects.filter(date=date_filter).order_by('date', 'time')
+       
+#     else:
+#         appointments = Appointment.objects.all().order_by('date')
+    
+#     serializer = AppointmentSerializer(appointments, many=True)
+#     # print(appointments)
+#     return Response(serializer.data)
