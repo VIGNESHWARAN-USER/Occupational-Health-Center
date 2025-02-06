@@ -714,60 +714,6 @@ class MensPack(models.Model):
         return f"Men's Pack Test Report {self.id}"
 
 
-
-
-class WomensPack(models.Model):
-    emp_no = models.TextField(max_length=200)
-    mammogram = models.TextField(max_length=255)
-    mammogram_unit = models.TextField(max_length=255)
-    mammogram_reference_range = models.TextField(max_length=255)
-    mammogram_comments = models.TextField(max_length=255)
-
-    pap_smear = models.TextField(max_length=255)
-    pap_smear_unit = models.TextField(max_length=255)
-    pap_smear_reference_range = models.TextField(max_length=255)
-    pap_smear_comments = models.TextField(max_length=255)
-
-    def __str__(self):
-        return f"Women's Pack Test Report {self.id}"
-
-
-
-
-
-class OccupationalProfile(models.Model):
-    emp_no = models.TextField(max_length=200)
-    audiometry = models.TextField(max_length=255)
-    audiometry_unit = models.TextField(max_length=255)
-    audiometry_reference_range = models.TextField(max_length=255)
-    audiometry_comments = models.TextField(max_length=255)
-
-    pft = models.TextField(max_length=255)
-    pft_unit = models.TextField(max_length=255)
-    pft_reference_range = models.TextField(max_length=255)
-    pft_comments = models.TextField(max_length=255)
-
-    def __str__(self):
-        return f"Occupational Profile Test Report {self.id}"
-
-
-
-
-
-class OthersTest(models.Model):
-    emp_no = models.TextField(max_length=200)
-    pathology = models.TextField(max_length=255)
-    pathology_unit = models.TextField(max_length=255)
-    pathology_reference_range = models.TextField(max_length=255)
-    pathology_comments = models.TextField(max_length=255)
-
-    def __str__(self):
-        return f"Others Test Report {self.id}"
-
-
-
-
-
 class OphthalmicReport(models.Model):
     emp_no = models.TextField(max_length=200)
     vision = models.TextField(max_length=255)
@@ -782,44 +728,6 @@ class OphthalmicReport(models.Model):
 
     def __str__(self):
         return f"Ophthalmic Report {self.id}"
-
-
-
-
-
-class XRayReport(models.Model):
-    emp_no = models.TextField(max_length=200)
-    x_ray_chest = models.TextField(max_length=255)
-    x_ray_chest_unit = models.TextField(max_length=255)
-    x_ray_chest_reference_range = models.TextField(max_length=255)
-    x_ray_chest_comments = models.TextField(max_length=255)
-
-    x_ray_kub = models.TextField(max_length=255)
-    x_ray_kub_unit = models.TextField(max_length=255)
-    x_ray_kub_reference_range = models.TextField(max_length=255)
-    x_ray_kub_comments = models.TextField(max_length=255)
-
-    x_ray_spine = models.TextField(max_length=255)
-    x_ray_spine_unit = models.TextField(max_length=255)
-    x_ray_spine_reference_range = models.TextField(max_length=255)
-    x_ray_spine_comments = models.TextField(max_length=255)
-
-    x_ray_pelvis = models.TextField(max_length=255)
-    x_ray_pelvis_unit = models.TextField(max_length=255)
-    x_ray_pelvis_reference_range = models.TextField(max_length=255)
-    x_ray_pelvis_comments = models.TextField(max_length=255)
-
-    x_ray_abdomen = models.TextField(max_length=255)
-    x_ray_abdomen_unit = models.TextField(max_length=255)
-    x_ray_abdomen_reference_range = models.TextField(max_length=255)
-    x_ray_abdomen_comments = models.TextField(max_length=255)
-
-    def __str__(self):
-        return f"X-RAY Report {self.id}"
-
-
-
-
 
 
 
@@ -847,39 +755,6 @@ class USGReport(models.Model):
 
     def __str__(self):
         return f"USG Report {self.id}"
-
-
-class CTReport(models.Model):
-    emp_no = models.TextField(max_length=200)
-    ct_brain = models.TextField(max_length=255)
-    ct_brain_unit = models.TextField(max_length=255)
-    ct_brain_reference_range = models.TextField(max_length=255)
-    ct_brain_comments = models.TextField(max_length=255)
-
-    ct_lungs = models.TextField(max_length=255)
-    ct_lungs_unit = models.TextField(max_length=255)
-    ct_lungs_reference_range = models.TextField(max_length=255)
-    ct_lungs_comments = models.TextField(max_length=255)
-
-    ct_abdomen = models.TextField(max_length=255)
-    ct_abdomen_unit = models.TextField(max_length=255)
-    ct_abdomen_reference_range = models.TextField(max_length=255)
-    ct_abdomen_comments = models.TextField(max_length=255)
-
-    ct_spine = models.TextField(max_length=255)
-    ct_spine_unit = models.TextField(max_length=255)
-    ct_spine_reference_range = models.TextField(max_length=255)
-    ct_spine_comments = models.TextField(max_length=255)
-
-    ct_pelvis = models.TextField(max_length=255)
-    ct_pelvis_unit = models.TextField(max_length=255)
-    ct_pelvis_reference_range = models.TextField(max_length=255)
-    ct_pelvis_comments = models.TextField(max_length=255)
-
-    def __str__(self):
-        return f"CT Report {self.id}"
-
-
 
 
 
@@ -915,6 +790,25 @@ class MRIReport(models.Model):
         return f"MRI Report {self.id}"
 
 
+# class Appointment(models.Model):
+#     employee_id = models.CharField(max_length=100) 
+
+#     role = models.CharField(max_length=100, blank=True)
+#     name = models.CharField(max_length=255, blank=True)
+#     organization = models.CharField(max_length=255, blank=True)
+#     aadhar_no = models.CharField(max_length=20, unique=True, blank=True)
+#     contractor_name = models.CharField(max_length=255, blank=True)
+#     purpose = models.TextField(blank=True)
+#     appointment_date = models.DateField(null=True, blank=True)
+#     date = models.DateField(null=True, blank=True)
+#     time = models.TimeField(null=True, blank=True)
+#     booked_by = models.CharField(max_length=255, blank=True)
+
+#     def _str_(self):
+        # return self.name if self.name else self.employee_id
+
+
+
 class Appointment(models.Model):
     role = models.TextField(max_length=100)
     name = models.TextField(max_length=255)
@@ -930,5 +824,3 @@ class Appointment(models.Model):
 
     def _str_(self):
         return f"{self.name} - {self.appointment_date}"
-
-

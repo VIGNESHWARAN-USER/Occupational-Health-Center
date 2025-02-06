@@ -34,7 +34,7 @@ const UploadAppointmentPage = () => {
 
   const sendToBackend = async (data) => {
     try {
-      const response = await fetch("http://localhost:8000/uploadAppointment", {
+      const response = await fetch("http://localhost:8000/uploadAppointment/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

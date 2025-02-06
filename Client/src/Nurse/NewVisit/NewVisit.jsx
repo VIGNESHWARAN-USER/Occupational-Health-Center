@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../../Sidebar/Sidebar";
 import BasicDetails from "./BasicDetails";
 import Fitness from "./Fitness";
@@ -7,9 +7,11 @@ import Vaccination from "./Vaccination";
 import Vitals from "./Vitals";
 import MedicalHistory from "./MedicalHistory"
 import { FaSearch } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 
-const NewVisit = ({data}) => {
+const NewVisit = () => {
   const [type, setType] = useState("Employee");
   const [visit, setVisit] = useState("Preventive");
   const [register, setRegister] = useState("");
@@ -23,6 +25,81 @@ const NewVisit = ({data}) => {
     { id: "Vaccination", label: "Vaccination" },
     { id: "Fitness", label: "Fitness" },
   ];
+  const [data, setdata] = useState([])
+  const [employees, setEmployees] = useState([]);
+  const [searchId, setSearchId] = useState(""); 
+  const [filteredEmployees, setFilteredEmployees] = useState([]); 
+  const navigate = useNavigate()
+
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post("http://localhost:8000/addEmployee", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.status === 200) {
+        alert("Data submitted successfully!");
+      } else {
+        alert("Something went wrong!");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Error submitting data!");
+    }
+  };
+
+  const handleSearch = () => {
+    if (searchId.trim() === "") {
+        setFilteredEmployees(employees);
+        setdata([]); // Reset data when no input
+        localStorage.removeItem("selectedEmployee"); // Remove saved employee
+    } else {
+        const filtered = employees.filter(emp => 
+            emp.emp_no.toLowerCase() === searchId.toLowerCase()
+        );
+
+        if (filtered.length > 0) {
+            // Get the latest record by sorting by `id` (or `updated_at`)
+            const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
+
+            setFilteredEmployees([latestEmployee]);
+            setdata([latestEmployee]);
+            localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee)); // Save latest matched employee
+        }
+    }
+};
+
+  const handleClear = ()=>{
+    localStorage.removeItem("selectedEmployee");
+  }
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        
+        localStorage.removeItem("selectedEmployee");
+        const response = await axios.post("http://localhost:8000/userData");
+        setEmployees(response.data.data);
+        console.log(response.data.data)
+        setFilteredEmployees(response.data.data);
+  
+        // Retrieve saved employee if exists
+        const savedEmployee = localStorage.getItem("selectedEmployee");
+        if (savedEmployee) {
+          setdata([JSON.parse(savedEmployee)]);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+  
+    fetchDetails();
+  }, []);
+  
 
   // Mapping of Type, Visit, Register, and corresponding Purpose
   const dataMapping = {
@@ -122,11 +199,23 @@ const NewVisit = ({data}) => {
                 type="text"
                 placeholder="Search By Employee ID"
                 className="w-full bg-blue-100 py-2 pl-10 pr-4 rounded-lg"
+                value={searchId}
+                onChange={(e)=>{setSearchId(e.target.value)}}
               />
             </div>
-            <button className="bg-blue-500 text-white py-2 px-4 rounded-lg font-medium flex-shrink-0 w-1/4">
-              Search
+            <div className="flex">
+            <button onClick={handleSearch} className="bg-blue-500 text-white h-14 py-2 px-4 w-20 rounded-lg font-medium flex-shrink-0 w-1/4">
+              Get
             </button>
+            <button onClick={handleClear} className="bg-blue-500 text-white h-14 w-20 ms-4 rounded-lg font-medium flex-shrink-0 w-1/4">
+              Clear
+            </button>
+            <div className="flex justify-end">
+            <button onClick={handleSubmit} className="bg-blue-500 text-white h-14 w-20 ms-4 rounded-lg font-medium flex-shrink-0 w-1/4">
+              Add Data
+            </button>
+          </div>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Type Selection */}
@@ -187,6 +276,7 @@ const NewVisit = ({data}) => {
               />
             </div>
           </div>
+          
           <hr className="h-4 text-blue-100"/>
         <div className="border-b border-gray-200 mb-4">
           <nav className="-mb-px flex justify-evenly space-x-4" aria-label="Tabs">
@@ -199,27 +289,13 @@ const NewVisit = ({data}) => {
               </button>
             ))}
           </nav>
-          {activeTab === "DocBasicDetails" && <BasicDetails data={data}/>}
-            {activeTab === "DocFitness" && <Fitness data={data}/>}
-            {activeTab === "DocInvestigations" && <Investigation data={data}/>}
-            {activeTab === "DocVaccination" && <Vaccination data={data}/>}
-            {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
-            {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
+          {activeTab === "BasicDetails" && <BasicDetails/>}
+          {activeTab === "Fitness" && <Fitness/>}
+          {activeTab === "Investigations" && <Investigation data={data}/>}
+          {activeTab === "Vaccination" && <Vaccination data={data}/>}
+          {activeTab === "Vitals" && <Vitals data={data.vitals}/>}
+          {activeTab === "MedicalHistory" && <MedicalHistory data={data}/>}
         </div>
-
-        
-        {/* Add content for other tabs (Vitals, Medical/Surgical History, etc.) similarly */}
-        {/* { id: "BasicDetails", label: "Basic Details" },
-    { id: "Vitals", label: "Vitals" },
-    { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    { id: "Investigations", label: "Investigations" },
-    { id: "Vaccination", label: "Vaccination" },
-    { id: "Fitness", label: "Fitness" } */}
-          <div className="mt-6 flex justify-end">
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700">
-              Add Data
-            </button>
-          </div>
         </div>
       </div>
     </div>

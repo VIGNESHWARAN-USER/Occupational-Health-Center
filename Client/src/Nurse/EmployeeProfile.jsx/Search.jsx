@@ -27,14 +27,28 @@ const Search = () => {
   // Search function
   const handleSearch = () => {
     if (searchId.trim() === "") {
-      setFilteredEmployees(employees); 
+        setFilteredEmployees(employees);
+        setdata([]); // Reset data when no input
+        localStorage.removeItem("selectedEmployee"); // Remove saved employee
     } else {
-      const filtered = employees.filter(emp => 
-        emp.emp_no.toLowerCase().includes(searchId.toLowerCase())
-      );
-      setFilteredEmployees(filtered);
+        const filtered = employees.filter(emp => 
+            emp.emp_no.toLowerCase().includes(searchId.toLowerCase())
+        );
+
+        setFilteredEmployees(filtered);
+        setdata(filtered);
+
+        if (filtered.length > 0) {
+            // Get the most recently updated employee
+            const latestEmployee = filtered.sort((a, b) => 
+                new Date(b.updated_at) - new Date(a.updated_at)
+            )[0];
+
+            localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee)); // Save latest matched employee
+        }
     }
-  };
+};
+
 
   return (
     <div className='h-screen flex'>

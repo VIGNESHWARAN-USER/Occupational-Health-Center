@@ -21,7 +21,7 @@ const BookAppointment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await fetch("http://localhost:8000/bookAppointment", {
+    const response = await fetch("http://localhost:8000/bookAppointment/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
