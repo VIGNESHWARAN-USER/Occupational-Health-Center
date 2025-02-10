@@ -8,13 +8,12 @@ const AllAppointments = () => {
   const [toDate, setToDate] = useState("");
 
   useEffect(() => {
-    fetchAppointments(); // Fetch all appointments initially
+    fetchAppointments();
   }, []);
 
   const fetchAppointments = async () => {
     try {
-      let url = "http://127.0.0.1:8000/appointments"; // Default URL without filters
-
+      let url = "http://127.0.0.1:8000/appointments/";
       if (fromDate || toDate) {
         const params = new URLSearchParams();
         if (fromDate) params.append("fromDate", fromDate);
@@ -24,9 +23,9 @@ const AllAppointments = () => {
 
       const response = await fetch(url);
       const data = await response.json();
-
+      console.log(data)
       if (data.appointments) {
-        setAppointments(data.appointments); // Extract appointments array
+        setAppointments(data.appointments);
       } else {
         setAppointments([]);
       }
@@ -39,21 +38,44 @@ const AllAppointments = () => {
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
-    fetchAppointments(); // Fetch all appointments again
+    fetchAppointments();
   };
 
-  // Filter appointments based on searchQuery and date range
-  const filteredAppointments = appointments.filter((appointment) => {
-    const appointmentDate = new Date(appointment.appointment_date);
+  const handleStatusChange = async (appointmentId, currentStatus) => {
+    if (currentStatus !== "initiate") {
+      window.location.href = "/Newvisit";
+      return;
+    }
 
-    const matchesSearchQuery = appointment.employee_id.toString().includes(searchQuery);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/update-appointment-status/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: appointmentId, // Send appointment ID
+        }),
+      });
 
-    const matchesDateRange =
-      (fromDate ? appointmentDate >= new Date(fromDate) : true) &&
-      (toDate ? appointmentDate <= new Date(toDate) : true);
+      const data = await response.json();
 
-    return matchesSearchQuery && matchesDateRange;
-  });
+      if (data.success) {
+        setAppointments((prevAppointments) =>
+          prevAppointments.map((appointment) =>
+            appointment.id === appointmentId
+              ? { ...appointment, status: data.status } // Update status dynamically
+              : appointment
+          )
+        );
+        window.location.href = "/Newvisit"; // Redirect after status update
+      } else {
+        console.error("Failed to update appointment:", data.message);
+      }
+    } catch (error) {
+      console.error("Error updating appointment:", error);
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg h-screen overflow-auto p-8">
@@ -74,16 +96,10 @@ const AllAppointments = () => {
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
           />
-          <button
-            className="px-4 py-2 rounded-lg bg-blue-500 text-white"
-            onClick={fetchAppointments}
-          >
+          <button className="px-4 py-2 rounded-lg bg-blue-500 text-white" onClick={fetchAppointments}>
             Apply
           </button>
-          <button
-            className="px-4 py-2 ml-4 rounded-lg bg-gray-500 text-white"
-            onClick={clearFilters}
-          >
+          <button className="px-4 py-2 ml-4 rounded-lg bg-gray-500 text-white" onClick={clearFilters}>
             Clear
           </button>
         </div>
@@ -110,22 +126,29 @@ const AllAppointments = () => {
 
       {/* Appointments Data */}
       {appointments.length > 0 ? (
-        filteredAppointments.length > 0 ? (
-          filteredAppointments.map((appointment) => (
-            <div
-              key={appointment.employee_id}
-              className="grid grid-cols-5 text-center p-2 border-b border-gray-300 items-center"
+        appointments.map((appointment) => (
+          <div
+            key={appointment.id}
+            className="grid grid-cols-5 text-center p-2 border-b border-gray-300 items-center"
+          >
+            <p>{appointment.id}</p>
+            <p>{appointment.name}</p>
+            <p>{appointment.role}</p>
+            <p>{new Date(appointment.appointment_date).toLocaleString()}</p>
+            <button
+              className={`px-4 py-2 rounded-lg ${
+                appointment.status === "initiate"
+                  ? "bg-red-500 text-white"
+                  : appointment.status === "inprogress"
+                  ? "bg-yellow-500 text-black"
+                  : "bg-green-500 text-white"
+              }`}
+              onClick={() => handleStatusChange(appointment.id, appointment.status)}
             >
-              <p>{appointment.employee_id}</p>
-              <p>{appointment.name}</p>
-              <p>{appointment.role}</p>
-              <p>{new Date(appointment.appointment_date).toLocaleString()}</p>
-              <button className="bg-red-500 text-white px-4 py-2 rounded-lg">Initiate</button>
-            </div>
-          ))
-        ) : (
-          <p className="text-center text-gray-500 mt-4">No appointments match the search</p>
-        )
+              {appointment.status}
+            </button>
+          </div>
+        ))
       ) : (
         <p className="text-center text-gray-500 mt-4">No appointments found</p>
       )}

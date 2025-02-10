@@ -12,34 +12,37 @@ const Investigation = ({data}) => {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
           {[
-            { label: "Hemoglobin", data: data.haematology.hemoglobin },
-            { label: "Total RBC", data: data.haematology.totalRBC },
-            { label: "Total WBC", data: data.haematology.totalWBC },
-            { label: "Neutrophil", data: data.haematology.neutrophil },
-            { label: "Monocyte", data: data.haematology.monocyte },
-            { label: "PCV", data: data.haematology.pcv },
-            { label: "MCV", data: data.haematology.mcv },
-            { label: "MCH", data: data.haematology.mch },
-            { label: "Lymphocyte", data: data.haematology.lymphocyte },
-            { label: "ESR", data: data.haematology.esr },
-            { label: "MCHC", data: data.haematology.mchc },
-            { label: "Platelet Count", data: data.haematology.plateletCount },
-            { label: "RDW", data: data.haematology.rdw },
-            { label: "Eosinophil", data: data.haematology.eosinophil },
-            { label: "Basophil", data: data.haematology.basophil },
+            { label: "Hemoglobin", data: data.haematology.hemoglobin, rr: data.haematology.hemoglobin_reference_range, unit: data.haematology.hemoglobin_unit, comments: data.haematology.hemoglobin_comments },
+            { label: "Total RBC", data: data.haematology.totalRBC, rr: data.haematology.totalRBC_reference_range, unit: data.haematology.totalRBC_unit, comments: data.haematology.totalRBC_comments },
+            { label: "Total WBC", data: data.haematology.totalWBC, rr: data.haematology.totalWBC_reference_range, unit: data.haematology.totalWBC_unit, comments: data.haematology.totalWBC_comments },
+            { label: "Neutrophil", data: data.haematology.neutrophil, rr: data.haematology.neutrophil_reference_range, unit: data.haematology.neutrophil_unit, comments: data.haematology.neutrophil_comments },
+            { label: "Monocyte", data: data.haematology.monocyte, rr: data.haematology.monocyte_reference_range, unit: data.haematology.monocyte_unit, comments: data.haematology.monocyte_comments },
+            { label: "PCV", data: data.haematology.pcv, rr: data.haematology.pcv_reference_range, unit: data.haematology.pcv_unit, comments: data.haematology.pcv_comments },
+            { label: "MCV", data: data.haematology.mcv, rr: data.haematology.mcv_reference_range, unit: data.haematology.mcv_unit, comments: data.haematology.mcv_comments },
+            { label: "MCH", data: data.haematology.mch, rr: data.haematology.mch_reference_range, unit: data.haematology.mch_unit, comments: data.haematology.mch_comments },
+            { label: "Lymphocyte", data: data.haematology.lymphocyte, rr: data.haematology.lymphocyte_reference_range, unit: data.haematology.lymphocyte_unit, comments: data.haematology.lymphocyte_comments },
+            { label: "ESR", data: data.haematology.esr, rr: data.haematology.esr_reference_range, unit: data.haematology.esr_unit, comments: data.haematology.esr_comments },
+            { label: "MCHC", data: data.haematology.mchc, rr: data.haematology.mchc_reference_range, unit: data.haematology.mchc_unit, comments: data.haematology.mchc_comments },
+            { label: "Platelet Count", data: data.haematology.plateletCount, rr: data.haematology.plateletCount_reference_range, unit: data.haematology.plateletCount_unit, comments: data.haematology.plateletCount_comments },
+            { label: "RDW", data: data.haematology.rdw, rr: data.haematology.rdw_reference_range, unit: data.haematology.rdw_unit, comments: data.haematology.rdw_comments },
+            { label: "Eosinophil", data: data.haematology.eosinophil, rr: data.haematology.eosinophil_reference_range, unit: data.haematology.eosinophil_unit, comments: data.haematology.eosinophil_comments },
+            { label: "Basophil", data: data.haematology.basophil, rr: data.haematology.basophil_reference_range, unit: data.haematology.basophil_unit, comments: data.haematology.basophil_comments },
           ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
                 {item.label}
               </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.rr || 'No reference range'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
               </div>
             </div>
           ))}
@@ -52,248 +55,273 @@ const Investigation = ({data}) => {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
           {[
-            { label: "Glucose (F)", data: data.routinesugartests.glucoseF },
-            { label: "Glucose (PP)", data: data.routinesugartests.glucosePP },
-            { label: "Random Blood Sugar", data: data.routinesugartests.randomBloodSugar },
-            { label: "Estimated Average Glucose", data: data.routinesugartests.avgGlucose },
-            { label: "HbA1c", data: data.routinesugartests.hba1c },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-
-    if (selectedInvestigation === "RENAL FUNCTION TEST & ELECTROLYTES") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "Urea", data: data.renalFunctionTests.urea },
-            { label: "BUN", data: data.renalFunctionTests.bun },
-            { label: "Calcium", data: data.renalFunctionTests.calcium },
-            { label: "Sodium", data: data.renalFunctionTests.sodium },
-            { label: "Potassium", data: data.renalFunctionTests.potassium },
-            { label: "Phosphorus", data: data.renalFunctionTests.phosphorus },
-            { label: "Serum Creatinine", data: data.renalFunctionTests.serumCreatinine },
-            { label: "Uric Acid", data: data.renalFunctionTests.uricAcid },
-            { label: "Chloride", data: data.renalFunctionTests.chloride },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-
-    if (selectedInvestigation === "LIPID PROFILE") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "Total Cholesterol", data: data.lipidProfile.totalCholesterol },
-            { label: "Triglycerides", data: data.lipidProfile.triglycerides },
-            { label: "HDL - Cholesterol", data: data.lipidProfile.hdlCholesterol },
-            { label: "LDL - Cholesterol", data: data.lipidProfile.ldlCholesterol },
-            { label: "CHOL HDL ratio", data: data.lipidProfile.cholHdlRatio },
-            { label: "VLDL - Cholesterol", data: data.lipidProfile.vldlCholesterol },
-            { label: "LDL.CHOL/HDL.CHOL Ratio", data: data.lipidProfile.ldlHdlRatio },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-
-    if (selectedInvestigation === "LIVER FUNCTION TEST") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "Bilirubin - Total", data: data.liverFunctionTest.bilirubinTotal },
-            { label: "Bilirubin - Direct", data: data.liverFunctionTest.bilirubinDirect },
-            { label: "Bilirubin - Indirect", data: data.liverFunctionTest.bilirubinIndirect },
-            { label: "SGOT /AST", data: data.liverFunctionTest.sgotAst },
-            { label: "SGPT /ALT", data: data.liverFunctionTest.sgptAlt },
-            { label: "Alkaline phosphatase", data: data.liverFunctionTest.alkalinePhosphatase },
-            { label: "Total Protein", data: data.liverFunctionTest.totalProtein },
-            { label: "Albumin (Serum)", data: data.liverFunctionTest.albuminSerum },
-            { label: "Globulin (Serum)", data: data.liverFunctionTest.globulinSerum },
-            { label: "Alb/Glob Ratio", data: data.liverFunctionTest.albGlobRatio },
-            { label: "Gamma Glutamyl transferase", data: data.liverFunctionTest.gammaGlutamylTransferase },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-    if (selectedInvestigation === "THYROID FUNCTION TEST") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "T3 - Triiodothyronine", data: data.thyroidFunctionTest.t3 },
-            { label: "T4 - Thyroxine", data: data.thyroidFunctionTest.t4 },
-            { label: "TSH - Thyroid Stimulating Hormone", data: data.thyroidFunctionTest.tsh },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-    if (selectedInvestigation === "AUTOIMMUNE TEST") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "ANA (Antinuclear Antibody)", data: data.autoimmuneTest.ana },
-            { label: "Anti ds DNA", data: data.autoimmuneTest.antiDsDna },
-            { label: "Anticardiolipin Antibodies (IgG & IgM)", data: data.autoimmuneTest.anticardiolipin },
-            { label: "Rheumatoid Factor", data: data.autoimmuneTest.rheumatoidFactor },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    
-
-    if (selectedInvestigation === "COAGULATION TEST") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "Prothrombin Time (PT)", data: data.coagulationtest.prothrombin_time, comments: data.coagulationtest.prothrombin_time_comments, ref: data.coagulationtest.prothrombin_time_reference_range, unit:  data.coagulationtest.prothrombin_time_unit},
-            { label: "PT INR", data: data.coagulationtest.pt_inr },
-            { label: "Clotting Time (CT)", data: data.coagulationtest.clotting_time },
-            { label: "Bleeding Time (BT)", data: data.coagulationtest.bleeding_time },
+            { label: "Glucose (F)", data: data.routinesugartests.glucose_f, rr: data.routinesugartests.glucose_f_reference_range, unit: data.routinesugartests.glucose_f_unit, comments: data.routinesugartests.glucose_f_comments },
+            { label: "Glucose (PP)", data: data.routinesugartests.glucose_pp, rr: data.routinesugartests.glucose_pp_reference_range, unit: data.routinesugartests.glucose_pp_unit, comments: data.routinesugartests.glucose_pp_comments },
+            { label: "Random Blood Sugar", data: data.routinesugartests.random_blood_sugar, rr: data.routinesugartests.random_blood_sugar_reference_range, unit: data.routinesugartests.random_blood_sugar_unit, comments: data.routinesugartests.random_blood_sugar_comments },
+            { label: "Estimated Average Glucose", data: data.routinesugartests.estimated_average_glucose, rr: data.routinesugartests.estimated_average_glucose_reference_range, unit: data.routinesugartests.estimated_average_glucose_unit, comments: data.routinesugartests.estimated_average_glucose_comments },
+            { label: "HbA1c", data: data.routinesugartests.hba1c, rr: data.routinesugartests.hba1c_reference_range, unit: data.routinesugartests.hba1c_unit, comments: data.routinesugartests.hba1c_comments },
           ].map((item, index) => (
             <div key={index} className="grid grid-cols-5 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
                 {item.label}
               </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.unit || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.rr || 'No reference range'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.ref || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.comments || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
               </div>
             </div>
           ))}
         </div>
       );
     }
+    
+    
+
+    if (selectedInvestigation === "RENAL FUNCTION TEST & ELECTROLYTES") {
+      return (
+        <div className="grid w-full grid-cols-1 gap-4">
+          {[
+            { label: "Urea", data: data.renalfunctiontests_and_electrolytes.urea, rr: data.renalfunctiontests_and_electrolytes.urea_reference_range, unit: data.renalfunctiontests_and_electrolytes.urea_unit, comments: data.renalfunctiontests_and_electrolytes.urea_comments },
+            { label: "BUN", data: data.renalfunctiontests_and_electrolytes.bun, rr: data.renalfunctiontests_and_electrolytes.bun_reference_range, unit: data.renalfunctiontests_and_electrolytes.bun_unit, comments: data.renalfunctiontests_and_electrolytes.bun_comments },
+            { label: "Calcium", data: data.renalfunctiontests_and_electrolytes.calcium, rr: data.renalfunctiontests_and_electrolytes.calcium_reference_range, unit: data.renalfunctiontests_and_electrolytes.calcium_unit, comments: data.renalfunctiontests_and_electrolytes.calcium_comments },
+            { label: "Sodium", data: data.renalfunctiontests_and_electrolytes.sodium, rr: data.renalfunctiontests_and_electrolytes.sodium_reference_range, unit: data.renalfunctiontests_and_electrolytes.sodium_unit, comments: data.renalfunctiontests_and_electrolytes.sodium_comments },
+            { label: "Potassium", data: data.renalfunctiontests_and_electrolytes.potassium, rr: data.renalfunctiontests_and_electrolytes.potassium_reference_range, unit: data.renalfunctiontests_and_electrolytes.potassium_unit, comments: data.renalfunctiontests_and_electrolytes.potassium_comments },
+            { label: "Phosphorus", data: data.renalfunctiontests_and_electrolytes.phosphorus, rr: data.renalfunctiontests_and_electrolytes.phosphorus_reference_range, unit: data.renalfunctiontests_and_electrolytes.phosphorus_unit, comments: data.renalfunctiontests_and_electrolytes.phosphorus_comments },
+            { label: "Serum Creatinine", data: data.renalfunctiontests_and_electrolytes.serumCreatinine, rr: data.renalfunctiontests_and_electrolytes.serumCreatinine_reference_range, unit: data.renalfunctiontests_and_electrolytes.serumCreatinine_unit, comments: data.renalfunctiontests_and_electrolytes.serumCreatinine_comments },
+            { label: "Uric Acid", data: data.renalfunctiontests_and_electrolytes.uricAcid, rr: data.renalfunctiontests_and_electrolytes.uricAcid_reference_range, unit: data.renalfunctiontests_and_electrolytes.uricAcid_unit, comments: data.renalfunctiontests_and_electrolytes.uricAcid_comments },
+            { label: "Chloride", data: data.renalfunctiontests_and_electrolytes.chloride, rr: data.renalfunctiontests_and_electrolytes.chloride_reference_range, unit: data.renalfunctiontests_and_electrolytes.chloride_unit, comments: data.renalfunctiontests_and_electrolytes.chloride_comments },
+          ].map((item, index) => (
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {item.label}
+              </label>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.rr || 'No reference range'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    
+
+    if (selectedInvestigation === "LIPID PROFILE") {
+  return (
+    <div className="grid w-full grid-cols-1 gap-4">
+      {[
+        { label: "Total Cholesterol", data: data.lipidProfile.totalCholesterol, rr: data.lipidProfile.totalCholesterol_reference_range, unit: data.lipidProfile.totalCholesterol_unit, comments: data.lipidProfile.totalCholesterol_comments },
+        { label: "Triglycerides", data: data.lipidProfile.triglycerides, rr: data.lipidProfile.triglycerides_reference_range, unit: data.lipidProfile.triglycerides_unit, comments: data.lipidProfile.triglycerides_comments },
+        { label: "HDL - Cholesterol", data: data.lipidProfile.hdlCholesterol, rr: data.lipidProfile.hdlCholesterol_reference_range, unit: data.lipidProfile.hdlCholesterol_unit, comments: data.lipidProfile.hdlCholesterol_comments },
+        { label: "LDL - Cholesterol", data: data.lipidProfile.ldlCholesterol, rr: data.lipidProfile.ldlCholesterol_reference_range, unit: data.lipidProfile.ldlCholesterol_unit, comments: data.lipidProfile.ldlCholesterol_comments },
+        { label: "CHOL HDL Ratio", data: data.lipidProfile.cholHdlRatio, rr: data.lipidProfile.cholHdlRatio_reference_range, unit: data.lipidProfile.cholHdlRatio_unit, comments: data.lipidProfile.cholHdlRatio_comments },
+        { label: "VLDL - Cholesterol", data: data.lipidProfile.vldlCholesterol, rr: data.lipidProfile.vldlCholesterol_reference_range, unit: data.lipidProfile.vldlCholesterol_unit, comments: data.lipidProfile.vldlCholesterol_comments },
+        { label: "LDL/HDL Ratio", data: data.lipidProfile.ldlHdlRatio, rr: data.lipidProfile.ldlHdlRatio_reference_range, unit: data.lipidProfile.ldlHdlRatio_unit, comments: data.lipidProfile.ldlHdlRatio_comments },
+      ].map((item, index) => (
+        <div key={index} className="grid grid-cols-5 gap-4 items-center">
+          <label className="text-gray-700 font-medium text-sm md:text-base">
+            {item.label}
+          </label>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.data || 'No data'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.rr || 'No reference range'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.unit || 'No unit'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.comments || 'No comments'}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+    
+
+    if (selectedInvestigation === "LIVER FUNCTION TEST") {
+  return (
+    <div className="grid w-full grid-cols-1 gap-4">
+      {[
+        { label: "Bilirubin - Total", data: data.liverFunctionTest.bilirubinTotal, rr: data.liverFunctionTest.bilirubinTotal_reference_range, unit: data.liverFunctionTest.bilirubinTotal_unit, comments: data.liverFunctionTest.bilirubinTotal_comments },
+        { label: "Bilirubin - Direct", data: data.liverFunctionTest.bilirubinDirect, rr: data.liverFunctionTest.bilirubinDirect_reference_range, unit: data.liverFunctionTest.bilirubinDirect_unit, comments: data.liverFunctionTest.bilirubinDirect_comments },
+        { label: "Bilirubin - Indirect", data: data.liverFunctionTest.bilirubinIndirect, rr: data.liverFunctionTest.bilirubinIndirect_reference_range, unit: data.liverFunctionTest.bilirubinIndirect_unit, comments: data.liverFunctionTest.bilirubinIndirect_comments },
+        { label: "SGOT / AST", data: data.liverFunctionTest.sgotAst, rr: data.liverFunctionTest.sgotAst_reference_range, unit: data.liverFunctionTest.sgotAst_unit, comments: data.liverFunctionTest.sgotAst_comments },
+        { label: "SGPT / ALT", data: data.liverFunctionTest.sgptAlt, rr: data.liverFunctionTest.sgptAlt_reference_range, unit: data.liverFunctionTest.sgptAlt_unit, comments: data.liverFunctionTest.sgptAlt_comments },
+        { label: "Alkaline Phosphatase", data: data.liverFunctionTest.alkalinePhosphatase, rr: data.liverFunctionTest.alkalinePhosphatase_reference_range, unit: data.liverFunctionTest.alkalinePhosphatase_unit, comments: data.liverFunctionTest.alkalinePhosphatase_comments },
+        { label: "Total Protein", data: data.liverFunctionTest.totalProtein, rr: data.liverFunctionTest.totalProtein_reference_range, unit: data.liverFunctionTest.totalProtein_unit, comments: data.liverFunctionTest.totalProtein_comments },
+        { label: "Albumin (Serum)", data: data.liverFunctionTest.albuminSerum, rr: data.liverFunctionTest.albuminSerum_reference_range, unit: data.liverFunctionTest.albuminSerum_unit, comments: data.liverFunctionTest.albuminSerum_comments },
+        { label: "Globulin (Serum)", data: data.liverFunctionTest.globulinSerum, rr: data.liverFunctionTest.globulinSerum_reference_range, unit: data.liverFunctionTest.globulinSerum_unit, comments: data.liverFunctionTest.globulinSerum_comments },
+        { label: "Alb/Glob Ratio", data: data.liverFunctionTest.albGlobRatio, rr: data.liverFunctionTest.albGlobRatio_reference_range, unit: data.liverFunctionTest.albGlobRatio_unit, comments: data.liverFunctionTest.albGlobRatio_comments },
+        { label: "Gamma Glutamyl Transferase", data: data.liverFunctionTest.gammaGlutamylTransferase, rr: data.liverFunctionTest.gammaGlutamylTransferase_reference_range, unit: data.liverFunctionTest.gammaGlutamylTransferase_unit, comments: data.liverFunctionTest.gammaGlutamylTransferase_comments },
+      ].map((item, index) => (
+        <div key={index} className="grid grid-cols-5 gap-4 items-center">
+          <label className="text-gray-700 font-medium text-sm md:text-base">
+            {item.label}
+          </label>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.data || 'No data'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.rr || 'No reference range'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.unit || 'No unit'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.comments || 'No comments'}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+    
+if (selectedInvestigation === "THYROID FUNCTION TEST") {
+  return (
+    <div className="grid w-full grid-cols-1 gap-4">
+      {[
+        { label: "T3 - Triiodothyronine", data: data.thyroidFunctionTest.t3_triiodothyronine, rr: data.thyroidFunctionTest.t3_reference_range, unit: data.thyroidFunctionTest.t3_unit, comments: data.thyroidFunctionTest.t3_comments },
+        { label: "T4 - Thyroxine", data: data.thyroidFunctionTest.t4_thyroxine, rr: data.thyroidFunctionTest.t4_reference_range, unit: data.thyroidFunctionTest.t4_unit, comments: data.thyroidFunctionTest.t4_comments },
+        { label: "TSH - Thyroid Stimulating Hormone", data: data.thyroidFunctionTest.tsh_thyroid_stimulating_hormone, rr: data.thyroidFunctionTest.tsh_reference_range, unit: data.thyroidFunctionTest.tsh_unit, comments: data.thyroidFunctionTest.tsh_comments },
+      ].map((item, index) => (
+        <div key={index} className="grid grid-cols-5 gap-4 items-center">
+          <label className="text-gray-700 font-medium text-sm md:text-base">
+            {item.label}
+          </label>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.data || 'No data'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.rr || 'No reference range'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.unit || 'No unit'}
+          </div>
+          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+            {item.comments || 'No comments'}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+    
+    // if (selectedInvestigation === "AUTOIMMUNE TEST") {
+    //   return (
+    //     <div className="grid grid-cols-1 gap-4">
+    //       {[
+    //         { label: "ANA (Antinuclear Antibody)", data: data.autoimmuneTest.ana },
+    //         { label: "Anti ds DNA", data: data.autoimmuneTest.antiDsDna },
+    //         { label: "Anticardiolipin Antibodies (IgG & IgM)", data: data.autoimmuneTest.anticardiolipin },
+    //         { label: "Rheumatoid Factor", data: data.autoimmuneTest.rheumatoidFactor },
+    //       ].map((item, index) => (
+    //         <div key={index} className="grid grid-cols-4 gap-4 items-center">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
+    
+
+    if (selectedInvestigation === "COAGULATION TEST") {
+      return (
+        <div className="grid w-full grid-cols-1 gap-4">
+          {[
+            { label: "Prothrombin Time (PT)", data: data.coagulationtest.prothrombin_time, unit: data.coagulationtest.prothrombin_time_unit, ref: data.coagulationtest.prothrombin_time_reference_range, comments: data.coagulationtest.prothrombin_time_comments },
+            { label: "PT INR", data: data.coagulationtest.pt_inr, unit: data.coagulationtest.pt_inr_unit, ref: data.coagulationtest.pt_inr_reference_range, comments: data.coagulationtest.pt_inr_comments },
+            { label: "Clotting Time (CT)", data: data.coagulationtest.clotting_time, unit: data.coagulationtest.clotting_time_unit, ref: data.coagulationtest.clotting_time_reference_range, comments: data.coagulationtest.clotting_time_comments },
+            { label: "Bleeding Time (BT)", data: data.coagulationtest.bleeding_time, unit: data.coagulationtest.bleeding_time_unit, ref: data.coagulationtest.bleeding_time_reference_range, comments: data.coagulationtest.bleeding_time_comments },
+          ].map((item, index) => (
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {item.label}
+              </label>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.ref || 'No reference range'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
     
 
     if (selectedInvestigation === "ENZYMES & CARDIAC Profile") {
       return (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid w-full grid-cols-1 gap-4">
           {[
-            { label: "Acid Phosphatase", data: data.enzymesCardiacProfile.acidPhosphatase },
-            { label: "Adenosine Deaminase", data: data.enzymesCardiacProfile.adenosineDeaminase },
-            { label: "Amylase", data: data.enzymesCardiacProfile.amylase },
-            { label: "ECG (Normal)", data: data.enzymesCardiacProfile.ecgNormal },
-            { label: "Troponin-T", data: data.enzymesCardiacProfile.troponinT },
-            { label: "CPK - TOTAL", data: data.enzymesCardiacProfile.cpkTotal },
-            { label: "ECHO (Normal)", data: data.enzymesCardiacProfile.echoNormal },
-            { label: "Lipase", data: data.enzymesCardiacProfile.lipase },
-            { label: "CPK - MB", data: data.enzymesCardiacProfile.cpkMb },
-            { label: "TMT (Normal)", data: data.enzymesCardiacProfile.tmtNormal },
+            { label: "Acid Phosphatase", data: data.enzymesandcardiacprofile.acid_phosphatase, unit: data.enzymesandcardiacprofile.acid_phosphatase_unit, ref: data.enzymesandcardiacprofile.acid_phosphatase_reference_range, comments: data.enzymesandcardiacprofile.acid_phosphatase_comments },
+            { label: "Adenosine Deaminase", data: data.enzymesandcardiacprofile.adenosine_deaminase, unit: data.enzymesandcardiacprofile.adenosine_deaminase_unit, ref: data.enzymesandcardiacprofile.adenosine_deaminase_reference_range, comments: data.enzymesandcardiacprofile.adenosine_deaminase_comments },
+            { label: "Amylase", data: data.enzymesandcardiacprofile.amylase, unit: data.enzymesandcardiacprofile.amylase_unit, ref: data.enzymesandcardiacprofile.amylase_reference_range, comments: data.enzymesandcardiacprofile.amylase_comments },
+            { label: "ECG", data: data.enzymesandcardiacprofile.ecg, unit: data.enzymesandcardiacprofile.ecg_unit, ref: data.enzymesandcardiacprofile.ecg_reference_range, comments: data.enzymesandcardiacprofile.ecg_comments },
+            { label: "Troponin-T", data: data.enzymesandcardiacprofile.troponin_t, unit: data.enzymesandcardiacprofile.troponin_t_unit, ref: data.enzymesandcardiacprofile.troponin_t_reference_range, comments: data.enzymesandcardiacprofile.troponin_t_comments },
+            { label: "CPK - TOTAL", data: data.enzymesandcardiacprofile.cpk_total, unit: data.enzymesandcardiacprofile.cpk_total_unit, ref: data.enzymesandcardiacprofile.cpk_total_reference_range, comments: data.enzymesandcardiacprofile.cpk_total_comments },
+            { label: "ECHO", data: data.enzymesandcardiacprofile.echo, unit: data.enzymesandcardiacprofile.echo_unit, ref: data.enzymesandcardiacprofile.echo_reference_range, comments: data.enzymesandcardiacprofile.echo_comments },
+            { label: "Lipase", data: data.enzymesandcardiacprofile.lipase, unit: data.enzymesandcardiacprofile.lipase_unit, ref: data.enzymesandcardiacprofile.lipase_reference_range, comments: data.enzymesandcardiacprofile.lipase_comments },
+            { label: "CPK - MB", data: data.enzymesandcardiacprofile.cpk_mb, unit: data.enzymesandcardiacprofile.cpk_mb_unit, ref: data.enzymesandcardiacprofile.cpk_mb_reference_range, comments: data.enzymesandcardiacprofile.cpk_mb_comments },
+            { label: "TMT", data: data.enzymesandcardiacprofile.tmt_normal, unit: data.enzymesandcardiacprofile.tmt_normal_unit, ref: data.enzymesandcardiacprofile.tmt_normal_reference_range, comments: data.enzymesandcardiacprofile.tmt_normal_comments },
           ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
                 {item.label}
               </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.ref || 'No reference range'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
               </div>
             </div>
           ))}
@@ -301,45 +329,46 @@ const Investigation = ({data}) => {
       );
     }
     
-    if (selectedInvestigation === "URINE ROUTINE") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            { label: "Colour", data: data.urineRoutine.colour },
-            { label: "Appearance", data: data.urineRoutine.appearance },
-            { label: "Reaction (pH)", data: data.urineRoutine.reactionPH },
-            { label: "Specific gravity", data: data.urineRoutine.specificGravity },
-            { label: "Crystals", data: data.urineRoutine.crystals },
-            { label: "Bacteria", data: data.urineRoutine.bacteria },
-            { label: "Protein/Albumin", data: data.urineRoutine.proteinAlbumin },
-            { label: "Glucose (Urine)", data: data.urineRoutine.glucoseUrine },
-            { label: "Ketone Bodies", data: data.urineRoutine.ketoneBodies },
-            { label: "Urobilinogen", data: data.urineRoutine.urobilinogen },
-            { label: "Casts", data: data.urineRoutine.casts },
-            { label: "Bile Salts", data: data.urineRoutine.bileSalts },
-            { label: "Bile Pigments", data: data.urineRoutine.bilePigments },
-            { label: "WBC / Pus cells", data: data.urineRoutine.wbcPusCells },
-            { label: "Red Blood Cells", data: data.urineRoutine.redBloodCells },
-            { label: "Epithelial cells", data: data.urineRoutine.epithelialCells },
-          ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
+    
+    // if (selectedInvestigation === "URINE ROUTINE") {
+    //   return (
+    //     <div className="grid grid-cols-1 gap-4">
+    //       {[
+    //         { label: "Colour", data: data.urineRoutine.colour },
+    //         { label: "Appearance", data: data.urineRoutine.appearance },
+    //         { label: "Reaction (pH)", data: data.urineRoutine.reactionPH },
+    //         { label: "Specific gravity", data: data.urineRoutine.specificGravity },
+    //         { label: "Crystals", data: data.urineRoutine.crystals },
+    //         { label: "Bacteria", data: data.urineRoutine.bacteria },
+    //         { label: "Protein/Albumin", data: data.urineRoutine.proteinAlbumin },
+    //         { label: "Glucose (Urine)", data: data.urineRoutine.glucoseUrine },
+    //         { label: "Ketone Bodies", data: data.urineRoutine.ketoneBodies },
+    //         { label: "Urobilinogen", data: data.urineRoutine.urobilinogen },
+    //         { label: "Casts", data: data.urineRoutine.casts },
+    //         { label: "Bile Salts", data: data.urineRoutine.bileSalts },
+    //         { label: "Bile Pigments", data: data.urineRoutine.bilePigments },
+    //         { label: "WBC / Pus cells", data: data.urineRoutine.wbcPusCells },
+    //         { label: "Red Blood Cells", data: data.urineRoutine.redBloodCells },
+    //         { label: "Epithelial cells", data: data.urineRoutine.epithelialCells },
+    //       ].map((item, index) => (
+    //         <div key={index} className="grid grid-cols-4 gap-4 items-center">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {item.data || 'No data available'}
+    //           </div>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
     
 
     if (selectedInvestigation === "SEROLOGY") {

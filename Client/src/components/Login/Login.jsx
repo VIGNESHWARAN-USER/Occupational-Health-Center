@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import leftlogin from '../../assets/login-left.png';
 import jswlogo from '../../assets/logo.png';
 import { Link, useNavigate } from "react-router-dom";
@@ -9,9 +9,15 @@ const Login = () => {
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
-  localStorage.setItem('accessLevel', "")
+  
   const navigate = useNavigate();
-
+  useEffect(()=>{
+    if(!localStorage.getItem('accessLevel'))
+    {
+      navigate(-1);
+    }
+    localStorage.setItem('accessLevel', "");
+  }, [])
   const login = async(e) => {
     e.preventDefault();
     if (name.length === 0) setErr("Enter username");

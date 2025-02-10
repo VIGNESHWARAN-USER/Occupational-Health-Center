@@ -8,10 +8,16 @@ from datetime import datetime
 import json
 from .models import user  # Replace with your actual model
 from .models import Appointment  # Replace with your actual model
+from .models import mockdrills  # Replace with your actual model
+from .models import eventsandcamps # Replace with your actual model
 from datetime import datetime, timedelta
 from .models import Appointment
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db.models import Max 
+import logging
 
 @csrf_exempt
 def login(request):
@@ -43,58 +49,53 @@ def login(request):
 
 logger = logging.getLogger(__name__)
 
+
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def fetchdata(request):
     if request.method == "POST":
         try:
-            # Fetch employee details
-            employees = list(models.employee_details.objects.values())
-            vitals = list(models.vitals.objects.values())  
-            haematology = list(models.heamatalogy.objects.values()) if models.heamatalogy.objects.exists() else []
-            routinesugartests = list(models.RoutineSugarTests.objects.values()) if models.RoutineSugarTests.objects.exists() else []
-            renalfunctiontests = list(models.RenalFunctionTest.objects.values()) if models.RenalFunctionTest.objects.exists() else []
-            lipidprofile = list(models.LipidProfile.objects.values()) if models.LipidProfile.objects.exists() else []
-            liverfunctiontest = list(models.LiverFunctionTest.objects.values()) if models.LiverFunctionTest.objects.exists() else []
-            thyroidfunctiontest = list(models.ThyroidFunctionTest.objects.values()) if models.ThyroidFunctionTest.objects.exists() else []
-            coagulationtest = list(models.CoagulationTest.objects.values()) if models.CoagulationTest.objects.exists() else []
-            enzymesandcardiacprofile = list(models.EnzymesCardiacProfile.objects.values()) if models.EnzymesCardiacProfile.objects.exists() else []
-            urineroutine = list(models.UrineRoutineTest.objects.values()) if models.UrineRoutineTest.objects.exists() else []
-            serology = list(models.SerologyTest.objects.values()) if models.SerologyTest.objects.exists() else []
-            motion = list(models.MotionTest.objects.values()) if models.MotionTest.objects.exists() else []
-            menspack = list(models.MensPack.objects.values()) if models.MensPack.objects.exists() else []
-            #womenspack = list(models.WomensPack.objects.values()) if models.WomensPack.objects.exists() else []
-            #occupationalprofile = list(models.OccupationalProfile.objects.values()) if models.OccupationalProfile.objects.exists() else []
-            #otherstest = list(models.OthersTest.objects.values()) if models.OthersTest.objects.exists() else []
-            opthalamicreport = list(models.OphthalmicReport.objects.values()) if models.OphthalmicReport.objects.exists() else []
-            #xray = list(models.XRayReport.objects.values()) if models.XRayReport.objects.exists() else []
-            usg = list(models.USGReport.objects.values()) if models.USGReport.objects.exists() else []
-            #ct = list(models.CTReport.objects.values()) if models.CTReport.objects.exists() else []
-            mri = list(models.MRIReport.objects.values()) if models.MRIReport.objects.exists() else []
+            # Get latest record for each emp_no
+            latest_employees = (
+                models.employee_details.objects.values("emp_no")
+                .annotate(latest_id=Max("id"))  # Ensure latest record
+            )
 
-            # Convert the lists into dictionaries with emp_no as the key
-            vitals_dict = {v["emp_no"]: v for v in vitals}
-            haematology_dict = {v["emp_no"]: v for v in haematology}
-            routinesugartests_dict = {v["emp_no"]: v for v in routinesugartests}
-            renalfunctiontests_dict = {v["emp_no"]: v for v in renalfunctiontests}
-            lipidprofile_dict = {v["emp_no"]: v for v in lipidprofile}
-            liverfunctiontest_dict = {v["emp_no"]: v for v in liverfunctiontest}
-            thyroidfunctiontest_dict = {v["emp_no"]: v for v in thyroidfunctiontest}
-            coagulationtest_dict = {v["emp_no"]: v for v in coagulationtest}
-            enzymesandcardiacprofile_dict = {v["emp_no"]: v for v in enzymesandcardiacprofile}
-            urineroutine_dict = {v["emp_no"]: v for v in urineroutine}
-            serology_dict = {v["emp_no"]: v for v in serology}
-            motion_dict = {v["emp_no"]: v for v in motion}
-            menspack_dict = {v["emp_no"]: v for v in menspack}
-            #womenspack_dict = {v["emp_no"]: v for v in womenspack}
-            #occupationalprofile_dict = {v["emp_no"]: v for v in occupationalprofile}
-            #otherstest_dict = {v["emp_no"]: v for v in otherstest}
-            opthalamicreport_dict = {v["emp_no"]: v for v in opthalamicreport}
-            #xray_dict = {v["emp_no"]: v for v in xray}
-            usg_dict = {v["emp_no"]: v for v in usg}
-            #ct_dict = {v["emp_no"]: v for v in ct}
-            mri_dict = {v["emp_no"]: v for v in mri}
+            latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
 
-            # Merging employee data with the fetched details
+            # Fetch only the latest employee records
+            employees = list(models.employee_details.objects.filter(id__in=latest_employee_ids).values())
+
+            # Fetch latest records for other tables using emp_no
+            def get_latest_records(model):
+                return {
+                    v["emp_no"]: v
+                    for v in model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees])
+                    .values("emp_no")
+                    .annotate(latest_id=Max("id"))
+                    .values()
+                }
+
+            vitals_dict = get_latest_records(models.vitals)
+            haematology_dict = get_latest_records(models.heamatalogy)
+            routinesugartests_dict = get_latest_records(models.RoutineSugarTests)
+            renalfunctiontests_dict = get_latest_records(models.RenalFunctionTest)
+            lipidprofile_dict = get_latest_records(models.LipidProfile)
+            liverfunctiontest_dict = get_latest_records(models.LiverFunctionTest)
+            thyroidfunctiontest_dict = get_latest_records(models.ThyroidFunctionTest)
+            coagulationtest_dict = get_latest_records(models.CoagulationTest)
+            enzymesandcardiacprofile_dict = get_latest_records(models.EnzymesCardiacProfile)
+            urineroutine_dict = get_latest_records(models.UrineRoutineTest)
+            serology_dict = get_latest_records(models.SerologyTest)
+            motion_dict = get_latest_records(models.MotionTest)
+            menspack_dict = get_latest_records(models.MensPack)
+            opthalamicreport_dict = get_latest_records(models.OphthalmicReport)
+            usg_dict = get_latest_records(models.USGReport)
+            mri_dict = get_latest_records(models.MRIReport)
+
+            # Merge data
             merged_data = []
             for emp in employees:
                 emp_no = emp["emp_no"]
@@ -111,14 +112,10 @@ def fetchdata(request):
                 emp["serology"] = serology_dict.get(emp_no, {})
                 emp["motion"] = motion_dict.get(emp_no, {})
                 emp["menspack"] = menspack_dict.get(emp_no, {})
-                #emp["womenspack"] = womenspack_dict.get(emp_no, {})
-                #emp["occupationalprofile"] = occupationalprofile_dict.get(emp_no, {})
-                #emp["otherstest"] = otherstest_dict.get(emp_no, {})
                 emp["opthalamicreport"] = opthalamicreport_dict.get(emp_no, {})
-                #emp["xray"] = xray_dict.get(emp_no, {})
                 emp["usg"] = usg_dict.get(emp_no, {})
-                #emp["ct"] = ct_dict.get(emp_no, {})
                 emp["mri"] = mri_dict.get(emp_no, {})
+
                 merged_data.append(emp)
 
             if merged_data:
@@ -131,6 +128,8 @@ def fetchdata(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
 
 
 @csrf_exempt
@@ -877,6 +876,53 @@ def get_appointments(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
+@csrf_exempt
+def get_appointments(request):
+    if request.method == "GET":
+        from_date_str = request.GET.get('fromDate')
+        to_date_str = request.GET.get('toDate')
+
+        today = datetime.today().date()
+        from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else None
+        to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else None
+
+        if from_date and to_date:
+            appointments = Appointment.objects.filter(appointment_date__range=[from_date, to_date]).order_by('appointment_date', 'time')
+        elif from_date:
+            appointments = Appointment.objects.filter(appointment_date__range=[from_date, today]).order_by('appointment_date', 'time')
+        elif to_date:
+            appointments = Appointment.objects.filter(appointment_date__range=[today,to_date]).order_by('appointment_date', 'time')
+        else:
+            appointments = Appointment.objects.filter(appointment_date=today).order_by('appointment_date', 'time')
+
+        appointment_list = list(appointments.values("id", "employee_id", "name", "role", "appointment_date", "status"))
+        return JsonResponse({"appointments": appointment_list, "message": "Appointments fetched successfully."})
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@csrf_exempt
+def update_appointment_status(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            appointment_id = data.get("id")  # Get appointment ID
+            appointment = Appointment.objects.get(id=appointment_id)  # Fetch by ID
+            
+            if appointment.status == "initiate":
+                appointment.status = "inprogress"
+                appointment.save()
+                return JsonResponse({"success": True, "message": "Status updated", "status": "inprogress"})
+
+            return JsonResponse({"success": False, "message": "Cannot update status"})
+
+        except Appointment.DoesNotExist:
+            return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"success": False, "message": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
 @csrf_exempt  # Disable CSRF for testing; use CSRF token in production
 def uploadAppointment(request):
     if request.method == "POST":
@@ -961,3 +1007,64 @@ def create_users(request):
             
     print("Users created successfully.")
     return JsonResponse({"message": "Password updated successfully!"})
+
+
+@csrf_exempt
+def add_camp(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            camp = eventsandcamps.objects.create(
+                camp_name=data.get("camp_name"),
+                start_date=data.get("start_date"),
+                end_date=data.get("end_date"),
+                camp_details=data.get("camp_details"),
+                camp_type=data.get("select_option"),
+            )
+            return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@csrf_exempt
+def save_mockdrills(request):
+
+    if request.method == "POST":
+        try:
+            print("Hi hello")
+            data = json.loads(request.body)
+            mock_drill = mockdrills.objects.create(
+                date=data.get("date"),
+                time=data.get("time"),
+                department=data.get("department"),
+                location=data.get("location"),
+                scenario=data.get("scenario"),
+                ambulance_timing=data.get("ambulance_timing"),
+                departure_from_OHC=data.get("departure_from_OHC"),
+                return_to_OHC=data.get("return_to_OHC"),
+                emp_no=data.get("emp_no"),
+                victim_department=data.get("victim_department"),
+                victim_name=data.get("victim_name"),
+                nature_of_job=data.get("nature_of_job"),
+                age=data.get("age"),
+                mobile_no=data.get("mobile_no"),
+                gender=data.get("gender"),
+                vitals=data.get("vitals"),
+                complaints=data.get("complaints"),
+                treatment=data.get("treatment"),
+                referal=data.get("referal"),
+                ambulance_driver=data.get("ambulance_driver"),
+                staff_name=data.get("staff_name"),
+                OHC_doctor=data.get("OHC_doctor"),
+                staff_nurse=data.get("staff_nurse"),
+                action_completion=data.get("Action_Completion"),
+                responsible=data.get("Responsible"),
+            )
+            return JsonResponse({"message": "Mock drill saved successfully{}".format(mock_drill.id)}, status=201)
+        except Exception as e:
+            print("error occured")
+
+
+            return JsonResponse({"error": str(e) + "This error"}, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=405)

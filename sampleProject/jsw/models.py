@@ -808,8 +808,12 @@ class MRIReport(models.Model):
         # return self.name if self.name else self.employee_id
 
 
-
 class Appointment(models.Model):
+    class StatusChoices(models.TextChoices):
+        INITIATE = 'initiate', 'Initiate'
+        IN_PROGRESS = 'inprogress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+
     role = models.TextField(max_length=100)
     name = models.TextField(max_length=255)
     employee_id = models.TextField(max_length=100, blank=True)
@@ -821,6 +825,11 @@ class Appointment(models.Model):
     date = models.DateField()
     time = models.TextField(max_length=225)
     booked_by = models.TextField(max_length=255)
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.INITIATE
+    )
 
-    def _str_(self):
+    def str(self):
         return f"{self.name} - {self.appointment_date}"
