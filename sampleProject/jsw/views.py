@@ -10,23 +10,35 @@ from .models import user  # Replace with your actual model
 from .models import Appointment  # Replace with your actual model
 from datetime import datetime, timedelta
 from .models import Appointment
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 
 @csrf_exempt
 def login(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            email = data.get('name')
-            userval = models.user.objects.filter(name=email).first()
-            if userval:
-                return JsonResponse({"password": userval.password, "accessLevel":userval.accessLevel}, status=200)
+            username = data.get('username')
+            password = data.get('password')
+
+            user = authenticate(username=username, password=password)  # Authenticate user
+            print(user)  # Debugging
+
+            if user is not None:
+                # Return user info (convert object to JSON-compatible format)
+                return JsonResponse({
+                    "username": user.username,
+                    "accessLevel": user.username,  # You can modify this based on roles later
+                    "message": "Login successful!"
+                }, status=200)
             else:
-                return JsonResponse({"error": "User not found"}, status=404)
+                return JsonResponse({"message": "User not found"}, status=404)
+
         except Exception as e:
             print("Error:", str(e))
             return JsonResponse({"error": str(e)}, status=400)
-    else:
-        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
 logger = logging.getLogger(__name__)
@@ -126,7 +138,10 @@ def addbasicdetails(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
         print("Basic Details:" ,data['name'])
-        print("Vitals: ", data['vitals']['name'])
+        print("Vitals: ", data['vitals']['emp_no'])
+        print("Motion Test", data['motion']['emp_no'])
+        #print("CSTest", data.keys())
+        print("Mens Pack", data['menspack']['emp_no'])
         # basicdetails = models.employee_details.objects.create(
         #     name = data['name'],
         #     dob= data['dob'],
@@ -153,64 +168,64 @@ def addbasicdetails(request):
         #     address= data['address'],
         # )
         # vital_details = models.vitals.objects.create(
-        #     emp_no=data['emp_no'],
-        #     systolic=data['systolic'],
-        #     diastolic=data['diastolic'],
-        #     pulse=data['pulse'],
-        #     respiratory_rate=data['respiratory_rate'],
-        #     temperature=data['temperature'],
-        #     spO2=data['spO2'],
-        #     weight=data['weight'],
-        #     height=data['height'],
-        #     bmi=data['bmi']
+        #     emp_no=data['vitals']['emp_no'],
+        #     systolic=data['vitals']['systolic'],
+        #     diastolic=data['vitals']['diastolic'],
+        #     pulse=data['vitals']['pulse'],
+        #     respiratory_rate=data['vitals']['respiratory_rate'],
+        #     temperature=data['vitals']['temperature'],
+        #     spO2=data['vitals']['spO2'],
+        #     weight=data['vitals']['weight'],
+        #     height=data['vitals']['height'],
+        #     bmi=data['vitals']['bmi']
         # )
-
-        # motion_test = MotionTest.objects.create(
-        #     emp_no=data['emp_no'],
-        #     colour_motion=data['colour_motion'],
-        #     colour_motion_unit=data['colour_motion_unit'],
-        #     colour_motion_reference_range=data['colour_motion_reference_range'],
-        #     colour_motion_comments=data['colour_motion_comments'],
+          
+        # motion_test = models.MotionTest.objects.create(
+        #     emp_no=data['motion']['emp_no'],
+        #     colour_motion=data['motion']['colour_motion'],
+        #     colour_motion_unit=data['motion']['colour_motion_unit'],
+        #     colour_motion_reference_range=data['motion']['colour_motion_reference_range'],
+        #     colour_motion_comments=data['motion']['colour_motion_comments'],
             
-        #     appearance_motion=data['appearance_motion'],
-        #     appearance_motion_unit=data['appearance_motion_unit'],
-        #     appearance_motion_reference_range=data['appearance_motion_reference_range'],
-        #     appearance_motion_comments=data['appearance_motion_comments'],
+        #     appearance_motion=data['motion']['appearance_motion'],
+        #     appearance_motion_unit=data['motion']['appearance_motion_unit'],
+        #     appearance_motion_reference_range=data['motion']['appearance_motion_reference_range'],
+        #     appearance_motion_comments=data['motion']['appearance_motion_comments'],
             
-        #     occult_blood=data['occult_blood'],
-        #     occult_blood_unit=data['occult_blood_unit'],
-        #     occult_blood_reference_range=data['occult_blood_reference_range'],
-        #     occult_blood_comments=data['occult_blood_comments'],
+        #     occult_blood=data['motion']['occult_blood'],
+        #     occult_blood_unit=data['motion']['occult_blood_unit'],
+        #     occult_blood_reference_range=data['motion']['occult_blood_reference_range'],
+        #     occult_blood_comments=data['motion']['occult_blood_comments'],
             
-        #     cyst=data['cyst'],
-        #     cyst_unit=data['cyst_unit'],
-        #     cyst_reference_range=data['cyst_reference_range'],
-        #     cyst_comments=data['cyst_comments'],
+        #     cyst=data['motion']['cyst'],
+        #     cyst_unit=data['motion']['cyst_unit'],
+        #     cyst_reference_range=data['motion']['cyst_reference_range'],
+        #     cyst_comments=data['motion']['cyst_comments'],
             
-        #     mucus=data['mucus'],
-        #     mucus_unit=data['mucus_unit'],
-        #     mucus_reference_range=data['mucus_reference_range'],
-        #     mucus_comments=data['mucus_comments'],
+        #     mucus=data['motion']['mucus'],
+        #     mucus_unit=data['motion']['mucus_unit'],
+        #     mucus_reference_range=data['motion']['mucus_reference_range'],
+        #     mucus_comments=data['motion']['mucus_comments'],
             
-        #     pus_cells=data['pus_cells'],
-        #     pus_cells_unit=data['pus_cells_unit'],
-        #     pus_cells_reference_range=data['pus_cells_reference_range'],
-        #     pus_cells_comments=data['pus_cells_comments'],
+        #     pus_cells=data['motion']['pus_cells'],
+        #     pus_cells_unit=data['motion']['pus_cells_unit'],
+        #     pus_cells_reference_range=data['motion']['pus_cells_reference_range'],
+        #     pus_cells_comments=data['motion']['pus_cells_comments'],
             
-        #     ova=data['ova'],
-        #     ova_unit=data['ova_unit'],
-        #     ova_reference_range=data['ova_reference_range'],
-        #     ova_comments=data['ova_comments'],
+        #     ova=data['motion']['ova'],
+        #     ova_unit=data['motion']['ova_unit'],
+        #     ova_reference_range=data['motion']['ova_reference_range'],
+        #     ova_comments=data['motion']['ova_comments'],
             
-        #     rbcs=data['rbcs'],
-        #     rbcs_unit=data['rbcs_unit'],
-        #     rbcs_reference_range=data['rbcs_reference_range'],
-        #     rbcs_comments=data['rbcs_comments'],
+        #     rbcs=data['motion']['rbcs'],
+        #     rbcs_unit=data['motion']['rbcs_unit'],
+        #     rbcs_reference_range=data['motion']['rbcs_reference_range'],
+        #     rbcs_comments=data['motion']['rbcs_comments'],
             
-        #     others=data['others'],
-        #     others_unit=data['others_unit'],
-        #     others_reference_range=data['others_reference_range'],
-        #     others_comments=data['others_comments']
+        #     others=data['motion']['others'],
+        #     others_unit=data['motion']['others_unit'],
+        #     others_reference_range=data['motion']['others_reference_range'],
+        #     others_comments=data['motion']['others_comments']
         # )
 
         # culture_sensitivity_test = CultureSensitivityTest.objects.create(
@@ -236,13 +251,13 @@ def addbasicdetails(request):
         #     blood_comments=data['blood_comments']
         # )
 
-        # mens_pack = MensPack.objects.create(
-        #     emp_no=data['emp_no'],
-        #     psa=data['psa'],
-        #     psa_unit=data['psa_unit'],
-        #     psa_reference_range=data['psa_reference_range'],
-        #     psa_comments=data['psa_comments']
-        # )
+        mens_pack = models.MensPack.objects.create(
+            emp_no=data['menspack']['emp_no'],
+            psa=data['menspack']['psa'],
+            psa_unit=data['menspack']['psa_unit'],
+            psa_reference_range=data['menspack']['psa_reference_range'],
+            psa_comments=data['menspack']['psa_comments']
+        )
 
 
         # ophthalmic_report = OphthalmicReport.objects.create(
@@ -928,3 +943,21 @@ def uploadAppointment(request):
             return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+
+def create_users(request):
+    users = [
+        {'username': 'nurse', 'password': 'nurse'},
+        {'username': 'doctor', 'password': 'doctor'},
+        {'username': 'admin', 'password': 'admin'}
+    ]
+
+    
+    for user_data in users:
+        user = User.objects.get(username=user_data['username'])
+        user.set_password(user_data['password'])
+        user.save()
+            
+    print("Users created successfully.")
+    return JsonResponse({"message": "Password updated successfully!"})

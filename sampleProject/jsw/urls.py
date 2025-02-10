@@ -7,5 +7,6 @@ urlpatterns = [
     path('addEmployee', views.addbasicdetails, name = 'addDetails'),
     path('bookAppointment/', views.BookAppointment, name='Appointments'),
     path('uploadAppointment/', views.uploadAppointment, name='uploadAppointment'),
-    path('appointments/', views.get_appointments, name='get_appointments')
+    path('appointments/', views.get_appointments, name='get_appointments'),
+    path('addUsers/', views.create_users, name='addusers')
 ]
