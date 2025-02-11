@@ -8,9 +8,27 @@ const Investigation = ({data}) => {
   };
   console.log(data)
   const renderTableForInvestigation = () => {
+    
     if (selectedInvestigation === "HAEMATOLOGY") {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
             { label: "Hemoglobin", data: data.haematology.hemoglobin, rr: data.haematology.hemoglobin_reference_range, unit: data.haematology.hemoglobin_unit, comments: data.haematology.hemoglobin_comments },
             { label: "Total RBC", data: data.haematology.totalRBC, rr: data.haematology.totalRBC_reference_range, unit: data.haematology.totalRBC_unit, comments: data.haematology.totalRBC_comments },
@@ -54,6 +72,23 @@ const Investigation = ({data}) => {
     if (selectedInvestigation === "ROUTINE SUGAR TESTS") {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
             { label: "Glucose (F)", data: data.routinesugartests.glucose_f, rr: data.routinesugartests.glucose_f_reference_range, unit: data.routinesugartests.glucose_f_unit, comments: data.routinesugartests.glucose_f_comments },
             { label: "Glucose (PP)", data: data.routinesugartests.glucose_pp, rr: data.routinesugartests.glucose_pp_reference_range, unit: data.routinesugartests.glucose_pp_unit, comments: data.routinesugartests.glucose_pp_comments },
@@ -88,6 +123,23 @@ const Investigation = ({data}) => {
     if (selectedInvestigation === "RENAL FUNCTION TEST & ELECTROLYTES") {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
             { label: "Urea", data: data.renalfunctiontests_and_electrolytes.urea, rr: data.renalfunctiontests_and_electrolytes.urea_reference_range, unit: data.renalfunctiontests_and_electrolytes.urea_unit, comments: data.renalfunctiontests_and_electrolytes.urea_comments },
             { label: "BUN", data: data.renalfunctiontests_and_electrolytes.bun, rr: data.renalfunctiontests_and_electrolytes.bun_reference_range, unit: data.renalfunctiontests_and_electrolytes.bun_unit, comments: data.renalfunctiontests_and_electrolytes.bun_comments },
@@ -126,6 +178,23 @@ const Investigation = ({data}) => {
     if (selectedInvestigation === "LIPID PROFILE") {
   return (
     <div className="grid w-full grid-cols-1 gap-4">
+      <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
       {[
         { label: "Total Cholesterol", data: data.lipidProfile.totalCholesterol, rr: data.lipidProfile.totalCholesterol_reference_range, unit: data.lipidProfile.totalCholesterol_unit, comments: data.lipidProfile.totalCholesterol_comments },
         { label: "Triglycerides", data: data.lipidProfile.triglycerides, rr: data.lipidProfile.triglycerides_reference_range, unit: data.lipidProfile.triglycerides_unit, comments: data.lipidProfile.triglycerides_comments },
@@ -162,6 +231,23 @@ const Investigation = ({data}) => {
     if (selectedInvestigation === "LIVER FUNCTION TEST") {
   return (
     <div className="grid w-full grid-cols-1 gap-4">
+      <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
       {[
         { label: "Bilirubin - Total", data: data.liverFunctionTest.bilirubinTotal, rr: data.liverFunctionTest.bilirubinTotal_reference_range, unit: data.liverFunctionTest.bilirubinTotal_unit, comments: data.liverFunctionTest.bilirubinTotal_comments },
         { label: "Bilirubin - Direct", data: data.liverFunctionTest.bilirubinDirect, rr: data.liverFunctionTest.bilirubinDirect_reference_range, unit: data.liverFunctionTest.bilirubinDirect_unit, comments: data.liverFunctionTest.bilirubinDirect_comments },
@@ -201,6 +287,23 @@ const Investigation = ({data}) => {
 if (selectedInvestigation === "THYROID FUNCTION TEST") {
   return (
     <div className="grid w-full grid-cols-1 gap-4">
+      <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
       {[
         { label: "T3 - Triiodothyronine", data: data.thyroidFunctionTest.t3_triiodothyronine, rr: data.thyroidFunctionTest.t3_reference_range, unit: data.thyroidFunctionTest.t3_unit, comments: data.thyroidFunctionTest.t3_comments },
         { label: "T4 - Thyroxine", data: data.thyroidFunctionTest.t4_thyroxine, rr: data.thyroidFunctionTest.t4_reference_range, unit: data.thyroidFunctionTest.t4_unit, comments: data.thyroidFunctionTest.t4_comments },
@@ -262,6 +365,23 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
     if (selectedInvestigation === "COAGULATION TEST") {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
             { label: "Prothrombin Time (PT)", data: data.coagulationtest.prothrombin_time, unit: data.coagulationtest.prothrombin_time_unit, ref: data.coagulationtest.prothrombin_time_reference_range, comments: data.coagulationtest.prothrombin_time_comments },
             { label: "PT INR", data: data.coagulationtest.pt_inr, unit: data.coagulationtest.pt_inr_unit, ref: data.coagulationtest.pt_inr_reference_range, comments: data.coagulationtest.pt_inr_comments },
@@ -295,6 +415,23 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
     if (selectedInvestigation === "ENZYMES & CARDIAC Profile") {
       return (
         <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
             { label: "Acid Phosphatase", data: data.enzymesandcardiacprofile.acid_phosphatase, unit: data.enzymesandcardiacprofile.acid_phosphatase_unit, ref: data.enzymesandcardiacprofile.acid_phosphatase_reference_range, comments: data.enzymesandcardiacprofile.acid_phosphatase_comments },
             { label: "Adenosine Deaminase", data: data.enzymesandcardiacprofile.adenosine_deaminase, unit: data.enzymesandcardiacprofile.adenosine_deaminase_unit, ref: data.enzymesandcardiacprofile.adenosine_deaminase_reference_range, comments: data.enzymesandcardiacprofile.adenosine_deaminase_comments },
@@ -373,63 +510,104 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
 
     if (selectedInvestigation === "SEROLOGY") {
       return (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {"Name"}
+              </label>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
           {[
-            { label: "Screening For HIV I & II", data: data.serology.hiv },
-            { label: "HBsAg", data: data.serology.hbsAg },
-            { label: "HCV", data: data.serology.hcv },
-            { label: "VDRL", data: data.serology.vdrl },
-            { label: "Dengue NS1Ag", data: data.serology.dengueNS1Ag },
-            { label: "Dengue IgG", data: data.serology.dengueIgG },
-            { label: "Dengue IgM", data: data.serology.dengueIgM },
-            { label: "WIDAL", data: data.serology.widal },
+            { label: "Screening For HIV I & II", data: data.serology.screening_hiv, unit: data.serology.screening_hiv_unit, ref: data.serology.screening_hiv_reference_range, comments: data.serology.screening_hiv_comments },
+            { label: "HBsAg", data: data.serology.hbsAg, unit: data.serology.hbsAg_unit, ref: data.serology.hbsAg_reference_range, comments: data.serology.hbsAg_comments },
+            { label: "HCV", data: data.serology.hcv, unit: data.serology.hcv_unit, ref: data.serology.hcv_reference_range, comments: data.serology.hcv_comments },
+            { label: "VDRL", data: data.serology.vdrl, unit: data.serology.vdrl_unit, ref: data.serology.vdrl_reference_range, comments: data.serology.vdrl_comments },
+            { label: "Dengue NS1Ag", data: data.serology.dengueNS1Ag, unit: data.serology.dengueNS1Ag_unit, ref: data.serology.dengueNS1Ag_reference_range, comments: data.serology.dengueNS1Ag_comments },
+            { label: "Dengue IgG", data: data.serology.dengueIgG, unit: data.serology.dengueIgG_unit, ref: data.serology.dengueIgG_reference_range, comments: data.serology.dengueIgG_comments },
+            { label: "Dengue IgM", data: data.serology.dengueIgM, unit: data.serology.dengueIgM_unit, ref: data.serology.dengueIgM_reference_range, comments: data.serology.dengueIgM_comments },
+            { label: "WIDAL", data: data.serology.widal, unit: data.serology.widal_unit, ref: data.serology.widal_reference_range, comments: data.serology.widal_comments },
           ].map((item, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
                 {item.label}
               </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {item.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.ref || 'No reference range'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
               </div>
             </div>
           ))}
         </div>
       );
     }
+    
     
 
     if (selectedInvestigation === "MOTION") {
       return (
-        <div className="grid grid-cols-1 gap-4">
-          {[
-            "Colour (Motion)",
-            "Appearance (Motion)",
-            "Occult Blood",
-            "Cyst",
-            "Mucus",
-            "Pus Cells",
-            "Ova",
-            "RBCs",
-            "Others",
-          ].map((label, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
+        <div className="grid w-full grid-cols-1 gap-4">
+          <div className="grid grid-cols-5 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
-                {label}
+                {"Name"}
               </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {"Data"}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Reference range'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Unit'}
+              </div>
+              <div className="text-gray-700 font-medium text-sm md:text-base ms-4">
+                {'Comments'}
+              </div>
+            </div>
+          {[
+            { label: "Colour (Motion)", data: data.motion.colour_motion, unit: data.motion.colour_motion_unit, ref: data.motion.colour_motion_reference_range, comments: data.motion.colour_motion_comments },
+            { label: "Appearance (Motion)", data: data.motion.appearance_motion, unit: data.motion.appearance_motion_unit, ref: data.motion.appearance_motion_reference_range, comments: data.motion.appearance_motion_comments },
+            { label: "Occult Blood", data: data.motion.occult_blood, unit: data.motion.occult_blood_unit, ref: data.motion.occult_blood_reference_range, comments: data.motion.occult_blood_comments },
+            { label: "Cyst", data: data.motion.cyst, unit: data.motion.cyst_unit, ref: data.motion.cyst_reference_range, comments: data.motion.cyst_comments },
+            { label: "Mucus", data: data.motion.mucus, unit: data.motion.mucus_unit, ref: data.motion.mucus_reference_range, comments: data.motion.mucus_comments },
+            { label: "Pus Cells", data: data.motion.pus_cells, unit: data.motion.pus_cells_unit, ref: data.motion.pus_cells_reference_range, comments: data.motion.pus_cells_comments },
+            { label: "Ova", data: data.motion.ova, unit: data.motion.ova_unit, ref: data.motion.ova_reference_range, comments: data.motion.ova_comments },
+            { label: "RBCs", data: data.motion.rbcs, unit: data.motion.rbcs_unit, ref: data.motion.rbcs_reference_range, comments: data.motion.rbcs_comments },
+            { label: "Others", data: data.motion.others, unit: data.motion.others_unit, ref: data.motion.others_reference_range, comments: data.motion.others_comments },
+          ].map((item, index) => (
+            <div key={index} className="grid grid-cols-5 gap-4 items-center">
+              <label className="text-gray-700 font-medium text-sm md:text-base">
+                {item.label}
+              </label>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.unit || 'No unit'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.ref || 'No reference range'}
+              </div>
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.comments || 'No comments'}
               </div>
             </div>
           ))}
@@ -437,47 +615,56 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
       );
     }
     
-    if (selectedInvestigation === "ROUTINE CULTURE & SENSITIVITY TEST") {
-      return (
-        <div className="grid grid-cols-1 gap-4">
-          {["Urine", "Motion", "Sputum", "Blood"].map((label, index) => (
-            <div key={index} className="grid grid-cols-4 gap-4 items-center">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {label}
-              </label>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
-              </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
-              </div>
-            </div>
-          ))}
-        </div>
-      );
-    }
+    
+    // if (selectedInvestigation === "ROUTINE CULTURE & SENSITIVITY TEST") {
+    //   return (
+    //     <div className="grid grid-cols-1 gap-4">
+    //       {["Urine", "Motion", "Sputum", "Blood"].map((label, index) => (
+    //         <div key={index} className="grid grid-cols-4 gap-4 items-center">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {label}
+    //           </label>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {data.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {data.data || 'No data available'}
+    //           </div>
+    //           <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
+    //             {data.data || 'No data available'}
+    //           </div>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
     
     if (selectedInvestigation === "Men's Pack") {
       return (
         <div className="grid grid-cols-1 gap-4">
-          {["PSA (Prostate Specific Antigen)"].map((label, index) => (
+          {[
+            {
+              label: "PSA (Prostate Specific Antigen)",
+              data: data.mensPack.psa,
+              unit: data.mensPack.psa_unit,
+              ref: data.mensPack.psa_reference_range,
+              comments: data.mensPack.psa_comments,
+            },
+          ].map((item, index) => (
             <div key={index} className="grid grid-cols-4 gap-4 items-center">
               <label className="text-gray-700 font-medium text-sm md:text-base">
-                {label}
+                {item.label}
               </label>
               <input
                 type="text"
                 placeholder="Unit (in %) or ng/ml"
                 className="p-2 border border-gray-300 rounded text-sm md:text-base w-full"
               />
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.data || 'No data available'}
               </div>
-              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-                {data.data || 'No data available'}
+              <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                {item.ref || 'No reference range'}
               </div>
             </div>
           ))}
@@ -485,86 +672,101 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
       );
     }
     
-    if (selectedInvestigation === "Women's Pack") {
-      return (
-        <div className="space-y-4">
-          {[
-            { label: "Mammogram", options: ["Normal", "Abnormal"] },
-            { label: "PAP Smear", options: ["Normal", "Abnormal"] },
-          ].map((item, index) => (
-            <div key={index} className="space-y-2">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
-                <option value="">Select Result</option>
-                {item.options.map((option, i) => (
-                  <option key={i} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      );
-    }
     
-    if (selectedInvestigation === "Occupational Profile") {
-      return (
-        <div className="space-y-4">
-          {[
-            { label: "Audiometry", options: ["Normal", "Abnormal"] },
-            { label: "PFT", options: ["Normal", "Abnormal"] },
-          ].map((item, index) => (
-            <div key={index} className="space-y-2">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
-                <option value="">Select Result</option>
-                {item.options.map((option, i) => (
-                  <option key={i} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      );
-    }
+    // if (selectedInvestigation === "Women's Pack") {
+    //   return (
+    //     <div className="space-y-4">
+    //       {[
+    //         { label: "Mammogram", options: ["Normal", "Abnormal"] },
+    //         { label: "PAP Smear", options: ["Normal", "Abnormal"] },
+    //       ].map((item, index) => (
+    //         <div key={index} className="space-y-2">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
+    //             <option value="">Select Result</option>
+    //             {item.options.map((option, i) => (
+    //               <option key={i} value={option}>
+    //                 {option}
+    //               </option>
+    //             ))}
+    //           </select>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
     
-    if (selectedInvestigation === "Others TEST") {
-      return (
-        <div className="space-y-4">
-          {[
-            { label: "Pathology", options: ["Normal", "Abnormal"] },
-          ].map((item, index) => (
-            <div key={index} className="space-y-2">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
-                <option value="">Select Result</option>
-                {item.options.map((option, i) => (
-                  <option key={i} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      );
-    }
+    // if (selectedInvestigation === "Occupational Profile") {
+    //   return (
+    //     <div className="space-y-4">
+    //       {[
+    //         { label: "Audiometry", options: ["Normal", "Abnormal"] },
+    //         { label: "PFT", options: ["Normal", "Abnormal"] },
+    //       ].map((item, index) => (
+    //         <div key={index} className="space-y-2">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
+    //             <option value="">Select Result</option>
+    //             {item.options.map((option, i) => (
+    //               <option key={i} value={option}>
+    //                 {option}
+    //               </option>
+    //             ))}
+    //           </select>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
+    
+    // if (selectedInvestigation === "Others TEST") {
+    //   return (
+    //     <div className="space-y-4">
+    //       {[
+    //         { label: "Pathology", options: ["Normal", "Abnormal"] },
+    //       ].map((item, index) => (
+    //         <div key={index} className="space-y-2">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
+    //             <option value="">Select Result</option>
+    //             {item.options.map((option, i) => (
+    //               <option key={i} value={option}>
+    //                 {option}
+    //               </option>
+    //             ))}
+    //           </select>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
     
     if (selectedInvestigation === "OPHTHALMIC REPORT") {
       return (
         <div className="space-y-4">
           {[
-            { label: "Vision", options: ["Normal", "Abnormal"] },
-            { label: "Color Vision", options: ["Normal", "Abnormal"] },
+            {
+              label: "Vision",
+              data: data.opthalamicreport.vision,
+              unit: data.opthalamicreport.vision_unit,
+              ref: data.opthalamicreport.vision_reference_range,
+              comments: data.opthalamicreport.vision_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "Color Vision",
+              data: data.opthalamicreport.color_vision,
+              unit: data.opthalamicreport.color_vision_unit,
+              ref: data.opthalamicreport.color_vision_reference_range,
+              comments: data.opthalamicreport.color_vision_comments,
+              options: ["Normal", "Abnormal"],
+            },
           ].map((item, index) => (
             <div key={index} className="space-y-2">
               <label className="text-gray-700 font-medium text-sm md:text-base">
@@ -573,53 +775,93 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
               <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
                 <option value="">Select Result</option>
                 {item.options.map((option, i) => (
-                  <option key={i} value={option}>
+                  <option key={i} value={option} selected={option === item.data}>
                     {option}
                   </option>
                 ))}
               </select>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.data || 'No data available'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.ref || 'No reference range'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.comments || 'No comments'}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       );
     }
     
-    if (selectedInvestigation === "X-RAY") {
-      return (
-        <div className="space-y-4">
-          {[
-            { label: "X-RAY Chest", options: ["Normal", "Abnormal"] },
-            { label: "X-RAY KUB", options: ["Normal", "Abnormal"] },
-            { label: "X-RAY Spine", options: ["Normal", "Abnormal"] },
-            { label: "X-RAY Pelvis", options: ["Normal", "Abnormal"] },
-            { label: "X-RAY Abdomen", options: ["Normal", "Abnormal"] },
-          ].map((item, index) => (
-            <div key={index} className="space-y-2">
-              <label className="text-gray-700 font-medium text-sm md:text-base">
-                {item.label}
-              </label>
-              <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
-                <option value="">Select Result</option>
-                {item.options.map((option, i) => (
-                  <option key={i} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ))}
-        </div>
-      );
-    }
+    
+    // if (selectedInvestigation === "X-RAY") {
+    //   return (
+    //     <div className="space-y-4">
+    //       {[
+    //         { label: "X-RAY Chest", options: ["Normal", "Abnormal"] },
+    //         { label: "X-RAY KUB", options: ["Normal", "Abnormal"] },
+    //         { label: "X-RAY Spine", options: ["Normal", "Abnormal"] },
+    //         { label: "X-RAY Pelvis", options: ["Normal", "Abnormal"] },
+    //         { label: "X-RAY Abdomen", options: ["Normal", "Abnormal"] },
+    //       ].map((item, index) => (
+    //         <div key={index} className="space-y-2">
+    //           <label className="text-gray-700 font-medium text-sm md:text-base">
+    //             {item.label}
+    //           </label>
+    //           <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
+    //             <option value="">Select Result</option>
+    //             {item.options.map((option, i) => (
+    //               <option key={i} value={option}>
+    //                 {option}
+    //               </option>
+    //             ))}
+    //           </select>
+    //         </div>
+    //       ))}
+    //     </div>
+    //   );
+    // }
     
     if (selectedInvestigation === "USG") {
       return (
         <div className="space-y-4">
           {[
-            { label: "USG Abdomen", options: ["Normal", "Abnormal"] },
-            { label: "USG KUB", options: ["Normal", "Abnormal"] },
-            { label: "USG Pelvis", options: ["Normal", "Abnormal"] },
-            { label: "USG Neck", options: ["Normal", "Abnormal"] },
+            {
+              label: "USG Abdomen",
+              data: data.usg_abdomen,
+              unit: data.usg_abdomen_unit,
+              ref: data.usg_abdomen_reference_range,
+              comments: data.usg_abdomen_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "USG KUB",
+              data: data.usg_kub,
+              unit: data.usg_kub_unit,
+              ref: data.usg_kub_reference_range,
+              comments: data.usg_kub_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "USG Pelvis",
+              data: data.usg_pelvis,
+              unit: data.usg_pelvis_unit,
+              ref: data.usg_pelvis_reference_range,
+              comments: data.usg_pelvis_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "USG Neck",
+              data: data.usg_neck,
+              unit: data.usg_neck_unit,
+              ref: data.usg_neck_reference_range,
+              comments: data.usg_neck_comments,
+              options: ["Normal", "Abnormal"],
+            },
           ].map((item, index) => (
             <div key={index} className="space-y-2">
               <label className="text-gray-700 font-medium text-sm md:text-base">
@@ -628,16 +870,28 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
               <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
                 <option value="">Select Result</option>
                 {item.options.map((option, i) => (
-                  <option key={i} value={option}>
+                  <option key={i} value={option} selected={option === item.data}>
                     {option}
                   </option>
                 ))}
               </select>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.data || 'No data available'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.ref || 'No reference range'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.comments || 'No comments'}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       );
     }
+    
     
     if (selectedInvestigation === "CT") {
       return (
@@ -670,10 +924,38 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
       return (
         <div className="space-y-4">
           {[
-            { label: "MRI Brain", options: ["Normal", "Abnormal"] },
-            { label: "MRI Spine", options: ["Normal", "Abnormal"] },
-            { label: "MRI Abdomen", options: ["Normal", "Abnormal"] },
-            { label: "MRI Pelvis", options: ["Normal", "Abnormal"] },
+            {
+              label: "MRI Brain",
+              data: data.mri_brain,
+              unit: data.mri_brain_unit,
+              ref: data.mri_brain_reference_range,
+              comments: data.mri_brain_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "MRI Spine",
+              data: data.mri_spine,
+              unit: data.mri_spine_unit,
+              ref: data.mri_spine_reference_range,
+              comments: data.mri_spine_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "MRI Abdomen",
+              data: data.mri_abdomen,
+              unit: data.mri_abdomen_unit,
+              ref: data.mri_abdomen_reference_range,
+              comments: data.mri_abdomen_comments,
+              options: ["Normal", "Abnormal"],
+            },
+            {
+              label: "MRI Pelvis",
+              data: data.mri_pelvis,
+              unit: data.mri_pelvis_unit,
+              ref: data.mri_pelvis_reference_range,
+              comments: data.mri_pelvis_comments,
+              options: ["Normal", "Abnormal"],
+            },
           ].map((item, index) => (
             <div key={index} className="space-y-2">
               <label className="text-gray-700 font-medium text-sm md:text-base">
@@ -682,16 +964,28 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
               <select className="p-2 border border-gray-300 rounded text-sm md:text-base w-full">
                 <option value="">Select Result</option>
                 {item.options.map((option, i) => (
-                  <option key={i} value={option}>
+                  <option key={i} value={option} selected={option === item.data}>
                     {option}
                   </option>
                 ))}
               </select>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.data || 'No data available'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.ref || 'No reference range'}
+                </div>
+                <div className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm flex items-center">
+                  {item.comments || 'No comments'}
+                </div>
+              </div>
             </div>
           ))}
         </div>
       );
     }
+    
         
     return null;
   };
