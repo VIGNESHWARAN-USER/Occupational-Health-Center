@@ -1,131 +1,65 @@
-import React, { useState } from "react";
-import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
 
-const FitnessPage = () => {
-  const [options, setOptions] = useState(["Height Work", "2", "3", "4"]);
-  const [selectedOptions, setSelectedOptions] = useState([]);
+const FitnessPage = ({ data }) => {
+  const [fitnessData, setFitnessData] = useState({
+    tremors: "",
+    romberg_test: "",
+    acrophobia: "",
+    trendelenberg_test: "",
+    jobNature: [],
+  });
 
-  const handleSelectChange = (e) => {
-    const selectedValue = e.target.value;
-
-    if (selectedValue) {
-      setSelectedOptions([...selectedOptions, selectedValue]);
-      setOptions(options.filter((option) => option !== selectedValue));
+  useEffect(() => {
+    if (data) {
+      setFitnessData({
+        tremors: data.tremors || "N/A",
+        romberg_test: data.romberg_test || "N/A",
+        acrophobia: data.acrophobia || "N/A",
+        trendelenberg_test: data.trendelenberg_test || "N/A",
+        jobNature: data.job_nature ? data.job_nature.split(", ") : [],
+        comments: data.comments,
+      });
     }
-  };
-
-  const handleRemoveSelected = (value) => {
-    setOptions([...options, value]);
-    setSelectedOptions(selectedOptions.filter((option) => option !== value));
-  };
+  }, [data]);
 
   return (
-    <div className="bg-white min-h-screen p-6">
-      <h1 className="text-3xl font-bold mb-8">Fitness</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Tremors and Romberg Test */}
-        <div className="bg-blue-100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold mb-4">Tremors</h2>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="tremors" className="form-radio" />
-              <span>Positive</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="tremors" className="form-radio" />
-              <span>Negative</span>
-            </label>
-          </div>
+    <div className="bg-gradient-to-r from-indigo-50 to-blue-100 min-h-screen p-6 flex flex-col items-center">
+      <div className="max-w-4xl w-full bg-white shadow-xl rounded-xl p-8">
+        <h1 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Fitness Details</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {["Tremors", "Romberg Test", "Acrophobia", "Trendelenberg Test"].map((test, index) => (
+            <div
+              key={index}
+              className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-lg transition-all duration-300 hover:shadow-2xl"
+            >
+              <h2 className="text-xl font-semibold text-blue-800 mb-2">{test}</h2>
+              <p className="text-gray-700 text-lg">{fitnessData[test.toLowerCase().replace(/ /g, "_")]}</p>
+            </div>
+          ))}
         </div>
 
-        <div className="bg-blue-100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold mb-4">Romberg Test</h2>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="romberg" className="form-radio" />
-              <span>Positive</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="romberg" className="form-radio" />
-              <span>Negative</span>
-            </label>
-          </div>
+        {/* Job Nature */}
+        <div
+          className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-lg mt-8 transition-all duration-300 hover:shadow-2xl"
+        >
+          <h2 className="text-xl font-semibold text-blue-800 mb-4">Job Nature</h2>
+          {fitnessData.jobNature.length > 0 ? (
+            <ul className="list-disc pl-6 text-gray-700 text-lg">
+              {fitnessData.jobNature.map((job, index) => (
+                <li key={index}>{job}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-700 text-lg">No job nature specified.</p>
+          )}
         </div>
 
-        {/* Acrophobia and Trendelenberg Test */}
-        <div className="bg-blue-100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold mb-4">Acrophobia</h2>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="acrophobia" className="form-radio" />
-              <span>Positive</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="acrophobia" className="form-radio" />
-              <span>Negative</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="bg-blue-100 p-6 rounded-lg shadow-md">
-          <h2 className="text-lg font-semibold mb-4">Trendelenberg Test</h2>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="trendelenberg" className="form-radio" />
-              <span>Positive</span>
-            </label>
-            <label className="flex items-center space-x-2">
-              <input type="radio" name="trendelenberg" className="form-radio" />
-              <span>Negative</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Multi-Select Dropdown */}
-      <div className="bg-blue-100 p-6 rounded-lg shadow-md mt-8">
-        <h2 className="text-lg font-semibold mb-4">Job Nature (Select Multiple Options)</h2>
-        <div className="relative mb-4">
-          <select
-            id="jobNature"
-            className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            onChange={handleSelectChange}
-            value="" // Reset dropdown after each selection
-          >
-            <option value="" disabled>
-              -- Select an option --
-            </option>
-            {options.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Options:</h3>
-          <div className="space-y-2">
-            {selectedOptions.length > 0 ? (
-              selectedOptions.map((option, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border border-gray-300 rounded-md shadow-sm"
-                >
-                  <span>{option}</span>
-                  <button
-                    className="text-red-500 text-sm font-medium hover:underline"
-                    onClick={() => handleRemoveSelected(option)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500">No options selected.</p>
-            )}
-          </div>
+        {/* Comments */}
+        <div
+          className="bg-gradient-to-r from-blue-50 to-blue-100 p-6 rounded-lg shadow-lg mt-8 transition-all duration-300 hover:shadow-2xl"
+        >
+          <h2 className="text-xl font-semibold text-blue-800 mb-4">Comments</h2>
+          <p className="text-gray-700 text-lg">{fitnessData.comments || "No comments available."}</p>
         </div>
       </div>
     </div>

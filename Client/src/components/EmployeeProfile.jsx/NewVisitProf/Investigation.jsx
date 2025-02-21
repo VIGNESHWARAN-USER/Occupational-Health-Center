@@ -995,7 +995,7 @@ if (selectedInvestigation === "THYROID FUNCTION TEST") {
       
       {/* Form Container */}
       <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-        <h2 className="text-lg font-bold mb-4">Select Investigation Form</h2>
+        <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Select Investigation Form</h2>
         <select
           value={selectedInvestigation}
           onChange={handleInvestigationChange}

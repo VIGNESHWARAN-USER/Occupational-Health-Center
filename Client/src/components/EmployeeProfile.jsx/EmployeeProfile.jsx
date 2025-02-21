@@ -1,60 +1,57 @@
-import Sidebar from "../Sidebar";;
+import Sidebar from "../Sidebar";
 import { FaUserCircle } from "react-icons/fa";
 import { useLocation } from "react-router-dom";
 import NewVisit from "./NewVisitProf/NewVisit";
 
 const EmployeeProfile = () => {
+  const { data } = useLocation().state || {};
 
-  const {data} = useLocation().state || []
   return (
-    <div className="flex min-h-screen">
+    <div className="h-screen w-full flex bg-[#8fcadd]">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
       <div className="flex-1 h-screen overflow-auto p-6">
-        {/* Employee Details Section */}
-        <div className="flex p-6 rounded-xl bg-white shadow-md space-x-6">
+        {/* Employee Profile Card */}
+        <div className="bg-white shadow-lg rounded-xl p-6 flex space-x-8 items-center transition-all duration-300 hover:shadow-xl border-t-4 border-blue-600">
           {/* Employee Icon and Basic Details */}
           <div className="flex flex-col items-center w-1/5 space-y-4">
-            <FaUserCircle className="text-gray-500 text-8xl" />
-            <h2 className="text-lg font-bold">Employee</h2>
+            <FaUserCircle className="text-blue-600 text-9xl" />
+            <h2 className="text-xl font-bold text-blue-700">{data.name || "Employee"}</h2>
+            <span className="text-sm text-gray-500 font-medium">Emp ID: {data.id || "N/A"}</span>
           </div>
 
           {/* Employee Information */}
-          <div className="flex">
-            <div className="flex flex-col">
-            <p className="me-8 p-2">
-                <span className="font-medium">Name:</span> {data.name}
+          <div className="flex flex-1">
+            {/* Left Details */}
+            <div className="flex flex-col space-y-3 w-1/2">
+              <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <span className="font-semibold text-gray-900">Aadhar No.:</span> {data.aadhar || "N/A"}
               </p>
-              <p className="me-8 p-2">
-                <span className="font-medium">Emp ID:</span> {data.id}
+              <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <span className="font-semibold text-gray-900">Department:</span> {data.department || "N/A"}
               </p>
-              <p className="me-8 p-2">
-                <span className="font-medium">Aadhar No.:</span> {data.aadhar}
+            </div>
+
+            {/* Vertical Separator */}
+            <div className="w-[2px] bg-gray-300 mx-6"></div>
+
+            {/* Right Details */}
+            <div className="flex flex-col space-y-3 w-1/2">
+              <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <span className="font-semibold text-gray-900">Phone No.:</span> {data.phone_Office || "N/A"}
               </p>
-              
-              </div>
-              <div className="flex flex-col">
-              <hr className="w-1 rounded-lg h-32 bg-gray-600 me-8"/>
-              </div>
-              <div className="flex flex-col">
-              <p className="me-8 p-2">
-                <span className="font-medium">Department:</span> {data.department}
-              </p>
-              <p className="me-8 p-2">
-                <span className="font-medium">Phone No.:</span> {data.phone_Office}
-              </p>
-              <p className="me-8 p-2">
-                <span className="font-medium">Blood Group:</span> {data.bloodgrp}
+              <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
+                <span className="font-semibold text-gray-900">Blood Group:</span> {data.bloodgrp || "N/A"}
               </p>
             </div>
           </div>
         </div>
 
-        
-        <div className="">
-          <NewVisit data={data}/>
+        {/* New Visit Section */}
+        <div className="mt-6">
+          <NewVisit data={data} />
         </div>
       </div>
     </div>

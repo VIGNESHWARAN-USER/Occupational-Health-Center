@@ -94,6 +94,7 @@ def fetchdata(request):
             opthalamicreport_dict = get_latest_records(models.OphthalmicReport)
             usg_dict = get_latest_records(models.USGReport)
             mri_dict = get_latest_records(models.MRIReport)
+            fitnessassessment_dict=get_latest_records(models.FitnessAssessment)
 
             # Merge data
             merged_data = []
@@ -115,6 +116,7 @@ def fetchdata(request):
                 emp["opthalamicreport"] = opthalamicreport_dict.get(emp_no, {})
                 emp["usg"] = usg_dict.get(emp_no, {})
                 emp["mri"] = mri_dict.get(emp_no, {})
+                emp["fitnessassessment"]=fitnessassessment_dict.get(emp_no,{})
 
                 merged_data.append(emp)
 
@@ -130,7 +132,56 @@ def fetchdata(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
+def addEntries(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            
+          
+            if not data.get('emp_no'):
+                return JsonResponse({"error": "Employee number is required"}, status=400)
 
+            print(data['emp_no'])  
+            models.Dashboard.objects.create(
+                emp_no = data['emp_no'],
+                type_of_visit = data['formDataDashboard']['typeofVisit'],
+                type = data['formDataDashboard']['category'],
+                register = data['formDataDashboard']['register'],
+                purpose = data['formDataDashboard']['purpose']
+            )
+
+            return JsonResponse({"message": "Entry added successfully"}, status=200)
+        
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error"}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+from django.db.models import Count
+from .models import Dashboard  
+
+@csrf_exempt
+def dashboard_stats(request):
+    try:
+        type_counts = Dashboard.objects.values("type").annotate(count=Count("type"))
+        type_of_visit_counts = Dashboard.objects.values("type_of_visit").annotate(count=Count("type_of_visit"))
+        register_counts = Dashboard.objects.values("register").annotate(count=Count("register"))
+        purpose_counts = Dashboard.objects.values("purpose").annotate(count=Count("purpose"))
+
+        data = {
+            "type_counts": list(type_counts),
+            "type_of_visit_counts": list(type_of_visit_counts),
+            "register_counts": list(register_counts),
+            "purpose_counts": list(purpose_counts),
+        }
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({"error": str(e)},status=500)
 
 @csrf_exempt
 def addbasicdetails(request):

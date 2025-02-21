@@ -790,22 +790,15 @@ class MRIReport(models.Model):
         return f"MRI Report {self.id}"
 
 
-# class Appointment(models.Model):
-#     employee_id = models.CharField(max_length=100) 
-
-#     role = models.CharField(max_length=100, blank=True)
-#     name = models.CharField(max_length=255, blank=True)
-#     organization = models.CharField(max_length=255, blank=True)
-#     aadhar_no = models.CharField(max_length=20, unique=True, blank=True)
-#     contractor_name = models.CharField(max_length=255, blank=True)
-#     purpose = models.TextField(blank=True)
-#     appointment_date = models.DateField(null=True, blank=True)
-#     date = models.DateField(null=True, blank=True)
-#     time = models.TimeField(null=True, blank=True)
-#     booked_by = models.CharField(max_length=255, blank=True)
-
-#     def _str_(self):
-        # return self.name if self.name else self.employee_id
+class Dashboard(models.Model):
+    emp_no = models.TextField(max_length=200)
+    type = models.TextField(max_length=255)  # Represents "Type"
+    type_of_visit = models.TextField(max_length=255)  # Represents "Type of visit"
+    register = models.TextField(max_length=255)
+    purpose = models.TextField(max_length=255)
+    date = models.DateField(auto_now=True)
+    def _str_(self):
+        return f"Dashboard Record {self.id}"
 
 
 class Appointment(models.Model):
@@ -833,3 +826,22 @@ class Appointment(models.Model):
 
     def str(self):
         return f"{self.name} - {self.appointment_date}"
+    
+
+class FitnessAssessment(models.Model):
+    class PositiveNegativeChoices(models.TextChoices):
+        POSITIVE = 'Positive', 'Positive'
+        NEGATIVE = 'Negative', 'Negative'
+
+    emp_no = models.CharField(max_length = 20)
+    tremors = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
+    romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
+    acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
+    trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
+
+    job_nature = models.TextField()
+    overall_fitness = models.TextField()
+    comments = models.TextField(blank=True, null=True)
+
+    def _str_(self):
+        return f"Fitness Assessment for {self.emp_no.emp_no} - {self.overall_fitness}"

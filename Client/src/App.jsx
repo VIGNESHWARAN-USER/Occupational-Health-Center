@@ -19,7 +19,7 @@ import ProtectedRoute from './ProtectedRoute'
 
 function App() {
   return (
-    <div className='bg-blue-100 h-screen'>
+    <div className='bg-[#8fcadd] h-screen'>
       <Routes>
       <Route path="*" element={<Navigate to="/" />} />
       <Route path='/' element={<Login/>}/>

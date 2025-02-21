@@ -1,119 +1,77 @@
-import React, { useEffect } from 'react'
-import img from '../assets/logo.png'
-import { Link, useNavigate } from 'react-router-dom'
-const Sidebar = () => {
-  const navigate  = useNavigate()
-  const accessLevel = localStorage.getItem('accessLevel')
-  console.log(accessLevel)
-  if(accessLevel === 'nurse'){
-  return (
-    <div className="w-1/5 bg-blue-200 h-full text-gray-900 font-medium flex flex-col">
-        <div className="">
-          <img src = {img} className='w-64 mt-16 mb-8 flex ml-8'/>
-        </div>
-        <div className='p-2 m-4 rounded-xl'>
-            <div className="flex flex-col">
-                <Link to= "../dashboard" className="py-2 px-3 hover:bg-blue-300 ms-8 rounded-md">
-                Dashboard
-                </Link>
-                <Link to='../searchemployee' className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                Employee Profile
-                </Link>
-                <Link  to='../newvisit' className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                New Visit
-                </Link>
-                <Link to='../eventsandcamps' className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                Events & Camps
-                </Link>
-                <Link to='../recordsfilters'className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                Records & Filters
-                </Link>
-                <Link to='../mockdrills' className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                Mock Drills
-                </Link>
-                <Link to = '../appointments' className="py-2  px-3 hover:bg-blue-300 ms-8 mt-2  rounded-md">
-                Appointments
-                </Link>
-            </div>
-        </div>
-        <div className="flex items-center justify-center p-4">
-          <button onClick={()=>navigate("../login")} className=" py-2 px-8 bg-blue-600 text-white mt-8 font-medium rounded-md">
-            Logout
-          </button>
-        </div>
-      </div>
-  )}
-  else if(accessLevel === 'doctor')
-  {
-    return (
-      <div className="w-1/5 bg-blue-200 h-full text-gray-900 font-medium flex flex-col">
-          <div className="">
-            <img src = {img} className='w-64 mt-16 mb-8 flex ml-10'/>
-          </div>
-          <div className='p-2 m-4 rounded-xl'>
-              <div className="flex flex-col">
-                  <Link to= "../docdashboard" className="py-2 px-3 hover:bg-blue-300 text-center rounded-md">
-                  Dashboard
-                  </Link>
-                  <Link to='../docsearchemployee' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Employee Profile
-                  </Link>
-                  <Link  to='../docnewvisit' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  New Visit
-                  </Link>
-                  <Link to='../doceventsandcamps' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Events & Camps
-                  </Link>
-                  <Link to='../docrecordsfilters'className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Records & Filters
-                  </Link>
-                  <Link to='../docmockdrills' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Mock Drills
-                  </Link>
-                  <Link to = '../docappointments' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Appointments
-                  </Link>
-                  <Link to = '../docreviewpeople' className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                  Review People
-                  </Link>
-              </div>
-          </div>
-          <div className="flex items-center justify-center p-4">
-            <button onClick={()=>navigate("../login")} className=" py-2 px-8 bg-blue-600 text-white mt-8 font-medium rounded-md">
-              Logout
-            </button>
-          </div>
-        </div>
-    )
-  }
-  else{
-    return (
-        <div className="w-1/5 bg-blue-200 h-full text-gray-900 font-medium flex flex-col">
-            <div className="">
-              <img src = {img} className='w-64 mt-16 mb-8 flex ml-10'/>
-            </div>
-            <div className='p-2 m-4 rounded-xl'>
-                <div className="flex flex-col">
-                    <Link to= "../admindashboard" className="py-2 px-3 hover:bg-blue-300 text-center rounded-md">
-                    Dashboard
-                    </Link>
-                    <Link to="../addmember" className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                    Add Members
-                    </Link>
-                    <Link to="../dropdown" className="py-2  px-3 hover:bg-blue-300 text-center mt-2  rounded-md">
-                    Dynamic Dropdown
-                    </Link>
-                    
-                </div>
-            </div>
-            <div className="flex items-center justify-center p-4">
-              <button onClick={()=>navigate("../login")} className=" py-2 px-8 bg-blue-600 text-white mt-52 font-medium rounded-md">
-                Logout
-              </button>
-            </div>
-          </div>
-      )
-  }
-}
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { FaUserMd, FaUsers, FaRegCalendarAlt, FaSignOutAlt } from "react-icons/fa";
+import { MdDashboard, MdEvent, MdFilterList, MdLibraryAdd } from "react-icons/md";
+import img from "../assets/logo.png";
 
-export default Sidebar
+const Sidebar = () => {
+  const navigate = useNavigate();
+  const accessLevel = localStorage.getItem("accessLevel");
+
+  // Define menus for different roles
+  const menus = {
+    nurse: [
+      { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
+      { name: "Employee Profile", to: "../searchemployee", icon: <FaUsers /> },
+      { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
+      { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
+      { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
+      { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
+      { name: "Appointments", to: "../appointments", icon: <FaRegCalendarAlt /> },
+    ],
+    doctor: [
+      { name: "Dashboard", to: "../docdashboard", icon: <MdDashboard /> },
+      { name: "Employee Profile", to: "../docsearchemployee", icon: <FaUsers /> },
+      { name: "New Visit", to: "../docnewvisit", icon: <FaUserMd /> },
+      { name: "Events & Camps", to: "../doceventsandcamps", icon: <MdEvent /> },
+      { name: "Records & Filters", to: "../docrecordsfilters", icon: <MdFilterList /> },
+      { name: "Mock Drills", to: "../docmockdrills", icon: <MdLibraryAdd /> },
+      { name: "Appointments", to: "../docappointments", icon: <FaRegCalendarAlt /> },
+      { name: "Review People", to: "../docreviewpeople", icon: <FaUsers /> },
+    ],
+    admin: [
+      { name: "Dashboard", to: "../admindashboard", icon: <MdDashboard /> },
+      { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
+      { name: "Dynamic Dropdown", to: "../dropdown", icon: <MdFilterList /> },
+    ],
+  };
+
+  // Get current menu based on access level
+  const currentMenu = menus[accessLevel] || [];
+
+  return (
+    <div className="w-1/5 h-full bg-gradient-to-b from-blue-600 to-blue-400 text-white flex flex-col shadow-lg">
+      {/* Logo */}
+      <div className="p-6 flex justify-center">
+        <img src={img} alt="Logo" className="w-50 shadow-2xl p-4 rounded-lg bg-white" />
+      </div>
+
+      {/* Menu Items */}
+      <nav className="flex-1">
+        {currentMenu.map((item, index) => (
+          <Link
+            key={index}
+            to={item.to}
+            className="flex items-center space-x-3 p-3 mx-4 my-2 text-lg rounded-lg font-bold transition hover:bg-blue-300 hover:scale-105 hover:text-blue-600"
+          >
+            {item.icon}
+            <span>{item.name}</span>
+          </Link>
+        ))}
+      </nav>
+
+      {/* Logout Button */}
+      <div className="p-4">
+        <button
+          onClick={() => navigate("../login")}
+          className="w-full flex items-center justify-center space-x-3 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition"
+        >
+          <FaSignOutAlt />
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Sidebar;

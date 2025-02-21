@@ -68,11 +68,13 @@ const MedicalHistory = () => {
               />
             </div>
           </div>
+          
+          <div className="space-y-4">
           <div>
             <label>Alcohol Consumption</label>
-            <div className="space-y-2">
-              <input type="radio" name="alcohol" value="yes" /> Yes
-              <input type="radio" name="alcohol" value="no" /> No
+            <div className="flex items-center space-x-4">
+              <input type="radio" name="smoking" value="yes" /> Yes
+              <input type="radio" name="smoking" value="no" /> No
               <input
                 type="text"
                 placeholder="Years of Drinking"
@@ -80,21 +82,23 @@ const MedicalHistory = () => {
               />
               <input
                 type="text"
-                placeholder="How Often (e.g., Occasional)"
+                placeholder="Consuming per day"
                 className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
+          </div>
           <div>
-            <label>Paan/Beetel Chewing</label>
-            <div className="space-y-2">
-              <input type="radio" name="paan" value="yes" /> Yes
-              <input type="radio" name="paan" value="no" /> No
+            <label>Paan/Beetle Chewer</label>
+            <div className="flex items-center space-x-4">
+              <input type="radio" name="smoking" value="yes" /> Yes
+              <input type="radio" name="smoking" value="no" /> No
               <input
                 type="text"
                 placeholder="Years of Chewing"
                 className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+             
             </div>
           </div>
           <div>
@@ -160,68 +164,55 @@ const MedicalHistory = () => {
             className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
           ></textarea>
           <div>
-            <label>Children</label>
-            <div className="space-y-2">
-              <input
-                type="number"
-                placeholder="Number of Children"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Child 1 - Sex"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="date"
-                placeholder="Child 1 - DOB"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Child 1 - Status"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Child 1 - Reason (if expired)"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Child 1 - Remarks (Health Condition)"
-                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+  <label>Children</label>
+  <div className="space-y-4">
+    <input
+      type="number"
+      placeholder="Number of Children"
+      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+    {/* Row for first three fields */}
+    <div className="flex space-x-4">
+      <input
+        type="text"
+        placeholder="Child 1 - Sex"
+        className="px-4 py-2 w-1/3 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <input
+        type="date"
+        placeholder="Child 1 - DOB"
+        className="px-4 py-2 w-1/3 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <input
+        type="text"
+        placeholder="Child 1 - Status"
+        className="px-4 py-2 w-1/3 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+    {/* Remaining fields */}
+    <input
+      type="text"
+      placeholder="Child 1 - Reason (if expired)"
+      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+    <input
+      type="text"
+      placeholder="Child 1 - Remarks (Health Condition)"
+      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+  </div>
+
           </div>
         </div>
       </div>
 
       {/* Family History */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold">Parents and Grandparents</h2>
         <div className="space-y-4">
-          <div>
-            <label>Father</label>
-            <input
-              type="text"
-              placeholder="Status"
-              className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-            />
-            <input
-              type="text"
-              placeholder="Reason (if expired)"
-              className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-            />
-            <input
-              type="text"
-              placeholder="Remarks (Health Condition)"
-              className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-            />
-          </div>
+          
           {/* Parents and Grandparents Section */}
-<div className="mb-6">
-  <h2 className="text-xl font-semibold">Parents and Grandparents</h2>
+          <div className="mb-6">
+  <h2 className="text-xl font-semibold mb-4">Parents and Grandparents</h2>
   {[
     { label: "Father" },
     { label: "Paternal Grand Father" },
@@ -230,23 +221,28 @@ const MedicalHistory = () => {
     { label: "Maternal Grand Father" },
     { label: "Maternal Grand Mother" },
   ].map(({ label }) => (
-    <div key={label} className="space-y-4">
-      <label>{label}</label>
-      <input
-        type="text"
-        placeholder="Status"
-        className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-      />
-      <input
-        type="text"
-        placeholder="Reason (if expired)"
-        className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-      />
-      <input
-        type="text"
-        placeholder="Remarks (Health Condition)"
-        className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-      />
+    <div key={label} className="mb-6">
+      {/* Label */}
+      <label className="block mb-2 font-medium text-gray-700">{label}</label>
+      
+      {/* Input Fields in a Row */}
+      <div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+        <input
+          type="text"
+          placeholder="Status"
+          className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <input
+          type="text"
+          placeholder="Reason (if expired)"
+          className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <input
+          type="text"
+          placeholder="Remarks (Health Condition)"
+          className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+      </div>
     </div>
   ))}
 </div>

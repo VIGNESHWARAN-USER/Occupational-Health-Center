@@ -9,6 +9,7 @@ import MedicalHistory from "./MedicalHistory"
 import { FaSearch } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { motion } from "framer-motion";
 
 
 const NewVisit = () => {
@@ -30,7 +31,12 @@ const NewVisit = () => {
   const [searchId, setSearchId] = useState(""); 
   const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [formData, setFormData] = useState([]);
-
+  const [formDataDashboard, setformDataDashboard] = useState({
+    typeofVisit: "Preventive",
+    category: "Employee",
+    register: "Pre employement",
+    purpose: "Medical Examination"
+  })
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -38,9 +44,46 @@ const NewVisit = () => {
       [name]: value,
     });
   };
-  console.log(formData.menspack);
+  
+  
+
+  const handleSubmitEntries = async (e) => {
+    e.preventDefault();
+  
+    if (!formData.emp_no) {
+      alert("Employee number is required!");
+      return;
+    }
+  
+    try {
+      const response = await axios.post("http://localhost:8000/addEntries", {
+        formDataDashboard, 
+        emp_no: formData.emp_no
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+  
+      if (response.status === 200) {
+        alert("Data submitted successfully!");
+      } else {
+        alert("Something went wrong!");
+      }
+    } catch (error) {
+      if (error.response && error.response.status === 400) {
+        alert(error.response.data.error); // Show user-friendly message
+      } else {
+        console.error("Error submitting form:", error);
+        alert("Error submitting data!");
+      }
+    }
+  };
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(formData)
     try {
       const response = await axios.post("http://localhost:8000/addEmployee", formData, {
         headers: {
@@ -88,7 +131,7 @@ const NewVisit = () => {
     setdata([]);
     setFormData([]);
   }
-
+  console.log(formDataDashboard)
   useEffect(() => {
     const fetchDetails = async () => {
       try {
@@ -191,53 +234,66 @@ const NewVisit = () => {
   };
 
   const handleRegisterChange = (e) => {
+    formDataDashboard.register = e.target.value;
     const selectedRegister = e.target.value;
     setRegister(selectedRegister);
     const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
     setPurpose(autoPurpose);
+    formDataDashboard.purpose = autoPurpose;
   };
 
   return (
-    <div className="h-screen w-full flex">
+    <div className="h-screen flex bg-[#8fcadd]">
       <Sidebar/>
-      <div className="w-4/5 p-6 overflow-auto">
-        <h2 className="text-xl font-bold mb-4">New Visit</h2>
+      <div className="w-4/5 p-8 overflow-y-auto">
+      <h2 className="text-4xl font-bold mb-8 text-gray-800">New Visit</h2>
+        
+      <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="p-1 overflow-y-auto">
+        <motion.div className="bg-white p-8 rounded-lg shadow-lg"
+        >
+        
         <div className="bg-white rounded-lg w-full p-6 shadow-lg">
           <div className="w-full flex items-center mb-8 space-x-4">
-            <h1 className="text-2xl font-bold">Get User</h1>
+            <h1 className="text-2xl font-semibold text-gray-700">Get User</h1>
             <div className="relative flex-grow">
-              <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-700" />
-              <input
-                type="text"
-                placeholder="Search By Employee ID"
-                className="w-full bg-blue-100 py-2 pl-10 pr-4 rounded-lg"
-                value={searchId}
-                onChange={(e)=>{setSearchId(e.target.value)}}
-              />
-            </div>
-            <div className="flex">
-            <button onClick={handleSearch} className="bg-blue-500 text-white h-14 py-2 px-4 w-20 rounded-lg font-medium flex-shrink-0 w-1/4">
+  {/* Search Icon */}
+  <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-4 text-gray-400" />
+
+  {/* Input Field */}
+  <input
+    type="text"
+    placeholder="Search by Employee ID"
+    className="w-full bg-white py-3 pl-12 pr-5 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out"
+    value={searchId}
+    onChange={(e) => setSearchId(e.target.value)}
+  />
+</div>
+
+            <div className="flex flex-grow">
+            <button onClick={handleSearch} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
               Get
             </button>
-            <button onClick={handleClear} className="bg-blue-500 text-white h-14 w-20 ms-4 rounded-lg font-medium flex-shrink-0 w-1/4">
+            <button onClick={handleClear} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ml-2 mr-2">
               Clear
             </button>
-            <div className="flex justify-end">
-            <button onClick={handleSubmit} className="bg-blue-500 text-white h-14 w-20 ms-4 rounded-lg font-medium flex-shrink-0 w-1/4">
-              Add Data
+            <button onClick={handleSubmitEntries} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+              Add Entry
             </button>
-          </div>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-6">
             {/* Type Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
                 Select Type
               </label>
               <select
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                onChange={(e) => setType(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                onChange={(e) => {setType(e.target.value); formDataDashboard.category = e.target.value}}
               >
                 <option>Employee</option>
                 <option>Contractor</option>
@@ -247,12 +303,12 @@ const NewVisit = () => {
 
             {/* Visit Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
                 Select Type of Visit
               </label>
               <select
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                onChange={(e) => setVisit(e.target.value)}
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                onChange={(e) => {setVisit(e.target.value); formDataDashboard.typeofVisit = e.target.value}}
               >
                 <option>Preventive</option>
                 <option>Curative</option>
@@ -261,11 +317,11 @@ const NewVisit = () => {
 
             {/* Register Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
                 Select Register
               </label>
               <select
-                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                 value={register}
                 onChange={handleRegisterChange}
               >
@@ -277,7 +333,7 @@ const NewVisit = () => {
 
             {/* Purpose (Auto-selected) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-gray-700 text-sm font-bold mb-2">
                 Purpose
               </label>
               <input
@@ -291,22 +347,35 @@ const NewVisit = () => {
           
           <hr className="h-4 text-blue-100"/>
         <div className="border-b border-gray-200 mb-4">
-          <nav className="-mb-px flex justify-evenly space-x-4" aria-label="Tabs">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium  text-m focus:outline-none ${activeTab === tab.id? "border-blue-500 text-blue-600": "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"}`}>
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+        <nav className="relative flex justify-evenly space-x-4 bg-gray-50 p-3 rounded-lg shadow-sm" aria-label="Tabs">
+  {tabs.map((tab) => (
+    <button
+      key={tab.id}
+      onClick={() => setActiveTab(tab.id)}
+      aria-selected={activeTab === tab.id}
+      className={`relative whitespace-nowrap font-bold py-2 px-4 font-medium text-sm focus:outline-none transition-all duration-300 ease-in-out
+        ${activeTab === tab.id 
+          ? "text-blue-600" 
+          : "text-gray-500 hover:text-gray-700"}`}
+    >
+      {tab.label}
+      {/* Active Tab Indicator */}
+      <span
+        className={`absolute left-0 bottom-0 h-1 w-full rounded-full bg-blue-500 transition-all duration-300 ease-in-out
+          ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
+      ></span>
+    </button>
+  ))}
+</nav>
+
+
+
           {activeTab === "BasicDetails" && (
              <div className="mt-8 p-4">
              <h2 className="text-lg font-medium mb-4">Basic Details</h2>
              <div className="grid grid-cols-3 mb-16 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Name</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Name</label>
                  <input
                    name = "name"
                    value={formData.name}
@@ -317,7 +386,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Date of Birth (dd/mm/yyyy)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Birth (dd/mm/yyyy)</label>
                  <input
                    name = "dob"
                    value={formData.dob}
@@ -328,7 +397,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Sex</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Sex</label>
                  <select
                    name="sex"
                    value={formData.sex || ""}
@@ -341,7 +410,7 @@ const NewVisit = () => {
                  </select>
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Aadhar No.</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Aadhar No.</label>
                  <input
                    name = "aadhar"
                    value={formData.aadhar}
@@ -352,7 +421,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Blood Group</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Blood Group</label>
                  <input
                    name = "bloodgrp"
                    value={formData.bloodgrp}
@@ -363,7 +432,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Identification Marks</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Marks</label>
                  <input
                    name = "identification_marks"
                    value={formData.identification_marks}
@@ -374,7 +443,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Marital Status</label>
                  <select
                    name="marital_status"
                    value={formData.marital_status || ""}
@@ -391,7 +460,7 @@ const NewVisit = () => {
              <h2 className="text-lg font-medium my-4">Employment Details</h2>
              <div className="grid grid-cols-3 mb-16 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Employee Number</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Employee Number</label>
                  <input
                    name = "emp_no"
                    value={formData.emp_no}
@@ -402,7 +471,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                   <label className="block text-sm font-medium text-gray-700">Employer</label>
+                   <label className="block text-gray-700 text-sm font-bold mb-2">Employer</label>
                    <input
                      name="employer"
                      value={formData.employer || ""}
@@ -413,7 +482,7 @@ const NewVisit = () => {
                    />
                  </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Designation</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Designation</label>
                  <input
                    name = "designation"
                    value={formData.designation}
@@ -424,7 +493,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Department</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Department</label>
                  <input
                    name = "department"
                    value={formData.department}
@@ -435,7 +504,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Nature of Job</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Nature of Job</label>
                  <input
                    name = "job_nature"
                    value={formData.job_nature}
@@ -446,7 +515,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Date of Joining</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Joining</label>
                  <input
                    name = "doj"
                    value={formData.doj}
@@ -458,7 +527,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Mode of Joining</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Mode of Joining</label>
                  <select
                  name="moj"
                  value={formData.moj || ""}
@@ -475,7 +544,7 @@ const NewVisit = () => {
              <h2 className="text-lg font-medium my-4">Contact Details</h2>
              <div className="grid grid-cols-3 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Phone (Personal)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Phone (Personal)</label>
                  <input
                  name = "phone_personal"
                    value={formData.phone_Personal}
@@ -486,7 +555,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Mail Id (Personal)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Personal)</label>
                  <input
                  name = "mail_id_Personal"
                    value={formData.mail_id_Personal}
@@ -497,7 +566,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Person</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Person</label>
                  <input
                  name='emergency_contact_person'
                    value={formData.emergency_contact_person}
@@ -508,7 +577,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Phone (Office)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Phone (Office)</label>
                  <input
                  name='phone_Office'
                    value={formData.phone_Office}
@@ -519,7 +588,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Mail Id (Office)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Office)</label>
                  <input
                  name = 'mail_id_Office'
                    value={formData.mail_id_Office}
@@ -530,7 +599,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Relation</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Relation</label>
                  <input
                  name='emergency_contact_relation'
                    value={formData.emergency_contact_relation}
@@ -541,7 +610,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Mail Id (Emergency Contact Person)</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Emergency Contact Person)</label>
                  <input
                  name='mail_id_Emergency_Contact_Person'
                    value={formData.mail_id_Emergency_Contact_Person}
@@ -552,7 +621,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Phone</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Phone</label>
                  <input
                  name='emergency_contact_phone'
                    value={formData.emergency_contact_phone}
@@ -563,7 +632,7 @@ const NewVisit = () => {
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 ">Address</label>
+                 <label className="block text-gray-700 text-sm font-bold mb-2 ">Address</label>
                  <textarea
                  name = 'address'
                    value={formData.address}
@@ -574,7 +643,9 @@ const NewVisit = () => {
                  />
                </div>
              </div>
-             
+             <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+              Add Basic Details
+            </button>
              
            </div>
           )}
@@ -585,6 +656,8 @@ const NewVisit = () => {
           {activeTab === "MedicalHistory" && <MedicalHistory data={data}/>}
         </div>
         </div>
+        </motion.div>
+      </motion.div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import leftlogin from '../../assets/login-left.png';
 import jswlogo from '../../assets/logo.png';
+import { IoIosEyeOff, IoIosEye } from "react-icons/io";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -11,13 +12,6 @@ const Login = () => {
   const [err, setErr] = useState("");
   
   const navigate = useNavigate();
-  useEffect(()=>{
-    if(!localStorage.getItem('accessLevel'))
-    {
-      navigate(-1);
-    }
-    localStorage.setItem('accessLevel', "");
-  }, [])
   const login = async(e) => {
     e.preventDefault();
     if (name.length === 0) setErr("Enter username");
@@ -86,10 +80,10 @@ const Login = () => {
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-2/4 transform -translate-y-1/2 text-gray-500"
+                  className="absolute right-3 top-2/4 transform -translate-y-1/2 text-xl text-blue-900"
                   onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? <IoIosEyeOff /> : <IoIosEye />}
                 </button>
               </div>
             </div>
@@ -102,7 +96,7 @@ const Login = () => {
             <p className="text-red-600 font-medium text-sm md:text-base mb-4">{err}</p>
             <button
               type="submit"
-              className="w-full bg-blue-800 text-white py-2 rounded-lg hover:bg-blue-900 transition duration-300"
+              className="mt-4 bg-blue-500 w-full text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
             >
               Login
             </button>

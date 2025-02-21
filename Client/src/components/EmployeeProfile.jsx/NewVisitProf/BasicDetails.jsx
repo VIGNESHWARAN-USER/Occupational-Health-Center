@@ -2,158 +2,64 @@ import React from 'react';
 
 const BasicDetails = ({ data }) => {
   return (
-    <div className="mt-8 p-4">
-      <h2 className="text-lg font-medium mb-4">Basic Details</h2>
-      <div className="grid grid-cols-3 mb-16 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Name</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.name || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Date of Birth (dd/mm/yyyy)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.dob || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Sex</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.sex || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Aadhar No.</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.aadhar || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Blood Group</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.bloodgrp || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Identification Marks</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.identification_marks || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Marital Status</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.marital_status || 'No data available'}
-          </div>
-        </div>
+    <div className="mt-8 p-6 bg-white rounded-xl shadow-md">
+      <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Basic Details</h2>
+      <div className="grid grid-cols-3 gap-6 mb-12">
+        {[
+          { label: 'Name', value: data.name },
+          { label: 'Date of Birth (dd/mm/yyyy)', value: data.dob },
+          { label: 'Sex', value: data.sex },
+          { label: 'Aadhar No.', value: data.aadhar },
+          { label: 'Blood Group', value: data.bloodgrp },
+          { label: 'Identification Marks', value: data.identification_marks },
+          { label: 'Marital Status', value: data.marital_status },
+        ].map((item, index) => (
+          <DetailCard key={index} label={item.label} value={item.value} />
+        ))}
       </div>
 
-      <h2 className="text-lg font-medium my-4">Employment Details</h2>
-      <div className="grid grid-cols-3 mb-16 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Employee Number</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.emp_no || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Employer</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.employer || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Designation</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.designation || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Department</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.department || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Nature of Job</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.job_nature || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Date of Joining</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.doj || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Mode of Joining</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.moj || 'No data available'}
-          </div>
-        </div>
+      <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Employment Details</h2>
+      <div className="grid grid-cols-3 gap-6 mb-12">
+        {[
+          { label: 'Employee Number', value: data.emp_no },
+          { label: 'Employer', value: data.employer },
+          { label: 'Designation', value: data.designation },
+          { label: 'Department', value: data.department },
+          { label: 'Nature of Job', value: data.job_nature },
+          { label: 'Date of Joining', value: data.doj },
+          { label: 'Mode of Joining', value: data.moj },
+        ].map((item, index) => (
+          <DetailCard key={index} label={item.label} value={item.value} />
+        ))}
       </div>
 
-      <h2 className="text-lg font-medium my-4">Contact Details</h2>
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Phone (Personal)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.phone_Personal || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Mail Id (Personal)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.mail_id_Personal || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Emergency Contact Person</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.emergency_contact_person || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Phone (Office)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.phone_Office || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Mail Id (Office)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.mail_id_Office || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Emergency Contact Relation</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.emergency_contact_relation || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Mail Id (Emergency Contact Person)</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.mail_id_Emergency_Contact_Person || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Emergency Contact Phone</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.emergency_contact_phone || 'No data available'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Address</label>
-          <div className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm min-h-[44px] flex items-center">
-            {data.address || 'No data available'}
-          </div>
-        </div>
+      <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Contact Details</h2>
+      <div className="grid grid-cols-3 gap-6">
+        {[
+          { label: 'Phone (Personal)', value: data.phone_Personal },
+          { label: 'Mail Id (Personal)', value: data.mail_id_Personal },
+          { label: 'Emergency Contact Person', value: data.emergency_contact_person },
+          { label: 'Phone (Office)', value: data.phone_Office },
+          { label: 'Mail Id (Office)', value: data.mail_id_Office },
+          { label: 'Emergency Contact Relation', value: data.emergency_contact_relation },
+          { label: 'Mail Id (Emergency Contact Person)', value: data.mail_id_Emergency_Contact_Person },
+          { label: 'Emergency Contact Phone', value: data.emergency_contact_phone },
+          { label: 'Address', value: data.address },
+        ].map((item, index) => (
+          <DetailCard key={index} label={item.label} value={item.value} />
+        ))}
       </div>
     </div>
   );
 };
+
+const DetailCard = ({ label, value }) => (
+  <div>
+    <label className="block text-gray-700 text-sm font-semibold mb-1">{label}</label>
+    <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
+      {value || 'No data available'}
+    </div>
+  </div>
+);
 
 export default BasicDetails;
