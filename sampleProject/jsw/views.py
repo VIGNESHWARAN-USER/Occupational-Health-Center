@@ -18,6 +18,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.db.models import Max 
 import logging
+from django.db.models import Count
+from datetime import datetime, date
+from .models import Dashboard  # Ensure this is your actual model
 
 @csrf_exempt
 def login(request):
@@ -168,10 +171,43 @@ from .models import Dashboard
 @csrf_exempt
 def dashboard_stats(request):
     try:
-        type_counts = Dashboard.objects.values("type").annotate(count=Count("type"))
-        type_of_visit_counts = Dashboard.objects.values("type_of_visit").annotate(count=Count("type_of_visit"))
-        register_counts = Dashboard.objects.values("register").annotate(count=Count("register"))
-        purpose_counts = Dashboard.objects.values("purpose").annotate(count=Count("purpose"))
+        # Get filters from request
+        from_date_str = request.GET.get("fromDate")
+        to_date_str = request.GET.get("toDate")
+        visit_type_filter = request.GET.get("visitType")  # Preventive / Curative
+        entity_filter = request.GET.get("entityType")  # Total Footfalls / Employee / Contractor / Visitor
+
+        # Default to today's date if filters are cleared
+        today = date.today()
+        from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else today
+        to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else today
+
+        # Base queryset
+        queryset = Dashboard.objects.filter(date__range=[from_date, to_date])
+
+        # Apply first group filter (Preventive / Curative)
+        if visit_type_filter in ["Preventive", "Curative"]:
+            queryset = queryset.filter(type_of_visit=visit_type_filter)
+
+        # Apply second group filter (Total Footfalls, Employee, Contractor, Visitor)
+        if entity_filter == "Total Footfalls":
+            # Count separately for Employee, Contractor, and Visitor
+            type_counts = queryset.values("type").annotate(count=Count("type"))
+        else:
+            entity_mapping = {
+                "Employee": {"type": "Employee"},
+                "Contractor": {"type": "Contractor"},
+                "Visitor": {"type": "Visitor"},
+            }
+            if entity_filter in entity_mapping:
+                queryset = queryset.filter(**entity_mapping[entity_filter])
+
+            type_counts = queryset.values("type").annotate(count=Count("type"))
+
+        # Aggregate filtered data
+        type_of_visit_counts = queryset.values("type_of_visit").annotate(count=Count("type_of_visit"))
+        register_counts = queryset.values("register").annotate(count=Count("register"))
+        purpose_counts = queryset.values("purpose").annotate(count=Count("purpose"))
 
         data = {
             "type_counts": list(type_counts),
@@ -179,7 +215,9 @@ def dashboard_stats(request):
             "register_counts": list(register_counts),
             "purpose_counts": list(purpose_counts),
         }
+
         return JsonResponse(data, safe=False)
+
     except Exception as e:
         return JsonResponse({"error": str(e)},status=500)
 
