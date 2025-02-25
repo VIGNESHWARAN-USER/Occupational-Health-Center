@@ -16,7 +16,7 @@ const VitalsForm = () => {
   {
     e.preventDefault();
     try{
-      const resp = await axios.post("http://localhost:8000/addvitals", formData)
+      const resp = await axios.post("https://occupational-health-center.onrender.com/addvitals", formData)
       if(resp.status === 200)
       {
         alert("Vitals added successfully")

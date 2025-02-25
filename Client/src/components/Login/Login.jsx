@@ -18,7 +18,7 @@ const Login = () => {
     else if (pass.length === 0) setErr("Enter password");
     else{
       try{
-          const response =await axios.post("http://localhost:8000/login",{username:name, password:pass});
+          const response =await axios.post("https://occupational-health-center.onrender.com/login",{username:name, password:pass});
           console.log(response.data);
           if(response.status === 200)
           {

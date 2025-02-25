@@ -39,7 +39,7 @@ const Dashboard = () => {
     params.append("visitType", visitType);
     params.append("entityType", entityType);
 
-    axios.get(`http://localhost:8000/dashboard/?${params.toString()}`)
+    axios.get(`https://occupational-health-center.onrender.com/dashboard/?${params.toString()}`)
       .then((response) => {
         setChartData(response.data);
       })
