@@ -16,6 +16,7 @@ import Search from './components/EmployeeProfile.jsx/Search'
 import RecordsFilters from './components/RecordsFilters'
 import EmployeeProfile from './components/EmployeeProfile.jsx/EmployeeProfile'
 import ProtectedRoute from './ProtectedRoute'
+import PrescriptionPDF from './components/NewVisit/PrescriptionPDF'
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Route path = '/searchEmployee' element = {<Search/>}/>
           <Route path = '/recordsfilters' element = {<RecordsFilters/>}/>
           <Route path = '/employeeprofile' element = {<EmployeeProfile/>}/>
+          <Route path = '/pdf' element = {<PrescriptionPDF/>}/>
       </Route>
     </Routes>
     </div>
