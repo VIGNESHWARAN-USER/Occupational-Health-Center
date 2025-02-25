@@ -80,6 +80,7 @@ const Search = () => {
                   <th className="px-6 py-3 text-left text-sm font-medium">Employee ID</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Name</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Age</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">Gender</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Actions</th>
                 </tr>
               </thead>
@@ -92,6 +93,7 @@ const Search = () => {
                       <span>{emp.name}</span>
                     </td>
                     <td className="px-6 py-4">{new Date().getFullYear() - new Date(emp.dob).getFullYear()}</td>
+                    <td className="px-6 py-4">{data.sex}</td>
                     <td className="px-6 py-4">
                       <button 
                         onClick={() => {navigate("../employeeprofile", { state: { data: emp } })}}

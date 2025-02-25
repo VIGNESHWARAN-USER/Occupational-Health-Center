@@ -85,7 +85,7 @@ const NewVisit = () => {
     e.preventDefault();
     console.log(formData)
     try {
-      const response = await axios.post("http://localhost:8000/addEmployee", formData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", formData, {
         headers: {
           "Content-Type": "application/json",
         },

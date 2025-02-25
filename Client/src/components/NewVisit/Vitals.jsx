@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 
 const VitalsForm = () => {
@@ -8,10 +9,26 @@ const VitalsForm = () => {
     if (initialData && initialData.vitals) {
       setFormData(initialData.vitals);
     }
-  }, [initialData]);
+  }, []);
 
-  console.log(formData);
 
+  const handleSubmit = async (e) =>
+  {
+    e.preventDefault();
+    try{
+      const resp = await axios.post("http://localhost:8000/addvitals", formData)
+      if(resp.status === 200)
+      {
+        alert("Vitals added successfully")
+      }
+    }
+    catch(e)
+    {
+      alert("An Error Occured")
+    }
+    
+  }
+  console.log(formData)
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -163,7 +180,11 @@ const VitalsForm = () => {
             className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+        
       </div>
+      <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+              Add Vitals
+            </button>
     </div>
   );
 };
