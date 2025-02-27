@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Login = () => {
+  const [Loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState("");
   const [pass, setPass] = useState("");
@@ -18,11 +19,13 @@ const Login = () => {
     else if (pass.length === 0) setErr("Enter password");
     else{
       try{
+        setLoading(true)
           const response =await axios.post("https://occupational-health-center.onrender.com/login",{username:name, password:pass});
           console.log(response.data);
           if(response.status === 200)
           {
             localStorage.setItem('accessLevel', response.data.accessLevel)
+            setLoading(false)
             navigate("../dashboard")
           }else
           setErr("Password incorrect")
@@ -94,11 +97,17 @@ const Login = () => {
               </Link>
             </div>
             <p className="text-red-600 font-medium text-sm md:text-base mb-4">{err}</p>
+            
             <button
               type="submit"
               className="mt-4 bg-blue-500 w-full text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
             >
-              Login
+              {(Loading === true)?
+              (<div
+                className="inline-block h-6 w-6 text-white animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+                role="status">
+              </div>):('Login')}
+              
             </button>
           </form>
         </div>

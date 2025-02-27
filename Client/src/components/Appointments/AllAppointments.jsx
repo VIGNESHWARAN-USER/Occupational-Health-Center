@@ -1,10 +1,10 @@
-//AllAppointments
 import React, { useEffect, useState } from "react";
 import { FaSearch, FaCalendarAlt, FaFilter, FaSyncAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 const AllAppointments = () => {
   const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -14,6 +14,7 @@ const AllAppointments = () => {
   }, []);
 
   const fetchAppointments = async () => {
+    setLoading(true);
     try {
       let url = "http://127.0.0.1:8000/appointments/";
       if (fromDate || toDate) {
@@ -33,48 +34,8 @@ const AllAppointments = () => {
     } catch (error) {
       console.error("Error fetching appointments:", error);
       setAppointments([]);
-    }
-  };
-
-  const clearFilters = () => {
-    setFromDate("");
-    setToDate("");
-    fetchAppointments();
-  };
-
-  const handleStatusChange = async (appointmentId, currentStatus) => {
-    if (currentStatus !== "initiate") {
-      window.location.href = "/Newvisit";
-      return;
-    }
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/update-appointment-status/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: appointmentId,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setAppointments((prevAppointments) =>
-          prevAppointments.map((appointment) =>
-            appointment.id === appointmentId
-              ? { ...appointment, status: data.status }
-              : appointment
-          )
-        );
-        window.location.href = "/Newvisit";
-      } else {
-        console.error("Failed to update appointment:", data.message);
-      }
-    } catch (error) {
-      console.error("Error updating appointment:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,10 +46,8 @@ const AllAppointments = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">All Appointments</h1>
-        {/* <p className="text-gray-500">Manage and view all appointments in the system.</p> */}
       </div>
 
       {/* Search and Filters */}
@@ -134,7 +93,11 @@ const AllAppointments = () => {
             </button>
             <button
               className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center gap-2"
-              onClick={clearFilters}
+              onClick={() => {
+                setFromDate("");
+                setToDate("");
+                fetchAppointments();
+              }}
             >
               <FaSyncAlt /> Clear
             </button>
@@ -154,7 +117,19 @@ const AllAppointments = () => {
         </div>
 
         {/* Table Body */}
-        {appointments.length > 0 ? (
+        {loading ? (
+          <motion.div
+            className="flex justify-center items-center p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div
+            className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]"
+            role="status">
+          </div>
+          </motion.div>
+        ) : appointments.length > 0 ? (
           appointments.map((appointment) => (
             <div
               key={appointment.id}
@@ -172,7 +147,6 @@ const AllAppointments = () => {
                     ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
                     : "bg-green-100 text-green-600 hover:bg-green-200"
                 }`}
-                onClick={() => handleStatusChange(appointment.id, appointment.status)}
               >
                 {appointment.status}
               </button>

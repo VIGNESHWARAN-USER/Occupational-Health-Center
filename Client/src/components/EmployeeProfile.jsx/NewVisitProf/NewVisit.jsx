@@ -16,6 +16,7 @@ const NewVisit = ({data}) => {
     { id: "DocInvestigations", label: "Investigations" },
     { id: "DocVaccination", label: "Vaccination" },
     { id: "DocFitness", label: "Fitness" },
+    { id: "Visithistory", label: "Visit History" },
   ];
 
   return (
@@ -46,6 +47,7 @@ const NewVisit = ({data}) => {
             {activeTab === "DocVaccination" && <Vaccination data={data}/>}
             {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
             {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
+            {activeTab === "Visithistory" && <MedicalHistory data={data}/>}
           </div>
         </div>
       </div>
