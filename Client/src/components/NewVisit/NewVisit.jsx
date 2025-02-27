@@ -85,7 +85,6 @@ const NewVisit = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData)
     try {
       const response = await axios.post("https://occupational-health-center.onrender.com/addbasicdetails", formData, {
         headers: {
@@ -133,7 +132,6 @@ const NewVisit = () => {
     setdata([]);
     setFormData([]);
   }
-  console.log(formDataDashboard)
   useEffect(() => {
     const fetchDetails = async () => {
       try {

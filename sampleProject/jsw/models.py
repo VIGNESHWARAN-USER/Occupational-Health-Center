@@ -845,3 +845,35 @@ class FitnessAssessment(models.Model):
 
     def _str_(self):
         return f"Fitness Assessment for {self.emp_no.emp_no} - {self.overall_fitness}"
+
+
+
+class Vaccination(models.Model):
+    name = models.CharField(max_length=255)
+    status = models.CharField(max_length=50)
+    normal_doses = models.JSONField(default=dict)  # {"dates": [], "dose_names": []}
+    booster_doses = models.JSONField(default=dict)  # {"dates": [], "dose_names": []}
+
+    def _str_(self):
+        return self.name
+
+class ReviewCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+
+    def _str_(self):
+        return self.name
+
+class Review(models.Model):
+    category = models.ForeignKey(ReviewCategory, on_delete=models.CASCADE, related_name="reviews")
+    pid = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=255)
+    gender = models.CharField(max_length=10, choices=[("Male", "Male"), ("Female", "Female")])
+    appointment_date = models.DateField()
+    status = models.CharField(
+        max_length=20,
+        choices=[("Today", "Today"), ("Tomorrow", "Tomorrow"), ("Not Attempted", "Not Attempted")],
+        default="Today"
+    )
+
+    def _str_(self):
+        return f"{self.name} - {self.category.name}"

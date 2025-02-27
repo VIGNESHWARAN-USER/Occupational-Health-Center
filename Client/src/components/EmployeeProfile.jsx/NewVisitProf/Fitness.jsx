@@ -21,7 +21,7 @@ const FitnessPage = ({ data }) => {
       });
     }
   }, [data]);
-
+  console.log(fitnessData)
   return (
     <div className="bg-gradient-to-r from-indigo-50 to-blue-100 min-h-screen p-6 flex flex-col items-center">
       <div className="max-w-4xl w-full bg-white shadow-xl rounded-xl p-8">

@@ -21,6 +21,8 @@ import logging
 from django.db.models import Count
 from datetime import datetime, date
 from .models import Dashboard  # Ensure this is your actual model
+from .models import FitnessAssessment  # Ensure this is your actual model
+from django.shortcuts import get_object_or_404
 
 @csrf_exempt
 def login(request):
@@ -1097,4 +1099,173 @@ def save_mockdrills(request):
 
 
             return JsonResponse({"error": str(e) + "This error"}, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def insert_vaccination(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            print(data)  # Debugging
+
+            # Extract data correctly
+            vaccine_name = data.get("vaccine")  # Correct key name
+            status = data.get("status")
+
+            # Extract normal and booster doses
+            normal_doses = {
+                "dates": [dose["date"] for dose in data.get("normalDoses", []) if dose["date"]],
+                "dose_names": [dose["name"] for dose in data.get("normalDoses", []) if dose["name"]]
+            }
+
+            booster_doses = {
+                "dates": [dose["date"] for dose in data.get("boosterDoses", []) if dose["date"]],
+                "dose_names": [dose["name"] for dose in data.get("boosterDoses", []) if dose["name"]]
+            }
+
+            # Create a new vaccination record
+            vaccination = Vaccination.objects.create(
+                name=vaccine_name,
+                status=status,
+                normal_doses=normal_doses,
+                booster_doses=booster_doses
+            )
+
+            return JsonResponse({"message": "Vaccination record added successfully", "id": vaccination.id}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+from .models import Vaccination  # Ensure you import the Vaccination model
+
+@csrf_exempt
+def fetch_vaccinations(request):
+    if request.method == "GET":
+        try:
+            print("HII")
+            # Retrieve all vaccination records
+            vaccinations = Vaccination.objects.all()
+
+            # Convert queryset to a list of dictionaries
+            data = [
+                {
+                    "id": v.id,
+                    "vaccine": v.name,
+                    "status": v.status,
+                    "normalDoses": [
+                        {"date": date, "name": name}
+                        for date, name in zip(v.normal_doses.get("dates", []), v.normal_doses.get("dose_names", []))
+                    ],
+                    "boosterDoses": [
+                        {"date": date, "name": name}
+                        for date, name in zip(v.booster_doses.get("dates", []), v.booster_doses.get("dose_names", []))
+                    ],
+                }
+                for v in vaccinations
+            ]
+
+            return JsonResponse({"vaccinations": data}, status=200)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def fitness_test(request, pk=None):
+    if request.method == "GET":
+        print("Pramoth")
+        if pk:
+            # Retrieve a single record
+            fitness_test = json.loads(FitnessAssessment)
+            return JsonResponse({
+                "id": fitness_test.get['id'],
+                "emp_no": fitness_test.get['emp_no'],
+                "tremors": fitness_test.get['tremors'],
+                "romberg_test": fitness_test.get['romberg_test'],
+                "acrophobia": fitness_test.get['acrophobia'],
+                "trendelenberg_test": fitness_test.get['trendelenberg_test'],
+                "job_nature": fitness_test.get['job_nature'],
+                "overall_fitness": fitness_test.get['overall_fitness'],
+                "comments": fitness_test.get['comments'],
+                "created_at": fitness_test.get['created_at']
+            })
+        else:
+            # Retrieve all records
+            tests = list(FitnessAssessment.objects.all().values())
+            return JsonResponse(tests, safe=False)
+
+    elif request.method == "POST":
+        # Create a new record
+        data = json.loads(request.body)
+        print(data)
+        fitness_test = FitnessAssessment.objects.create(
+            emp_no=data.get("emp_no"),
+            tremors=data.get("tremors"),
+            romberg_test=data.get("romberg_test"),
+            acrophobia=data.get("acrophobia"),
+            trendelenberg_test=data.get("trendelenberg_test"),
+            job_nature=data.get("job_nature", ""),
+            overall_fitness=data.get("overall_fitness", ""),
+            comments=data.get("comments", ""),
+        )
+        return JsonResponse({"message": "Fitness test created!", "id": fitness_test.id}, status=201)
+
+    elif request.method == "PUT" and pk:
+        # Update an existing record
+        fitness_test = get_object_or_404(FitnessAssessment, pk=pk)
+        data = json.loads(request.body)
+        fitness_test.emp_no = data.get("emp_no", fitness_test.emp_no)
+        fitness_test.tremors = data.get("tremors", fitness_test.tremors)
+        fitness_test.romberg_test = data.get("romberg_test", fitness_test.romberg_test)
+        fitness_test.acrophobia = data.get("acrophobia", fitness_test.acrophobia)
+        fitness_test.trendelenberg_test = data.get("trendelenberg_test", fitness_test.trendelenberg_test)
+        fitness_test.job_nature = data.get("job_nature", fitness_test.job_nature)
+        fitness_test.overall_fitness = data.get("overall_fitness", fitness_test.overall_fitness)
+        fitness_test.comments = data.get("comments", fitness_test.comments)
+        fitness_test.save()
+        return JsonResponse({"message": "Fitness test updated!"})
+
+    elif request.method == "DELETE" and pk:
+        # Delete a record
+        fitness_test = get_object_or_404(FitnessAssessment, pk=pk)
+        fitness_test.delete()
+        return JsonResponse({"message": "Fitness test deleted!"}, status=204)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+from .models import mockdrills,ReviewCategory, Review
+
+def get_categories(request):
+    categories = list(ReviewCategory.objects.values("id", "name"))
+    return JsonResponse({"categories": categories}, safe=False)
+
+
+def get_reviews(request, status):
+    reviews = list(Review.objects.filter(status=status).values("id", "pid", "name", "gender", "appointment_date", "category__name"))
+    return JsonResponse({"reviews": reviews}, safe=False)
+
+
+@csrf_exempt
+def add_review(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            category, created = ReviewCategory.objects.get_or_create(name=data["category"])
+            review = Review.objects.create(
+                category=category,
+                pid=data["pid"],
+                name=data["name"],
+                gender=data["gender"],
+                appointment_date=datetime.strptime(data["appointment_date"], "%Y-%m-%d").date(),
+                status=data["status"]
+            )
+            return JsonResponse({"message": "Review added successfully", "id": review.id}, status=201)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Invalid request method"}, status=405)

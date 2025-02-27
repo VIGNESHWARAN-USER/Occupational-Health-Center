@@ -1,5 +1,6 @@
 from . import views
 from django.urls import path
+from .views import get_categories, get_reviews, add_review
 
 urlpatterns = [
     path('login', views.login, name='login'),
@@ -15,5 +16,12 @@ urlpatterns = [
     path('addEntries', views.addEntries, name='add_Entries'),
     path('addEntries', views.addEntries, name='add_Entries'),
     path('dashboard/', views.dashboard_stats, name='dashboard'),
-    path('addvitals', views.add_vital_details, name = 'addVitals')
+    path('addvitals', views.add_vital_details, name = 'addVitals'),
+    path("vaccination/", views.insert_vaccination, name="insert_vaccination"),
+    path("getvaccinations/", views.fetch_vaccinations, name="get_vaccination"),
+    path("fitness-tests/", views.fitness_test, name="fitness_test"),
+    path('addEntries', views.addEntries, name='add_Entries'),
+    path("categories/", get_categories, name="get_categories"),
+    path("reviews/<str:status>/", get_reviews, name="get_reviews"),
+    path("add-review/", add_review, name="add_review"),
 ]

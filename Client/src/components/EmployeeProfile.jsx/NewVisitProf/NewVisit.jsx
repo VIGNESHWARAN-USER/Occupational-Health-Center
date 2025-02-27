@@ -6,6 +6,7 @@ import Vaccination from "./Vaccination";
 import Vitals from "./Vitals";
 import MedicalHistory from "./MedicalHistory";
 import Sidebar from "../../Sidebar";
+import VIsitHistory from "../VIsitHistory";
 
 const NewVisit = ({data}) => {
   const [activeTab, setActiveTab] = useState("DocBasicDetails");
@@ -47,7 +48,7 @@ const NewVisit = ({data}) => {
             {activeTab === "DocVaccination" && <Vaccination data={data}/>}
             {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
             {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
-            {activeTab === "Visithistory" && <MedicalHistory data={data}/>}
+            {activeTab === "Visithistory" && <VIsitHistory data={data}/>}
           </div>
         </div>
       </div>
