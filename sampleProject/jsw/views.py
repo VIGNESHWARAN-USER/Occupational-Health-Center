@@ -853,3 +853,47 @@ def add_review(request):
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+# Add a new member
+@csrf_exempt
+def add_member(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        member = Member.objects.create(
+            employee_number=data['employee_number'],
+            name=data['name'],
+            designation=data['designation'],
+            email=data['email'],
+            role=data['role'],
+            date_exited=data.get('date_exited')
+        )
+        return JsonResponse({'message': 'Member added successfully', 'id': member.id})
+    
+# Get, Update, Delete a single member
+@csrf_exempt
+def member_detail(request, pk):
+    member = get_object_or_404(Member, pk=pk)
+    
+    if request.method == 'GET':
+        return JsonResponse({
+            'employee_number': member.employee_number,
+            'name': member.name,
+            'designation': member.designation,
+            'email': member.email,
+            'role': member.role,
+            'date_exited': member.date_exited
+        })
+    
+    elif request.method == 'PUT':
+        data = json.loads(request.body)
+        member.name = data.get('name', member.name)
+        member.designation = data.get('designation', member.designation)
+        member.email = data.get('email', member.email)
+        member.role = data.get('role', member.role)
+        member.date_exited = data.get('date_exited', member.date_exited)
+        member.save()
+        return JsonResponse({'message': 'Member updated successfully'})
+    
+    elif request.method == 'DELETE':
+        member.delete()
+        return JsonResponse({'message': 'Member deleted successfully'})

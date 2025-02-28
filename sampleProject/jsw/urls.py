@@ -40,5 +40,7 @@ urlpatterns = [
     path("addOpthalmicReport", views.add_opthalmic_report, name="addOpthalmicReport"),
     path("addUSG", views.add_usg_report, name="addUSG"),
     path("addMRI", views.add_mri_report, name="addMRI"),
-    path("addCT",views.add_mri, name = "addCT")
+    path("addCT",views.add_mri, name = "addCT"),
+    path('members/add/', views.add_member, name='member-add'),
+    path('members/<int:pk>/', views.member_detail, name='member-detail'),
 ]

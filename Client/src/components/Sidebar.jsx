@@ -1,14 +1,14 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { FaUserMd, FaUsers, FaRegCalendarAlt, FaSignOutAlt } from "react-icons/fa";
 import { MdDashboard, MdEvent, MdFilterList, MdLibraryAdd } from "react-icons/md";
 import img from "../assets/logo.png";
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const accessLevel = localStorage.getItem("accessLevel");
 
-  // Define menus for different roles
   const menus = {
     nurse: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
@@ -36,7 +36,6 @@ const Sidebar = () => {
     ],
   };
 
-  // Get current menu based on access level
   const currentMenu = menus[accessLevel] || [];
 
   return (
@@ -48,16 +47,21 @@ const Sidebar = () => {
 
       {/* Menu Items */}
       <nav className="flex-1">
-        {currentMenu.map((item, index) => (
-          <Link
-            key={index}
-            to={item.to}
-            className="flex items-center space-x-3 p-3 mx-4 my-2 text-lg rounded-lg font-bold transition hover:bg-blue-300 hover:scale-105 hover:text-blue-600"
-          >
-            {item.icon}
-            <span>{item.name}</span>
-          </Link>
-        ))}
+        {currentMenu.map((item, index) => {
+          const isActive = location.pathname.includes(item.to.replace("..", ""));
+          return (
+            <Link
+              key={index}
+              to={item.to}
+              className={`flex items-center space-x-3 p-3 mx-4 my-2 text-lg rounded-lg font-bold transition ${
+                isActive ? "bg-white text-blue-600 scale-105 shadow-md" : "hover:bg-blue-300 hover:scale-105 hover:text-blue-600"
+              }`}
+            >
+              {item.icon}
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Logout Button */}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
-const FitnessPage = ({data}) => {
-  const [options, setOptions] = useState(["Height Work", "2", "3", "4"]);
+const FitnessPage = ({ data }) => {
+  const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue"];
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [formData, setFormData] = useState({
     tremors: "",
@@ -9,24 +9,24 @@ const FitnessPage = ({data}) => {
     acrophobia: "",
     trendelenberg_test: "",
   });
-  console.log(data)
+
+  console.log(data);
+
   const handleSelectChange = (e) => {
     const selectedValue = e.target.value;
-    if (selectedValue) {
+    if (selectedValue && !selectedOptions.includes(selectedValue)) {
       setSelectedOptions([...selectedOptions, selectedValue]);
-      setOptions(options.filter((option) => option !== selectedValue));
     }
   };
-console.log(selectedOptions)
+
   const handleRemoveSelected = (value) => {
-    setOptions([...options, value]);
     setSelectedOptions(selectedOptions.filter((option) => option !== value));
   };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
+
   const handleSubmit = async () => {
     const payload = {
       emp_no: "", // Replace with actual employee number
@@ -48,7 +48,6 @@ console.log(selectedOptions)
       alert("Fitness data submitted successfully!");
       setFormData({ tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "" });
       setSelectedOptions([]);
-      setOptions(["Height Work", "2", "3", "4"]);
     } catch (error) {
       alert(error.message);
     }
@@ -87,27 +86,35 @@ console.log(selectedOptions)
           onChange={handleSelectChange}
         >
           <option value="" disabled>-- Select an option --</option>
-          {options.map((option, index) => (
-            <option key={index} value={option}>{option}</option>
+          {allOptions.map((option, index) => (
+            <option key={index} value={option} disabled={selectedOptions.includes(option)}>
+              {option}
+            </option>
           ))}
         </select>
 
-        {/* Selected options */}
-        <div className="space-y-2 mt-4">
-          {selectedOptions.length > 0 ? selectedOptions.map((option, index) => (
-            <div key={index} className="flex items-center justify-between p-3 border border-gray-300 rounded-md">
-              <span>{option}</span>
-              <button className="text-red-500 hover:underline" onClick={() => handleRemoveSelected(option)}>Remove</button>
-            </div>
-          )) : <p className="text-sm text-gray-500">No options selected.</p>}
+        {/* Selected options in a single row */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {selectedOptions.length > 0 ? (
+            selectedOptions.map((option, index) => (
+              <div key={index} className="flex items-center p-2 border border-gray-300 rounded-md bg-gray-100">
+                <span className="mr-2">{option}</span>
+                <button className="text-red-500 hover:underline" onClick={() => handleRemoveSelected(option)}>
+                  ✖
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500">No options selected.</p>
+          )}
         </div>
-      </div>
 
-      {/* Submit Button */}
-      <div className="absolute bottom-6 right-6">
-        <button className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600" onClick={handleSubmit}>
-          Submit
-        </button>
+        {/* Submit Button */}
+        <div className="absolute bottom-6 right-6">
+          <button className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600" onClick={handleSubmit}>
+            Submit
+          </button>
+        </div>
       </div>
     </div>
   );

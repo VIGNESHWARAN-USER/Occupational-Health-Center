@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import Consultation from "./Consultation";
+import Referral from "./Referral";
 import Prescription from "./Prescription";
 
 
@@ -27,6 +28,7 @@ const NewVisit = () => {
     { id: "Investigations", label: "Investigations" },
     { id: "Vaccination", label: "Vaccination" },
     { id: "Fitness", label: "Fitness" },
+    { id: "Referral", label: "Referral" },
   ];
   const [data, setdata] = useState([])
   const [employees, setEmployees] = useState([]);
@@ -114,7 +116,7 @@ const NewVisit = () => {
         );
 
         if (filtered.length > 0) {
-            // Get the latest record by sorting by `id` (or `updated_at`)
+            // Get the latest record by sorting by id (or updated_at)
             const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
 
             setFilteredEmployees([latestEmployee]);
@@ -670,12 +672,13 @@ else if(accessLevel === "doctor")
   const tabs = [
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
-    { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    { id: "Investigations", label: "Investigations" },
-    { id: "Vaccination", label: "Vaccination" },
-    visit === "Preventive" && { id: "Fitness", label: "Fitness" },
-    visit === "Curative" && { id: "Consultation", label: "Consultation" },
-    visit === "Curative" && { id: "Prescription", label: "Prescription" }
+    register !== "Alcohol Abuse" && { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
+    register !== "Alcohol Abuse" && purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave"&& (register==="Followup Visits" || visit!== "Curative" ) &&{ id: "Investigations", label: "Investigations" },
+    register !== "Alcohol Abuse" && { id: "Vaccination", label: "Vaccination" },
+    register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" &&{ id: "Fitness", label: "Fitness" },
+    register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation" },
+    register !== "Alcohol Abuse" && visit === "Curative" && { id: "Prescription", label: "Prescription" },
+    register !== "Alcohol Abuse" && visit === "Preventive" && { id: "Referral", label: "Referral" },
   ];
   return (
     <div className="h-screen flex bg-[#8fcadd]">
@@ -1084,13 +1087,14 @@ else if(accessLevel === "doctor")
              
            </div>
           )}
-          {activeTab === "Fitness" && visit === "Preventive" && <Fitness/>}
-          {activeTab === "Consultation" && visit === "Curative" && <Consultation/>}
-          {activeTab === "Prescription" && visit === "Curative" && <Prescription/>}
-          {activeTab === "Investigations" && <Investigation data={data}/>}
-          {activeTab === "Vaccination" && <Vaccination data={data}/>}
+          {activeTab === "Fitness" && register !== "Alcohol Abuse"&& register !== "Camps (Optional)" && visit === "Preventive" && <Fitness/>}
+          {activeTab === "Consultation" && register !== "Alcohol Abuse" && visit === "Curative" && <Consultation/>}
+          {activeTab === "Referral" && register !== "Alcohol Abuse" &&  visit === "Preventive" && <Referral/>}
+          {activeTab === "Prescription" && register !== "Alcohol Abuse" &&  visit === "Curative" && <Prescription/>}
+          {activeTab === "Investigations" && register !== "Alcohol Abuse" &&  (register==="Followup Visits" || visit!== "Curative" ) &&<Investigation data={data}/>}
+          {activeTab === "Vaccination" && register !== "Alcohol Abuse" &&  <Vaccination data={data}/>}
           {activeTab === "Vitals" && <Vitals data={data.vitals}/>}
-          {activeTab === "MedicalHistory" && <MedicalHistory data={data}/>}
+          {activeTab === "MedicalHistory" && register !== "Alcohol Abuse" &&  <MedicalHistory data={data}/>}
         </div>
         </div>
         </motion.div>
@@ -1103,5 +1107,3 @@ else if(accessLevel === "doctor")
 };
 
 export default NewVisit;
-
-

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Sidebar from "./Sidebar";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const filterSections = [
   { id: "position", label: "Position" },
@@ -13,152 +14,245 @@ const filterSections = [
   { id: "employmentstatus", label: "Employment Status" },
   { id: "preventive", label: "Preventive" },
   { id: "curative", label: "Curative" },
+  { id: "employeeData", label: "Employee Data" },
 ];
-
-
 
 const RecordsFilters = () => {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
-  const [data, setdata] = useState({})
+  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-useEffect(
-  ()=>{
-    const fetchAllDetails = () =>{
-      const response = axios.post("http://localhost:8000/fetchAllData")
-      console.log(response)
-    }
-    fetchAllDetails();
-  },[]
-)
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post("http://localhost:8000/userData");
+        setEmployees(response.data.data);
+        setFilteredEmployees(response.data.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+      setLoading(false);
+    };
+    fetchDetails();
+  }, []);
 
   const handleFilterClick = (section) => {
-    
     setSelectedSection(section);
   };
 
   const removeFilter = (section) => {
-    setSelectedFilters(selectedFilters.filter((item) => item !== section));
-    if (selectedSection === section) {
-      setSelectedSection(null);
-    }
+    setSelectedFilters((prevFilters) =>
+      prevFilters.filter((item) => item !== section)
+    );
   };
 
+  useEffect(() => {
+    applyFilters();
+  }, [selectedFilters, employees]);
+
   const addFilter = (formData) => {
-    const filteredData = Object.entries(formData)
-      .filter(([_, value]) => value !== "") // Remove empty values
-      .map(([key, value]) => ({ [key]: value })); // Convert to an array of key-value objects
-  
     setSelectedFilters((prevFilters) => {
-      const updatedFilters = [...prevFilters]; // Clone existing filters
-  
-      filteredData.forEach((newFilter) => {
-        const [newKey] = Object.keys(newFilter);
+      const updatedFilters = [...prevFilters];
+
+      Object.entries(formData).forEach(([key, value]) => {
         const existingIndex = updatedFilters.findIndex(
-          (filter) => Object.keys(filter)[0] === newKey
+          (filter) => Object.keys(filter)[0] === key
         );
-  
+
         if (existingIndex !== -1) {
-          // Override existing key-value pair
-          updatedFilters[existingIndex] = newFilter;
+          updatedFilters[existingIndex] = { [key]: value };
         } else {
-          // Add new key-value pair
-          updatedFilters.push(newFilter);
+          updatedFilters.push({ [key]: value });
         }
       });
-  
+
       return updatedFilters;
     });
   };
-  
+
+  const applyFilters = () => {
+    if (selectedFilters.length === 0) {
+      // If no filters are selected, show all employees
+      setFilteredEmployees([...employees]);
+      return;
+    }
+
+    let results = [...employees];
+
+    selectedFilters.forEach((filter) => {
+      const key = Object.keys(filter)[0];
+      const value = Object.values(filter)[0];
+
+      results = results.filter((employee) => {
+        let empValue = employee[key];
+
+        if (empValue === null || empValue === undefined) {
+          return false;
+        }
+
+        if (typeof empValue === "object") {
+          function checkNestedObject(obj, val) {
+            for (const prop in obj) {
+              if (obj.hasOwnProperty(prop)) {
+                const nestedValue = obj[prop];
+                if (nestedValue === value) { // Strict equality check here
+                  return true;
+                }
+              }
+            }
+            return false;
+          }
+
+          return checkNestedObject(empValue, value);
+        } else {
+          return empValue === value; // Strict equality check here
+        }
+      });
+    });
+
+    setFilteredEmployees(results);
+  };
 
   return (
     <div className="h-screen bg-[#8fcadd] flex">
       <Sidebar />
       <div className="h-screen overflow-auto flex w-4/5 flex-col">
-      {/* Selected Filters Display */}
-      <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300">
-        {selectedFilters.length > 0 ? (
-          selectedFilters.map((filter) => (
-            <motion.div
-              key={filter}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-full shadow"
-            >
-              {`${Object.entries(filter)[0][0].toUpperCase()} : ${Object.entries(filter)[0][1]}`}
-              <X
-                size={16}
-                className="ml-2 cursor-pointer"
-                onClick={() => removeFilter(filter)}
-              />
-            </motion.div>
-          ))
-        ) : (
-          <p className="text-gray-500">No filters selected</p>
-        )}
-      </div>
-
-      {/* Dropdown Filter Selector */}
-      <div className="relative p-4">
-  <select
-    className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-    onChange={(e) => handleFilterClick(e.target.value)}
-  >
-    <option value="" disabled selected>
-      Select Filters
-    </option>
-    {filterSections.map((section) => (
-      <option key={section.id} value={section.id}>
-        {section.label}
-      </option>
-    ))}
-  </select>
-</div>
-
-
-      {/* Filter Sections - Conditionally Rendered */}
-      <div className="p-4">
-        <AnimatePresence>
-          {selectedSection && (
-            <motion.div
-              key={selectedSection}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              className="p-6 bg-white shadow rounded-lg"
-            >
-              <h2 className="text-xl font-semibold mb-4">
-                {filterSections.find((f) => f.id === selectedSection)?.label}
-              </h2>
-              {(selectedSection === "personaldetails")? <PersonalDetails addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "position")? <Position addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "employmentdetails")? <Position addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "medicalhistory")? <MedicalHistoryForm addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "vaccination")? <VaccinationForm addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "preventive")? <Preventive addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "curative")? <Curative addFilter={addFilter}/>:selectedSection }
-              {(selectedSection === "employmentstatus")? <EmploymentStatus addFilter={addFilter}/>:selectedSection }
-            </motion.div>
+        <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300">
+          {selectedFilters.length > 0 ? (
+            selectedFilters.map((filter, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-full shadow"
+              >
+                {`${Object.entries(filter)[0][0].toUpperCase()} : ${
+                  Object.entries(filter)[0][1]
+                }`}
+                <X
+                  size={16}
+                  className="ml-2 cursor-pointer"
+                  onClick={() => removeFilter(filter)}
+                />
+              </motion.div>
+            ))
+          ) : (
+            <p className="text-gray-500">No filters selected</p>
           )}
-        </AnimatePresence>
-      </div></div>
+        </div>
+
+        <div className="relative p-4">
+          <select
+            className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleFilterClick(e.target.value)}
+          >
+            <option value="" disabled selected>
+              Select Filters
+            </option>
+            {filterSections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="p-4">
+          <AnimatePresence>
+            {selectedSection && (
+              <motion.div
+                key={selectedSection}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+                className="p-6 bg-white shadow rounded-lg"
+              >
+                <h2 className="text-xl font-semibold mb-4">
+                  {filterSections.find((f) => f.id === selectedSection)?.label}
+                </h2>
+                {selectedSection === "personaldetails" ? (
+                  <PersonalDetails addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "position" ? (
+                  <Position addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "employmentdetails" ? (
+                  <EmploymentDetails addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "medicalhistory" ? (
+                  <MedicalHistoryForm addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "vaccination" ? (
+                  <VaccinationForm addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "preventive" ? (
+                  <Preventive addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "curative" ? (
+                  <Curative addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "employmentstatus" ? (
+                  <EmploymentStatus addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "employeeData" ? (
+                  <EmployeeData employees={employees} addFilter={addFilter} />
+                ) : null}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Display Employee Data in Table */}
+        <div className="p-4">
+          <h2 className="text-xl font-semibold mb-4">Employee Records</h2>
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="p-2 border">Employee Number</th>
+                    <th className="p-2 border">Name</th>
+                    <th className="p-2 border">Gender</th>
+                    {/* Add more headers as needed */}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployees.map((employee) => (
+                    <tr key={employee.emp_no} className="hover:bg-gray-50">
+                      <td className="p-2 border">{employee.emp_no}</td>
+                      <td className="p-2 border">{employee.name}</td>
+                      <td className="p-2 border">{employee.sex}</td>
+                      {/* Add more data cells as needed */}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
-export default RecordsFilters;
+// Remaining components (PersonalDetails, Position, etc.) remain the same...
 
+export default RecordsFilters;
 
 const PersonalDetails = ({ addFilter }) => {
   const [formData, setformData] = useState({
     age: "",
     gender: "",
-    bloodgroup: "",
+    bloodgrp: "",
     marital_status: "",
-    bmi: "",
   });
 
   const handleChange = (e) => {
@@ -183,7 +277,10 @@ const PersonalDetails = ({ addFilter }) => {
 
       {/* Sex Input */}
       <div>
-        <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="gender"
+          className="block text-sm font-medium text-gray-700"
+        >
           Sex
         </label>
         <select
@@ -201,13 +298,16 @@ const PersonalDetails = ({ addFilter }) => {
 
       {/* Blood Group Input */}
       <div>
-        <label htmlFor="bloodgroup" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="bloodgrp"
+          className="block text-sm font-medium text-gray-700"
+        >
           Blood Group
         </label>
         <input
           type="text"
-          name="bloodgroup"
-          value={formData.bloodgroup}
+          name="bloodgrp"
+          value={formData.bloodgrp}
           onChange={handleChange}
           className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Enter Blood Group"
@@ -216,7 +316,10 @@ const PersonalDetails = ({ addFilter }) => {
 
       {/* Marital Status Input */}
       <div>
-        <label htmlFor="marital_status" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="marital_status"
+          className="block text-sm font-medium text-gray-700"
+        >
           Marital Status
         </label>
         <select
@@ -233,18 +336,61 @@ const PersonalDetails = ({ addFilter }) => {
         </select>
       </div>
 
-      {/* BMI Input */}
+      {/* Submit Button */}
+      <button
+        onClick={() => {
+          const filteredData = Object.fromEntries(
+            Object.entries(formData).filter(([_, value]) => value !== "")
+          );
+          addFilter(filteredData);
+        }}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+const Position = ({ addFilter }) => {
+  const [formData, setFormData] = useState({
+    designation: "",
+    department: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+      {/* designation Input */}
       <div>
-        <label htmlFor="bmi" className="block text-sm font-medium text-gray-700">
-          BMI (Body Mass Index)
+        <label className="block text-sm font-medium text-gray-700">
+          designation
         </label>
         <input
-          type="number"
-          name="bmi"
-          value={formData.bmi}
+          type="text"
+          name="designation"
+          value={formData.designation}
           onChange={handleChange}
           className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter BMI"
+          placeholder="Enter designation"
+        />
+      </div>
+
+      {/* Department Input */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Department
+        </label>
+        <input
+          type="text"
+          name="department"
+          value={formData.department}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter Department"
         />
       </div>
 
@@ -255,383 +401,152 @@ const PersonalDetails = ({ addFilter }) => {
             Object.entries(formData).filter(([_, value]) => value !== "")
           );
           addFilter(filteredData);
-        }}      
+        }}
         className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
       >
         Add to Filter
       </button>
     </div>
   );
-}
-  const Position = ({ addFilter }) => {
-    const [formData, setFormData] = useState({
-      job_title: "",
-      department: "",
-      employment_type: "",
-      experience: "",
-      location: "",
-    });
-  
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData({ ...formData, [name]: value });
-    };
-  
-    return (
-      <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-        {/* Job Title Input */}
+};
+
+const EmploymentDetails = ({ addFilter }) => {
+  const [formData, setformData] = useState({
+    doj: "",
+    job_nature: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setformData({ ...formData, [name]: value });
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+      {/* Age Input */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">doj</label>
+        <input
+          type="date"
+          name="doj"
+          value={formData.doj}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter age"
+        />
+      </div>
+
+      {/* Sex Input */}
+      <div>
+        <label
+          htmlFor="job_nature"
+          className="block text-sm font-medium text-gray-700"
+        >
+          job_nature
+        </label>
+        <select
+          name="job_nature"
+          value={formData.job_nature}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select job_nature</option>
+          <option value="Contract">Contract</option>
+          <option value="Permanent">Permanent</option>
+          <option value="Consultant">Consultant</option>
+        </select>
+      </div>
+
+      {/* Submit Button */}
+      <button
+        onClick={() => {
+          const filteredData = Object.fromEntries(
+            Object.entries(formData).filter(([_, value]) => value !== "")
+          );
+          addFilter(filteredData);
+        }}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
+const MedicalHistoryForm = ({ addFilter }) => {
+  const [formData, setFormData] = useState({
+    smoking: "",
+    alcohol: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
+
+    addFilter(filteredData);
+  };
+
+  return (
+    <div className="p-6 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        Medical History Form
+      </h2>
+
+      <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Job Title
-          </label>
-          <input
-            type="text"
-            name="job_title"
-            value={formData.job_title}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter Job Title"
-          />
-        </div>
-  
-        {/* Department Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Department
-          </label>
-          <input
-            type="text"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter Department"
-          />
-        </div>
-  
-        {/* Employment Type Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Employment Type
-          </label>
+          <label className="block font-medium">Smoking</label>
           <select
-            name="employment_type"
-            value={formData.employment_type}
+            name="smoking"
+            value={formData.smoking}
             onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-2 border border-gray-300 rounded-lg"
           >
-            <option value="">Select Employment Type</option>
-            <option value="Full-Time">Full-Time</option>
-            <option value="Part-Time">Part-Time</option>
-            <option value="Contract">Contract</option>
-            <option value="Internship">Internship</option>
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
           </select>
         </div>
-  
-        {/* Experience Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Years of Experience
-          </label>
-          <input
-            type="number"
-            name="experience"
-            value={formData.experience}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter Years of Experience"
-          />
-        </div>
-  
-        {/* Location Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Location
-          </label>
-          <input
-            type="text"
-            name="location"
-            value={formData.location}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter Location"
-          />
-        </div>
-  
-        {/* Submit Button */}
-        <button
-          onClick={() => {
-            const filteredData = Object.fromEntries(
-              Object.entries(formData).filter(([_, value]) => value !== "")
-            );
-            addFilter(filteredData);
-          }}
-          className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-        >
-          Add to Filter
-        </button>
-      </div>
-    );
-  };
 
-
-  const MedicalHistoryForm = ({ addFilter }) => {
-    const [formData, setFormData] = useState({
-      smoking: "",
-      years_smoking: "",
-      cigarettes_per_day: "",
-      alcohol: "",
-      years_drinking: "",
-      drinks_per_day: "",
-      diet: "",
-      medical_conditions: [],
-      medical_comments: "",
-      family_health: {
-        father: { status: "", reason: "", remarks: "" },
-        paternal_grandfather: { status: "", reason: "", remarks: "" },
-        paternal_grandmother: { status: "", reason: "", remarks: "" },
-        mother: { status: "", reason: "", remarks: "" },
-        maternal_grandfather: { status: "", reason: "", remarks: "" },
-        maternal_grandmother: { status: "", reason: "", remarks: "" },
-      },
-    });
-  
-    const medicalOptions = [
-      "HTN",
-      "DM",
-      "Epileptic",
-      "Hyper Thyroid",
-      "Hypo Thyroid",
-      "CVS",
-      "CNS",
-      "Asthma",
-      "RS",
-      "GIT",
-      "KUB",
-      "Cancer",
-      "Others",
-    ];
-  
-    const handleChange = (e) => {
-      const { name, value, type, checked } = e.target;
-  
-      setFormData((prevData) => {
-        if (type === "checkbox") {
-          return {
-            ...prevData,
-            medical_conditions: checked
-              ? [...prevData.medical_conditions, value]
-              : prevData.medical_conditions.filter((item) => item !== value),
-          };
-        } else if (name.includes("_status") || name.includes("_reason") || name.includes("_remarks")) {
-          const [member, field] = name.split("_");
-          return {
-            ...prevData,
-            family_health: {
-              ...prevData.family_health,
-              [member]: { ...prevData.family_health[member], [field]: value },
-            },
-          };
-        } else {
-          return { ...prevData, [name]: value };
-        }
-      });
-    };
-  
-    const handleSubmit = () => {
-      const filteredData = Object.fromEntries(
-        Object.entries(formData).filter(([_, value]) => {
-          if (Array.isArray(value)) return value.length > 0;
-          return value !== "";
-        })
-      );
-  
-      addFilter(filteredData);
-    };
-  
-    return (
-      <div className="p-6 bg-white shadow-lg rounded-lg">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Medical History Form</h2>
-  
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block font-medium">Smoking</label>
-            <select
-              name="smoking"
-              value={formData.smoking}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            >
-              <option value="">Select</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-  
-          {formData.smoking === "Yes" && (
-            <>
-              <div>
-                <label className="block font-medium">Years of Smoking</label>
-                <input
-                  type="number"
-                  name="years_smoking"
-                  value={formData.years_smoking}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium">Cigarettes per day</label>
-                <input
-                  type="number"
-                  name="cigarettes_per_day"
-                  value={formData.cigarettes_per_day}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-            </>
-          )}
-  
-          <div>
-            <label className="block font-medium">Alcohol Consumption</label>
-            <select
-              name="alcohol"
-              value={formData.alcohol}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            >
-              <option value="">Select</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-  
-          {formData.alcohol === "Yes" && (
-            <>
-              <div>
-                <label className="block font-medium">Years of Drinking</label>
-                <input
-                  type="number"
-                  name="years_drinking"
-                  value={formData.years_drinking}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block font-medium">Drinks per day</label>
-                <input
-                  type="number"
-                  name="drinks_per_day"
-                  value={formData.drinks_per_day}
-                  onChange={handleChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-            </>
-          )}
-  
-          <div>
-            <label className="block font-medium">Diet</label>
-            <select
-              name="diet"
-              value={formData.diet}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg"
-            >
-              <option value="">Select Diet</option>
-              <option value="Vegetarian">Vegetarian</option>
-              <option value="Non-Vegetarian">Non-Vegetarian</option>
-              <option value="Vegan">Vegan</option>
-            </select>
-          </div>
+        <div>
+          <label className="block font-medium">Alcohol Consumption</label>
+          <select
+            name="alcohol"
+            value={formData.alcohol}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
         </div>
-  
-        <div className="mt-6">
-          <label className="block font-medium">Medical Conditions</label>
-          <div className="grid grid-cols-3 gap-3">
-            {medicalOptions.map((condition) => (
-              <label key={condition} className="flex items-center">
-                <input
-                  type="checkbox"
-                  value={condition}
-                  checked={formData.medical_conditions.includes(condition)}
-                  onChange={handleChange}
-                  className="mr-2"
-                />
-                {condition}
-              </label>
-            ))}
-          </div>
-        </div>
-  
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold">Family Health History</h3>
-          {Object.keys(formData.family_health).map((member) => (
-            <div key={member} className="mt-4">
-              <h4 className="font-medium capitalize">{member.replace("_", " ")}</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <input
-                  type="text"
-                  placeholder="Status"
-                  name={`${member}_status`}
-                  value={formData.family_health[member].status}
-                  onChange={handleChange}
-                  className="p-2 border border-gray-300 rounded-lg"
-                />
-                <input
-                  type="text"
-                  placeholder="Reason (if expired)"
-                  name={`${member}_reason`}
-                  value={formData.family_health[member].reason}
-                  onChange={handleChange}
-                  className="p-2 border border-gray-300 rounded-lg"
-                />
-                <input
-                  type="text"
-                  placeholder="Health Remarks"
-                  name={`${member}_remarks`}
-                  value={formData.family_health[member].remarks}
-                  onChange={handleChange}
-                  className="p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-  
-        <button
-          onClick={handleSubmit}
-          className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-        >
-          Add to Filter
-        </button>
       </div>
-    );
-  };
+
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
 
 const VaccinationForm = ({ addFilter }) => {
   const [formData, setFormData] = useState({
     vaccine: "",
     status: "",
-    doses: Array(5).fill({ date: "", name: "" }),
-    boosters: Array(5).fill({ date: "", name: "" }),
   });
 
-  const handleChange = (e, index, type) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    if (type === "dose") {
-      const newDoses = [...formData.doses];
-      newDoses[index][name] = value;
-      setFormData({ ...formData, doses: newDoses });
-    } else if (type === "booster") {
-      const newBoosters = [...formData.boosters];
-      newBoosters[index][name] = value;
-      setFormData({ ...formData, boosters: newBoosters });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
 
   return (
@@ -671,57 +586,14 @@ const VaccinationForm = ({ addFilter }) => {
         </select>
       </div>
 
-      {/* Doses */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold">Dose Information</h3>
-        {formData.doses.map((dose, index) => (
-          <div key={index} className="grid grid-cols-2 gap-4 mt-2">
-            <input
-              type="date"
-              name="date"
-              value={dose.date}
-              onChange={(e) => handleChange(e, index, "dose")}
-              className="p-2 border border-gray-300 rounded-lg"
-            />
-            <input
-              type="text"
-              name="name"
-              placeholder={`Dose ${index + 1} Name`}
-              value={dose.name}
-              onChange={(e) => handleChange(e, index, "dose")}
-              className="p-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Booster Doses */}
-      <div className="mt-6">
-        <h3 className="text-lg font-semibold">Booster Doses</h3>
-        {formData.boosters.map((booster, index) => (
-          <div key={index} className="grid grid-cols-2 gap-4 mt-2">
-            <input
-              type="date"
-              name="date"
-              value={booster.date}
-              onChange={(e) => handleChange(e, index, "booster")}
-              className="p-2 border border-gray-300 rounded-lg"
-            />
-            <input
-              type="text"
-              name="name"
-              placeholder={`Booster ${index + 1} Name`}
-              value={booster.name}
-              onChange={(e) => handleChange(e, index, "booster")}
-              className="p-2 border border-gray-300 rounded-lg"
-            />
-          </div>
-        ))}
-      </div>
-
       {/* Submit Button */}
       <button
-        onClick={() => addFilter(formData)}
+        onClick={() => {
+          const filteredData = Object.fromEntries(
+            Object.entries(formData).filter(([_, value]) => value !== "")
+          );
+          addFilter(filteredData);
+        }}
         className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
       >
         Add to Filter
@@ -733,17 +605,9 @@ const VaccinationForm = ({ addFilter }) => {
 const Preventive = ({ addFilter }) => {
   const preventiveOptions = {
     "Pre employment": "Medical Examination",
-    "Pre employment (Food Handler)": "Medical Examination",
-    "Pre Placement": "Medical Examination",
     "Annual / Periodical": "Medical Examination",
-    "Periodical (Food Handler)": "Medical Examination",
-    "Camps (Mandatory)": "Medical Examination",
-    "Camps (Optional)": "Medical Examination",
-    "Special Work Fitness": "Periodic Work Fitness",
-    "Special Work Fitness (Renewal)": "Periodic Work Fitness",
     "Fitness After Medical Leave": "Fitness After Medical Leave",
     "Mock Drill": "Mock Drill",
-    "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
   };
 
   const [selectedOption, setSelectedOption] = useState("");
@@ -757,7 +621,7 @@ const Preventive = ({ addFilter }) => {
     if (selectedOption && !selectedList.includes(selectedOption)) {
       const updatedList = [...selectedList, selectedOption];
       setSelectedList(updatedList);
-      addFilter && addFilter(updatedList);
+      addFilter && addFilter({preventive:updatedList.join(',')});
       setSelectedOption(""); // Reset dropdown after selection
     }
   };
@@ -774,7 +638,7 @@ const Preventive = ({ addFilter }) => {
       >
         <option value="">Select</option>
         {Object.entries(preventiveOptions).map(([key, value]) => (
-          <option key={key} value={value}>
+          <option key={key} value={key}>
             {key}
           </option>
         ))}
@@ -793,7 +657,9 @@ const Preventive = ({ addFilter }) => {
           <h3 className="font-medium text-gray-700">Selected Filters:</h3>
           <ul className="list-disc pl-5">
             {selectedList.map((item, index) => (
-              <li key={index} className="text-gray-800">{item}</li>
+              <li key={index} className="text-gray-800">
+                {item}
+              </li>
             ))}
           </ul>
         </div>
@@ -802,19 +668,12 @@ const Preventive = ({ addFilter }) => {
   );
 };
 
-
-
 const Curative = ({ addFilter }) => {
   const curativeOptions = {
     "Illness": "Outpatient",
-    "Over Counter Illness": "Outpatient",
     "Injury": "Outpatient",
-    "Over Counter Injury": "Outpatient",
     "Followup Visits": "Outpatient",
     "BP Sugar ( Abnormal Value)": "Outpatient",
-    "Injury Outside the Premises": "Outpatient",
-    "Over Counter Injury Outside the Premises": "Outpatient",
-    "Alcohol Abuse": "Alcohol Abuse",
   };
 
   const [selectedOption, setSelectedOption] = useState("");
@@ -828,7 +687,7 @@ const Curative = ({ addFilter }) => {
     if (selectedOption && !selectedList.includes(selectedOption)) {
       const updatedList = [...selectedList, selectedOption];
       setSelectedList(updatedList);
-      addFilter && addFilter(updatedList);
+      addFilter && addFilter({curative:updatedList.join(',')});
       setSelectedOption(""); // Reset dropdown after selection
     }
   };
@@ -845,7 +704,72 @@ const Curative = ({ addFilter }) => {
       >
         <option value="">Select</option>
         {Object.entries(curativeOptions).map(([key, value]) => (
-          <option key={key} value={value}>
+          <option key={key} value={key}>
+            {key}
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={handleAddFilter}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+
+      {/* Display selected options */}
+      {selectedList.length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-medium text-gray-700">Selected Filters:</h3>
+          <ul className="list-disc pl-5">
+            {selectedList.map((item, index) => (
+              <li key={index} className="text-gray-800">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const EmploymentStatus = ({ addFilter }) => {
+  const employmentOptions = {
+    "Employed":"Employed",
+    "Self-Employed": "Self-Employed",
+    "Not Employed": "Not Employed",
+  };
+
+  const [selectedOption, setSelectedOption] = useState("");
+  const [selectedList, setSelectedList] = useState([]);
+
+  const handleChange = (e) => {
+    setSelectedOption(e.target.value);
+  };
+
+  const handleAddFilter = () => {
+    if (selectedOption && !selectedList.includes(selectedOption)) {
+      const updatedList = [...selectedList, selectedOption];
+      setSelectedList(updatedList);
+      addFilter && addFilter({EmploymentStatus:updatedList.join(',')});
+      setSelectedOption(""); // Reset dropdown after selection
+    }
+  };
+
+  return (
+    <div className="p-4">
+      <label className="block font-medium text-gray-700">
+        Select Employment Status
+      </label>
+      <select
+        value={selectedOption}
+        onChange={handleChange}
+        className="w-full p-2 mt-2 border border-gray-300 rounded-lg"
+      >
+        <option value="">Select</option>
+        {Object.entries(employmentOptions).map(([key, value]) => (
+          <option key={key} value={key}>
             {key}
           </option>
         ))}
@@ -873,50 +797,37 @@ const Curative = ({ addFilter }) => {
   );
 };
 
-const EmploymentStatus = ({ addFilter }) => {
-  const employmentOptions = {
-    "Full-Time": "Employed",
-    "Part-Time": "Employed",
-    "Contract": "Employed",
-    "Intern": "Employed",
-    "Freelancer": "Self-Employed",
-    "Consultant": "Self-Employed",
-    "Unemployed": "Not Employed",
-    "Retired": "Not Employed",
-    "Student": "Not Employed",
-    "Self-Employed": "Self-Employed",
-  };
 
-  const [selectedOption, setSelectedOption] = useState("");
-  const [selectedList, setSelectedList] = useState([]);
+const EmployeeData = ({ employees, addFilter }) => {
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
-  const handleChange = (e) => {
-    setSelectedOption(e.target.value);
+  const handleEmployeeChange = (e) => {
+    setSelectedEmployeeId(e.target.value);
   };
 
   const handleAddFilter = () => {
-    if (selectedOption && !selectedList.includes(selectedOption)) {
-      const updatedList = [...selectedList, selectedOption];
-      setSelectedList(updatedList);
-      addFilter && addFilter(updatedList);
-      setSelectedOption(""); // Reset dropdown after selection
+    if (selectedEmployeeId) {
+      const selectedEmployee = employees.find(emp => emp.id === parseInt(selectedEmployeeId));
+      if (selectedEmployee) {
+        addFilter({ emp_no: selectedEmployee.emp_no });
+      }
     }
   };
 
   return (
     <div className="p-4">
       <label className="block font-medium text-gray-700">
-        Select Employment Status
+        Select Employee
       </label>
       <select
-        value={selectedOption}
-        onChange={handleChange}
+        value={selectedEmployeeId}
+        onChange={handleEmployeeChange}
         className="w-full p-2 mt-2 border border-gray-300 rounded-lg"
       >
-        <option value="">Select</option>
-        {Object.entries(employmentOptions).map(([key, value]) => (
-          <option key={key} value={value}>
-            {key}
+        <option value="">Select an employee</option>
+        {employees.map((employee) => (
+          <option key={employee.id} value={employee.id}>
+            {employee.name} (ID: {employee.id})
           </option>
         ))}
       </select>
@@ -925,20 +836,17 @@ const EmploymentStatus = ({ addFilter }) => {
         onClick={handleAddFilter}
         className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
       >
-        Add to Filter
+        Add Employee Data as Filter
       </button>
+      {selectedEmployeeId && (
+          <div className="mt-4">
+            <h3 className="font-medium text-gray-700">Employee Details:</h3>
+            {employees.find(emp => emp.id === parseInt(selectedEmployeeId)) && (
+              <pre>{JSON.stringify(employees.find(emp => emp.id === parseInt(selectedEmployeeId)), null, 2)}</pre>
+            )}
+          </div>
+        )}
 
-      {/* Display selected options */}
-      {selectedList.length > 0 && (
-        <div className="mt-4">
-          <h3 className="font-medium text-gray-700">Selected Filters:</h3>
-          <ul className="list-disc pl-5">
-            {selectedList.map((item, index) => (
-              <li key={index} className="text-gray-800">{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 };
