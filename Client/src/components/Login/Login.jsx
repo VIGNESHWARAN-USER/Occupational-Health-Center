@@ -13,6 +13,18 @@ const Login = () => {
   const [err, setErr] = useState("");
   
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkState = () => {
+      const accessLevel = localStorage.getItem('accessLevel');
+      if (accessLevel) {
+        localStorage.setItem('accessLevel', null);
+      }
+    };
+    checkState();
+  }, []);
+  
+
   const login = async(e) => {
     e.preventDefault();
     if (name.length === 0) setErr("Enter username");

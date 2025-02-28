@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Sidebar from "./Sidebar";
+import axios from "axios";
 
 const filterSections = [
   { id: "position", label: "Position" },
@@ -14,9 +15,22 @@ const filterSections = [
   { id: "curative", label: "Curative" },
 ];
 
+
+
 const RecordsFilters = () => {
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
+  const [data, setdata] = useState({})
+
+useEffect(
+  ()=>{
+    const fetchAllDetails = () =>{
+      const response = axios.post("http://localhost:8000/fetchAllData")
+      console.log(response)
+    }
+    fetchAllDetails();
+  },[]
+)
 
   const handleFilterClick = (section) => {
     

@@ -673,9 +673,9 @@ else if(accessLevel === "doctor")
     { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
     { id: "Investigations", label: "Investigations" },
     { id: "Vaccination", label: "Vaccination" },
-    { id: "Fitness", label: "Fitness" },
-    { id: "Consultation", label: "Consultation" },
-    { id: "Prescription", label: "Prescription" }
+    visit === "Preventive" && { id: "Fitness", label: "Fitness" },
+    visit === "Curative" && { id: "Consultation", label: "Consultation" },
+    visit === "Curative" && { id: "Prescription", label: "Prescription" }
   ];
   return (
     <div className="h-screen flex bg-[#8fcadd]">
@@ -1084,9 +1084,9 @@ else if(accessLevel === "doctor")
              
            </div>
           )}
-          {activeTab === "Fitness" && <Fitness/>}
-          {activeTab === "Consultation" && <Consultation/>}
-          {activeTab === "Prescription" && <Prescription/>}
+          {activeTab === "Fitness" && visit === "Preventive" && <Fitness/>}
+          {activeTab === "Consultation" && visit === "Curative" && <Consultation/>}
+          {activeTab === "Prescription" && visit === "Curative" && <Prescription/>}
           {activeTab === "Investigations" && <Investigation data={data}/>}
           {activeTab === "Vaccination" && <Vaccination data={data}/>}
           {activeTab === "Vitals" && <Vitals data={data.vitals}/>}

@@ -14,14 +14,31 @@ urlpatterns = [
     path('add-camp/', views.add_camp, name='add_camp'),
     path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'),
     path('addEntries', views.addEntries, name='add_Entries'),
-    path('addEntries', views.addEntries, name='add_Entries'),
     path('dashboard/', views.dashboard_stats, name='dashboard'),
     path('addvitals', views.add_vital_details, name = 'addVitals'),
     path("vaccination/", views.insert_vaccination, name="insert_vaccination"),
     path("getvaccinations/", views.fetch_vaccinations, name="get_vaccination"),
     path("fitness-tests/", views.fitness_test, name="fitness_test"),
-    path('addEntries', views.addEntries, name='add_Entries'),
     path("categories/", get_categories, name="get_categories"),
     path("reviews/<str:status>/", get_reviews, name="get_reviews"),
     path("add-review/", add_review, name="add_review"),
+    path("addInvestigation", views.add_haem_report, name="addInvestigation"),  # Keep this
+
+    # New URLs for different investigations
+    path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"),
+    path("addRenalFunctionTest", views.add_renel_function, name="addRenalFunctionTest"),
+    path("addLipidProfile", views.add_lipid_profile, name="addLipidProfile"),
+    path("addLiverFunctionTest", views.add_liver_function, name="addLiverFunctionTest"),
+    path("addThyroidFunctionTest", views.add_thyroid_function, name="addThyroidFunctionTest"),
+    path("addCoagulationTest", views.add_mri, name="addCoagulationTest"),  # Corrected the mis-mapping
+    path("addEnzymesAndCardiacProfile", views.add_enzymes_cardiac, name="addEnzymesAndCardiacProfile"),
+    path("addUrineRoutine", views.add_urine_routine, name="addUrineRoutine"),
+    path("addSerology", views.add_urine_routine, name="addSerology"), # Fixed the mis-mapping
+    path("addMotion", views.add_motion_test, name="addMotion"),
+    #path("addCultureSensitivityTest", views.add_culture_sensitivity_test, name="addCultureSensitivityTest"),
+    path("addMensPack", views.add_mens_pack, name="addMensPack"),
+    path("addOpthalmicReport", views.add_opthalmic_report, name="addOpthalmicReport"),
+    path("addUSG", views.add_usg_report, name="addUSG"),
+    path("addMRI", views.add_mri_report, name="addMRI"),
+    path("addCT",views.add_mri, name = "addCT")
 ]
