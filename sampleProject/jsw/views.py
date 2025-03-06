@@ -859,7 +859,8 @@ def add_review(request):
 def add_member(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        member = Member.objects.create(
+        print(data)
+        member = models.Member.objects.create(
             employee_number=data['employee_number'],
             name=data['name'],
             designation=data['designation'],

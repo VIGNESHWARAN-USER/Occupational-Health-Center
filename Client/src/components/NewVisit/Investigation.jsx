@@ -1,10 +1,19 @@
 import axios from "axios";
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function InvestigationForm({ data }) {
-  delete data[0]['haematology']['id'];
-  delete data[0]['haematology']['latest_id'];
-  console.log(data[0]['haematology']);
+
+  const navigate = useNavigate()
+
+  if(data.length)
+  {
+    console.log(data)
+    delete data[0]['haematology']['id'];
+    delete data[0]['haematology']['latest_id'];
+    console.log(data[0]['haematology']);
+  
+  
 
   const [selectedOption, setSelectedOption] = useState("");
   const [formData, setFormData] = useState({}); // Initialize formData state
@@ -367,5 +376,13 @@ function InvestigationForm({ data }) {
     </div>
   );
 }
+else{
+  return (
+<p className=" p-4 flex justify-center items-center">Get the employee details</p>
+  )
+  
+}
+}
+
 
 export default InvestigationForm;

@@ -31,7 +31,7 @@ const VitalsForm = ({ data }) => {
         <h3 className={`text-md font-semibold text-${meterColor}-600 mb-2`}>{status}</h3>
 
         {/* Reduced Size Circular Gauge */}
-        <div className="relative w-28 h-28 mx-auto">
+        <div className="relative w-32 h-32 mx-auto">
           <svg className="w-full h-full" viewBox="0 0 36 36" transform="rotate(-90)">
             {/* Background Circle */}
             <circle
@@ -58,8 +58,8 @@ const VitalsForm = ({ data }) => {
           </svg>
           {/* Text Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-xs font-medium text-gray-600">Mean BP</p>
-            <p className={`text-lg font-bold text-${meterColor}-600`}>{meanBP.toFixed(1)} mmHg</p>
+            <p className="text-xm font-medium text-gray-600">Mean BP</p>
+            <p className={`text-sm font-bold text-${meterColor}-600`}>{meanBP.toFixed(1)} mmHg</p>
           </div>
         </div>
       </div>

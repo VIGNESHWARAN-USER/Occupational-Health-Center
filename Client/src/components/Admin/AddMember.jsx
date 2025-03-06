@@ -1,15 +1,20 @@
 import React, { useState } from "react";
 import Sidebar from "../Sidebar";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 function AddMember() {
+
+  const accessLevel = localStorage.getItem('accessLevel')
+  const navigate = useNavigate();
+  if(accessLevel === "admin")
+  {
   const [formData, setFormData] = useState({
     employee_number: "",
     name: "",
     designation: "Admin",
     email: "",
     role: "HR",
-    date_exited: "2025-01-07",
   });
 
   // Handle input change
@@ -132,17 +137,7 @@ function AddMember() {
               </div>
             </div>
 
-            {/* Fourth Row */}
-            <div>
-              <label className="block text-black mb-1">Enter the Date Exited</label>
-              <input
-                type="date"
-                name="date_exited"
-                value={formData.date_exited}
-                onChange={handleChange}
-                className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+           
             <div>
               <button
                 type="submit"
@@ -156,6 +151,19 @@ function AddMember() {
       </div>
     </div>
   );
+}
+else{
+  return  <section class="bg-white h-full flex items-center dark:bg-gray-900">
+  <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
+      <div class="mx-auto max-w-screen-sm text-center">
+          <h1 class="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-primary-600 dark:text-primary-500">404</h1>
+          <p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Something's missing.</p>
+          <p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, we can't find that page. You'll find lots to explore on the home page. </p>
+          <button onClick={()=>navigate(-1)} class="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4">Back</button>
+      </div>   
+  </div>
+</section>
+}
 }
 
 export default AddMember;

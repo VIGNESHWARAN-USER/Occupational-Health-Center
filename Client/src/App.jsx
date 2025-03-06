@@ -1,11 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import './index.css'
+import React from 'react'
 import Login from './components/Login/Login'
 import Forgot from './components/Login/Forgot'
 import Dashboard from './components/Dashboard'
 import AppointmentPage from './components/Appointments/Appointment'
-import UploadAppointmentPage from './components/Appointments/UploadAppointment'
-import ViewDetails from './components/Appointments/ViewDetails'
 import MockDrills from './components/MockDrills'
 import EventsAndCamps from './components/EventsAndCamps'
 import AddMember from './components/Admin/AddMember'
@@ -30,8 +29,6 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path = '/newvisit' element = {<NewVisit/>}/>
           <Route path= '/appointments' element = {<AppointmentPage/>}/>
-          <Route path = '/uploadAppointment' element = {<UploadAppointmentPage/>}/>
-          <Route path = '/viewDetails' element = {<ViewDetails/>}/>
           <Route path = '/mockDrills' element = {<MockDrills/>}/>
           <Route path = '/eventsandcamps' element = {<EventsAndCamps/>}/>
           <Route path = '/addmember' element = {<AddMember/>}/>
