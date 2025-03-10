@@ -11,7 +11,6 @@ from .models import Appointment  # Replace with your actual model
 from .models import mockdrills  # Replace with your actual model
 from .models import eventsandcamps  # Replace with your actual model
 from datetime import datetime, timedelta
-from .models import Appointment
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
@@ -608,14 +607,14 @@ def uploadAppointment(request):
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-
+@csrf_exempt
 def create_users(request):
     users = [
-        {'username': 'nurse', 'password': 'nurse'},
-        {'username': 'doctor', 'password': 'doctor'},
-        {'username': 'admin', 'password': 'admin'}
+        {'username': 'nurse', 'password': 'nurse123'},
+        {'username': 'doctor', 'password': 'doctor123'},
+        {'username': 'admin', 'password': 'admin123'}
     ]
-
+    print("Hii")
     for user_data in users:
         user = User.objects.get(username=user_data['username'])
         user.set_password(user_data['password'])

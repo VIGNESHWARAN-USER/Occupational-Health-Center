@@ -31,7 +31,7 @@ const EventsAndCamps = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/add-camp/", {
+      const response = await fetch("https://occupational-health-center.onrender.com/add-camp/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -179,7 +179,7 @@ else if(accessLevel === "doctor")
     setError(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/add-camp/", {
+      const response = await fetch("https://occupational-health-center.onrender.com/add-camp/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

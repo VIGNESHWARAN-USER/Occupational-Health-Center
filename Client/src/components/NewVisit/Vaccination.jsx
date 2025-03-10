@@ -31,7 +31,7 @@ const Vaccination = () => {
     };
 
     try {
-      const response = await fetch("http://localhost:8000/vaccination/", {
+      const response = await fetch("https://occupational-health-center.onrender.com/vaccination/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

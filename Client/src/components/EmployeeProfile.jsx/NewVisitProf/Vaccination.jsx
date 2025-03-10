@@ -13,7 +13,7 @@ const Vaccination = () => {
 
   // Fetch vaccination data from backend
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/getvaccinations/") // Update with your API URL
+    fetch("https://occupational-health-center.onrender.com/getvaccinations/") // Update with your API URL
       .then((response) => response.json())
       .then((data) => {
         if (data.vaccinations.length > 0) {

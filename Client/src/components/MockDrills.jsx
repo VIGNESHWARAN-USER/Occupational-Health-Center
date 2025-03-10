@@ -45,7 +45,7 @@ const MockDrills = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    const response = await fetch("http://127.0.0.1:8000/save-mockdrills/", {
+    const response = await fetch("https://occupational-health-center.onrender.com/save-mockdrills/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -428,7 +428,7 @@ else if(accessLevel === "doctor")
   const handleSubmit = async (e) => {
     e.preventDefault();
   
-    const response = await fetch("http://127.0.0.1:8000/save-mockdrills/", {
+    const response = await fetch("https://occupational-health-center.onrender.com/save-mockdrills/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
