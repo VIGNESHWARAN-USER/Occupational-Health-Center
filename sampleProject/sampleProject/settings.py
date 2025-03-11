@@ -27,10 +27,12 @@ SECRET_KEY = 'django-insecure-2an=+9=g@e!k!x@al6ve@@g@fuxv&vgv%evj%6jv^l6421xojc
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    'occupational-health-center.onrender.com',
+    '*',
+    'occupational-health-center-1.onrender.com',
     'localhost',
     '127.0.0.1'
 ]
+
 
 CORS_ALLOW_ALL_ORIGINS = True
 
