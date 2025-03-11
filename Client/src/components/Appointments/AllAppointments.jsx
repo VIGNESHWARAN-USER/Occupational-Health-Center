@@ -7,7 +7,7 @@ const AllAppointments = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [purpose, setPurpose] = useState(""); // New state for the filter
+  const [purpose, setPurpose] = useState("");
 
   const purposeOptions = [
     "Pre employment",
@@ -26,16 +26,16 @@ const AllAppointments = () => {
 
   useEffect(() => {
     fetchAppointments();
-  }, [fromDate, toDate, purpose]); // Add purpose to dependencies
+  }, [fromDate, toDate, purpose]);
 
   const fetchAppointments = async () => {
     try {
-      let url = "https://occupational-health-center-1.onrender.com/appointments/";
+      let url = "http://localhost:8000/appointments/";
       const params = new URLSearchParams();
 
       if (fromDate) params.append("fromDate", fromDate);
       if (toDate) params.append("toDate", toDate);
-      if (purpose) params.append("purpose", purpose); // Add the purpose to the URL params
+      if (purpose) params.append("purpose", purpose);
 
       if (params.toString()) {
         url += `?${params.toString()}`;
@@ -57,7 +57,7 @@ const AllAppointments = () => {
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
-    setPurpose(""); // Reset purpose filter
+    setPurpose("");
     fetchAppointments();
   };
 
@@ -68,7 +68,7 @@ const AllAppointments = () => {
     }
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/update-appointment-status/", {
+      const response = await fetch("http://localhost:8000/update-appointment-status/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -98,11 +98,10 @@ const AllAppointments = () => {
   };
 
   const filteredAppointments = appointments.filter((appointment) => {
-    // Filter by search query
     const searchMatch =
       appointment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       appointment.id.toString().includes(searchQuery);
-    // Check if the appointment matches all selected filters
+
     const dateMatch =
       (!fromDate || new Date(appointment.appointment_date) >= new Date(fromDate)) &&
       (!toDate || new Date(appointment.appointment_date) <= new Date(toDate));
@@ -113,23 +112,23 @@ const AllAppointments = () => {
 
   return (
     <motion.div
-      className="p-6 rounded-lg bg-gray-50 shadow-md"
+      className="p-4 md:p-6 rounded-lg bg-gray-50 shadow-md"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-800">
+      <div className="mb-4 md:mb-8">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">
           {purpose ? `${purpose} Appointments` : "All Appointments"}
         </h1>
       </div>
 
       {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <div className="relative flex items-center w-full sm:w-64">
+      <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-4 md:mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 w-full">
+            <div className="relative flex items-center w-full">
               <FaSearch className="absolute left-3 text-gray-400" />
               <input
                 type="text"
@@ -141,8 +140,8 @@ const AllAppointments = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <div className="relative flex items-center w-full sm:w-48">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 md:gap-4 w-full md:w-auto">
+            <div className="relative flex items-center w-full md:w-48">
               <FaCalendarAlt className="absolute left-3 text-gray-400" />
               <input
                 type="date"
@@ -151,7 +150,7 @@ const AllAppointments = () => {
                 onChange={(e) => setFromDate(e.target.value)}
               />
             </div>
-            <div className="relative flex items-center w-full sm:w-48">
+            <div className="relative flex items-center w-full md:w-48">
               <FaCalendarAlt className="absolute left-3 text-gray-400" />
               <input
                 type="date"
@@ -160,7 +159,7 @@ const AllAppointments = () => {
                 onChange={(e) => setToDate(e.target.value)}
               />
             </div>
-            <div className="relative flex items-center w-full sm:w-48">
+            <div className="relative flex items-center w-full md:w-48">
               <FaFilter className="absolute left-3 text-gray-400" />
               <select
                 value={purpose}
@@ -175,6 +174,7 @@ const AllAppointments = () => {
                 ))}
               </select>
             </div>
+            <div className="flex gap-2">
             <button
               className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2"
               onClick={fetchAppointments}
@@ -187,19 +187,20 @@ const AllAppointments = () => {
             >
               <FaSyncAlt /> Clear
             </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
         {/* Table Header */}
-        <div className="grid grid-cols-6 bg-blue-50 p-4 font-semibold text-blue-600">
-          <p>ID</p>
+        <div className="grid grid-cols-2 md:grid-cols-6 bg-blue-50 p-2 md:p-4 font-semibold text-blue-600">
+          <p className="hidden md:block">ID</p>
           <p>Name</p>
-          <p>Role</p>
-          <p>Purpose</p>
-          <p>Appointment Date</p>
+          <p className="hidden md:block">Role</p>
+          <p className="hidden md:block">Purpose</p>
+          <p className="hidden md:block">Appointment Date</p>
           <p>Action</p>
         </div>
 
@@ -208,15 +209,15 @@ const AllAppointments = () => {
           filteredAppointments.map((appointment) => (
             <div
               key={appointment.id}
-              className="grid grid-cols-6 p-4 text-sm text-gray-700 border-b border-gray-100 hover:bg-gray-50 transition"
+              className="grid grid-cols-2 md:grid-cols-6 p-2 md:p-4 text-sm text-gray-700 border-b border-gray-100 hover:bg-gray-50 transition"
             >
-              <p>{appointment.id}</p>
+              <p className="hidden md:block">{appointment.id}</p>
               <p>{appointment.name}</p>
-              <p>{appointment.role}</p>
-              <p>{appointment.purpose}</p>
-              <p>{new Date(appointment.appointment_date).toLocaleString()}</p>
+              <p className="hidden md:block">{appointment.role}</p>
+              <p className="hidden md:block">{appointment.purpose}</p>
+              <p className="hidden md:block">{new Date(appointment.appointment_date).toLocaleString()}</p>
               <button
-                className={`px-4 py-2 rounded-lg text-sm font-semibold ${
+                className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold ${
                   appointment.status === "initiate"
                     ? "bg-red-100 text-red-600 hover:bg-red-200"
                     : appointment.status === "inprogress"

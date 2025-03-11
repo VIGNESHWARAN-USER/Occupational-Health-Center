@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Sidebar from "./Sidebar";
+import { motion } from "framer-motion";
 
 const ReviewPeople = () => {
     const [reviews, setReviews] = useState([]);
@@ -8,7 +10,7 @@ const ReviewPeople = () => {
 
     // Fetch categories
     useEffect(() => {
-        fetch("https://occupational-health-center-1.onrender.com/categories/")
+        fetch("http://localhost:8000/categories/")
             .then((res) => res.json())
             .then((data) => setCategories(data.categories))
             .catch((err) => console.error("Error fetching categories:", err));
@@ -16,7 +18,7 @@ const ReviewPeople = () => {
 
     // Fetch reviews based on activeStatus & selectedCategory
     useEffect(() => {
-        let url = `https://occupational-health-center-1.onrender.com/reviews/${activeStatus}/`;
+        let url = `http://localhost:8000/reviews/${activeStatus}/`;
         if (selectedCategory) {
             url += `?category=${selectedCategory}`; // Append category as a query param
         }
@@ -28,85 +30,92 @@ const ReviewPeople = () => {
     }, [activeStatus, selectedCategory]);
 
     return (
-        <div className="flex p-5">
-            {/* Left Sidebar: Categories */}
-            <div className="w-1/4 bg-gray-100 p-4 rounded-lg">
-                <h2 className="text-lg font-semibold">Categories</h2>
-                <ul className="mt-4">
-                    <li 
-                        className={`p-2 border-b cursor-pointer ${selectedCategory === "" ? "font-bold text-blue-600" : ""}`}
-                        onClick={() => setSelectedCategory("")} // Show all reviews
-                    >
-                        📁 All Categories
-                    </li>
-                    {categories.map((category) => (
-                        <li 
-                            key={category.id} 
-                            className={`p-2 border-b cursor-pointer ${selectedCategory === category.name ? "font-bold text-blue-600" : ""}`}
-                            onClick={() => setSelectedCategory(category.name)}
-                        >
-                            📁 {category.name}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+        <div className="h-screen flex bg-[#8fcadd]">
+            <Sidebar />
+            <div className="w-4/5 p-8 overflow-y-auto">
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-4xl font-bold text-gray-800">Review People</h1>
+                    <div className="flex gap-4">
+                        {["Today", "Tomorrow", "Not Attempted"].map((status) => (
+                            <button
+                                key={status}
+                                onClick={() => setActiveStatus(status)}
+                                className={`px-4 py-2 rounded-md ${activeStatus === status
+                                    ? "bg-blue-500 text-white hover:bg-blue-600"
+                                    : "bg-gray-300 text-gray-700 hover:bg-gray-400 hover:text-gray-800"
+                                    } transition duration-300`}
+                            >
+                                {status} Reviews
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
-            {/* Right Content: Reviews */}
-            <div className="w-3/4 p-4">
-                {/* Filter Buttons */}
-                <div className="flex gap-4 mb-4">
-                    {["Today", "Tomorrow", "Not Attempted"].map((status) => (
-                        <button
-                            key={status}
-                            onClick={() => setActiveStatus(status)}
-                            className={`px-4 py-2 rounded-md ${
-                                activeStatus === status ? "bg-gray-800 text-white" : "bg-gray-300"
-                            }`}
+                <motion.div
+                    className="bg-white p-8 rounded-lg shadow-lg"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    
+                    <div className="bg-white shadow rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-semibold mb-2 text-gray-700">{activeStatus} Reviews</h2>
+                        <div className="mb-4">
+                        <label htmlFor="category" className="block text-gray-700 text-sm font-bold mb-2">
+                            Select Category:
+                        </label>
+                        <select
+                            id="category"
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            {status} Reviews
+                            <option value="">All Categories</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.name}>
+                                    {category.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    </div>
+                        <h3 className="text-md text-gray-500">{selectedCategory || "All Categories"}</h3>
+                        <table className="w-full border-collapse">
+    <thead>
+        <tr className="bg-gray-200">
+            <th className="border p-3 text-gray-700 w-1/5 text-center">PID</th>
+            <th className="border p-3 text-gray-700 w-1/5 text-center">Name</th>
+            <th className="border p-3 text-gray-700 w-1/5 text-center">Gender</th>
+            <th className="border p-3 text-gray-700 w-1/5 text-center">Appointments</th>
+            <th className="border p-3 text-gray-700 w-1/5 text-center">Edit</th>
+        </tr>
+    </thead>
+    <tbody>
+        {reviews.length > 0 ? (
+            reviews.map((review) => (
+                <tr key={review.id} className="border odd:bg-gray-100">
+                    <td className="p-3 text-gray-700 text-center">{review.pid}</td>
+                    <td className="p-3 text-gray-700 text-center">{review.name}</td>
+                    <td className="p-3 text-gray-700 text-center">{review.gender}</td>
+                    <td className="p-3 text-gray-700 text-center">{review.appointment_date}</td>
+                    <td className="p-3 text-center">
+                        <button className="bg-blue-500 text-white px-4 py-1 rounded-md hover:bg-blue-600 transition duration-300">
+                            Edit
                         </button>
-                    ))}
-                </div>
+                    </td>
+                </tr>
+            ))
+        ) : (
+            <tr>
+                <td colSpan="5" className="text-center p-4 text-gray-500">No reviews found</td>
+            </tr>
+        )}
+    </tbody>
+</table>
 
-                {/* Review Table */}
-                <div className="bg-white shadow rounded-lg p-4">
-                    <h2 className="text-lg font-semibold mb-2">{activeStatus} Reviews</h2>
-                    <h3 className="text-md text-gray-500">{selectedCategory || "All Categories"}</h3>
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-gray-200">
-                                <th className="border p-2">Profile</th>
-                                <th className="border p-2">PID</th>
-                                <th className="border p-2">Name</th>
-                                <th className="border p-2">Gender</th>
-                                <th className="border p-2">Appointments</th>
-                                <th className="border p-2">Edit</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {reviews.length > 0 ? (
-                                reviews.map((review) => (
-                                    <tr key={review.id} className="border">
-                                        <td className="p-2 text-center">👤</td>
-                                        <td className="p-2">{review.pid}</td>
-                                        <td className="p-2">{review.name}</td>
-                                        <td className="p-2">{review.gender}</td>
-                                        <td className="p-2">{review.appointment_date}</td>
-                                        <td className="p-2">
-                                            <button className="bg-gray-800 text-white px-3 py-1 rounded-md">
-                                                Edit
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="6" className="text-center p-4">No reviews found</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                    </div>
+                </motion.div>
             </div>
         </div>
     );

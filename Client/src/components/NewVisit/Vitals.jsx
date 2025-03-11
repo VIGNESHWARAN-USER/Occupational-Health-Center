@@ -43,7 +43,7 @@ const VitalsForm = () => {
     }
 
     try {
-      const resp = await axios.post("https://occupational-health-center-1.onrender.com/addvitals", formDataToSend, {
+      const resp = await axios.post("http://localhost:8000/addvitals", formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

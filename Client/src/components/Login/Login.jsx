@@ -49,13 +49,13 @@ const Login = () => {
       try {
         setLoading(true);
         const response = await axios.post(
-          "https://occupational-health-center-1.onrender.com/login",
+          "http://localhost:8000/login",
           { username: name, password: pass }
         );
         if (response.status === 200) {
           localStorage.setItem("accessLevel", response.data.accessLevel);
           setLoading(false);
-          navigate(response.data.accessLevel === "nurse" ? "../dashboard" : "../admindashboard");
+          navigate(response.data.accessLevel === "admin" ? "../admindashboard" : "../dashboard");
         } else setErr("Password incorrect");
       } catch (error) {
         setErr("Invalid details");
