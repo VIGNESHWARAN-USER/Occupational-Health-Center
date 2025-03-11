@@ -66,7 +66,7 @@ const accessLevel = localStorage.getItem('accessLevel');
     }
   
     try {
-      const response = await axios.post("https://occupational-health-center.onrender.com/addEntries", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
         formDataDashboard, 
         emp_no: formData.emp_no
       }, {
@@ -94,7 +94,7 @@ const accessLevel = localStorage.getItem('accessLevel');
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("https://occupational-health-center.onrender.com/addbasicdetails", formData, {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", formData, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -146,7 +146,7 @@ const accessLevel = localStorage.getItem('accessLevel');
       try {
         
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("https://occupational-health-center.onrender.com/userData");
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
         setEmployees(response.data.data);
         console.log(response.data.data)
         setFilteredEmployees(response.data.data);

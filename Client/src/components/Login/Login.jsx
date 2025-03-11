@@ -49,7 +49,7 @@ const Login = () => {
       try {
         setLoading(true);
         const response = await axios.post(
-          "https://occupational-health-center.onrender.com/login",
+          "https://occupational-health-center-1.onrender.com/login",
           { username: name, password: pass }
         );
         if (response.status === 200) {

@@ -42,7 +42,7 @@ const Dashboard = () => {
       params.append("visitType", visitType);
       params.append("entityType", entityType);
   
-      axios.get(`https://occupational-health-center.onrender.com/dashboard/?${params.toString()}`)
+      axios.get(`https://occupational-health-center-1.onrender.com/dashboard/?${params.toString()}`)
         .then((response) => {
           setChartData(response.data);
         })
@@ -171,7 +171,7 @@ const Dashboard = () => {
       params.append("visitType", visitType);
       params.append("entityType", entityType);
   
-      axios.get(`https://occupational-health-center.onrender.com/dashboard/?${params.toString()}`)
+      axios.get(`https://occupational-health-center-1.onrender.com/dashboard/?${params.toString()}`)
         .then((response) => {
           setChartData(response.data);
         })

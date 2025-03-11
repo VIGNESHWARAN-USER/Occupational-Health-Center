@@ -8,7 +8,7 @@ const ReviewPeople = () => {
 
     // Fetch categories
     useEffect(() => {
-        fetch("https://occupational-health-center.onrender.com/categories/")
+        fetch("https://occupational-health-center-1.onrender.com/categories/")
             .then((res) => res.json())
             .then((data) => setCategories(data.categories))
             .catch((err) => console.error("Error fetching categories:", err));
@@ -16,7 +16,7 @@ const ReviewPeople = () => {
 
     // Fetch reviews based on activeStatus & selectedCategory
     useEffect(() => {
-        let url = `https://occupational-health-center.onrender.com/reviews/${activeStatus}/`;
+        let url = `https://occupational-health-center-1.onrender.com/reviews/${activeStatus}/`;
         if (selectedCategory) {
             url += `?category=${selectedCategory}`; // Append category as a query param
         }

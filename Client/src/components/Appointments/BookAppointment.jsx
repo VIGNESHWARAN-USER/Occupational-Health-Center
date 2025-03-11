@@ -23,7 +23,7 @@ const BookAppointment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const response = await fetch("https://occupational-health-center.onrender.com/bookAppointment/", {
+    const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
