@@ -103,7 +103,8 @@ DATABASES = {
         'USER': 'avnadmin',
         'PASSWORD': 'AVNS_uVkEh0awpxi9I4bEOCq',
         'HOST' : "mysql-5893c62-jsw-test.a.aivencloud.com",
-        'PORT':'19129'
+        'PORT':'19129',
+        'CONN_MAX_AGE': 0
     }
 }
 

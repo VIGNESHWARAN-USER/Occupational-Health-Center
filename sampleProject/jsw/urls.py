@@ -11,7 +11,9 @@ urlpatterns = [
     path('appointments/', views.get_appointments, name='get_appointments'),
     path('addUsers/', views.create_users, name='addusers'),
     path('save-mockdrills/', views.save_mockdrills, name='save_mockdrills'),
+    path('get-mockdrills/', views.get_mockdrills, name='get_mockdrills'),
     path('add-camp/', views.add_camp, name='add_camp'),
+    path('get-camps/', views.get_camps, name='get_camps'),
     path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'),
     path('addEntries', views.addEntries, name='add_Entries'),
     path('dashboard/', views.dashboard_stats, name='dashboard'),
@@ -23,7 +25,7 @@ urlpatterns = [
     path("reviews/<str:status>/", get_reviews, name="get_reviews"),
     path("add-review/", add_review, name="add_review"),
     path("addInvestigation", views.add_haem_report, name="addInvestigation"),  # Keep this
-
+    path("medical-history/", views.create_medical_history, name="add_review"),
     # New URLs for different investigations
     path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"),
     path("addRenalFunctionTest", views.add_renel_function, name="addRenalFunctionTest"),

@@ -50,6 +50,7 @@ const NewVisit = () => {
         "Special Work Fitness": "Periodic Work Fitness",
         "Special Work Fitness (Renewal)": "Periodic Work Fitness",
         "Fitness After Medical Leave": "Fitness After Medical Leave",
+        "Fitness After Long Leave": "Fitness After Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
       },
@@ -77,6 +78,7 @@ const NewVisit = () => {
         "Special Work Fitness": "Periodic Work Fitness",
         "Special Work Fitness (Renewal)": "Periodic Work Fitness",
         "Fitness After Medical Leave": "Fitness After Medical Leave",
+        "Fitness Long Medical Leave": "Fitness Long Medical Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
       },
@@ -146,7 +148,8 @@ const NewVisit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:8000/addbasicdetails", formData, {
+      const updatedformData = {...formData, role: type}
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -183,6 +186,11 @@ const NewVisit = () => {
           setdata([latestEmployee]);
           setsingleData([latestEmployee]);
           setFormData(latestEmployee);
+          const selectedType = latestEmployee.role;
+          setType(selectedType);
+          setRegister(""); // Reset register
+          setPurpose("");   // Reset purpose
+          setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" }));
           localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee)); // Save latest matched employee
         } else {
           alert("Employee not found!");
@@ -210,9 +218,10 @@ const NewVisit = () => {
       try {
         localStorage.removeItem("selectedEmployee");
         const response = await axios.post("http://localhost:8000/userData");
-        setEmployees(response.data.data);
+        setEmployees(response.data.data);                        
         setFilteredEmployees(response.data.data);
-
+        console.log(response.data.data);
+                                                                    
         const savedEmployee = localStorage.getItem("selectedEmployee");
         if (savedEmployee) {
           const parsedEmployee = JSON.parse(savedEmployee);
@@ -284,18 +293,18 @@ const NewVisit = () => {
                   value={formData.name || ''}  // Handle undefined
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="Initial followed by Full Name"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Birth (dd/mm/yyyy)</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Birth</label>
                 <input
                   name="dob"
                   value={formData.dob || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter Date of Birth in dd/mm/yyyy"
+                  placeholder="DD/MM/YYYY"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -320,7 +329,7 @@ const NewVisit = () => {
                   value={formData.aadhar || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter 12-digit Aadhar No."
+                  placeholder="0000 0000 0000"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -331,18 +340,29 @@ const NewVisit = () => {
                   value={formData.bloodgrp || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="e.g., A+, O-"
+                  placeholder="e.g., A Positive"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Marks</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Mark 1</label>
                 <input
-                  name="identification_marks"
-                  value={formData.identification_marks || ''}
+                  name="identification_marks1"
+                  value={formData.identification_marks1 || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter any visible identification marks"
+                  placeholder="Any visible identification marks"
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Mark 2</label>
+                <input
+                  name="identification_marks2"
+                  value={formData.identification_marks2 || ''}
+                  onChange={handleChange}
+                  type="text"
+                  placeholder="Any visible identification marks"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -357,7 +377,9 @@ const NewVisit = () => {
                   <option value="">Select Status</option>
                   <option>Single</option>
                   <option>Married</option>
-                  <option>Other</option>
+                  <option>Seperated</option>
+                  <option>Divorced</option>
+                  <option>Widowed</option>
                 </select>
               </div>
             </div>
@@ -561,7 +583,7 @@ const NewVisit = () => {
       case "Vaccination":
         return <Vaccination data={data} />;
       case "Vitals":
-        return <Vitals data={data.vitals} />;
+        return <Vitals data={data} />;
       case "MedicalHistory":
         return <MedicalHistory data={data} />;
       case "Consultation":
@@ -629,6 +651,7 @@ const NewVisit = () => {
                       value={type}
                       onChange={handleTypeChange}
                     >
+                      <option value="">Select Type</option>
                       <option>Employee</option>
                       <option>Contractor</option>
                       <option>Visitor</option>
@@ -645,6 +668,7 @@ const NewVisit = () => {
                       value={visit}
                       onChange={handleVisitChange}
                     >
+                      <option value="">Select Visit Type</option>
                       <option>Preventive</option>
                       <option>Curative</option>
                     </select>
@@ -675,6 +699,7 @@ const NewVisit = () => {
                     <input
                       type="text"
                       value={purpose}
+                      placeholder="Select the above feilds"
                       readOnly
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100"
                     />

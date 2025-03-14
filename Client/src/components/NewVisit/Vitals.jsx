@@ -1,63 +1,37 @@
 import axios from 'axios';
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { FaFileUpload } from 'react-icons/fa';
 
 const VitalsForm = () => {
   const initialData = JSON.parse(localStorage.getItem("selectedEmployee")) || {};
   const [formData, setFormData] = useState({});
-  const [selectedFiles, setSelectedFiles] = useState({});
 
   useEffect(() => {
     if (initialData && initialData.vitals) {
       setFormData(initialData.vitals);
+      formData.emp_no = initialData.emp_no;
     }
-  }, [initialData]);
+  }, []);
 
-  const handleFileChange = (event, type) => {
-    const file = event.target.files[0];
-    setSelectedFiles((prevFiles) => ({ ...prevFiles, [type]: file }));
-  };
 
-  const handleBrowseClick = (type) => {
-    document.getElementById(type).click();
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e) =>
+  {
     e.preventDefault();
-
-    const formDataToSend = new FormData();
-
-    for (const key in formData) {
-      formDataToSend.append(key, formData[key]);
-    }
-
-    if (selectedFiles.SelfDeclaration) {
-      formDataToSend.append('SelfDeclaration', selectedFiles.SelfDeclaration);
-    }
-    if (selectedFiles.FCExternal) {
-      formDataToSend.append('FCExternal', selectedFiles.FCExternal);
-    }
-    if (selectedFiles.Reports) {
-      formDataToSend.append('Reports', selectedFiles.Reports);
-    }
-
-    try {
-      const resp = await axios.post("http://localhost:8000/addvitals", formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      if (resp.status === 200) {
-        alert("Vitals added successfully");
+    try{
+      const updatedformdata = {...formData, emp_no: initialData.emp_no}
+      console.log(updatedformdata)
+      const resp = await axios.post("http://localhost:8000/addvitals", updatedformdata)
+      if(resp.status === 200)
+      {
+        alert("Vitals added successfully")
       }
-    } catch (error) {
-      console.error("Error adding vitals:", error);
-      alert("An Error Occurred: " + error.message);
     }
-  };
-
+    catch(e)
+    {
+      alert("An Error Occured")
+    }
+    
+  }
+  console.log(formData)
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -72,15 +46,15 @@ const VitalsForm = () => {
     const diastolicValue = parseInt(diastolic, 10);
 
     let status = "Normal";
-    let imageUrl = "normal.png";
+    let imageUrl = "normal.png"; // Replace with the path to your normal image
 
     if (systolicValue > 120 || diastolicValue > 80) {
       status = "Elevated";
-      imageUrl = "elevated.png";
+      imageUrl = "elevated.png"; // Replace with the path to your elevated image
     }
     if (systolicValue > 140 || diastolicValue > 90) {
       status = "Hypertension";
-      imageUrl = "hypertension.png";
+      imageUrl = "hypertension.png"; // Replace with the path to your hypertension image
     }
 
     return (
@@ -209,42 +183,11 @@ const VitalsForm = () => {
             className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
-
+        
       </div>
-
-      {/* File Upload Section - Moved to the bottom */}
-      <div className="mt-8">
-        <h3>Upload Documents</h3>
-        <div className="grid grid-cols-2 gap-4">
-          {['SelfDeclaration', 'FCExternal', 'Reports','Manual Forms'].map((type) => (
-            <motion.div
-              key={type}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer mb-4 h-28 bg-white shadow-md hover:shadow-lg transition duration-300"
-              onClick={() => handleBrowseClick(type)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FaFileUpload className="text-4xl text-blue-500 mb-2" />
-              <p className="text-gray-700 font-medium">Upload {type.replace(/([A-Z])/g, ' $1')}</p>
-              <p className="text-xs text-gray-500">Click or drag file here</p>
-              <input
-                type="file"
-                id={type}
-                style={{ display: "none" }}
-                onChange={(e) => handleFileChange(e, type)}
-              />
-              {selectedFiles[type] && (
-                <p className="mt-2 text-sm text-gray-600">{selectedFiles[type].name}</p>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      </div>
-
       <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-        Add Vitals
-      </button>
+              Add Vitals
+            </button>
     </div>
   );
 };

@@ -15,7 +15,8 @@ class employee_details(models.Model):
     sex = models.TextField(max_length=225)
     aadhar = models.TextField(max_length=225)
     bloodgrp = models.TextField(max_length=225)
-    identification_marks = models.TextField(max_length=225)
+    identification_marks1 = models.TextField(max_length=225)
+    identification_marks2 = models.TextField(max_length=225)
     marital_status = models.TextField(max_length=225)
     emp_no = models.TextField(max_length=200)
     employer = models.TextField(max_length=225)
@@ -33,7 +34,7 @@ class employee_details(models.Model):
     mail_id_Emergency_Contact_Person = models.TextField(max_length=225)
     emergency_contact_phone = models.TextField(max_length=225)
     address = models.TextField(max_length=225)
-
+    role = models.TextField(max_length=50)
     def __str__(self):
         return self.emp_no
         
@@ -86,15 +87,29 @@ class mockdrills(models.Model):
         return self.emp_no
     
 
+from datetime import date
+
 class eventsandcamps(models.Model):
     camp_name = models.TextField(max_length=100)
-    start_date= models.DateField()
-    end_date= models.DateField()
-    camp_details= models.TextField(max_length=225)
-    camp_type= models.TextField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    camp_details = models.TextField(max_length=225)
+    camp_type = models.TextField(max_length=100, default="Upcoming")
 
-    def __str__(self):
+    def _str_(self):
         return self.camp_name
+
+    def save(self, *args, **kwargs):
+        today = date.today()
+
+        if self.start_date > today:
+            self.camp_type = "Upcoming"
+        elif self.start_date <= today <= self.end_date:
+            self.camp_type = "Live"
+        else:
+            self.camp_type = "Previous"
+
+        super().save(*args, **kwargs)
 
 
 class heamatalogy(models.Model):
@@ -806,18 +821,24 @@ class Appointment(models.Model):
         INITIATE = 'initiate', 'Initiate'
         IN_PROGRESS = 'inprogress', 'In Progress'
         COMPLETED = 'completed', 'Completed'
-
+        DEFAULT = 'default', 'Default'
+    
+    appointment_no = models.TextField(max_length = 255)
+    booked_date = models.DateField()
     role = models.TextField(max_length=100)
-    name = models.TextField(max_length=255)
-    employee_id = models.TextField(max_length=100, blank=True)
-    organization = models.TextField(max_length=255)
+    name = models.TextField(max_length=100)
+    organization_name = models.TextField(max_length=100)
+    contractor_name = models.TextField(max_length=100)
+    consultated_by =models.TextField(max_length=100)
+    employer = models.TextField(max_length=255)
+    emp_no = models.TextField(max_length=255)
     aadhar_no = models.TextField(max_length=225)
-    contractor_name = models.TextField(max_length=255)
+    doctor_name = models.TextField(max_length=255)
     purpose = models.TextField()
-    appointment_date = models.DateField()
     date = models.DateField()
     time = models.TextField(max_length=225)
     booked_by = models.TextField(max_length=255)
+    mrd_no = models.TextField(max_length=255)
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
@@ -826,7 +847,7 @@ class Appointment(models.Model):
 
     def str(self):
         return f"{self.name} - {self.appointment_date}"
-    
+
 
 class FitnessAssessment(models.Model):
     class PositiveNegativeChoices(models.TextChoices):
@@ -849,6 +870,7 @@ class FitnessAssessment(models.Model):
 
 
 class Vaccination(models.Model):
+    emp_no = models.CharField(max_length=200)
     name = models.CharField(max_length=255)
     status = models.CharField(max_length=50)
     normal_doses = models.JSONField(default=dict)  # {"dates": [], "dose_names": []}
@@ -877,93 +899,6 @@ class Review(models.Model):
 
     def _str_(self):
         return f"{self.name} - {self.category.name}"
-
-
-
-class MedicalHistory(models.Model):
-    # Personal History
-    smoking_yes_no = models.CharField(max_length=10, blank=True, null=True, choices=[('yes', 'Yes'), ('no', 'No')], verbose_name="Smoking (Yes/No)")
-    smoking_years = models.IntegerField(blank=True, null=True, verbose_name="Smoking Years")
-    smoking_per_day = models.IntegerField(blank=True, null=True, verbose_name="Smoking Per Day")
-    alcohol_yes_no = models.CharField(max_length=10, blank=True, null=True, choices=[('yes', 'Yes'), ('no', 'No')], verbose_name="Alcohol (Yes/No)")
-    alcohol_years = models.IntegerField(blank=True, null=True, verbose_name="Alcohol Years")
-    alcohol_frequency = models.CharField(max_length=50, blank=True, null=True, verbose_name="Alcohol Frequency")
-    paan_yes_no = models.CharField(max_length=10, blank=True, null=True, choices=[('yes', 'Yes'), ('no', 'No')], verbose_name="Paan (Yes/No)")
-    paan_years = models.IntegerField(blank=True, null=True, verbose_name="Paan Years")
-    diet = models.CharField(max_length=20, blank=True, null=True, choices=[('mixed', 'Mixed'), ('veg', 'Pure Veg'), ('egg', 'Eggetarian')], verbose_name="Diet")
-
-    # Medical History Entries (Medical Data Table)
-    medical_conditions_comments = models.TextField(blank=True, null=True, verbose_name="Medical Conditions Comments")
-
-
-    # Female Worker History
-    obstetric = models.CharField(max_length=255, blank=True, null=True, verbose_name="Obstetric History")
-    gynecological = models.CharField(max_length=255, blank=True, null=True, verbose_name="Gynecological History")
-
-    # Surgical History
-    surgical_comments = models.TextField(blank=True, null=True, verbose_name="Surgical Comments")
-    num_children = models.IntegerField(default=0, verbose_name="Number of Children")  # Added field for the number of children
-
-
-    # Allergy History
-    drug_allergy = models.BooleanField(default=False, verbose_name="Drug Allergy")
-    drug_allergy_comments = models.TextField(blank=True, null=True, verbose_name="Drug Allergy Comments")
-    food_allergy = models.BooleanField(default=False, verbose_name="Food Allergy")
-    food_allergy_comments = models.TextField(blank=True, null=True, verbose_name="Food Allergy Comments")
-    other_allergies = models.BooleanField(default=False, verbose_name="Other Allergies")
-    other_allergies_comments = models.TextField(blank=True, null=True, verbose_name="Other Allergies Comments")
-
-    # Family History
-    father_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Father Status")
-    father_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Father Reason (if deceased)")
-    father_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Father Remarks")
-
-    paternal_grand_father_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandfather Status")
-    paternal_grand_father_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandfather Reason (if deceased)")
-    paternal_grand_father_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandfather Remarks")
-
-    paternal_grand_mother_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandmother Status")
-    paternal_grand_mother_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandmother Reason (if deceased)")
-    paternal_grand_mother_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Paternal Grandmother Remarks")
-
-    mother_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mother Status")
-    mother_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mother Reason (if deceased)")
-    mother_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Mother Remarks")
-
-    maternal_grand_father_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandfather Status")
-    maternal_grand_father_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandfather Reason (if deceased)")
-    maternal_grand_father_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandfather Remarks")
-
-    maternal_grand_mother_status = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandmother Status")
-    maternal_grand_mother_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandmother Reason (if deceased)")
-    maternal_grand_mother_remarks = models.CharField(max_length=255, blank=True, null=True, verbose_name="Maternal Grandmother Remarks")
-
-    # Health Conditions
-    HTN_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="HTN Condition Details")  # Add fields for the relations as well
-    DM_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="DM Condition Details")
-    Epileptic_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="Epileptic Condition Details")
-    Hyperthyroid_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="Hyperthyroid Condition Details")
-    Hypothyroid_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="Hypothyroid Condition Details")
-    Asthma_condition = models.CharField(max_length=255, blank=True, null=True, verbose_name="Asthma Condition Details")
-
-    # Medical Details
-    CVS = models.CharField(max_length=255, blank=True, null=True, verbose_name="CVS Details")
-    CNS = models.CharField(max_length=255, blank=True, null=True, verbose_name="CNS Details")
-    RS = models.CharField(max_length=255, blank=True, null=True, verbose_name="RS Details")
-    GIT = models.CharField(max_length=255, blank=True, null=True, verbose_name="GIT Details")
-    KUB = models.CharField(max_length=255, blank=True, null=True, verbose_name="KUB Details")
-    CANCER_details = models.CharField(max_length=255, blank=True, null=True, verbose_name="Cancer Details")
-    OTHERS_details = models.CharField(max_length=255, blank=True, null=True, verbose_name="Other Medical Details")
-
-    # Submission Details
-    submitted_by = models.CharField(max_length=100, blank=True, null=True, verbose_name="Submitted By")
-    booked_to = models.CharField(max_length=100, blank=True, null=True, verbose_name="Booked To")
-
-    class Meta:
-        verbose_name_plural = "Medical Histories"
-
-    def _str_(self):
-        return f"Comprehensive Medical History (ID: {self.id})"
     
 
 class Member(models.Model):
@@ -976,3 +911,21 @@ class Member(models.Model):
 
     def _str_(self):
         return self.name
+    
+
+class MedicalHistory(models.Model):
+    emp_no = models.CharField(max_length=255, null=True, blank=True)  # Add emp_no field
+    personal_history = models.JSONField(null=True, blank=True)
+    medical_data = models.JSONField(null=True, blank=True)
+    female_worker = models.JSONField(null=True, blank=True)
+    surgical_history = models.JSONField(null=True, blank=True)
+    family_history = models.JSONField(null=True, blank=True)
+    health_conditions = models.JSONField(null=True, blank=True)
+    submission_details = models.JSONField(null=True, blank=True)
+    allergy_fields = models.JSONField(null=True, blank=True)
+    allergy_comments = models.JSONField(null=True, blank=True)
+    children_data = models.JSONField(null=True, blank=True)
+    conditions = models.JSONField(null=True, blank=True)
+
+    def _str_(self):
+        return f"Medical History for Emp No: {self.emp_no}"

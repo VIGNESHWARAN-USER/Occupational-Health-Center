@@ -11,7 +11,8 @@ const filterSections = [
   { id: "fitness", label: "Fitness" },
   { id: "medicalhistory", label: "Medical History" },
   { id: "investigations", label: "Investigations" },
-  { id: "vaccination", label: "Vaccination" }
+  { id: "vaccination", label: "Vaccination" },
+  { id: "purpose", label: "Purpose Filter" }
 ];
 
 const RecordsFilters = () => {
@@ -60,7 +61,15 @@ const RecordsFilters = () => {
         Object.entries(formData).forEach(([key, value]) => {
           let existingIndex;
 
-          if (key !== "param" && key !== "investigation" && key !== "fitness") {
+          if (
+            key !== "param" &&
+            key !== "investigation" &&
+            key !== "fitness" &&
+            key !== "personalhistory" &&
+            key !== "allergyhistory" &&
+            key !== "surgicalhistory" &&
+            key != "purpose"
+          ) {
             existingIndex = updatedFilters.findIndex(
               (filter) => Object.keys(filter)[0] === key
             );
@@ -73,6 +82,22 @@ const RecordsFilters = () => {
               (filter) => Object.keys(filter)[0] === value.form
             );
           } else if (key === "fitness") {
+            existingIndex = updatedFilters.findIndex(
+              (filter) => Object.keys(filter)[0] === key
+            );
+          } else if (key === "personalhistory") {
+            existingIndex = updatedFilters.findIndex(
+              (filter) => Object.keys(filter)[0] === key
+            );
+          } else if (key === "allergyhistory") {
+            existingIndex = updatedFilters.findIndex(
+              (filter) => Object.keys(filter)[0] === key
+            );
+          } else if (key === "surgicalhistory") {
+            existingIndex = updatedFilters.findIndex(
+              (filter) => Object.keys(filter)[0] === key
+            );
+          } else if (key === "purpose") {
             existingIndex = updatedFilters.findIndex(
               (filter) => Object.keys(filter)[0] === key
             );
@@ -174,8 +199,107 @@ const RecordsFilters = () => {
                 }
               }
             }
-            return matchesAll;  // Return true only if ALL the filters match
-          } else {
+            return matchesAll; // Return true only if ALL the filters match
+          } else if (key === "personalhistory") {
+            if (!employee.personalhistory) {
+              return false;
+            }
+
+            let matchesAll = true; // Assume it matches all filters until proven otherwise
+
+            for (const assessmentKey in value) {
+              if (value.hasOwnProperty(assessmentKey)) {
+                const filterValue = value[assessmentKey];
+
+                if (filterValue) {
+                  // Only filter if there's a filter value
+                  if (
+                    employee.personalhistory[assessmentKey] !== filterValue
+                  ) {
+                    matchesAll = false; // If ANY filter fails, it's a mismatch
+                    break; // No need to check other assessments, exit loop.
+                  }
+                }
+              }
+            }
+            return matchesAll; // Return true only if ALL the filters match
+          } else if (key === "allergyhistory") {
+            if (!employee.allergyhistory) {
+              return false;
+            }
+
+            let matchesAll = true; // Assume it matches all filters until proven otherwise
+
+            for (const assessmentKey in value) {
+              if (value.hasOwnProperty(assessmentKey)) {
+                const filterValue = value[assessmentKey];
+
+                if (filterValue === "true" || filterValue === "false") {
+                  const isTrueValue = filterValue === "true";
+                  if (
+                    employee.allergyhistory[assessmentKey] !== isTrueValue
+                  ) {
+                    matchesAll = false;
+                    break;
+                  }
+                } else {
+                  if (filterValue) {
+                    // Only filter if there's a filter value
+                    if (
+                      employee.allergyhistory[assessmentKey] !== filterValue
+                    ) {
+                      matchesAll = false; // If ANY filter fails, it's a mismatch
+                      break; // No need to check other assessments, exit loop.
+                    }
+                  }
+                }
+              }
+            }
+            return matchesAll; // Return true only if ALL the filters match
+          } else if (key === "surgicalhistory") {
+            if (!employee.surgicalhistory) {
+              return false;
+            }
+
+            let matchesAll = true;
+
+            for (const surgicalKey in value) {
+              if (value.hasOwnProperty(surgicalKey)) {
+                const filterValue = value[surgicalKey];
+
+                if (filterValue === "true" || filterValue === "false") {
+                  const isTrueValue = filterValue === "true";
+                  if (
+                    employee.surgicalhistory[surgicalKey] !== isTrueValue
+                  ) {
+                    matchesAll = false;
+                    break;
+                  }
+                }
+              }
+            }
+            return matchesAll;
+          } else if (key === "purpose") {
+            // Purpose Filter Logic
+            const { type_of_visit, register } = value;
+
+            return results.filter((employee) => {
+             if(employee.dashboard){
+                if (type_of_visit && employee.dashboard.type_of_visit !== type_of_visit) {
+                return false;
+              }
+              if (register && employee.dashboard.register !== register) {
+                return false;
+              }
+              return true;
+             }
+
+              return false;
+
+            })
+          }
+
+          else {
             let empValue = employee[key];
 
             if (empValue === null || empValue === undefined) {
@@ -233,6 +357,27 @@ const RecordsFilters = () => {
                         .map(([key, value]) => `${key}: ${value}`)
                         .join(", ");
                       return `Fitness: ${fitnessDetails}`;
+                    } else if (filterKey === "personalhistory") {
+                      const personalHistoryDetails = Object.entries(
+                        filterValue
+                      )
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(", ");
+                      return `Personal History: ${personalHistoryDetails}`;
+                    } else if (filterKey === "allergyhistory") {
+                      const allergyHistoryDetails = Object.entries(
+                        filterValue
+                      )
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(", ");
+                      return `Allergy History: ${allergyHistoryDetails}`;
+                    } else if (filterKey === "surgicalhistory") {
+                      const surgicalHistoryDetails = Object.entries(
+                        filterValue
+                      )
+                        .map(([key, value]) => `${key}: ${value}`)
+                        .join(", ");
+                      return `Surgical History: ${surgicalHistoryDetails}`;
                     } else {
                       return `${filterKey.toUpperCase()} : ${filterValue}`;
                     }
@@ -299,6 +444,9 @@ const RecordsFilters = () => {
                   ) : null}
                   {selectedSection === "vaccination" ? (
                     <VaccinationForm addFilter={addFilter} />
+                  ) : null}
+                  {selectedSection === "purpose" ? (
+                    <PurposeFilter addFilter={addFilter} />
                   ) : null}
                 </motion.div>
               )}
@@ -407,6 +555,313 @@ const RecordsFilters = () => {
   }
 };
 
+
+const data = {
+  "Preventive Visit": {
+    "Medical Examination": [
+      "Pre Employment",
+      "Pre Employment (Food Handler)",
+      "Pre Placement",
+      "Annual / Periodical",
+      "Periodical (Food Handler)",
+      { "Camps (Mandatory)": ["Hospital Name"] },
+      "Camps (Optional)"
+    ],
+    "Periodic Work Fitness": [
+      { "Special Work Fitness": ["Nature Of Job"] },
+      { "Special Work Fitness (Renewal)": ["Nature Of Job"] },
+    ],
+    "Fitness After Medical Leave": ["Fitness After Medical Leave"],
+    "Mock Drill": ["Mock Drill"],
+    "BP Sugar Check (Normal Value)": ["BP Sugar Check (Normal Value)"]
+  },
+  "Curative Visit": {
+    "Outpatient": [
+      "Illness",
+      "Over Counter Illness",
+      "Injury",
+      "Over Counter Injury",
+      "Follow-up Visits",
+      "BP Sugar Chart",
+      "Injury Outside the Premises",
+      "Over Counter Injury Outside the Premises"
+    ],
+    "Alcohol Abuse": ["Alcohol Abuse"]
+  },
+  "Separate (Unhealthy)": {
+    "Special Medical Leave SML / Special Disability Leave SDL (2nd Phase)": []
+  }
+};
+
+function PurposeFilter({ addFilter }) {
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [specificCategory, setSpecificCategory] = useState("");
+
+  const handleSubmit = () => {
+    const purposeFilter = {
+      type_of_visit: purpose,
+      register: subcategory,
+    };
+
+    addFilter({ purpose: purposeFilter });
+  };
+    const handleFilterClick = () => {
+      handleSubmit();
+    }
+
+  return (
+    <div className="p-4 max-w-lg mx-auto bg-white shadow-lg rounded-xl space-y-4">
+      <h2 className="text-xl font-bold">Purpose Filter</h2>
+
+      <div className="flex space-x-4">
+        <input
+          type="date"
+          className="w-full p-2 border rounded"
+          value={fromDate}
+          onChange={(e) => setFromDate(e.target.value)}
+        />
+        <input
+          type="date"
+          className="w-full p-2 border rounded"
+          value={toDate}
+          onChange={(e) => setToDate(e.target.value)}
+        />
+      </div>
+
+      <select
+        className="w-full p-2 border rounded"
+        onChange={(e) => {
+          setPurpose(e.target.value);
+          setSubcategory("");
+          setSpecificCategory("");
+        }}
+      >
+        <option value="">Select Purpose</option>
+        {Object.keys(data).map((key) => (
+          <option key={key} value={key}>{key}</option>
+        ))}
+      </select>
+
+      {purpose && (
+        <select
+          className="w-full p-2 border rounded"
+          onChange={(e) => {
+            setSubcategory(e.target.value);
+            setSpecificCategory("");
+          }}
+        >
+          <option value="">Select Subcategory</option>
+          {Object.keys(data[purpose]).map((key) => (
+            <option key={key} value={key}>{key}</option>
+          ))}
+        </select>
+      )}
+
+    
+
+      <button onClick={handleFilterClick}>Submit</button>
+    </div>
+  );
+}
+
+const MedicalHistoryForm = ({ addFilter }) => {
+  const [medicalHistoryFilters, setMedicalHistoryFilters] = useState({});
+  const [allergyFilters, setAllergyFilters] = useState({});
+  const [surgicalFilters, setSurgicalFilters] = useState({});
+
+  const [medicalHistoryParameter, setMedicalHistoryParameter] = useState("");
+  const [allergyParameter, setAllergyParameter] = useState("");
+  const [surgicalParameter, setSurgicalParameter] = useState("");
+
+  const medicalHistoryOptions = ["smoking", "alcohol", "paan", "diet"];
+  const allergyOptions = ["drugAllergy", "foodAllergy", "otherAllergies"];
+  const surgicalOptions = ["surgicalHistory"];
+
+  const valueOptions = {
+    smoking: ["Yes", "No"],
+    alcohol: ["Yes", "No"],
+    paan: ["Yes", "No"],
+    diet: ["Mixed", "Pure Veg", "Eggetarian"],
+    drugAllergy: ["Yes", "No"],
+    foodAllergy: ["Yes", "No"],
+    otherAllergies: ["Yes", "No"],
+    surgicalHistory: ["Yes", "No"],
+  };
+
+  const handleMedicalHistoryParameterChange = (e) => {
+    setMedicalHistoryParameter(e.target.value);
+  };
+
+  const handleAllergyParameterChange = (e) => {
+    setAllergyParameter(e.target.value);
+  };
+
+  const handleSurgicalParameterChange = (e) => {
+    setSurgicalParameter(e.target.value);
+  };
+
+  const handleMedicalHistoryValueChange = (e) => {
+    setMedicalHistoryFilters((prev) => ({
+      ...prev,
+      [medicalHistoryParameter]: e.target.value,
+    }));
+    setMedicalHistoryParameter(""); // Reset parameter after selection
+  };
+
+  const handleAllergyValueChange = (e) => {
+    setAllergyFilters((prev) => ({
+      ...prev,
+      [allergyParameter]: e.target.value,
+    }));
+    setAllergyParameter(""); // Reset parameter after selection
+  };
+
+  const handleSurgicalValueChange = (e) => {
+    setSurgicalFilters((prev) => ({
+      ...prev,
+      [surgicalParameter]: e.target.value,
+    }));
+    setSurgicalParameter(""); // Reset parameter after selection
+  };
+
+  const handleSubmit = () => {
+    // Combine all the filters
+    const combinedFilters = {
+      ...medicalHistoryFilters,
+      allergyhistory: allergyFilters,
+      surgicalhistory: surgicalFilters,
+    };
+
+    addFilter(combinedFilters);
+
+    // Clear filters after submitting
+    setMedicalHistoryFilters({});
+    setAllergyFilters({});
+    setSurgicalFilters({});
+  };
+
+  return (
+    <div className="p-6 bg-white shadow-lg rounded-lg">
+      {/* Medical History */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Medical History</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <select
+              value={medicalHistoryParameter}
+              onChange={handleMedicalHistoryParameterChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              {medicalHistoryOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            {medicalHistoryParameter && (
+              <select
+                onChange={handleMedicalHistoryValueChange}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select Value</option>
+                {valueOptions[medicalHistoryParameter].map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Allergy History */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Allergy History</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <select
+              value={allergyParameter}
+              onChange={handleAllergyParameterChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Select Parameter</option>
+              {allergyOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            {allergyParameter && (
+              <select
+                onChange={handleAllergyValueChange}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select Value</option>
+                {valueOptions[allergyParameter].map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Surgical History */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2">Surgical History</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <select
+              value={surgicalParameter}
+              onChange={handleSurgicalParameterChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Select Parameter</option>
+              {surgicalOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            {surgicalParameter && (
+              <select
+                onChange={handleSurgicalValueChange}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select Value</option>
+                {valueOptions[surgicalParameter].map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
 const PersonalDetails = ({ addFilter }) => {
   const [formData, setformData] = useState({
     age: "",
@@ -415,15 +870,16 @@ const PersonalDetails = ({ addFilter }) => {
     marital_status: "",
     designation: "",
     department: "",
+    moj: "",
+    employer:"",
     doj: "",
     job_nature: "",
-    employmentStatus: "", // Added employmentStatus to formData
   });
 
   const employmentOptions = {
-    Employed: "Employed",
-    "Self-Employed": "Self-Employed",
-    "Not Employed": "Not Employed",
+    "JSW Steel": "JSW Steel",
+    "JSW Cement": "JSW Cement",
+    "JSW Foundation": "JSW Foundation",
   };
 
   const handleChange = (e) => {
@@ -548,7 +1004,7 @@ const PersonalDetails = ({ addFilter }) => {
           htmlFor="job_nature"
           className="block text-sm font-medium text-gray-700"
         >
-          job_nature
+          Job Nature
         </label>
         <select
           name="job_nature"
@@ -563,21 +1019,40 @@ const PersonalDetails = ({ addFilter }) => {
         </select>
       </div>
 
+      <div>
+        <label
+          htmlFor="job_nature"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Mode of Joining
+        </label>
+        <select
+          name="moj"
+          value={formData.moj}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select mode</option>
+          <option value="Contract">New Joinee</option>
+          <option value="Permanent">Transfer</option>
+        </select>
+      </div>
+
       {/* Employment Status Input */}
       <div>
         <label
           htmlFor="employmentStatus"
           className="block text-sm font-medium text-gray-700"
         >
-          Employment Status
+          Employer
         </label>
         <select
-          name="employmentStatus"
-          value={formData.employmentStatus}
+          name="employer"
+          value={formData.employer}
           onChange={handleChange}
           className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">Select Employment Status</option>
+          <option value="">Select Employer Value</option>
           {Object.entries(employmentOptions).map(([key, value]) => (
             <option key={key} value={key}>
               {key}
@@ -681,70 +1156,6 @@ const Vitals = ({ addFilter }) => {
   );
 };
 
-const MedicalHistoryForm = ({ addFilter }) => {
-  const [formData, setFormData] = useState({
-    smoking: "",
-    alcohol: "",
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
-  };
-
-  const handleSubmit = () => {
-    const filteredData = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => value !== "")
-    );
-
-    addFilter(filteredData);
-  };
-
-  return (
-    <div className="p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">
-        Medical History Form
-      </h2>
-
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block font-medium">Smoking</label>
-          <select
-            name="smoking"
-            value={formData.smoking}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block font-medium">Alcohol Consumption</label>
-          <select
-            name="alcohol"
-            value={formData.alcohol}
-            onChange={handleChange}
-            className="w-full p-2 border border-gray-300 rounded-lg"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-      </div>
-
-      <button
-        onClick={handleSubmit}
-        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-      >
-        Add to Filter
-      </button>
-    </div>
-  );
-};
 
 const formOptions = {
   haematology: [

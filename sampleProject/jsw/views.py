@@ -1,4 +1,3 @@
-# views.py
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -19,8 +18,8 @@ from django.db.models import Max
 import logging
 from django.db.models import Count
 from datetime import datetime, date
-from .models import Dashboard  # Ensure this is your actual model
-from .models import FitnessAssessment  # Ensure this is your actual model
+from .models import Dashboard  
+from .models import FitnessAssessment 
 from django.shortcuts import get_object_or_404
 
 
@@ -52,80 +51,82 @@ def login(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-logger = logging.getLogger(__name__)
-
 
 @csrf_exempt
 def fetchdata(request):
     if request.method == "POST":
         try:
-            # Get latest record for each emp_no
             latest_employees = (
                 models.employee_details.objects.values("emp_no")
                     .annotate(latest_id=Max("id"))  # Ensure latest record
             )
 
             latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
-
-            # Fetch only the latest employee records
             employees = list(models.employee_details.objects.filter(id__in=latest_employee_ids).values())
 
             # Fetch latest records for other tables using emp_no
             def get_latest_records(model):
-                return {
-                    v["emp_no"]: v
-                    for v in model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees])
-                        .values("emp_no")
-                        .annotate(latest_id=Max("id"))
-                        .values()
-                }
+                records = list(model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees]).values())
+                
+                if records:
+                    all_keys = records[0].keys()  # Get keys from the first record
+                    default_structure = {key: "" for key in all_keys}  # Default empty structure
+                    return {record["emp_no"]: record for record in records}, default_structure
+                else:
+                    return {}, {}  # Ensure two values are returned even if no data
 
-            vitals_dict = get_latest_records(models.vitals)
-            haematology_dict = get_latest_records(models.heamatalogy)
-            routinesugartests_dict = get_latest_records(models.RoutineSugarTests)
-            renalfunctiontests_dict = get_latest_records(models.RenalFunctionTest)
-            lipidprofile_dict = get_latest_records(models.LipidProfile)
-            liverfunctiontest_dict = get_latest_records(models.LiverFunctionTest)
-            thyroidfunctiontest_dict = get_latest_records(models.ThyroidFunctionTest)
-            coagulationtest_dict = get_latest_records(models.CoagulationTest)
-            enzymesandcardiacprofile_dict = get_latest_records(models.EnzymesCardiacProfile)
-            urineroutine_dict = get_latest_records(models.UrineRoutineTest)
-            serology_dict = get_latest_records(models.SerologyTest)
-            motion_dict = get_latest_records(models.MotionTest)
-            menspack_dict = get_latest_records(models.MensPack)
-            opthalamicreport_dict = get_latest_records(models.OphthalmicReport)
-            usg_dict = get_latest_records(models.USGReport)
-            mri_dict = get_latest_records(models.MRIReport)
-            fitnessassessment_dict = get_latest_records(models.FitnessAssessment)
+            # Fetch all data with proper structure
+            dashboard_dict, dashboard_default = get_latest_records(models.Dashboard)
+            vitals_dict, vitals_default = get_latest_records(models.vitals)
+            msphistory_dict, msphistory_default = get_latest_records(models.MedicalHistory)
+            haematology_dict, haematology_default = get_latest_records(models.heamatalogy)
+            routinesugartests_dict, routinesugartests_default = get_latest_records(models.RoutineSugarTests)
+            renalfunctiontests_dict, renalfunctiontests_default = get_latest_records(models.RenalFunctionTest)
+            lipidprofile_dict, lipidprofile_default = get_latest_records(models.LipidProfile)
+            liverfunctiontest_dict, liverfunctiontest_default = get_latest_records(models.LiverFunctionTest)
+            thyroidfunctiontest_dict, thyroidfunctiontest_default = get_latest_records(models.ThyroidFunctionTest)
+            coagulationtest_dict, coagulationtest_default = get_latest_records(models.CoagulationTest)
+            enzymesandcardiacprofile_dict, enzymesandcardiacprofile_default = get_latest_records(models.EnzymesCardiacProfile)
+            urineroutine_dict, urineroutine_default = get_latest_records(models.UrineRoutineTest)
+            serology_dict, serology_default = get_latest_records(models.SerologyTest)
+            motion_dict, motion_default = get_latest_records(models.MotionTest)
+            menspack_dict, menspack_default = get_latest_records(models.MensPack)
+            opthalamicreport_dict, opthalamicreport_default = get_latest_records(models.OphthalmicReport)
+            usg_dict, usg_default = get_latest_records(models.USGReport)
+            mri_dict, mri_default = get_latest_records(models.MRIReport)
+            fitnessassessment_dict, fitnessassessment_default = get_latest_records(models.FitnessAssessment)
 
-            # Merge data
+            # If no employees found, return a meaningful response
+            if not employees:
+                return JsonResponse({"data": []}, status=200)
+
+            # Merge data with empty structures where necessary
             merged_data = []
             for emp in employees:
                 emp_no = emp["emp_no"]
-                emp["vitals"] = vitals_dict.get(emp_no, {})
-                emp["haematology"] = haematology_dict.get(emp_no, {})
-                emp["routinesugartests"] = routinesugartests_dict.get(emp_no, {})
-                emp["renalfunctiontests_and_electrolytes"] = renalfunctiontests_dict.get(emp_no, {})
-                emp["lipidprofile"] = lipidprofile_dict.get(emp_no, {})
-                emp["liverfunctiontest"] = liverfunctiontest_dict.get(emp_no, {})
-                emp["thyroidfunctiontest"] = thyroidfunctiontest_dict.get(emp_no, {})
-                emp["coagulationtest"] = coagulationtest_dict.get(emp_no, {})
-                emp["enzymesandcardiacprofile"] = enzymesandcardiacprofile_dict.get(emp_no, {})
-                emp["urineroutine"] = urineroutine_dict.get(emp_no, {})
-                emp["serology"] = serology_dict.get(emp_no, {})
-                emp["motion"] = motion_dict.get(emp_no, {})
-                emp["menspack"] = menspack_dict.get(emp_no, {})
-                emp["opthalamicreport"] = opthalamicreport_dict.get(emp_no, {})
-                emp["usg"] = usg_dict.get(emp_no, {})
-                emp["mri"] = mri_dict.get(emp_no, {})
-                emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, {})
+                emp["dashboard"] = dashboard_dict.get(emp_no, dashboard_default or {})
+                emp["vitals"] = vitals_dict.get(emp_no, vitals_default or {})
+                emp["haematology"] = haematology_dict.get(emp_no, haematology_default or {})
+                emp["msphistory"] = msphistory_dict.get(emp_no, msphistory_default or {})
+                emp["routinesugartests"] = routinesugartests_dict.get(emp_no, routinesugartests_default or {})
+                emp["renalfunctiontests_and_electrolytes"] = renalfunctiontests_dict.get(emp_no, renalfunctiontests_default or {})
+                emp["lipidprofile"] = lipidprofile_dict.get(emp_no, lipidprofile_default or {})
+                emp["liverfunctiontest"] = liverfunctiontest_dict.get(emp_no, liverfunctiontest_default or {})
+                emp["thyroidfunctiontest"] = thyroidfunctiontest_dict.get(emp_no, thyroidfunctiontest_default or {})
+                emp["coagulationtest"] = coagulationtest_dict.get(emp_no, coagulationtest_default or {})
+                emp["enzymesandcardiacprofile"] = enzymesandcardiacprofile_dict.get(emp_no, enzymesandcardiacprofile_default or {})
+                emp["urineroutine"] = urineroutine_dict.get(emp_no, urineroutine_default or {})
+                emp["serology"] = serology_dict.get(emp_no, serology_default or {})
+                emp["motion"] = motion_dict.get(emp_no, motion_default or {})
+                emp["menspack"] = menspack_dict.get(emp_no, menspack_default or {})
+                emp["opthalamicreport"] = opthalamicreport_dict.get(emp_no, opthalamicreport_default or {})
+                emp["usg"] = usg_dict.get(emp_no, usg_default or {})
+                emp["mri"] = mri_dict.get(emp_no, mri_default or {})
+                emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, fitnessassessment_default or {})
 
                 merged_data.append(emp)
 
-            if merged_data:
-                return JsonResponse({"data": merged_data}, status=200)
-            else:
-                return JsonResponse({"message": "Data not found"}, status=404)
+            return JsonResponse({"data": merged_data}, status=200)
 
         except Exception as e:
             logger.error(f"Error in fetchdata view: {str(e)}")  # Log the error for debugging
@@ -222,15 +223,16 @@ def dashboard_stats(request):
 def add_basic_details(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        print("Hii")
-        print(data)
+        print(data['role'])
         basicdetails = models.employee_details.objects.create(
             name=data['name'],
             dob=data['dob'],
             sex=data['sex'],
             aadhar=data['aadhar'],
+            role = data['role'],
             bloodgrp=data['bloodgrp'],
-            identification_marks=data['identification_marks'],
+            identification_marks1=data['identification_marks1'],
+            identification_marks2=data['identification_marks2'],
             marital_status=data['marital_status'],
             emp_no=data['emp_no'],
             employer=data['employer'],
@@ -239,7 +241,7 @@ def add_basic_details(request):
             job_nature=data['job_nature'],
             doj=data['doj'],
             moj=data['moj'],
-            phone_Personal=data['phone_Personal'],
+            phone_Personal=data['phone_personal'],
             mail_id_Personal=data['mail_id_Personal'],
             emergency_contact_person=data['emergency_contact_person'],
             phone_Office=data['phone_Office'],
@@ -415,32 +417,75 @@ def add_serology(request):
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
-@csrf_exempt  # Disable CSRF for this API (for testing; use CSRF token in production)
+import json
+from datetime import datetime, timedelta
+from .models import Appointment
+
+from datetime import datetime
+
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import json
+from datetime import datetime
+from .models import Appointment  # Import your Appointment model
+
+@csrf_exempt
 def BookAppointment(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            print("Hi")
-            # Create an appointment instance and save it
-            appointment = models.Appointment.objects.create(
-                role=data.get("role"),
-                name=data.get("name"),
-                employee_id=data.get("employeeId"),
-                organization=data.get("organization"),
-                aadhar_no=data.get("aadharNo"),
-                contractor_name=data.get("contractorName"),
-                purpose=data.get("purpose"),
-                appointment_date=data.get("appointmentDate"),
-                date=data.get("date"),
-                time=data.get("time"),
-                booked_by=data.get("bookedBy"),
-            )
-            print(data.get("role"))
+            print(data)
+            # Extract data, providing defaults for optional fields
+            role = data.get("role", None)
+            name = data.get("name", None)
+            employee_id = data.get("employeeId", None)
+            organization_name = data.get("organization", None)
+            aadhar_no = data.get("aadharNo", None)
+            contractor_name = data.get("contractorName", None)
+            purpose = data.get("purpose", None)
+            appointment_date_str = data.get("appointmentDate", None)  # Corrected field name
+            time = data.get("time", None)
+            booked_by = data.get("bookedBy", None)
+            consulted_by = data.get("consultedDoctor", None)
 
-            return JsonResponse(
-                {"message": f"Appointment booked successfully for {appointment.name} on {appointment.appointment_date}"})
+            # Convert appointment_date string to date object
+            if appointment_date_str:
+                appointment_date = datetime.strptime(appointment_date_str, "%Y-%m-%d").date()
+                print(appointment_date)
+                print(datetime.now().strftime("%Y-%m-%d"))
+            else:
+                return JsonResponse({"error": "Appointment date is required"}, status=400)
+
+            # Get the count of existing appointments for the given date
+            existing_appointments = Appointment.objects.filter(date=appointment_date).count()
+            next_appointment_number = existing_appointments + 1  # Start from 1
+
+            # Format appointment number: XXXXDDMMYYYY
+            appointment_no = f"{next_appointment_number:04d}{appointment_date.strftime('%d%m%Y')}"
+            print(appointment_no)
+            # Create an Appointment instance
+            appointment = Appointment.objects.create(
+                appointment_no=appointment_no,
+                booked_date = datetime.now().strftime("%Y-%m-%d"),
+                role=role,
+                name=name,
+                emp_no=employee_id,
+                organization_name=organization_name,
+                aadhar_no=aadhar_no,
+                contractor_name=contractor_name,
+                purpose=purpose,
+                date=appointment_date,
+                time=time,
+                booked_by=booked_by,
+                consultated_by=consulted_by,
+                employer=organization_name if role == "Employee" else contractor_name,
+                doctor_name=consulted_by
+            )
+
+            return JsonResponse({"message": f"Appointment booked successfully for {appointment.name} on {appointment.date}. Appointment No: {appointment.appointment_no}"})
 
         except Exception as e:
+            print(e)  # Log the exception for debugging
             return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -451,86 +496,54 @@ def get_appointments(request):
     if request.method == "GET":
         from_date_str = request.GET.get('fromDate')
         to_date_str = request.GET.get('toDate')
-
+        print(from_date_str, to_date_str)  # Debugging
         today = datetime.today().date()
 
-        # Convert string to date format (if provided)
+        # Convert string to date format safely
         from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else None
         to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else None
 
-        # Fetch appointments based on provided filters using `appointment_date`
+        # Fetch appointments based on provided filters using `date`
         if from_date and to_date:
             appointments = Appointment.objects.filter(
-                appointment_date__gte=from_date,
-                appointment_date__lte=to_date
-            ).order_by('appointment_date', 'time')
+                date__gte=from_date,
+                date__lte=to_date
+            ).order_by('date', 'time')
         elif from_date:
             appointments = Appointment.objects.filter(
-                appointment_date__gte=from_date
-            ).order_by('appointment_date', 'time')
+                date__gte=from_date
+            ).order_by('date', 'time')
         elif to_date:
             appointments = Appointment.objects.filter(
-                appointment_date__lte=to_date
-            ).order_by('appointment_date', 'time')
+                date__lte=to_date
+            ).order_by('date', 'time')
         else:
-            appointments = Appointment.objects.filter(appointment_date=today).order_by('appointment_date', 'time')
-
-        # Debugging prints
-        print(f"Today: {today}")
-        print(f"From: {from_date}, To: {to_date}")
-        print(f"Query: {appointments.query}")  # Debugging SQL query
-        print(f"Results: {list(appointments)}")  # Debugging actual results
+            appointments = Appointment.objects.filter(date=today).order_by('date', 'time')
 
         # Convert QuerySet to JSON format
         appointment_list = list(appointments.values())
+        print(appointment_list)  # Debugging
         return JsonResponse({"appointments": appointment_list, "message": "Appointments fetched successfully."})
 
     return JsonResponse({"error": "Invalid request"}, status=400)
-
-
-@csrf_exempt
-def get_appointments(request):
-    if request.method == "GET":
-        from_date_str = request.GET.get('fromDate')
-        to_date_str = request.GET.get('toDate')
-
-        today = datetime.today().date()
-        from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else None
-        to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else None
-
-        if from_date and to_date:
-            appointments = Appointment.objects.filter(appointment_date__range=[from_date, to_date]).order_by(
-                'appointment_date', 'time')
-        elif from_date:
-            appointments = Appointment.objects.filter(appointment_date__range=[from_date, today]).order_by(
-                'appointment_date', 'time')
-        elif to_date:
-            appointments = Appointment.objects.filter(appointment_date__range=[today, to_date]).order_by(
-                'appointment_date', 'time')
-        else:
-            appointments = Appointment.objects.filter(appointment_date=today).order_by('appointment_date', 'time')
-
-        appointment_list = list(
-            appointments.values("id", "employee_id", "name", "role", "appointment_date", "status"))
-        return JsonResponse({"appointments": appointment_list, "message": "Appointments fetched successfully."})
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
 
 @csrf_exempt
 def update_appointment_status(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            appointment_id = data.get("id")  # Get appointment ID
-            appointment = Appointment.objects.get(id=appointment_id)  # Fetch by ID
+            appointment_id = data.get("id")
+            appointment = Appointment.objects.get(id=appointment_id)
 
-            if appointment.status == "initiate":
-                appointment.status = "inprogress"
-                appointment.save()
-                return JsonResponse({"success": True, "message": "Status updated", "status": "inprogress"})
+            if appointment.status == Appointment.StatusChoices.INITIATE:
+                appointment.status = Appointment.StatusChoices.IN_PROGRESS
+            elif appointment.status == Appointment.StatusChoices.IN_PROGRESS:
+                appointment.status = Appointment.StatusChoices.COMPLETED
+            else:
+                return JsonResponse({"success": False, "message": "Cannot update status further."})
 
-            return JsonResponse({"success": False, "message": "Cannot update status"})
+            appointment.save()
+            return JsonResponse({"success": True, "message": "Status updated", "status": appointment.status})
 
         except Appointment.DoesNotExist:
             return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
@@ -540,15 +553,13 @@ def update_appointment_status(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
-@csrf_exempt  # Disable CSRF for testing; use CSRF token in production
+@csrf_exempt
 def uploadAppointment(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)  # Load JSON data
-            print("Received data:", data)  # Debugging: Verify structure
-
+            data = json.loads(request.body)
             appointments_data = data.get("appointments", [])
-            print(appointments_data)
+            appointment_count = {}
 
             for i, appointment_data in enumerate(appointments_data):
                 if i == 0:  # Skip header row
@@ -556,53 +567,58 @@ def uploadAppointment(request):
 
                 try:
                     role = str(appointment_data[1]).strip()
-                    name = str(appointment_data[2]).strip()
-                    employee_id = str(appointment_data[3]).strip()
-                    organization = str(appointment_data[4]).strip()
-                    aadhar_no = str(appointment_data[5]).strip()  # Ensure it's a string
+                    if role.lower() != "contractor":  # Filter only contractor appointments
+                        continue
+                    
+                    emp_no = str(appointment_data[3]).strip()
+                    aadhar_no = str(appointment_data[5]).strip()
                     contractor_name = str(appointment_data[6]).strip()
                     purpose = str(appointment_data[7]).strip()
 
-                    # Check if date is an Excel serial number (integer)
-                    def excel_date_to_date(excel_serial):
-                        if isinstance(excel_serial, int):
-                            return (datetime(1899, 12, 30) + timedelta(days=excel_serial)).date()
-                        return datetime.strptime(str(excel_serial).strip(), "%Y-%m-%d").date()
+                    def parse_date(value):
+                        if isinstance(value, int):  # Excel serial date handling
+                            return (datetime(1899, 12, 30) + timedelta(days=value)).date()
+                        return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
 
-                    appointment_date = excel_date_to_date(appointment_data[8])
-                    date = excel_date_to_date(appointment_data[9])
+                    date = parse_date(appointment_data[8])  # Ensure only date is stored
+                    time = str(appointment_data[9]).strip()
+                    booked_by = str(appointment_data[10]).strip()
+                    consulted_by = str(appointment_data[10]).strip()
+                    
+                    # Format date as ddmmyyyy for appointment_no
+                    formatted_date = date.strftime("%d%m%Y")
 
-                    # Parse time in 'HH:MM:SS' format
-                    time = datetime.strptime(str(appointment_data[10]).strip(), "%H:%M:%S").time()
-
-                    booked_by = str(appointment_data[11]).strip()
-
-                except IndexError as ie:
-                    print("Index Error:", str(ie))
+                    # Determine the sequence number for the given date
+                    if formatted_date not in appointment_count:
+                        appointment_count[formatted_date] = 1
+                    else:
+                        appointment_count[formatted_date] += 1
+                    print(appointment_count)  # Debugging
+                    # Format the appointment number (4-digit sequence + date)
+                    appointment_no = f"{appointment_count[formatted_date]:04d}{formatted_date}"
+                    print(appointment_no)  # Debugging
+                except IndexError:
                     return JsonResponse({"error": "Data is missing required fields."}, status=400)
                 except ValueError as ve:
-                    print("Value Error:", str(ve))
-                    return JsonResponse({"error": f"Invalid date or time format: {ve}"}, status=400)
-
-                # Create and save the appointment
+                    return JsonResponse({"error": f"Invalid date format: {ve}"}, status=400)
+                
+                # Create and save the contractor appointment
                 Appointment.objects.create(
+                    appointment_no=appointment_no,
                     role=role,
-                    name=name,
-                    employee_id=employee_id,
-                    organization=organization,
+                    emp_no=emp_no,
                     aadhar_no=aadhar_no,
                     contractor_name=contractor_name,
                     purpose=purpose,
-                    appointment_date=appointment_date,
-                    date=date,
+                    date=date,  # Store only date
                     time=time,
-                    booked_by=booked_by
+                    booked_by=booked_by,
+                    doctor_name=consulted_by
                 )
 
-            return JsonResponse({"message": "Appointments uploaded successfully."})
+            return JsonResponse({"message": "Contractor appointments uploaded successfully."})
 
         except Exception as e:
-            print("Error:", str(e))
             return JsonResponse({"error": str(e)}, status=400)
 
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -614,7 +630,6 @@ def create_users(request):
         {'username': 'doctor', 'password': 'doctor123'},
         {'username': 'admin', 'password': 'admin123'}
     ]
-    print("Hii")
     for user_data in users:
         user = User.objects.get(username=user_data['username'])
         user.set_password(user_data['password'])
@@ -622,24 +637,6 @@ def create_users(request):
 
     print("Users created successfully.")
     return JsonResponse({"message": "Password updated successfully!"})
-
-
-@csrf_exempt
-def add_camp(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            camp = eventsandcamps.objects.create(
-                camp_name=data.get("camp_name"),
-                start_date=data.get("start_date"),
-                end_date=data.get("end_date"),
-                camp_details=data.get("camp_details"),
-                camp_type=data.get("select_option"),
-            )
-            return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-    return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 @csrf_exempt
@@ -897,3 +894,170 @@ def member_detail(request, pk):
     elif request.method == 'DELETE':
         member.delete()
         return JsonResponse({'message': 'Member deleted successfully'})
+    
+
+@csrf_exempt
+def add_camp(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            print("Data received by backend:", data)
+            # Parse date strings from the request:
+            start_date_str = data.get("start_date")
+            end_date_str = data.get("end_date")
+
+            # Handle potential parsing errors (important):
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            except ValueError as e:
+                return JsonResponse({"error": f"Invalid date format: {e}"}, status=400)
+
+            camp = eventsandcamps.objects.create(
+                camp_name=data.get("camp_name"),
+                start_date=start_date,
+                end_date=end_date,
+                camp_details=data.get("camp_details"),
+            )
+            return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
+        except Exception as e:
+            print("Error in add_camp view:", e)
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+def get_camps(request):
+    if request.method == "GET":
+        search_term = request.GET.get("searchTerm", "")
+        filter_status = request.GET.get("filterStatus", "")
+        today = date.today()  # Get today's date
+
+        camps = eventsandcamps.objects.all()
+
+        if search_term:
+            camps = camps.filter(camp_name=search_term)
+
+        if filter_status == "Live":
+            camps = camps.filter(
+                camp_type="Live",  #Check camp type is "Live"
+                start_date__lte=today,   #start_date should be less then or equal to current date
+                end_date__gte=today, #end_date should be greter then or equal to current date
+            )
+        elif filter_status:
+            camps = camps.filter(camp_type=filter_status)
+
+        data = list(camps.values())
+        return JsonResponse(data, safe=False)
+
+    return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+@csrf_exempt
+def save_mockdrills(request):
+
+    if request.method == "POST":
+        try:
+            print("Hi hello")
+            data = json.loads(request.body)
+            mock_drill = mockdrills.objects.create(
+                date=data.get("date"),
+                time=data.get("time"),
+                department=data.get("department"),
+                location=data.get("location"),
+                scenario=data.get("scenario"),
+                ambulance_timing=data.get("ambulance_timing"),
+                departure_from_OHC=data.get("departure_from_OHC"),
+                return_to_OHC=data.get("return_to_OHC"),
+                emp_no=data.get("emp_no"),
+                victim_department=data.get("victim_department"),
+                victim_name=data.get("victim_name"),
+                nature_of_job=data.get("nature_of_job"),
+                age=data.get("age"),
+                mobile_no=data.get("mobile_no"),
+                gender=data.get("gender"),
+                vitals=data.get("vitals"),
+                complaints=data.get("complaints"),
+                treatment=data.get("treatment"),
+                referal=data.get("referal"),
+                ambulance_driver=data.get("ambulance_driver"),
+                staff_name=data.get("staff_name"),
+                OHC_doctor=data.get("OHC_doctor"),
+                staff_nurse=data.get("staff_nurse"),
+                action_completion=data.get("Action_Completion"),
+                responsible=data.get("Responsible"),
+            )
+            return JsonResponse({"message": "Mock drill saved successfully{}".format(mock_drill.id)}, status=201)
+        except Exception as e:
+            print("error occured")
+
+
+            return JsonResponse({"error": str(e) + "This error"}, status=400)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+def get_mockdrills(request):
+    if request.method == "GET":
+        try:
+            mock_drills = list(mockdrills.objects.values())  # Serialize the queryset to a list of dictionaries
+            return JsonResponse(mock_drills, safe=False)  # safe=False allows serialization of non-dict objects (lists, etc.)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+    
+
+import json
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+from . import models
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def create_medical_history(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON data from request body
+            data = json.loads(request.body)
+            logger.info("Received data: %s", data)  # Log the received data
+
+            # Validate required fields
+            required_fields = ['emp_no',  'personalHistory', 'medicalData', 'femaleWorker', 
+                              'surgicalHistory', 'familyHistory', 'healthConditions', 'submissionDetails', 
+                              'allergyFields', 'allergyComments', 'childrenData', 'conditions']
+            for field in required_fields:
+                if field not in data:
+                    logger.error("Missing required field: %s", field)
+                    return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
+
+            # Create medical history record
+            medical_history = models.MedicalHistory.objects.create(
+                emp_no=data['emp_no'],
+                personal_history=data['personalHistory'],
+                medical_data=data['medicalData'],
+                female_worker=data['femaleWorker'],
+                surgical_history=data['surgicalHistory'],
+                family_history=data['familyHistory'],
+                health_conditions=data['healthConditions'],
+                submission_details=data['submissionDetails'],
+                allergy_fields=data['allergyFields'],
+                allergy_comments=data['allergyComments'],
+                children_data=data['childrenData'],
+                conditions=data['conditions']
+            )
+
+            logger.info("Medical history created successfully for emp_no: %s", data['emp_no'])
+            return JsonResponse({"message": "Medical history created successfully"}, status=201)
+
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON data received")
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except ValidationError as e:
+            logger.error("Validation error: %s", str(e))
+            return JsonResponse({"error": str(e)}, status=400)
+        except Exception as e:
+            logger.error("Error creating medical history: %s", str(e))
+            return JsonResponse({"error": "An internal server error occurred"}, status=500)
+    else:
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)

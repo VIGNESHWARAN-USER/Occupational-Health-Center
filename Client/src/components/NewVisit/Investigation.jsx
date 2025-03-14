@@ -1,22 +1,26 @@
 import axios from "axios";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; //Import useEffect
 import { useNavigate } from "react-router-dom";
 
 function InvestigationForm({ data }) {
 
-  const navigate = useNavigate()
-
-  if(data.length)
-  {
-    console.log(data)
-    delete data[0]['haematology']['id'];
-    delete data[0]['haematology']['latest_id'];
-    console.log(data[0]['haematology']);
-  
-  
+  const navigate = useNavigate();
 
   const [selectedOption, setSelectedOption] = useState("");
   const [formData, setFormData] = useState({}); // Initialize formData state
+  const [processedData, setProcessedData] = useState(null); // State to hold processed data
+
+  useEffect(() => {
+    if (data && data.length) {
+      const newData = JSON.parse(JSON.stringify(data)); // Deep copy to avoid modifying original data
+      delete newData[0]['haematology']['id'];
+      delete newData[0]['haematology']['latest_id'];
+      setProcessedData(newData);
+      console.log(newData[0]['haematology']);
+    } else {
+      setProcessedData(null);
+    }
+  }, [data]); // useEffect runs whenever data changes
 
   const invFormOptions = [
     "HAEMATALOGY",
@@ -43,6 +47,7 @@ function InvestigationForm({ data }) {
     "MRI",
   ];
 
+
   const handleOptionChange = (e) => {
     const selected = e.target.value;
     setSelectedOption(selected);
@@ -58,73 +63,74 @@ function InvestigationForm({ data }) {
 
     switch (selected) {
       case "HAEMATALOGY":
-        setFormData(initializeFormData(data[0]['haematology']));
+        setFormData(initializeFormData(processedData ? processedData[0]['haematology'] : null));
         break;
       case "ROUTINE SUGAR TESTS":
-        setFormData(initializeFormData(data[0]['routinesugartests']));
+        setFormData(initializeFormData(processedData ? processedData[0]['routinesugartests'] : null));
         break;
       // case "RENAL FUNCTION TEST & ELECTROLYTES":
-      //   setFormData(initializeFormData(data[0]['renalfunctiontestselectrolytes']));
+      //   setFormData(initializeFormData(processedData ? processedData[0]['renalfunctiontestselectrolytes'] : null));
       //   break;
       case "LIPID PROFILE":
-        setFormData(initializeFormData(data[0]['lipidprofile']));
+        setFormData(initializeFormData(processedData ? processedData[0]['lipidprofile'] : null));
         break;
       case "LIVER FUNCTION TEST":
-        setFormData(initializeFormData(data[0]['liverfunctiontest']));
+        setFormData(initializeFormData(processedData ? processedData[0]['liverfunctiontest'] : null));
         break;
       case "THYROID FUNCTION TEST":
-        setFormData(initializeFormData(data[0]['thyroidfunctiontest']));
+        setFormData(initializeFormData(processedData ? processedData[0]['thyroidfunctiontest'] : null));
         break;
       case "COAGULATION TEST":
-        setFormData(initializeFormData(data[0]['coagulationtest']));
+        setFormData(initializeFormData(processedData ? processedData[0]['coagulationtest'] : null));
         break;
       case "ENZYMES & CARDIAC Profile":
-        setFormData(initializeFormData(data[0]['enzymesandcardiacprofile']));
+        setFormData(initializeFormData(processedData ? processedData[0]['enzymesandcardiacprofile'] : null));
         break;
       case "URINE ROUTINE":
-        setFormData(initializeFormData(data[0]['urineroutine']));
+        setFormData(initializeFormData(processedData ? processedData[0]['urineroutine'] : null));
         break;
       case "SEROLOGY":
-        setFormData(initializeFormData(data[0]['serology']));
+        setFormData(initializeFormData(processedData ? processedData[0]['serology'] : null));
         break;
       case "MOTION":
-        setFormData(initializeFormData(data[0]['motion']));
+        setFormData(initializeFormData(processedData ? processedData[0]['motion'] : null));
         break;
       // case "ROUTINE CULTURE & SENSITIVITY TEST":
-      //   setFormData(initializeFormData(data[0]['routineculturesensitivitytest']));
+      //   setFormData(initializeFormData(processedData ? processedData[0]['routineculturesensitivitytest'] : null));
       //   break;
       case "Men's Pack":
-        setFormData(initializeFormData(data[0]['menspack']));
+        setFormData(initializeFormData(processedData ? processedData[0]['menspack'] : null));
         break;
       // case "Women's Pack":
-      //   setFormData(initializeFormData(data[0]['womenspack']));
+      //   setFormData(initializeFormData(processedData ? processedData[0]['womenspack'] : null));
       //   break;
       // case "Occupational Profile":
-      //   setFormData(initializeFormData(data[0]['occupationalprofile']));
+      //   setFormData(initializeFormData(processedData ? processedData[0]['occupationalprofile'] : null));
       //   break;
       // case "Others TEST":
-      //   setFormData(initializeFormData(data[0]['otherstest']));
+      //   setFormData(initializeFormData(processedData ? processedData[0]['otherstest'] : null));
       //   break;
       case "OPHTHALMIC REPORT":
-        setFormData(initializeFormData(data[0]['opthalmicreport']));
+        setFormData(initializeFormData(processedData ? processedData[0]['opthalmicreport'] : null));
         break;
       case "X-RAY":
-        setFormData(initializeFormData(data[0]['xray']));
+        setFormData(initializeFormData(processedData ? processedData[0]['xray'] : null));
         break;
       case "USG":
-        setFormData(initializeFormData(data[0]['usg']));
+        setFormData(initializeFormData(processedData ? processedData[0]['usg'] : null));
         break;
       case "CT":
-        setFormData(initializeFormData(data[0]['ct']));
+        setFormData(initializeFormData(processedData ? processedData[0]['ct'] : null));
         break;
       case "MRI":
-        setFormData(initializeFormData(data[0]['mri']));
+        setFormData(initializeFormData(processedData ? processedData[0]['mri'] : null));
         break;
       default:
         setFormData({}); // Reset if no option selected
         break;
     }
   };
+
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -134,10 +140,13 @@ function InvestigationForm({ data }) {
     }));
   };
 
-  console.log(data);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!processedData) {
+      alert("Please wait for data to load.");
+      return;
+    }
 
     let url = "";
     let dataToSend = {};
@@ -213,7 +222,9 @@ function InvestigationForm({ data }) {
     }
 
     try {
-      const response = await axios.post(url, dataToSend, {
+      const updatedData = { ...dataToSend, emp_no: processedData[0].emp_no };
+      console.log(updatedData);
+      const response = await axios.post(url, updatedData, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -230,72 +241,75 @@ function InvestigationForm({ data }) {
     }
   };
 
+
   const renderFields = (category) => {
+    if (!processedData) return null;
+
     let categoryData;
 
     switch (category) {
       case "HAEMATALOGY":
-        categoryData = data[0]?.haematology;
+        categoryData = processedData[0]?.haematology;
         break;
       case "ROUTINE SUGAR TESTS":
-        categoryData = data[0]?.routinesugartests;
+        categoryData = processedData[0]?.routinesugartests;
         break;
       // case "RENAL FUNCTION TEST & ELECTROLYTES":
-      //   categoryData = data[0]?.renalfunctiontestselectrolytes;
+      //   categoryData = processedData[0]?.renalfunctiontestselectrolytes;
       //   break;
       case "LIPID PROFILE":
-        categoryData = data[0]?.lipidprofile;
+        categoryData = processedData[0]?.lipidprofile;
         break;
       case "LIVER FUNCTION TEST":
-        categoryData = data[0]?.liverfunctiontest;
+        categoryData = processedData[0]?.liverfunctiontest;
         break;
       case "THYROID FUNCTION TEST":
-        categoryData = data[0]?.thyroidfunctiontest;
+        categoryData = processedData[0]?.thyroidfunctiontest;
         break;
       case "COAGULATION TEST":
-        categoryData = data[0]?.coagulationtest;
+        categoryData = processedData[0]?.coagulationtest;
         break;
       case "ENZYMES & CARDIAC Profile":
-        categoryData = data[0]?.enzymesandcardiacprofile;
+        categoryData = processedData[0]?.enzymesandcardiacprofile;
         break;
       case "URINE ROUTINE":
-        categoryData = data[0]?.urineroutine;
+        categoryData = processedData[0]?.urineroutine;
         break;
       case "SEROLOGY":
-        categoryData = data[0]?.serology;
+        categoryData = processedData[0]?.serology;
         break;
       case "MOTION":
-        categoryData = data[0]?.motion;
+        categoryData = processedData[0]?.motion;
         break;
       // case "ROUTINE CULTURE & SENSITIVITY TEST":
-      //   categoryData = data[0]?.routineculturesensitivitytest;
+      //   categoryData = processedData[0]?.routineculturesensitivitytest;
       //   break;
       case "Men's Pack":
-        categoryData = data[0]?.menspack;
+        categoryData = processedData[0]?.menspack;
         break;
       // case "Women's Pack":
-      //   categoryData = data[0]?.womenspack;
+      //   categoryData = processedData[0]?.womenspack;
       //   break;
       // case "Occupational Profile":
-      //   categoryData = data[0]?.occupationalprofile;
+      //   categoryData = processedData[0]?.occupationalprofile;
       //   break;
       // case "Others TEST":
-      //   categoryData = data[0]?.otherstest;
+      //   categoryData = processedData[0]?.otherstest;
       //   break;
       case "OPHTHALMIC REPORT":
-        categoryData = data[0]?.opthalmicreport;
+        categoryData = processedData[0]?.opthalmicreport;
         break;
       case "X-RAY":
-        categoryData = data[0]?.xray;
+        categoryData = processedData[0]?.xray;
         break;
       case "USG":
-        categoryData = data[0]?.usg;
+        categoryData = processedData[0]?.usg;
         break;
       case "CT":
-        categoryData = data[0]?.ct;
+        categoryData = processedData[0]?.ct;
         break;
       case "MRI":
-        categoryData = data[0]?.mri;
+        categoryData = processedData[0]?.mri;
         break;
       default:
         categoryData = {};
@@ -341,48 +355,46 @@ function InvestigationForm({ data }) {
 
   return (
     <div className="bg-white p-8 rounded-lg">
-      <div className="mb-6">
-        <label htmlFor="investigations" className="block text-sm font-medium text-gray-700">
-          Select Investigation
-        </label>
-        <select
-          id="investigations"
-          name="investigations"
-          className="py-4 mt-1 block w-full rounded-md bg-blue-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-          value={selectedOption}
-          onChange={handleOptionChange}
-        >
-          <option value="">-- Select an option --</option>
-          {invFormOptions.map((option, index) => (
-            <option key={index} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </div>
+      {processedData ? (
+        <>
+          <div className="mb-6">
+            <label htmlFor="investigations" className="block text-sm font-medium text-gray-700">
+              Select Investigation
+            </label>
+            <select
+              id="investigations"
+              name="investigations"
+              className="py-4 mt-1 block w-full rounded-md bg-blue-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              value={selectedOption}
+              onChange={handleOptionChange}
+            >
+              <option value="">-- Select an option --</option>
+              {invFormOptions.map((option, index) => (
+                <option key={index} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {selectedOption && (
-        <div>
-          {renderFields(selectedOption)}
-          <button
-            type="submit"
-            onClick={handleSubmit}
-            className="w-1/5 mt-6 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-          >
-            Add Data
-          </button>
-        </div>
+          {selectedOption && (
+            <div>
+              {renderFields(selectedOption)}
+              <button
+                type="submit"
+                onClick={handleSubmit}
+                className="w-1/5 mt-6 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+              >
+                Add Data
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className=" p-4 flex justify-center items-center">Get the employee details</p>
       )}
     </div>
   );
 }
-else{
-  return (
-<p className=" p-4 flex justify-center items-center">Get the employee details</p>
-  )
-  
-}
-}
-
 
 export default InvestigationForm;

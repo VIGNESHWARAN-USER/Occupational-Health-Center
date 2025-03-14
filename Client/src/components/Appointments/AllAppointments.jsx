@@ -43,6 +43,7 @@ const AllAppointments = () => {
 
       const response = await fetch(url);
       const data = await response.json();
+      console.log("data:", data);
       if (data.appointments) {
         setAppointments(data.appointments);
       } else {
@@ -97,18 +98,7 @@ const AllAppointments = () => {
     }
   };
 
-  const filteredAppointments = appointments.filter((appointment) => {
-    const searchMatch =
-      appointment.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      appointment.id.toString().includes(searchQuery);
-
-    const dateMatch =
-      (!fromDate || new Date(appointment.appointment_date) >= new Date(fromDate)) &&
-      (!toDate || new Date(appointment.appointment_date) <= new Date(toDate));
-    const purposeMatch = !purpose || appointment.purpose === purpose;
-
-    return searchMatch && dateMatch && purposeMatch;
-  });
+  
 
   return (
     <motion.div
@@ -193,47 +183,50 @@ const AllAppointments = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
-        {/* Table Header */}
-        <div className="grid grid-cols-2 md:grid-cols-6 bg-blue-50 p-2 md:p-4 font-semibold text-blue-600">
-          <p className="hidden md:block">ID</p>
-          <p>Name</p>
-          <p className="hidden md:block">Role</p>
-          <p className="hidden md:block">Purpose</p>
-          <p className="hidden md:block">Appointment Date</p>
-          <p>Action</p>
-        </div>
+<div className="bg-white rounded-lg shadow-md overflow-x-auto">
+  {/* Table Header */}
+  <div className="grid grid-cols-7 bg-blue-50 p-2 md:p-4 font-semibold text-blue-600 text-center">
+    <p className="hidden md:block">Appointment No.</p>
+    <p className="hidden md:block">MRD No.</p>
+    <p className="hidden md:block">Booked Date</p>
+    <p className="hidden md:block">Role</p>
+    <p className="hidden md:block">Purpose</p>
+    <p className="hidden md:block">Appointment Date</p>
+    <p>Action</p>
+  </div>
 
-        {/* Table Body */}
-        {filteredAppointments.length > 0 ? (
-          filteredAppointments.map((appointment) => (
-            <div
-              key={appointment.id}
-              className="grid grid-cols-2 md:grid-cols-6 p-2 md:p-4 text-sm text-gray-700 border-b border-gray-100 hover:bg-gray-50 transition"
-            >
-              <p className="hidden md:block">{appointment.id}</p>
-              <p>{appointment.name}</p>
-              <p className="hidden md:block">{appointment.role}</p>
-              <p className="hidden md:block">{appointment.purpose}</p>
-              <p className="hidden md:block">{new Date(appointment.appointment_date).toLocaleString()}</p>
-              <button
-                className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold ${
-                  appointment.status === "initiate"
-                    ? "bg-red-100 text-red-600 hover:bg-red-200"
-                    : appointment.status === "inprogress"
-                    ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-                    : "bg-green-100 text-green-600 hover:bg-green-200"
-                }`}
-                onClick={() => handleStatusChange(appointment.id, appointment.status)}
-              >
-                {appointment.status}
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="p-6 text-center text-gray-500">No appointments found matching the selected filters.</div>
-        )}
+  {/* Table Body */}
+  {appointments.length > 0 ? (
+    appointments.map((appointment) => (
+      <div
+        key={appointment.id}
+        className="grid grid-cols-7 text-sm text-gray-700 border-b border-gray-100 hover:bg-gray-50 transition text-center items-center py-2 md:py-4"
+      >
+        <p className="hidden md:block">{appointment.appointment_no}</p>
+        <p className="hidden md:block">{appointment.mrd_no}</p>
+        <p className="hidden md:block">{appointment.booked_date}</p>
+        <p className="hidden md:block">{appointment.role}</p>
+        <p className="hidden md:block">{appointment.purpose}</p>
+        <p className="hidden md:block">{appointment.date}</p>
+        <button
+          className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold mx-auto ${
+            appointment.status === "initiate"
+              ? "bg-red-100 text-red-600 hover:bg-red-200"
+              : appointment.status === "inprogress"
+              ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+              : "bg-green-100 text-green-600 hover:bg-green-200"
+          }`}
+          onClick={() => handleStatusChange(appointment.id, appointment.status)}
+        >
+          {appointment.status}
+        </button>
       </div>
+    ))
+  ) : (
+    <div className="p-6 text-center text-gray-500">No appointments found matching the selected filters.</div>
+  )}
+</div>
+
     </motion.div>
   );
 };
