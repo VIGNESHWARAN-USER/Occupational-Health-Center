@@ -36,6 +36,19 @@ const NewVisit = () => {
     purpose: "Medical Examination"
   });
 
+  //New states
+  const [annualPeriodicalFields, setAnnualPeriodicalFields] = useState({
+    year: "",
+    batch: "",
+    hospitalName: "",
+  });
+
+  const [campFields, setCampFields] = useState({
+    campName: "",
+    hospitalName: "",
+  });
+
+
 
   const dataMapping = {
     Employee: {
@@ -119,11 +132,19 @@ const NewVisit = () => {
       alert("Employee number is required!");
       return;
     }
+      let extraData = {};
+
+      if (register === "Annual / Periodical") {
+          extraData = { ...annualPeriodicalFields };
+      } else if (register.startsWith("Camps")) {
+          extraData = { ...campFields };
+      }
 
     try {
       const response = await axios.post("http://localhost:8000/addEntries", {
         formDataDashboard,
-        emp_no: formData.emp_no
+        emp_no: formData.emp_no,
+        extraData // Send additional data
       }, {
         headers: {
           "Content-Type": "application/json"
@@ -243,12 +264,15 @@ const NewVisit = () => {
   };
 
   const handleRegisterChange = (e) => {
-    const selectedRegister = e.target.value;
-    setRegister(selectedRegister);
-    const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
-    setPurpose(autoPurpose);
-    setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
+      const selectedRegister = e.target.value;
+      setRegister(selectedRegister);
+      const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
+      setPurpose(autoPurpose);
+      setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
 
+      // Reset additional fields when register changes
+      setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
+      setCampFields({ campName: "", hospitalName: "" });
   };
 
   const handleTypeChange = (e) => {
@@ -266,6 +290,7 @@ const NewVisit = () => {
     setPurpose("");   // Reset purpose
     setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); // Update dashboard data and reset
   };
+
   const tabs = [
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
@@ -706,6 +731,62 @@ const NewVisit = () => {
                   </div>
                 </div>
 
+                  {/* Conditionally Rendered Fields */}
+                  {register === "Annual / Periodical" && (
+                      <div className="grid grid-cols-3 gap-4 mb-6">
+                          <div>
+                              <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
+                              <input
+                                  type="text"
+                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                  value={annualPeriodicalFields.year}
+                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, year: e.target.value }))}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-gray-70                                  text-sm font-bold mb-2">Batch</label>
+                              <input
+                                  type="text"
+                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                  value={annualPeriodicalFields.batch}
+                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, batch: e.target.value }))}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                              <input
+                                  type="text"
+                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                  value={annualPeriodicalFields.hospitalName}
+                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                              />
+                          </div>
+                      </div>
+                  )}
+
+                  {register.startsWith("Camps") && (
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                          <div>
+                              <label className="block text-gray-700 text-sm font-bold mb-2">Camp Name</label>
+                              <input
+                                  type="text"
+                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                  value={campFields.campName}
+                                  onChange={(e) => setCampFields(prev => ({ ...prev, campName: e.target.value }))}
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                              <input
+                                  type="text"
+                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                  value={campFields.hospitalName}
+                                  onChange={(e) => setCampFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                              />
+                          </div>
+                      </div>
+                  )}
+
                 <hr className="h-4 text-blue-100" />
                 <div className="border-b border-gray-200 mb-4">
                   <nav className="relative flex justify-evenly space-x-4 bg-gray-50 p-3 rounded-lg shadow-sm" aria-label="Tabs">
@@ -854,6 +935,61 @@ const NewVisit = () => {
                     />
                   </div>
                 </div>
+                      {/* Conditionally Rendered Fields */}
+                      {register === "Annual / Periodical" && (
+                          <div className="grid grid-cols-3 gap-4 mb-6">
+                              <div>
+                                  <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
+                                  <input
+                                      type="text"
+                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                      value={annualPeriodicalFields.year}
+                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, year: e.target.value }))}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-gray-700 text-sm font-bold mb-2">Batch</label>
+                                  <input
+                                      type="text"
+                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                      value={annualPeriodicalFields.batch}
+                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, batch: e.target.value }))}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                                  <input
+                                      type="text"
+                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                      value={annualPeriodicalFields.hospitalName}
+                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                                  />
+                              </div>
+                          </div>
+                      )}
+
+                      {register.startsWith("Camps") && (
+                          <div className="grid grid-cols-2 gap-4 mb-6">
+                              <div>
+                                  <label className="block text-gray-700 text-sm font-bold mb-2">Camp Name</label>
+                                  <input
+                                      type="text"
+                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                      value={campFields.campName}
+                                      onChange={(e) => setCampFields(prev => ({ ...prev, campName: e.target.value }))}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                                  <input
+                                      type="text"
+                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                                      value={campFields.hospitalName}
+                                      onChange={(e) => setCampFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                                  />
+                              </div>
+                          </div>
+                      )}
 
                 <hr className="h-4 text-blue-100" />
                 <div className="border-b border-gray-200 mb-4">

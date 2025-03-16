@@ -4,7 +4,6 @@ import jswlogo from "../../assets/logo.png";
 import { IoIosEyeOff, IoIosEye } from "react-icons/io";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import loginImage from "../../assets/JSWSalem.jpeg";
 
 const Login = () => {
   const [loading, setLoading] = useState(false);
@@ -74,15 +73,9 @@ const Login = () => {
       <div className="md:w-3/5 w-full h-full flex items-center justify-center overflow-hidden relative">
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out"
-          style={{
-            backgroundImage: `url(${loginImage})`,
-            transform: `scale(${scale})`,
-          }}
-          onMouseEnter={() => setHovering(true)}
-          onMouseLeave={() => setHovering(false)}
         ></div>
 
-        <div className="relative z-10 w-full sm:w-4/5 md:w-3/4 max-w-md p-6 md:p-8 bg-white bg-opacity-20 backdrop-blur-xl border border-white border-opacity-30 rounded-lg shadow-2xl">
+        <div className="relative z-10 w-full sm:w-4/5 md:w-3/4 max-w-md p-6 md:p-8 bg-white  border border-white border-opacity-30 rounded-lg shadow-2xl">
           <h2 className="text-2xl md:text-4xl font-bold text-center mb-4">Login</h2>
           <p className="text-center text-gray-600 mb-6 text-sm md:text-base">Welcome to JSW OHC</p>
           <form onSubmit={login}>

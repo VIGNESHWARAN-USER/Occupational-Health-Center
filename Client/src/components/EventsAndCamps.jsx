@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from 'xlsx';
+import axios from 'axios'; // Import axios
 
 const EventsAndCamps = () => {
     const accessLevel = localStorage.getItem("accessLevel");
@@ -15,14 +16,14 @@ const EventsAndCamps = () => {
     const [filteredCampData, setFilteredCampData] = useState([]);
     const [tempSearchTerm, setTempSearchTerm] = useState("");
     const [tempFilterStatus, setTempFilterStatus] = useState("");
-    const [selectedFiles, setSelectedFiles] = useState({});
+    const [selectedFiles, setSelectedFiles] = useState({}); // track individual file selection
     const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
+    const [dateTo] = useState("");
     const [tempDateFrom, setTempDateFrom] = useState("");
-    const [tempDateTo, setTempDateTo] = useState("");
-    const [uploadedFileNames, setUploadedFileNames] = useState({});  // State to hold names
-    const [allFilesUploaded, setAllFilesUploaded] = useState({}); // Track all files status
+    const [tempDateTo] = useState("");
+    const [uploadedFileNames, setUploadedFileNames] = useState({}); // Names of the files on DB
     const fileTypes = ["report1", "report2", "photos", "ppt"]; // Define file types
+    const [dbFiles, setDbFiles] = useState({});  // store file URLs from the database
 
     // Nurse Role Functionality
     if (accessLevel === "nurse") {
@@ -121,6 +122,19 @@ const EventsAndCamps = () => {
                 const data = await response.json();
                 setCampData(data);
                 setFilteredCampData(data);
+
+                // Initialize dbFiles state with the existing files
+                const initialDbFiles = {};
+                data.forEach(camp => {
+                    initialDbFiles[camp.id] = {
+                        report1: camp.report1,
+                        report2: camp.report2,
+                        photos: camp.photos,
+                        ppt: camp.ppt
+                    };
+                });
+                setDbFiles(initialDbFiles);
+
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -143,86 +157,137 @@ const EventsAndCamps = () => {
         };
 
         const handleFileChange = (e, campId, fileType) => {
-            const files = Array.from(e.target.files);
-            setSelectedFiles((prevSelectedFiles) => ({
+             const files = Array.from(e.target.files);
+             setSelectedFiles((prevSelectedFiles) => ({
                 ...prevSelectedFiles,
                 [campId]: {
-                    ...prevSelectedFiles[campId], // Keep other file types
-                    [fileType]: files,
+                  ...prevSelectedFiles[campId],
+                  [fileType]: files[0],  // Only store the first file
                 },
-            }));
+              }));
 
-            // Update displayed file names
-            setUploadedFileNames((prevNames) => ({
+              // Update displayed file names
+              setUploadedFileNames((prevNames) => ({
                 ...prevNames,
                 [campId]: {
-                    ...prevNames[campId], // Keep other file types
-                    [fileType]: files.map((file) => file.name).join(", "),
+                  ...prevNames[campId],
+                  [fileType]: files.map((file) => file.name).join(", "),
                 },
-            }));
-             setAllFilesUploaded((prevStatus) => ({
-                ...prevStatus,
-                [campId]: false, // Reset overall upload status
-            }));
+              }));
         };
 
-        const handleFileUpload = async (campId) => {
+        const handleRemoveFile = async (campId, fileType) => {
             setError(null);
             setLoading(true);
-            let allUploaded = true; // Assume all uploads will be successful
-            const uploadPromises = fileTypes.map(async (fileType) => {
-                 const filesToUpload = selectedFiles[campId]?.[fileType] || [];
-                if (filesToUpload.length === 0) {
-                   allUploaded = false; // If any file type is missing, mark overall status as false
-                    return; // Skip upload if no files for this type
-                }
-                const formData = new FormData();
-                filesToUpload.forEach((file) => {
-                    formData.append("files", file);
-                });
-                 formData.append("campId", campId);
-                formData.append("fileType", fileType); // Send file type to server
-                try {
-                    const response = await fetch("http://localhost:8000/upload-files/", {
-                        method: "POST",
-                        body: formData,
-                    });
 
-                    if (!response.ok) {
-                        throw new Error(`File upload failed: ${response.status}`);
-                    }
-                       setUploadedFileNames((prevNames) => ({
-                        ...prevNames,
-                        [campId]: {
-                            ...prevNames[campId],
-                            [fileType]: undefined, // Clear the displayed name
-                        },
-                    }));
-                       setSelectedFiles((prevSelectedFiles) => ({
-                        ...prevSelectedFiles,
-                        [campId]: {
-                            ...prevSelectedFiles[campId],
-                            [fileType]: undefined, // Clear selected files for this type
-                        },
-                    }));
-                } catch (error) {
-                  console.error(`File upload error for ${fileType}:, error`);
-                  allUploaded = false; // Mark overall status as false if any upload fails
-                  setError(`File upload error: ${error.message}`);
+            try {
+                const response = await fetch("http://localhost:8000/delete-file/", {  // Backend API endpoint
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ campId: campId, fileType: fileType }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`File deletion failed: ${response.status} - ${errorData.error || "Unknown error"}`);
                 }
-             });
-          await Promise.all(uploadPromises);
-           setLoading(false);
-            setAllFilesUploaded((prevStatus) => ({
-                ...prevStatus,
-                [campId]: allUploaded, // Set overall status based on all uploads
-            }));
-            if (allUploaded) {
-                alert("All files uploaded successfully!");
-            } else {
-                alert("Some files may have failed to upload. Check for errors.");
+
+                // Update the frontend states:
+                setDbFiles((prevDbFiles) => {
+                    const updatedDbFiles = { ...prevDbFiles };
+                    if (updatedDbFiles[campId]) {
+                        updatedDbFiles[campId][fileType] = null;  // Set to null instead of deleting
+                    }
+                    return updatedDbFiles;
+                });
+                setUploadedFileNames((prevUploadedFileNames) => {
+                    const updatedUploadedFileNames = { ...prevUploadedFileNames };
+                    if (updatedUploadedFileNames[campId]) {
+                        updatedUploadedFileNames[campId][fileType] = undefined;
+                    }
+                    return updatedUploadedFileNames;
+                });
+                setSelectedFiles((prevSelectedFiles) => {
+                    const updatedSelectedFiles = { ...prevSelectedFiles };
+                    if (updatedSelectedFiles[campId]) {
+                        updatedSelectedFiles[campId][fileType] = undefined;
+                    }
+                    return updatedSelectedFiles;
+                });
+
+                alert(`${fileType} removed successfully!`);
+            } catch (err) {
+                setError(err.message);
+                console.error(`File deletion error for ${fileType}:, err`);
+            } finally {
+                setLoading(false);
             }
-         };
+        };
+
+        const handleFileUpload = async (campId, fileType) => {
+            setError(null);
+            setLoading(true);
+            const fileToUpload = selectedFiles[campId]?.[fileType];
+
+            if (!fileToUpload) {
+                setError(`No file selected for ${fileType}`);
+                setLoading(false);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("files", fileToUpload);
+            formData.append("campId", campId);
+            formData.append("fileType", fileType);
+
+            try {
+                const response = await fetch("http://localhost:8000/upload-files/", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`File upload failed: ${response.status} - ${errorData.error || "Unknown error"}`);
+                }
+
+                const responseData = await response.json();
+
+                // Update the dbFiles state with the new file URL
+                setDbFiles(prevDbFiles => ({
+                    ...prevDbFiles,
+                    [campId]: {
+                        ...prevDbFiles[campId],
+                        [fileType]: responseData.file_url, // Assuming the backend returns the file URL
+                    },
+                }));
+                  // Clear selected file and its name
+                  setSelectedFiles((prevSelectedFiles) => ({
+                   ...prevSelectedFiles,
+                   [campId]: {
+                     ...prevSelectedFiles[campId],
+                     [fileType]: undefined, // Clear selected files for this type
+                   },
+                }));
+                  setUploadedFileNames((prevNames) => ({
+                    ...prevNames,
+                     [campId]: {
+                       ...prevNames[campId],
+                        [fileType]: undefined, // Clear the displayed name
+                         },
+                      }));
+
+
+                alert(`${fileType} uploaded successfully!`);
+            } catch (err) {
+                setError(err.message);
+                console.error(`File upload error for ${fileType}:, err`);
+            } finally {
+                setLoading(false);
+            }
+        };
 
         const getLabelStyle = (campId, fileType) => {
             const hasFilesSelected = uploadedFileNames[campId]?.[fileType];
@@ -252,6 +317,13 @@ const EventsAndCamps = () => {
             // Generate the Excel file
             XLSX.writeFile(wb, "CampData.xlsx");
         };
+
+     const getDownloadLink = (campId, fileType) => {
+            // Construct the URL to download the file from your backend
+            // Replace with your actual API endpoint and parameters
+            return `http://localhost:8000/download-file?campId=${campId}&fileType=${fileType}`;
+        };
+
 
         return (
             <div className="h-screen flex bg-[#8fcadd]">
@@ -365,14 +437,17 @@ const EventsAndCamps = () => {
                             </div>
 
                             {loading ? (
-                                <p>Loading camp data...</p>
+                                <div className="flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-700"></div>
+                                    <span className="ml-3">Loading camp data...</span>
+                                </div>
                             ) : error ? (
                                 <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
                                     {error}
                                 </div>
                             ) : filteredCampData.length > 0 ? (
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full table-auto">
+                                    <table className="min-w-full table-auto font-sans">
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -392,72 +467,93 @@ const EventsAndCamps = () => {
                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Status
                                                 </th>
-                                                {fileTypes.map((type) => (
+                                                 {fileTypes.map((fileType) => (
                                                     <th
-                                                        key={type}
+                                                        key={fileType}
                                                         className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                                                     >
-                                                        {type}
+                                                        {fileType}
                                                     </th>
                                                 ))}
-                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Result
-                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {filteredCampData.map((camp) => (
-                                                <tr key={camp.id}>
-                                                    <td className="px-4 py-2 whitespace-nowrap">
-                                                        {camp.camp_name}
-                                                    </td>
-                                                    <td className="px-4 py-2 whitespace-nowrap">
-                                                        {camp.start_date}
-                                                    </td>
-                                                    <td className="px-4 py-2 whitespace-nowrap">
-                                                        {camp.end_date}
-                                                    </td>
-                                                    <td className="px-4 py-2 ">{camp.camp_details}</td>
-                                                    <td className="px-4 py-2 whitespace-nowrap">
-                                                        {camp.camp_type}
-                                                    </td>
+                                             {filteredCampData.map((camp) => (
+                                                <tr key={camp.id} className="hover:bg-gray-100">
+                                                    <td className="px-4 py-2 whitespace-nowrap">{camp.camp_name}</td>
+                                                    <td className="px-4 py-2 whitespace-nowrap">{camp.start_date}</td>
+                                                    <td className="px-4 py-2 whitespace-nowrap">{camp.end_date}</td>
+                                                    <td className="px-4 py-2">{camp.camp_details}</td>
+                                                    <td className="px-4 py-2 whitespace-nowrap">{camp.camp_type}</td>
                                                     {fileTypes.map((fileType) => (
                                                         <td key={fileType} className="px-4 py-2 whitespace-nowrap">
                                                             {camp.camp_type === "Previous" && (
-                                                                <>
-                                                                    <input
-                                                                        type="file"
-                                                                        multiple
-                                                                        onChange={(e) => handleFileChange(e, camp.id, fileType)}
-                                                                        id={`fileUpload-${camp.id}-${fileType}`}
-                                                                        className="hidden"
-                                                                    />
-                                                                    <label
-                                                                        htmlFor={`fileUpload-${camp.id}-${fileType}`}
-                                                                        className="px-3 py-1 rounded-md text-sm cursor-pointer mr-2"
-                                                                        style={getLabelStyle(camp.id, fileType)}
+                                                                <div className="flex flex-col items-start">
+                                                                    {dbFiles[camp.id]?.[fileType] ? (
+                                                                        <div className="flex items-center space-x-2">
+                                                                             <a
+                                                                                href={getDownloadLink(camp.id, fileType)}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                className="inline-block bg-green-500 hover:bg-green-700 text-white py-1 px-2 rounded text-xs"
+                                                                                download // Add the download attribute
+                                                                             >
+                                                                                View
+                                                                             </a>
+                                                                            <input
+                                                                                type="file"
+                                                                                multiple
+                                                                                onChange={(e) => handleFileChange(e, camp.id, fileType)}
+                                                                                id={`fileUpload-${camp.id}-${fileType}`}
+                                                                                className="hidden"
+                                                                            />
+                                                                            <label
+                                                                                htmlFor={`fileUpload-${camp.id}-${fileType}`}
+                                                                                className="inline-block bg-yellow-500 hover:bg-yellow-700 text-white py-1 px-2 rounded text-xs cursor-pointer"
+                                                                            >
+                                                                                Change
+                                                                            </label>
+                                                                              <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleRemoveFile(camp.id, fileType)}
+                                                                                    className="inline-block bg-red-500 hover:bg-red-700 text-white py-1 px-2 rounded text-xs"
+                                                                                >
+                                                                                    Remove
+                                                                                </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <input
+                                                                                type="file"
+                                                                                multiple
+                                                                                onChange={(e) => handleFileChange(e, camp.id, fileType)}
+                                                                                id={`fileUpload-${camp.id}-${fileType}`}
+                                                                                className="hidden"
+                                                                            />
+                                                                            <label
+                                                                                htmlFor={`fileUpload-${camp.id}-${fileType}`}
+                                                                                className="inline-block bg-blue-500 hover:bg-blue-700 text-white py-1 px-2 rounded text-xs cursor-pointer"
+                                                                            >
+                                                                                Choose Files
+                                                                            </label>
+                                                                        </>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={() => handleFileUpload(camp.id, fileType)}
+                                                                        className="bg-green-500 text-white px-3 py-1 rounded-md text-sm hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 mt-2"
+                                                                        disabled={loading}
                                                                     >
-                                                                        {uploadedFileNames[camp.id]?.[fileType] ? (
-                                                                            "Uploaded"
-                                                                        ) : (
-                                                                            "Choose Files"
-                                                                        )}
-                                                                    </label>
-                                                                </>
+                                                                        {loading ? (
+                                                                            <div className="flex items-center justify-center">
+                                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                                                <span className="ml-2">Uploading...</span>
+                                                                            </div>
+                                                                        ) : "Upload"}
+                                                                    </button>
+                                                                </div>
                                                             )}
                                                         </td>
                                                     ))}
-                                                    <td className="px-4 py-2 whitespace-nowrap">
-                                                        {camp.camp_type === "Previous" && (
-                                                            <button
-                                                            onClick={() => handleFileUpload(camp.id)}
-                                                            className="bg-green-500 text-white px-3 py-1 rounded-md text-sm"
-                                                            disabled={loading || allFilesUploaded[camp.id]}
-                                                        >
-                                                             {allFilesUploaded[camp.id] ? "Uploaded" : "Upload All"}
-                                                        </button>
-                                                        )}
-                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>

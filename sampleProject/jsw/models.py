@@ -95,6 +95,10 @@ class eventsandcamps(models.Model):
     end_date = models.DateField()
     camp_details = models.TextField(max_length=225)
     camp_type = models.TextField(max_length=100, default="Upcoming")
+    report1 = models.FileField(upload_to='camp_reports/', blank=True, null=True)
+    report2 = models.FileField(upload_to='camp_reports/', blank=True, null=True)
+    photos = models.ImageField(upload_to='camp_photos/', blank=True, null=True)
+    ppt = models.FileField(upload_to='camp_presentations/', blank=True, null=True)
 
     def _str_(self):
         return self.camp_name
@@ -871,13 +875,14 @@ class FitnessAssessment(models.Model):
 
 class Vaccination(models.Model):
     emp_no = models.CharField(max_length=200)
-    name = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
-    normal_doses = models.JSONField(default=dict)  # {"dates": [], "dose_names": []}
-    booster_doses = models.JSONField(default=dict)  # {"dates": [], "dose_names": []}
-
-    def _str_(self):
-        return self.name
+    vaccine_names = models.JSONField(default=list)  # List of vaccine names
+    statuses = models.JSONField(default=list)  # List of statuses corresponding to each vaccine
+    normal_doses = models.JSONField(default=dict)  # List of normal dose details
+    booster_doses = models.JSONField(default=dict)  # List of booster dose details
+    entry_date = models.DateField(auto_now=True)
+    
+    def __str__(self):
+        return self.emp_no
 
 class ReviewCategory(models.Model):
     name = models.CharField(max_length=255, unique=True)

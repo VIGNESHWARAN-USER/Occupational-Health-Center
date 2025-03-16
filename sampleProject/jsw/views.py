@@ -8,7 +8,7 @@ import json
 from .models import user  # Replace with your actual model
 from .models import Appointment  # Replace with your actual model
 from .models import mockdrills  # Replace with your actual model
-from .models import eventsandcamps  # Replace with your actual model
+# from .models import eventsandcamps  # Replace with your actual model
 from datetime import datetime, timedelta
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -52,6 +52,18 @@ def login(request):
 
 
 
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Max  # Import Max
+from django.db.models import CharField, TextField, IntegerField, FloatField, BooleanField, DateField, DateTimeField, JSONField
+from . import models  # Import all models from the current app (adjust if needed)
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @csrf_exempt
 def fetchdata(request):
     if request.method == "POST":
@@ -66,14 +78,42 @@ def fetchdata(request):
 
             # Fetch latest records for other tables using emp_no
             def get_latest_records(model):
+                print(model._meta.db_table)
                 records = list(model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees]).values())
-                
                 if records:
                     all_keys = records[0].keys()  # Get keys from the first record
                     default_structure = {key: "" for key in all_keys}  # Default empty structure
                     return {record["emp_no"]: record for record in records}, default_structure
                 else:
-                    return {}, {}  # Ensure two values are returned even if no data
+                    # When no records exist, provide a default structure
+                    try:
+                        # Instantiate a model instance (not saved to the DB)
+                        instance = model()
+                        fields = model._meta.get_fields()  # Get all fields from the model
+
+                        default_structure = {}
+                        for field in fields:
+                            if field.concrete and not field.is_relation:
+                                if isinstance(field, (CharField, TextField)):
+                                    default_structure[field.name] = ""  # Empty string for text-based fields
+                                elif isinstance(field, (IntegerField, FloatField)):
+                                    default_structure[field.name] = None  # Or 0, if that's more appropriate
+                                elif isinstance(field, BooleanField):
+                                    default_structure[field.name] = False
+                                elif isinstance(field, (DateField, DateTimeField)):
+                                    default_structure[field.name] = None  # Or some default date
+                                elif isinstance(field, JSONField):
+                                    # Special handling for JSONField, especially nested structures
+                                    if field.name == "normal_doses" or field.name == "booster_doses":
+                                        default_structure[field.name] = {"dates": [], "dose_names": []}
+                                    else:
+                                        default_structure[field.name] = {}  # Default empty JSON object
+                                else:
+                                    default_structure[field.name] = None  # Default to None for other types
+                        return {}, default_structure  # Ensure two values are returned even if no data
+                    except Exception as e:
+                        print(e)
+                        return {}, {}
 
             # Fetch all data with proper structure
             dashboard_dict, dashboard_default = get_latest_records(models.Dashboard)
@@ -95,6 +135,7 @@ def fetchdata(request):
             usg_dict, usg_default = get_latest_records(models.USGReport)
             mri_dict, mri_default = get_latest_records(models.MRIReport)
             fitnessassessment_dict, fitnessassessment_default = get_latest_records(models.FitnessAssessment)
+            vaccination_dict, vaccination_default = get_latest_records(models.Vaccination)
 
             # If no employees found, return a meaningful response
             if not employees:
@@ -123,7 +164,7 @@ def fetchdata(request):
                 emp["usg"] = usg_dict.get(emp_no, usg_default or {})
                 emp["mri"] = mri_dict.get(emp_no, mri_default or {})
                 emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, fitnessassessment_default or {})
-
+                emp["vaccination"] = vaccination_dict.get(emp_no, vaccination_default or {})
                 merged_data.append(emp)
 
             return JsonResponse({"data": merged_data}, status=200)
@@ -133,7 +174,6 @@ def fetchdata(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def addEntries(request):
@@ -691,7 +731,7 @@ def insert_vaccination(request):
             # Extract data correctly
             vaccine_name = data.get("vaccine")  # Correct key name
             status = data.get("status")
-
+            emp_no = data.get("emp_no")
             # Extract normal and booster doses
             normal_doses = {
                 "dates": [dose["date"] for dose in data.get("normalDoses", []) if dose["date"]],
@@ -705,6 +745,7 @@ def insert_vaccination(request):
 
             # Create a new vaccination record
             vaccination = Vaccination.objects.create(
+                emp_no=emp_no,
                 name=vaccine_name,
                 status=status,
                 normal_doses=normal_doses,
@@ -895,61 +936,223 @@ def member_detail(request, pk):
         member.delete()
         return JsonResponse({'message': 'Member deleted successfully'})
     
+import json
+from datetime import datetime, date
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+# from .models import eventsandcamps # Import your model
+from django.core.files.storage import default_storage
 
-@csrf_exempt
-def add_camp(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            print("Data received by backend:", data)
-            # Parse date strings from the request:
-            start_date_str = data.get("start_date")
-            end_date_str = data.get("end_date")
+ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'pptx', 'ppt']
 
-            # Handle potential parsing errors (important):
-            try:
-                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-            except ValueError as e:
-                return JsonResponse({"error": f"Invalid date format: {e}"}, status=400)
+# @csrf_exempt
+# def add_camp(request):
+#     if request.method == "POST":
+#         try:
+#             data = json.loads(request.body)
+#             print("Data received by backend:", data)
 
-            camp = eventsandcamps.objects.create(
-                camp_name=data.get("camp_name"),
-                start_date=start_date,
-                end_date=end_date,
-                camp_details=data.get("camp_details"),
-            )
-            return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
-        except Exception as e:
-            print("Error in add_camp view:", e)
-            return JsonResponse({"error": str(e)}, status=400)
+#             # Date parsing
+#             start_date_str = data.get("start_date")
+#             end_date_str = data.get("end_date")
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+#             try:
+#                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+#                 end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+#             except ValueError as e:
+#                 return JsonResponse({"error": f"Invalid date format: {e}"}, status=400)
 
-def get_camps(request):
-    if request.method == "GET":
-        search_term = request.GET.get("searchTerm", "")
-        filter_status = request.GET.get("filterStatus", "")
-        today = date.today()  # Get today's date
+#             camp = eventsandcamps.objects.create(
+#                 camp_name=data.get("camp_name"),
+#                 start_date=start_date,
+#                 end_date=end_date,
+#                 camp_details=data.get("camp_details"),
+#             )
+#             return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
 
-        camps = eventsandcamps.objects.all()
+#         except Exception as e:
+#             print("Error in add_camp view:", e)
+#             return JsonResponse({"error": str(e)}, status=400)
 
-        if search_term:
-            camps = camps.filter(camp_name=search_term)
+#     return JsonResponse({"error": "Invalid request"}, status=400)
 
-        if filter_status == "Live":
-            camps = camps.filter(
-                camp_type="Live",  #Check camp type is "Live"
-                start_date__lte=today,   #start_date should be less then or equal to current date
-                end_date__gte=today, #end_date should be greter then or equal to current date
-            )
-        elif filter_status:
-            camps = camps.filter(camp_type=filter_status)
+# def get_camps(request):
+#     if request.method == "GET":
+#         search_term = request.GET.get("searchTerm", "")
+#         filter_status = request.GET.get("filterStatus", "")
+#         date_from_str = request.GET.get("dateFrom", None)
+#         date_to_str = request.GET.get("dateTo", None)
+#         today = date.today()
 
-        data = list(camps.values())
-        return JsonResponse(data, safe=False)
+#         camps = eventsandcamps.objects.all()
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+#         if search_term:
+#             camps = camps.filter(camp_name__icontains=search_term)
+
+#         if filter_status == "Live":
+#             camps = camps.filter(
+#                 start_date__lte=today,
+#                 end_date__gte=today
+#             )
+#         elif filter_status and filter_status != "Live":
+#             camps = camps.filter(camp_type=filter_status)
+
+#         if date_from_str:
+#             try:
+#                 date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date()
+#                 camps = camps.filter(start_date__gte=date_from)
+#             except ValueError:
+#                 return JsonResponse({"error": "Invalid dateFrom format"}, status=400)
+
+#         if date_to_str:
+#             try:
+#                 date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date()
+#                 camps = camps.filter(end_date__lte=date_to)
+#             except ValueError:
+#                 return JsonResponse({"error": "Invalid dateTo format"}, status=400)
+
+#         data = []
+#         for camp in camps:
+#             camp_data = {
+#                 'id': camp.id,
+#                 'camp_name': camp.camp_name,
+#                 'start_date': str(camp.start_date),
+#                 'end_date': str(camp.end_date),
+#                 'camp_details': camp.camp_details,
+#                 'camp_type': camp.camp_type,
+#                 'report1': camp.report1.url if camp.report1 else None,
+#                 'report2': camp.report2.url if camp.report2 else None,
+#                 'photos': camp.photos.url if camp.photos else None,
+#                 'ppt': camp.ppt.url if camp.ppt else None,
+#             }
+#             data.append(camp_data)
+
+#         return JsonResponse(data, safe=False)
+
+# @csrf_exempt
+# def upload_files(request):
+#     if request.method == 'POST':
+#         camp_id = request.POST.get('campId')
+#         file_type = request.POST.get('fileType') #Get file type from request
+
+#         try:
+#             camp = eventsandcamps.objects.get(pk=camp_id)
+#         except eventsandcamps.DoesNotExist:
+#             return JsonResponse({'error': 'Camp not found'}, status=404)
+
+#         file = request.FILES.get('files')
+
+#         if not file:
+#             return JsonResponse({'error': 'No file uploaded'}, status=400)
+
+#         file_extension = file.name.split('.')[-1].lower()
+#         if file_extension not in ALLOWED_FILE_TYPES:
+#             return JsonResponse({'error': 'Invalid file type'}, status=400)
+#         old_file = None
+
+#         if file_type == 'report1':
+#             old_file = camp.report1
+#             camp.report1 = file
+#         elif file_type == 'report2':
+#             old_file = camp.report2
+#             camp.report2 = file
+#         elif file_type == 'photos':
+#             old_file = camp.photos
+#             camp.photos = file
+#         elif file_type == 'ppt':
+#             old_file = camp.ppt
+#             camp.ppt = file
+#         else:
+#             return JsonResponse({'error': 'Invalid file type'}, status=400)
+
+#         camp.save()
+
+#         if old_file:
+#             default_storage.delete(old_file.name)
+#          # Return file URL for immediate update on the frontend
+#         return JsonResponse({'message': 'File uploaded successfully', 'file_url': camp._getattribute_(file_type).url}, status=200)
+#     else:
+#         return JsonResponse({"error": "Invalid request method"}, status=400)
+
+# def download_file(request):
+#     if request.method == "GET":
+#         camp_id = request.GET.get('campId')
+#         file_type = request.GET.get('fileType')
+
+#         try:
+#             camp = get_object_or_404(eventsandcamps, pk=camp_id)
+#         except eventsandcamps.DoesNotExist:
+#             return JsonResponse({"error": "Camp not found"}, status=404)
+
+#         file_field = None
+#         if file_type == 'report1':
+#             file_field = camp.report1
+#         elif file_type == 'report2':
+#             file_field = camp.report2
+#         elif file_type == 'photos':
+#             file_field = camp.photos
+#         elif file_type == 'ppt':
+#             file_field = camp.ppt
+#         else:
+#             return JsonResponse({"error": "Invalid file type"}, status=400)
+
+#         if not file_field:
+#             return JsonResponse({"error": "File not found"}, status=404)
+
+#         try:
+#             with open(file_field.path, 'rb') as f:
+#                 response = HttpResponse(f.read(), content_type="application/force-download")
+#                 response['Content-Disposition'] = 'attachment; filename="{}"'.format(file_field.name)  # Suggest filename
+#                 return response
+
+#         except FileNotFoundError:
+#             return JsonResponse({"error": "File not found on server"}, status=404)
+#         except Exception as e:
+#             print("Error during download:", e)
+#             return JsonResponse({"error": "Error during download"}, status=500)
+
+#     return JsonResponse({"error": "Invalid request"}, status=400)
+
+# @csrf_exempt
+# def delete_file(request):
+#     if request.method == 'POST':
+#         try:
+#             data = json.loads(request.body)
+#             camp_id = data.get('campId')
+#             file_type = data.get('fileType')
+
+#             camp = eventsandcamps.objects.get(pk=camp_id)
+
+#             # Determine which file field to clear
+#             if file_type == 'report1':
+#                 file_field = camp.report1
+#                 camp.report1 = None
+#             elif file_type == 'report2':
+#                 file_field = camp.report2
+#                 camp.report2 = None
+#             elif file_type == 'photos':
+#                 file_field = camp.photos
+#                 camp.photos = None
+#             elif file_type == 'ppt':
+#                 file_field = camp.ppt
+#                 camp.ppt = None
+#             else:
+#                 return JsonResponse({'error': 'Invalid file type'}, status=400)
+
+#             # Delete the file from storage, if it exists
+#             if file_field:
+#                 default_storage.delete(file_field.name)  # Delete the old file
+#             camp.save()  # Save the model to remove the association
+#             return JsonResponse({'message': 'File deleted successfully'}, status=200)
+
+#         except eventsandcamps.DoesNotExist:
+#             return JsonResponse({'error': 'Camp not found'}, status=404)
+#         except Exception as e:
+#             print("Error in delete_file view:", e)
+#             return JsonResponse({'error': str(e)}, status=500)
+
+#     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
 @csrf_exempt
