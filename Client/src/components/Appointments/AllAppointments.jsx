@@ -32,7 +32,7 @@ const AllAppointments = () => {
   const fetchAppointments = async () => {
     setLoading(true)
     try {
-      let url = "http://localhost:8000/appointments/";
+      let url = "https://occupational-health-center-1.onrender.com/appointments/";
       const params = new URLSearchParams();
 
       if (fromDate) params.append("fromDate", fromDate);
@@ -74,7 +74,7 @@ const AllAppointments = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:8000/update-appointment-status/", {
+      const response = await fetch("https://occupational-health-center-1.onrender.com/update-appointment-status/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

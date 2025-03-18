@@ -19,7 +19,7 @@ const Search = () => {
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        const response = await axios.post("http://localhost:8000/userData");
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
         setEmployees(response.data.data);
         setFilteredEmployees(response.data.data);
         console.log(response.data.data);
