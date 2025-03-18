@@ -82,7 +82,7 @@ const Investigation = ({ data }) => {
     const entries = Object.entries(filteredData); // Convert object to array of [key, value] pairs
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-4">
         {entries.map(([key, value]) => (
           <div key={key} className="border rounded p-4">
             <span className="block font-medium text-gray-700">
@@ -90,7 +90,7 @@ const Investigation = ({ data }) => {
                 char.toUpperCase()
               )}:
             </span>
-            <span className="py-2 px-4  block w-full rounded-md border-gray-300 bg-blue-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-12">{value || "N/A"}</span>
+            <span className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">{value || "N/A"}</span>
           </div>
         ))}
       </div>

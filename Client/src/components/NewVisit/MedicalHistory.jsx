@@ -3,10 +3,8 @@ import Select from 'react-select';
 
 const MedicalHistory1 = ({ data }) => {
   console.log(data);
-  const emp_no = data[0].emp_no;
+  const emp_no = data[0]?.emp_no;
   const [isEditMode, setIsEditMode] = useState(true);
-
-  // *** NEW: Initialize state with values from the data prop ***
   const [name, setName] = useState(data[0]?.name || "");
   const [sex, setSex] = useState(data[0]?.sex || "");
   const [dob, setDob] = useState(data[0]?.dob || "");

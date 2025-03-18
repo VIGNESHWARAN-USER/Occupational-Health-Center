@@ -8,7 +8,7 @@ const AllAppointments = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [purpose, setPurpose] = useState("");
-
+  const [loading, setLoading] = useState(false);
   const purposeOptions = [
     "Pre employment",
     "Pre employment (Food Handler)",
@@ -25,10 +25,12 @@ const AllAppointments = () => {
   ];
 
   useEffect(() => {
+
     fetchAppointments();
   }, [fromDate, toDate, purpose]);
 
   const fetchAppointments = async () => {
+    setLoading(true)
     try {
       let url = "http://localhost:8000/appointments/";
       const params = new URLSearchParams();
@@ -52,6 +54,9 @@ const AllAppointments = () => {
     } catch (error) {
       console.error("Error fetching appointments:", error);
       setAppointments([]);
+    }
+    finally {
+      setLoading(false)
     }
   };
 
@@ -97,8 +102,6 @@ const AllAppointments = () => {
       console.error("Error updating appointment:", error);
     }
   };
-
-  
 
   return (
     <motion.div
@@ -165,67 +168,88 @@ const AllAppointments = () => {
               </select>
             </div>
             <div className="flex gap-2">
-            <button
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2"
-              onClick={fetchAppointments}
-            >
-              <FaFilter /> Apply
-            </button>
-            <button
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center gap-2"
-              onClick={clearFilters}
-            >
-              <FaSyncAlt /> Clear
-            </button>
+              <button
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-2"
+                onClick={fetchAppointments}
+              >
+                <FaFilter /> Apply
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center gap-2"
+                onClick={clearFilters}
+              >
+                <FaSyncAlt /> Clear
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Table */}
-<div className="bg-white rounded-lg shadow-md overflow-x-auto">
-  {/* Table Header */}
-  <div className="grid grid-cols-7 bg-blue-50 p-2 md:p-4 font-semibold text-blue-600 text-center">
-    <p className="hidden md:block">Appointment No.</p>
-    <p className="hidden md:block">MRD No.</p>
-    <p className="hidden md:block">Booked Date</p>
-    <p className="hidden md:block">Role</p>
-    <p className="hidden md:block">Purpose</p>
-    <p className="hidden md:block">Appointment Date</p>
-    <p>Action</p>
-  </div>
-
-  {/* Table Body */}
-  {appointments.length > 0 ? (
-    appointments.map((appointment) => (
-      <div
-        key={appointment.id}
-        className="grid grid-cols-7 text-sm text-gray-700 border-b border-gray-100 hover:bg-gray-50 transition text-center items-center py-2 md:py-4"
-      >
-        <p className="hidden md:block">{appointment.appointment_no}</p>
-        <p className="hidden md:block">{appointment.mrd_no}</p>
-        <p className="hidden md:block">{appointment.booked_date}</p>
-        <p className="hidden md:block">{appointment.role}</p>
-        <p className="hidden md:block">{appointment.purpose}</p>
-        <p className="hidden md:block">{appointment.date}</p>
-        <button
-          className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold mx-auto ${
-            appointment.status === "initiate"
-              ? "bg-red-100 text-red-600 hover:bg-red-200"
-              : appointment.status === "inprogress"
-              ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
-              : "bg-green-100 text-green-600 hover:bg-green-200"
-          }`}
-          onClick={() => handleStatusChange(appointment.id, appointment.status)}
-        >
-          {appointment.status}
-        </button>
+      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+        <table className="min-w-full table-auto">
+          <thead className="bg-blue-50 text-blue-600">
+            <tr>
+              <th className="px-4 py-2 font-semibold text-center">Appointment No.</th>
+              <th className="px-4 py-2 font-semibold text-center">MRD No.</th>
+              <th className="px-4 py-2 font-semibold text-center">Booked Date</th>
+              <th className="px-4 py-2 font-semibold text-center">Role</th>
+              <th className="px-4 py-2 font-semibold text-center">Purpose</th>
+              <th className="px-4 py-2 font-semibold text-center">Appointment Date</th>
+              <th className="px-4 py-2 font-semibold text-center">Aadhar No.</th>
+              <th className="px-4 py-2 font-semibold text-center">Booked By</th>
+              <th className="px-4 py-2 font-semibold text-center">Consulted By</th>
+              <th className="px-4 py-2 font-semibold text-center">Contractor Name</th>
+              <th className="px-4 py-2 font-semibold text-center">Doctor Name</th>
+              <th className="px-4 py-2 font-semibold text-center">Emp No</th>
+              <th className="px-4 py-2 font-semibold text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(loading)? (
+              <tr>
+              <td colSpan="12" className="text-center py-4">
+                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+              </td>
+            </tr>
+            ):  appointments.length > 0 ? (
+              appointments.map((appointment) => (
+                <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.appointment_no|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.mrd_no|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_date|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.role|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.purpose|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.date|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.aadhar_no|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_by|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.consultated_by|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.contractor_name|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.doctor_name|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.emp_no|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center">
+                    <button
+                      className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold mx-auto ${appointment.status === "initiate"
+                        ? "bg-red-100 text-red-600 hover:bg-red-200"
+                        : appointment.status === "inprogress"
+                          ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                          : "bg-green-100 text-green-600 hover:bg-green-200"
+                        }`}
+                      onClick={() => handleStatusChange(appointment.id, appointment.status)}
+                    >
+                      {appointment.status}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="13" className="p-6 text-center text-gray-500">No appointments found matching the selected filters.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    ))
-  ) : (
-    <div className="p-6 text-center text-gray-500">No appointments found matching the selected filters.</div>
-  )}
-</div>
 
     </motion.div>
   );

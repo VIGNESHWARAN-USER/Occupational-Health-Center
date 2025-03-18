@@ -45,7 +45,7 @@ const NewVisit = ({data}) => {
             {activeTab === "DocBasicDetails" && <BasicDetails data={data}/>}
             {activeTab === "DocFitness" && <Fitness data={data.fitnessassessment}/>}
             {activeTab === "DocInvestigations" && <Investigation data={data}/>}
-            {activeTab === "DocVaccination" && <Vaccination data={data}/>}
+            {activeTab === "DocVaccination" && <Vaccination data={data.vaccination}/>}
             {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
             {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
             {activeTab === "Visithistory" && <VIsitHistory data={data}/>}

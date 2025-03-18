@@ -1,37 +1,30 @@
-import React, { useState } from "react";
-
-const VisitHistory = () => {
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+const VisitHistory = ({data}) => {
   const [selectedYear, setSelectedYear] = useState("");
   const [visitReason, setVisitReason] = useState("");
   const [filteredData, setFilteredData] = useState([]);
-
-  // Sample visit history data
-  const visitData = [
-    {
-      hospitalName: "JSW OHC",
-      purpose: "Eye Fitness",
-      doctor: "SenthilKumar",
-      visitedDate: "18-09-2023",
-      year: "2023",
-      reason: "Pre employment",
-    },
-    {
-      hospitalName: "Apollo",
-      purpose: "Health Checkup",
-      doctor: "Dr. Rajesh",
-      visitedDate: "22-01-2024",
-      year: "2024",
-      reason: "Annual / Periodical",
-    },
-    {
-      hospitalName: "Fortis",
-      purpose: "BP Check",
-      doctor: "Dr. Kavitha",
-      visitedDate: "15-02-2024",
-      year: "2024",
-      reason: "BP Sugar Check (Normal Value)",
-    },
-  ];
+  const [visitData, setVisitData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();   
+  const emp_no = data.emp_no;
+  useEffect(() =>{
+    const fetchVisitData = async () => {
+      try {
+        const response = await axios.post(`http://localhost:8000/visitData/${emp_no}`);
+        console.log(response.data.data)
+        const data = await response.data.data;
+        console.log(data);
+        setVisitData(data);
+        setFilteredData(data);
+        setLoading(false);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    fetchVisitData();
+  }, [])
 
   // Filter function
   const applyFilter = () => {
@@ -73,8 +66,8 @@ const VisitHistory = () => {
               className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
             >
               <option value="">Select Reason</option>
-              <option>Pre employment</option>
-              <option>Pre employment (Food Handler)</option>
+              <option>Pre employement</option>
+              <option>Pre employement (Food Handler)</option>
               <option>Pre Placement</option>
               <option>Annual / Periodical</option>
               <option>Periodical (Food Handler)</option>
@@ -103,23 +96,30 @@ const VisitHistory = () => {
         <table className="min-w-full bg-white rounded-lg shadow-lg">
           <thead className="bg-blue-500 text-white">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-medium">Hospital Name</th>
+              <th className="px-6 py-3 text-left text-sm font-medium">MRD No.</th>
               <th className="px-6 py-3 text-left text-sm font-medium">Purpose</th>
-              <th className="px-6 py-3 text-left text-sm font-medium">Doctor</th>
               <th className="px-6 py-3 text-left text-sm font-medium">Visited Date</th>
               <th className="px-6 py-3 text-left text-sm font-medium">Details</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredData.length > 0 ? (
+            {loading? (
+              <tr>
+                <td colSpan="5" className="text-center py-4 text-gray-500">
+                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                </td>
+              </tr>
+            ) :
+            filteredData.length > 0 ? (
               filteredData.map((visit, index) => (
                 <tr key={index} className="hover:bg-gray-100 transition duration-200">
-                  <td className="px-6 py-4">{visit.hospitalName}</td>
-                  <td className="px-6 py-4">{visit.purpose}</td>
-                  <td className="px-6 py-4">{visit.doctor}</td>
-                  <td className="px-6 py-4">{visit.visitedDate}</td>
+                  <td className="px-6 py-4">{visit.mrdNo || 'Null'}</td>
+                  <td className="px-6 py-4">{visit.register}</td>
+                  <td className="px-6 py-4">{visit.date}</td>
                   <td className="px-6 py-4">
-                    <button className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition duration-300">
+                    <button
+                    onClick={() => {navigate("../summary", {state: {emp_no: emp_no, date: visit.date}})}} 
+                    className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition duration-300">
                       View
                     </button>
                   </td>

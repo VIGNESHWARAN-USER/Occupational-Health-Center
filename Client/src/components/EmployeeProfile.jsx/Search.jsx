@@ -22,6 +22,7 @@ const Search = () => {
         const response = await axios.post("http://localhost:8000/userData");
         setEmployees(response.data.data);
         setFilteredEmployees(response.data.data);
+        console.log(response.data.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }

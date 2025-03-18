@@ -1,6 +1,14 @@
 from django.db import models
+from datetime import date
 
-class user(models.Model):
+class BaseModel(models.Model):
+    entry_date = models.DateField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class user(BaseModel):
     name = models.TextField(max_length=50)
     password = models.TextField(max_length=50)
     accessLevel = models.TextField(max_length=50)
@@ -9,7 +17,7 @@ class user(models.Model):
         return self.name
     
 
-class employee_details(models.Model):
+class employee_details(BaseModel):
     name = models.TextField(max_length=225)
     dob = models.TextField(max_length=225)
     sex = models.TextField(max_length=225)
@@ -39,7 +47,7 @@ class employee_details(models.Model):
         return self.emp_no
         
 
-class vitals(models.Model):
+class vitals(BaseModel):
     emp_no = models.TextField(max_length=200)
     systolic = models.TextField(max_length=50)
     diastolic= models.TextField(max_length=50)
@@ -54,7 +62,7 @@ class vitals(models.Model):
     def __str__(self):
         return self.emp_no
     
-class mockdrills(models.Model):
+class mockdrills(BaseModel):
     emp_no = models.TextField(max_length=200)
     date= models.TextField(max_length=200)
     time= models.TextField(max_length=200)
@@ -87,9 +95,8 @@ class mockdrills(models.Model):
         return self.emp_no
     
 
-from datetime import date
 
-class eventsandcamps(models.Model):
+class eventsandcamps(BaseModel):
     camp_name = models.TextField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -116,7 +123,7 @@ class eventsandcamps(models.Model):
         super().save(*args, **kwargs)
 
 
-class heamatalogy(models.Model):
+class heamatalogy(BaseModel):
     emp_no = models.TextField(max_length=200)
     hemoglobin = models.TextField(max_length=255)
     hemoglobin_unit = models.TextField(max_length=255)
@@ -201,7 +208,7 @@ class heamatalogy(models.Model):
         return f"Blood Test Report {self.id}"
 
     
-class RoutineSugarTests(models.Model):
+class RoutineSugarTests(BaseModel):
     emp_no = models.TextField(max_length=200)
     glucose_f = models.TextField(max_length=255)
     glucose_f_unit = models.TextField(max_length=255)
@@ -233,7 +240,7 @@ class RoutineSugarTests(models.Model):
     
 
 
-class RenalFunctionTest(models.Model):
+class RenalFunctionTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     urea = models.TextField(max_length=255)
     urea_unit = models.TextField(max_length=255)
@@ -285,7 +292,7 @@ class RenalFunctionTest(models.Model):
 
 
 
-class LipidProfile(models.Model):
+class LipidProfile(BaseModel):
     emp_no = models.TextField(max_length=200)
     calcium = models.TextField(max_length=255)
     calcium_unit = models.TextField(max_length=255)
@@ -328,7 +335,7 @@ class LipidProfile(models.Model):
 
 
 
-class LiverFunctionTest(models.Model):
+class LiverFunctionTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     bilirubin_total = models.TextField(max_length=255)
     bilirubin_total_unit = models.TextField(max_length=255)
@@ -391,7 +398,7 @@ class LiverFunctionTest(models.Model):
 
 
 
-class ThyroidFunctionTest(models.Model):
+class ThyroidFunctionTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     t3_triiodothyronine = models.TextField(max_length=255)
     t3_unit = models.TextField(max_length=255)
@@ -413,7 +420,7 @@ class ThyroidFunctionTest(models.Model):
 
 
 
-class CoagulationTest(models.Model):
+class CoagulationTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     prothrombin_time = models.TextField(max_length=255)
     prothrombin_time_unit = models.TextField(max_length=255)
@@ -440,7 +447,7 @@ class CoagulationTest(models.Model):
     
 
 
-class EnzymesCardiacProfile(models.Model):
+class EnzymesCardiacProfile(BaseModel):
     emp_no = models.TextField(max_length=200)
     acid_phosphatase = models.TextField(max_length=255)
     acid_phosphatase_unit = models.TextField(max_length=255)
@@ -499,7 +506,7 @@ class EnzymesCardiacProfile(models.Model):
 
 
 
-class UrineRoutineTest(models.Model):
+class UrineRoutineTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     colour = models.TextField(max_length=255)
     colour_unit = models.TextField(max_length=255)
@@ -589,7 +596,7 @@ class UrineRoutineTest(models.Model):
 
 
 
-class SerologyTest(models.Model):
+class SerologyTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     screening_hiv = models.TextField(max_length=255)
     screening_hiv_unit = models.TextField(max_length=255)
@@ -638,7 +645,7 @@ class SerologyTest(models.Model):
 
 
 
-class MotionTest(models.Model):
+class MotionTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     colour_motion = models.TextField(max_length=255)
     colour_motion_unit = models.TextField(max_length=255)
@@ -692,7 +699,7 @@ class MotionTest(models.Model):
 
 
 
-class CultureSensitivityTest(models.Model):
+class CultureSensitivityTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     urine = models.TextField(max_length=255)
     urine_unit = models.TextField(max_length=255)
@@ -722,7 +729,7 @@ class CultureSensitivityTest(models.Model):
 
 
 
-class MensPack(models.Model):
+class MensPack(BaseModel):
     emp_no = models.TextField(max_length=200)
     psa = models.TextField(max_length=255)
     psa_unit = models.TextField(max_length=255)
@@ -733,7 +740,7 @@ class MensPack(models.Model):
         return f"Men's Pack Test Report {self.id}"
 
 
-class OphthalmicReport(models.Model):
+class OphthalmicReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     vision = models.TextField(max_length=255)
     vision_unit = models.TextField(max_length=255)
@@ -750,7 +757,7 @@ class OphthalmicReport(models.Model):
 
 
 
-class USGReport(models.Model):
+class USGReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     usg_abdomen = models.TextField(max_length=255)
     usg_abdomen_unit = models.TextField(max_length=255)
@@ -778,7 +785,7 @@ class USGReport(models.Model):
 
 
 
-class MRIReport(models.Model):
+class MRIReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     mri_brain = models.TextField(max_length=255)
     mri_brain_unit = models.TextField(max_length=255)
@@ -809,7 +816,7 @@ class MRIReport(models.Model):
         return f"MRI Report {self.id}"
 
 
-class Dashboard(models.Model):
+class Dashboard(BaseModel):
     emp_no = models.TextField(max_length=200)
     type = models.TextField(max_length=255)  # Represents "Type"
     type_of_visit = models.TextField(max_length=255)  # Represents "Type of visit"
@@ -820,7 +827,7 @@ class Dashboard(models.Model):
         return f"Dashboard Record {self.id}"
 
 
-class Appointment(models.Model):
+class Appointment(BaseModel):
     class StatusChoices(models.TextChoices):
         INITIATE = 'initiate', 'Initiate'
         IN_PROGRESS = 'inprogress', 'In Progress'
@@ -853,7 +860,7 @@ class Appointment(models.Model):
         return f"{self.name} - {self.appointment_date}"
 
 
-class FitnessAssessment(models.Model):
+class FitnessAssessment(BaseModel):
     class PositiveNegativeChoices(models.TextChoices):
         POSITIVE = 'Positive', 'Positive'
         NEGATIVE = 'Negative', 'Negative'
@@ -873,24 +880,23 @@ class FitnessAssessment(models.Model):
 
 
 
-class Vaccination(models.Model):
-    emp_no = models.CharField(max_length=200)
-    vaccine_names = models.JSONField(default=list)  # List of vaccine names
-    statuses = models.JSONField(default=list)  # List of statuses corresponding to each vaccine
-    normal_doses = models.JSONField(default=dict)  # List of normal dose details
-    booster_doses = models.JSONField(default=dict)  # List of booster dose details
-    entry_date = models.DateField(auto_now=True)
-    
-    def __str__(self):
-        return self.emp_no
+class VaccinationRecord(BaseModel):
+    emp_no = models.CharField(max_length=30)  # Employee number
+    vaccination = models.JSONField(default=list)
 
-class ReviewCategory(models.Model):
+    def __str__(self):
+        return f"Vaccination Record for {self.emp_no}"
+
+
+
+
+class ReviewCategory(BaseModel):
     name = models.CharField(max_length=255, unique=True)
 
     def _str_(self):
         return self.name
 
-class Review(models.Model):
+class Review(BaseModel):
     category = models.ForeignKey(ReviewCategory, on_delete=models.CASCADE, related_name="reviews")
     pid = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=255)
@@ -906,7 +912,7 @@ class Review(models.Model):
         return f"{self.name} - {self.category.name}"
     
 
-class Member(models.Model):
+class Member(BaseModel):
     employee_number = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     designation = models.CharField(max_length=50, choices=[("Admin", "Admin"), ("Manager", "Manager"), ("Staff", "Staff")])
@@ -918,7 +924,7 @@ class Member(models.Model):
         return self.name
     
 
-class MedicalHistory(models.Model):
+class MedicalHistory(BaseModel):
     emp_no = models.CharField(max_length=255, null=True, blank=True)  # Add emp_no field
     personal_history = models.JSONField(null=True, blank=True)
     medical_data = models.JSONField(null=True, blank=True)

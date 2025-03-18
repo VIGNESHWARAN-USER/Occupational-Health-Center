@@ -437,9 +437,8 @@ const EventsAndCamps = () => {
                             </div>
 
                             {loading ? (
-                                <div className="flex items-center justify-center">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-700"></div>
-                                    <span className="ml-3">Loading camp data...</span>
+                                <div className="w-full text-center py-4">
+                                  <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
                                 </div>
                             ) : error ? (
                                 <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -544,10 +543,9 @@ const EventsAndCamps = () => {
                                                                         disabled={loading}
                                                                     >
                                                                         {loading ? (
-                                                                            <div className="flex items-center justify-center">
-                                                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                                                <span className="ml-2">Uploading...</span>
-                                                                            </div>
+                                                                            <div className="w-full text-center py-4">
+                                                                            <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                                                                          </div>
                                                                         ) : "Upload"}
                                                                     </button>
                                                                 </div>

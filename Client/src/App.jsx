@@ -17,6 +17,7 @@ import EmployeeProfile from './components/EmployeeProfile.jsx/EmployeeProfile'
 import ProtectedRoute from './ProtectedRoute'
 import PrescriptionPDF from './components/NewVisit/PrescriptionPDF'
 import ReviewPeople from './components/ReviewPeople'
+import Summary from './components/EmployeeProfile.jsx/Summary'
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path = '/employeeprofile' element = {<EmployeeProfile/>}/>
           <Route path = '/pdf' element = {<PrescriptionPDF/>}/>
           <Route path = 'reviewpeople' element = {<ReviewPeople/>}/>
+          <Route path = 'summary' element = {<Summary/>}/>
       </Route>
     </Routes>
     </div>
