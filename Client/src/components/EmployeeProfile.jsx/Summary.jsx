@@ -18,7 +18,7 @@ const Summary = () => {
     useEffect(()=>{
         const fetchUserData = async () => {
             try {
-                const response = await axios.get(`http://localhost:8000/visitData/${emp_no}/${date}`);
+                const response = await axios.get(`https://occupational-health-center-1.onrender.com/visitData/${emp_no}/${date}`);
                 console.log(response)
                 console.log(response.data.data)
                 const data = await response.data.data;

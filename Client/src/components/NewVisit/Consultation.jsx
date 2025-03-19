@@ -28,7 +28,7 @@ const Consultation = ({data}) => {
 
     try {
       console.log(emp_no);
-      const response = await axios.post("http://localhost:8000/consultations/add/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", {
           emp_no: emp_no,
           complaints: complaints,
           diagnosis: diagnosis,

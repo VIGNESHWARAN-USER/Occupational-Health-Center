@@ -97,7 +97,7 @@ const App = () => {
     useEffect(() => {
       const fetchData = async () => {
         try {
-          const resp = await axios.post("http://localhost:8000/visitData/");
+          const resp = await axios.post("https://occupational-health-center-1.onrender.com/visitData/");
           console.log(resp.data);
           setVisitData(resp.data.data); // Store the fetched data in state
         } catch (error) {
