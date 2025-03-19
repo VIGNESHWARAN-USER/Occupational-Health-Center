@@ -26,7 +26,7 @@ const EventsAndCamps = () => {
     const [dbFiles, setDbFiles] = useState({});  // store file URLs from the database
 
     // Nurse Role Functionality
-    if (accessLevel === "nurse") {
+    if (accessLevel === "nurse" || accessLevel === "doctor") {
         const [formDatas, setFormDatas] = useState({
             camp_name: "",
             start_date: "",
@@ -59,7 +59,7 @@ const EventsAndCamps = () => {
             }
 
             try {
-                const response = await fetch("https://occupational-health-center-1.onrender.com/add-camp/", {
+                const response = await fetch("http://localhost:8000/add-camp/", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -112,7 +112,7 @@ const EventsAndCamps = () => {
                     params.append("dateTo", dateTo);
                 }
 
-                const url = `https://occupational-health-center-1.onrender.com/get-camps/?${params.toString()}`;
+                const url = `http://localhost:8000/get-camps/?${params.toString()}`;
                 const response = await fetch(url);
 
                 if (!response.ok) {
@@ -181,7 +181,7 @@ const EventsAndCamps = () => {
             setLoading(true);
 
             try {
-                const response = await fetch("https://occupational-health-center-1.onrender.com/delete-file/", {  // Backend API endpoint
+                const response = await fetch("http://localhost:8000/delete-file/", {  // Backend API endpoint
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -243,7 +243,7 @@ const EventsAndCamps = () => {
             formData.append("fileType", fileType);
 
             try {
-                const response = await fetch("https://occupational-health-center-1.onrender.com/upload-files/", {
+                const response = await fetch("http://localhost:8000/upload-files/", {
                     method: "POST",
                     body: formData,
                 });
@@ -321,7 +321,7 @@ const EventsAndCamps = () => {
      const getDownloadLink = (campId, fileType) => {
             // Construct the URL to download the file from your backend
             // Replace with your actual API endpoint and parameters
-            return `https://occupational-health-center-1.onrender.com/download-file?campId=${campId}&fileType=${fileType}`;
+            return `http://localhost:8000/download-file?campId=${campId}&fileType=${fileType}`;
         };
 
 

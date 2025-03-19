@@ -1,285 +1,355 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from 'react';
 import Sidebar from "./Sidebar";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import axios from "axios";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { motion } from 'framer-motion';
+import axios from 'axios';
 
-const Dashboard = () => {
-  const accessLevel = localStorage.getItem('accessLevel');
-  const navigate = useNavigate();
-  if(accessLevel === "nurse")
-  {
-    const [chartData, setChartData] = useState({
-      type_counts: [],
-      type_of_visit_counts: [],
-      register_counts: [],
-      purpose_counts: [],
-    });
-  
-    // Two separate filter states
-    const [visitType, setVisitType] = useState(""); // Preventive / Curative
-    const [entityType, setEntityType] = useState(""); // Total Footfalls / Employee / Contractor / Visitor
-  
-    // Default to today's date
-    const today = new Date().toISOString().split("T")[0];
-    const [fromDate, setFromDate] = useState(today);
-    const [toDate, setToDate] = useState(today);
-  
-    // Function to reset the date filter
-    const clearDateFilter = () => {
-      setFromDate(today);
-      setToDate(today);
+
+
+const MyBarChart = ({ data, title, color, onItemClick, index }) => {
+    const variants = {
+        hidden: { opacity: 0, y: 50 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+                delay: index * 0.2,  // Staggered delay based on index
+            },
+        },
     };
-  
-    // Fetch chart data with applied filters
-    const fetchChartData = () => {
-      if (!visitType || !entityType) return; // Ensure both filters are selected before fetching
-  
-      const params = new URLSearchParams();
-      params.append("fromDate", fromDate);
-      params.append("toDate", toDate);
-      params.append("visitType", visitType);
-      params.append("entityType", entityType);
-  
-      axios.get(`https://occupational-health-center-1.onrender.com/dashboard/?${params.toString()}`)
-        .then((response) => {
-          setChartData(response.data);
-        })
-        .catch((error) => {
-          console.error("Error fetching dashboard data:", error);
-        });
-    };
-  
-    useEffect(() => {
-      const accessLevel = localStorage.getItem("accessLevel");
-      if (!accessLevel) navigate("../");
-  
-      fetchChartData();
-    }, [navigate, visitType, entityType, fromDate, toDate]);
-  
-    const formatChartData = (data) => data.map((item) => ({
-      name: item.type || item.type_of_visit || item.register || item.purpose,
-      count: item.count,
-    }));
-  
+
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
-        <Sidebar />
-        <div className="flex-1 p-6 overflow-auto">
-          
-          {/* Header with Filters */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">Dashboard Statistics</h2>
-            <motion.div className="bg-white p-4 rounded-xl shadow-lg" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="flex items-center space-x-4">
-                <div className="flex flex-col">
-                  <label className="text-gray-700 text-sm font-bold mb-1">From:</label>
-                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="px-3 py-2 border rounded-lg shadow-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-gray-700 text-sm font-bold mb-1">To:</label>
-                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="px-3 py-2 border rounded-lg shadow-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <button className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition" onClick={fetchChartData}>Apply</button>
-                <button className="px-6 py-2 bg-gray-400 text-white rounded-lg shadow-md hover:bg-gray-500 transition" onClick={clearDateFilter}>Clear</button>
-              </div>
-            </motion.div>
-          </div>
-  
-          {/* First Group Filters */}
-          <motion.div className="mb-4">
-            <div className="flex gap-3">
-              {["Preventive", "Curative"].map((filter) => (
-                <button key={filter} onClick={() => setVisitType(filter)}
-                  className={`px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold transition ${
-                    visitType === filter ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}>{filter}</button>
-              ))}
-            </div>
-          </motion.div>
-  
-          {/* Second Group Filters */}
-          <motion.div className="mb-8">
-            <div className="flex gap-3">
-              {["Total Footfalls", "Employee", "Contractor", "Visitor"].map((filter) => (
-                <button key={filter} onClick={() => setEntityType(filter)}
-                  className={`px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold transition ${
-                    entityType === filter ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}>{filter}</button>
-              ))}
-            </div>
-          </motion.div>
-  
-  
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="p-6 bg-white rounded-xl shadow-md">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Dashboard Statistics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { title: "Type Distribution", data: formatChartData(chartData.type_counts), color: "#3182CE" }, 
-                  { title: "Type of Visit Distribution", data: formatChartData(chartData.type_of_visit_counts), color: "#2B6CB0" },
-                  { title: "Register Distribution", data: formatChartData(chartData.register_counts), color: "#D69E2E" },
-                  { title: "Purpose Distribution", data: formatChartData(chartData.purpose_counts), color: "#38A169" }
-                ].map((chart, index) => (
-                  <div key={index} className="h-80 bg-gray-100 p-4 rounded-lg shadow">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3">{chart.title}</h4>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={chart.data}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Tooltip/><Legend/><Bar dataKey="count" fill={chart.color} /></BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-  
-        </div>
-      </div>
+        <motion.div
+            className="bg-white p-4 rounded-lg shadow w-full"
+            variants={variants}
+            initial="hidden"
+            animate="visible"
+        >
+            <h4 className="text-lg font-semibold text-gray-800 mb-3">{title}</h4>
+            <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data} onClick={onItemClick}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill={color} label={{ position: 'top' }} />
+                </BarChart>
+            </ResponsiveContainer>
+        </motion.div>
     );
-  }
-  else if(accessLevel === "doctor")
-  {
-    const [chartData, setChartData] = useState({
-      type_counts: [],
-      type_of_visit_counts: [],
-      register_counts: [],
-      purpose_counts: [],
-    });
-  
-    // Two separate filter states
-    const [visitType, setVisitType] = useState(""); // Preventive / Curative
-    const [entityType, setEntityType] = useState(""); // Total Footfalls / Employee / Contractor / Visitor
-  
-    // Default to today's date
-    const today = new Date().toISOString().split("T")[0];
-    const [fromDate, setFromDate] = useState(today);
-    const [toDate, setToDate] = useState(today);
-  
-    // Function to reset the date filter
-    const clearDateFilter = () => {
-      setFromDate(today);
-      setToDate(today);
-    };
-  
-    // Fetch chart data with applied filters
-    const fetchChartData = () => {
-      if (!visitType || !entityType) return; // Ensure both filters are selected before fetching
-  
-      const params = new URLSearchParams();
-      params.append("fromDate", fromDate);
-      params.append("toDate", toDate);
-      params.append("visitType", visitType);
-      params.append("entityType", entityType);
-  
-      axios.get(`https://occupational-health-center-1.onrender.com/dashboard/?${params.toString()}`)
-        .then((response) => {
-          setChartData(response.data);
-        })
-        .catch((error) => {
-          console.error("Error fetching dashboard data:", error);
-        });
-    };
-  
-    useEffect(() => {
-      const accessLevel = localStorage.getItem("accessLevel");
-      if (!accessLevel) navigate("../");
-  
-      fetchChartData();
-    }, [navigate, visitType, entityType, fromDate, toDate]);
-  
-    const formatChartData = (data) => data.map((item) => ({
-      name: item.type || item.type_of_visit || item.register || item.purpose,
-      count: item.count,
-    }));
-  
-    return (
-      <div className="h-screen flex bg-[#8fcadd]">
-        <Sidebar />
-        <div className="flex-1 p-6 overflow-auto">
-          
-          {/* Header with Filters */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">Dashboard Statistics</h2>
-            <motion.div className="bg-white p-4 rounded-xl shadow-lg" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="flex items-center space-x-4">
-                <div className="flex flex-col">
-                  <label className="text-gray-700 text-sm font-bold mb-1">From:</label>
-                  <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="px-3 py-2 border rounded-lg shadow-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="flex flex-col">
-                  <label className="text-gray-700 text-sm font-bold mb-1">To:</label>
-                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="px-3 py-2 border rounded-lg shadow-sm w-40 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <button className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition" onClick={fetchChartData}>Apply</button>
-                <button className="px-6 py-2 bg-gray-400 text-white rounded-lg shadow-md hover:bg-gray-500 transition" onClick={clearDateFilter}>Clear</button>
-              </div>
-            </motion.div>
-          </div>
-  
-          {/* First Group Filters */}
-          <motion.div className="mb-4">
-            <div className="flex gap-3">
-              {["Preventive", "Curative"].map((filter) => (
-                <button key={filter} onClick={() => setVisitType(filter)}
-                  className={`px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold transition ${
-                    visitType === filter ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}>{filter}</button>
-              ))}
-            </div>
-          </motion.div>
-  
-          {/* Second Group Filters */}
-          <motion.div className="mb-8">
-            <div className="flex gap-3">
-              {["Total Footfalls", "Employee", "Contractor", "Visitor"].map((filter) => (
-                <button key={filter} onClick={() => setEntityType(filter)}
-                  className={`px-5 py-2.5 rounded-lg shadow-md text-sm font-semibold transition ${
-                    entityType === filter ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}>{filter}</button>
-              ))}
-            </div>
-          </motion.div>
-  
-  
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-            <div className="p-6 bg-white rounded-xl shadow-md">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Dashboard Statistics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {[
-                  { title: "Type Distribution", data: formatChartData(chartData.type_counts), color: "#3182CE" }, 
-                  { title: "Type of Visit Distribution", data: formatChartData(chartData.type_of_visit_counts), color: "#2B6CB0" },
-                  { title: "Register Distribution", data: formatChartData(chartData.register_counts), color: "#D69E2E" },
-                  { title: "Purpose Distribution", data: formatChartData(chartData.purpose_counts), color: "#38A169" }
-                ].map((chart, index) => (
-                  <div key={index} className="h-80 bg-gray-100 p-4 rounded-lg shadow">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3">{chart.title}</h4>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={chart.data}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis/><Tooltip/><Legend/><Bar dataKey="count" fill={chart.color} /></BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-  
-        </div>
-      </div>
-    );
-  }
-  else{
-    return(
-      <section class="bg-white h-full flex items-center dark:bg-gray-900">
-      <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-          <div class="mx-auto max-w-screen-sm text-center">
-              <h1 class="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-gray-900 md:text-4xl dark:text-white">404</h1>
-              <p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Something's missing.</p>
-              <p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, we can't find that page. You'll find lots to explore on the home page. </p>
-              <button onClick={()=>navigate(-1)} class="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4">Back</button>
-          </div>   
-      </div>
-  </section>
-    );
-  }
 };
 
-export default Dashboard;
+const OverAllFootFallDropdown = ({ value, onChange }) => {
+    const variants = {
+        hidden: { opacity: 0, y: 50 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.5,
+            },
+        },
+    };
+
+    return (
+        <motion.div
+            className="mb-4"
+            variants={variants}
+            initial="hidden"
+            animate="visible"
+        >
+            <label htmlFor="over-all-footfall" className="block text-gray-700 text-sm font-bold mb-2">
+                Overall Footfall:
+            </label>
+            <select
+                id="over-all-footfall"
+                value={value}
+                onChange={onChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            >
+                <option value="">Select Footfall Type</option>
+                <option value="Employee">Employee</option>
+                <option value="Contractor">Contractor</option>
+                <option value="Employee+Contractor">Employee + Contractor</option>
+                <option value="Total">Total</option>
+                <option value="Visitor">Visitor</option>
+            </select>
+        </motion.div>
+    );
+};
+
+const App = () => {
+    const [barChartData, setBarChartData] = useState([]);
+    const [secondBarChartData, setSecondBarChartData] = useState([]);
+    const [thirdBarChartData, setThirdBarChartData] = useState([]);
+    const [selectedBar, setSelectedBar] = useState(null);
+    const [selectedSubBar, setSelectedSubBar] = useState(null);
+    const [overAllFootFall, setOverAllFootFall] = useState("");
+    const [showCharts, setShowCharts] = useState(false); // State to control chart visibility
+    const [fromDate, setFromDate] = useState(''); // State for "From" date
+    const [toDate, setToDate] = useState(''); // State for "To" date
+    const [visitData, setVisitData] = useState([]);
+
+
+
+    useEffect(() => {
+      const fetchData = async () => {
+        try {
+          const resp = await axios.post("http://localhost:8000/visitData/");
+          console.log(resp.data);
+          setVisitData(resp.data.data); // Store the fetched data in state
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        }
+      };
+    
+      fetchData();
+    
+    }, []);
+
+    const handleOverAllFootFallChange = (event) => {
+        setOverAllFootFall(event.target.value);
+        setSelectedBar(null);
+        setSelectedSubBar(null);
+        setSecondBarChartData([]);
+        setThirdBarChartData([]);
+        setShowCharts(true);  // Show charts after dropdown changes
+    };
+
+    const handleBarClick = (event) => {
+        if (event && event.activePayload && event.activePayload[0]) {
+            setSelectedBar(event.activePayload[0].payload.name);
+            setSelectedSubBar(null);
+            setSecondBarChartData([]);
+            setThirdBarChartData([]);
+        }
+    };
+
+    const handleSubBarClick = (event) => {
+        if (event && event.activePayload && event.activePayload[0]) {
+            setSelectedSubBar(event.activePayload[0].payload.name);
+        }
+    };
+
+    useEffect(() => {
+        if (!visitData || visitData.length === 0) {
+            return; // Don't proceed if visitData is empty or not yet loaded.
+        }
+
+        let mainData = [];
+
+        if (overAllFootFall) {
+            let filteredData = visitData;
+
+            if (overAllFootFall !== "Total") {
+                filteredData = visitData.filter(item => item.type === overAllFootFall);
+            }
+            console.log("Filtered data:", filteredData);
+
+            const preventiveCount = filteredData.filter(item => item.type_of_visit === "Preventive").length;
+            const curativeCount = filteredData.filter(item => item.type_of_visit === "Curative").length;
+
+            mainData = [
+                { name: 'Preventive', count: preventiveCount },
+                { name: 'Curative', count: curativeCount },
+            ];
+        }
+        setBarChartData(mainData);
+
+    }, [overAllFootFall, visitData]);
+
+    useEffect(() => {
+        if (!visitData || visitData.length === 0) {
+            return; // Don't proceed if visitData is empty or not yet loaded.
+        }
+
+        let detailData = [];
+
+        if (selectedBar) {
+            let filteredData = visitData;
+
+            if (overAllFootFall !== "Total") {
+                filteredData = visitData.filter(item => item.type === overAllFootFall);
+            }
+
+            let subFilteredData;
+
+            if (selectedBar === "Preventive") {
+                subFilteredData = filteredData.filter(item => item.type_of_visit === "Preventive");
+            } else if (selectedBar === "Curative") {
+                subFilteredData = filteredData.filter(item => item.type_of_visit === "Curative");
+            }
+
+            if (subFilteredData) {
+                // Group by purpose or register based on what's relevant
+                const groupedData = {};
+                subFilteredData.forEach(item => {
+                    const key = item.purpose || item.register; // Use 'purpose' if available, otherwise 'register'
+
+                    if (groupedData[key]) {
+                        groupedData[key]++;
+                    } else {
+                        groupedData[key] = 1;
+                    }
+                });
+
+                detailData = Object.keys(groupedData).map(key => ({
+                    name: key,
+                    count: groupedData[key],
+                }));
+            }
+        }
+        setSecondBarChartData(detailData);
+
+    }, [selectedBar, overAllFootFall, visitData]);
+
+    useEffect(() => {
+        let thirdData = [];
+
+        if (selectedSubBar) {
+            const filteredVisitData = visitData.filter(item => item.purpose === selectedSubBar || item.register === selectedSubBar);
+
+            // Group by register or other relevant field for the third chart
+            const groupedData = {};
+            filteredVisitData.forEach(item => {
+                const key = item.register || item.date ; // Group by date or any other relevant field
+                if (groupedData[key]) {
+                    groupedData[key]++;
+                } else {
+                    groupedData[key] = 1;
+                }
+            });
+
+            thirdData = Object.keys(groupedData).map(key => ({
+                name: key,
+                count: groupedData[key],
+            }));
+        }
+
+        setThirdBarChartData(thirdData);
+    }, [selectedSubBar, visitData]);
+
+
+     const fetchChartData = () => {
+        // Placeholder for fetching data based on date range
+        console.log("Fetching data from:", fromDate, "to:", toDate);
+        // Add your data fetching logic here
+        // Example:
+        //  fetchData(fromDate, toDate).then(data => {
+        //    setChartData(processData(data));
+        //  });
+    };
+
+    const clearDateFilter = () => {
+        setFromDate('');
+        setToDate('');
+        // Optionally, refetch the original data
+        // fetchOriginalData().then(data => {
+        //   setChartData(processData(data));
+        // });
+    };
+
+    const chartData = [
+        {
+            title: "Overall Data Distribution",
+            data: barChartData,
+            color: "#3182CE",
+            onItemClick: handleBarClick,
+            show: true,  // Always show this chart
+        },
+        {
+            title: "Subdivision Details",
+            data: secondBarChartData,
+            color: "#82ca9d",
+            onItemClick: handleSubBarClick,
+            show: secondBarChartData.length > 0,
+        },
+        {
+            title: "Detailed Analysis",
+            data: thirdBarChartData,
+            color: "#E53E3E",
+            show: thirdBarChartData.length > 0,
+        },
+    ];
+
+    return (
+        <div className="h-screen flex bg-[#8fcadd]">
+            <Sidebar />
+            <div className="flex-1 p-4 overflow-y-auto">  {/* Added overflow-y-auto */}
+
+                {/* Header with Filters */}
+                <motion.div
+                    className="bg-white p-6 rounded-lg shadow-md mb-6"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                >
+                    <h2 className="text-2xl font-semibold mb-4">Dashboard Statistics</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label htmlFor="fromDate" className="block text-gray-700 text-sm font-bold mb-2">From Date:</label>
+                            <input
+                                type="date"
+                                id="fromDate"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="toDate" className="block text-gray-700 text-sm font-bold mb-2">To Date:</label>
+                            <input
+                                type="date"
+                                id="toDate"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            />
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2"
+                                type="button"
+                                onClick={fetchChartData}
+                            >
+                                Apply
+                            </button>
+                            <button
+                                className="bg-gray-400 hover:bg-gray-500 text-gray-700 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                type="button"
+                                onClick={clearDateFilter}
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+
+                <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-2xl font-semibold mb-4">Footfall Analysis</h2>
+
+                    <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
+
+                    <div className="flex flex-col gap-4">  {/* Changed to flex column */}
+                        {chartData.map((chart, index) => (
+                            chart.show && (
+                                <MyBarChart
+                                    key={index}
+                                    index={index}  // Pass the index
+                                    title={chart.title}
+                                    data={chart.data}
+                                    color={chart.color}
+                                    onItemClick={chart.onItemClick}
+                                />
+                            )
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default App;

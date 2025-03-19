@@ -27,7 +27,7 @@ const Vaccination = ({ data }) => {
     e.preventDefault();
     try{
       console.log(emp_no)
-      const resp = axios.post("https://occupational-health-center-1.onrender.com/vaccination/", {emp_no: emp_no, vaccination: vaccinationData});
+      const resp = axios.post("http://localhost:8000/vaccination/", {emp_no: emp_no, vaccination: vaccinationData});
       console.log(resp)
     }
     catch(error)

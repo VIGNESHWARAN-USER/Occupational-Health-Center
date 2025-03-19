@@ -6,7 +6,7 @@ import logging
 from datetime import datetime
 import json
 from .models import user  # Replace with your actual model
-from .models import Appointment  # Replace with your actual model
+# from .models import Appointment  # Replace with your actual model
 from .models import mockdrills  # Replace with your actual model
 # from .models import eventsandcamps  # Replace with your actual model
 from datetime import datetime, timedelta
@@ -136,7 +136,7 @@ def fetchdata(request):
             mri_dict, mri_default = get_latest_records(models.MRIReport)
             fitnessassessment_dict, fitnessassessment_default = get_latest_records(models.FitnessAssessment)
             vaccination_dict, vaccination_default = get_latest_records(models.VaccinationRecord)
-
+            consultation_dict, consultation_default = get_latest_records(models.Consultation)
             # If no employees found, return a meaningful response
             if not employees:
                 return JsonResponse({"data": []}, status=200)
@@ -165,6 +165,7 @@ def fetchdata(request):
                 emp["mri"] = mri_dict.get(emp_no, mri_default or {})
                 emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, fitnessassessment_default or {})
                 emp["vaccination"] = vaccination_dict.get(emp_no, vaccination_default or {})
+                emp["consultation"] = consultation_dict.get(emp_no, consultation_default or {})
                 merged_data.append(emp)
 
             return JsonResponse({"data": merged_data}, status=200)
@@ -595,74 +596,82 @@ def update_appointment_status(request):
 
 @csrf_exempt
 def uploadAppointment(request):
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            appointments_data = data.get("appointments", [])
-            appointment_count = {}
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
 
-            for i, appointment_data in enumerate(appointments_data):
-                if i == 0:  # Skip header row
+    try:
+        data = json.loads(request.body)
+        appointments_data = data.get("appointments", [])
+
+        if not appointments_data:
+            return JsonResponse({"error": "No appointment data provided."}, status=400)
+
+        for i, appointment_data in enumerate(appointments_data):
+            if i == 0:  # Skip header row
+                continue
+
+            # Ensure there are enough fields
+            expected_fields = 11
+            if len(appointment_data) < expected_fields:
+                return JsonResponse({"error": "Missing required fields in appointment row."}, status=400)
+
+            print("Processing appointment data:", appointment_data)
+
+            try:
+                role = str(appointment_data[1]).strip()
+                if role.lower() != "contractor":  # Only process contractors
                     continue
 
-                try:
-                    role = str(appointment_data[1]).strip()
-                    if role.lower() != "contractor":  # Filter only contractor appointments
-                        continue
-                    
-                    emp_no = str(appointment_data[3]).strip()
-                    aadhar_no = str(appointment_data[5]).strip()
-                    contractor_name = str(appointment_data[6]).strip()
-                    purpose = str(appointment_data[7]).strip()
+                emp_no = str(appointment_data[3]).strip()
+                aadhar_no = str(appointment_data[5]).strip()
+                contractor_name = str(appointment_data[6]).strip()
+                purpose = str(appointment_data[7]).strip()
 
-                    def parse_date(value):
-                        if isinstance(value, int):  # Excel serial date handling
-                            return (datetime(1899, 12, 30) + timedelta(days=value)).date()
+                # Date Parsing (Handles Excel Serial Dates & Strings)
+                def parse_date(value):
+                    if isinstance(value, int):  # Excel serial date handling
+                        return (datetime(1899, 12, 30) + timedelta(days=value)).date()
+                    try:
                         return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
+                    except ValueError:
+                        raise ValueError(f"Invalid date format: {value}")
 
-                    date = parse_date(appointment_data[8])  # Ensure only date is stored
-                    time = str(appointment_data[9]).strip()
-                    booked_by = str(appointment_data[10]).strip()
-                    consulted_by = str(appointment_data[10]).strip()
-                    
-                    # Format date as ddmmyyyy for appointment_no
-                    formatted_date = date.strftime("%d%m%Y")
+                date = parse_date(appointment_data[8])  # Ensure only date is stored
+                time = str(appointment_data[9]).strip()
+                booked_by = str(appointment_data[10]).strip()
+                consulted_by = booked_by  # Assumed same as booked_by
 
-                    # Determine the sequence number for the given date
-                    if formatted_date not in appointment_count:
-                        appointment_count[formatted_date] = 1
-                    else:
-                        appointment_count[formatted_date] += 1
-                    print(appointment_count)  # Debugging
-                    # Format the appointment number (4-digit sequence + date)
-                    appointment_no = f"{appointment_count[formatted_date]:04d}{formatted_date}"
-                    print(appointment_no)  # Debugging
-                except IndexError:
-                    return JsonResponse({"error": "Data is missing required fields."}, status=400)
-                except ValueError as ve:
-                    return JsonResponse({"error": f"Invalid date format: {ve}"}, status=400)
-                
-                # Create and save the contractor appointment
-                Appointment.objects.create(
-                    appointment_no=appointment_no,
-                    role=role,
-                    emp_no=emp_no,
-                    aadhar_no=aadhar_no,
-                    contractor_name=contractor_name,
-                    purpose=purpose,
-                    date=date,  # Store only date
-                    time=time,
-                    booked_by=booked_by,
-                    doctor_name=consulted_by
-                )
+                # Generate appointment number
+                formatted_date = date.strftime("%d%m%Y")
+                appointment_count = Appointment.objects.filter(date=date).count() + 1
+                appointment_no = f"{appointment_count:04d}{formatted_date}"
 
-            return JsonResponse({"message": "Contractor appointments uploaded successfully."})
+                print(f"Generated Appointment No: {appointment_no}")
 
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            except (IndexError, ValueError) as e:
+                return JsonResponse({"error": str(e)}, status=400)
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+            # Create and save the contractor appointment
+            Appointment.objects.create(
+                appointment_no=appointment_no,
+                role=role,
+                emp_no=emp_no,
+                aadhar_no=aadhar_no,
+                contractor_name=contractor_name,
+                booked_date = datetime.now().strftime("%Y-%m-%d"),
+                purpose=purpose,
+                date=date,
+                time=time,
+                booked_by=booked_by,
+                doctor_name=consulted_by
+            )
 
+        return JsonResponse({"message": "Contractor appointments uploaded successfully."})
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 @csrf_exempt
 def create_users(request):
     users = [
@@ -1254,6 +1263,18 @@ def fetchVisitdata(request, emp_no):
         return JsonResponse({"error": "Invalid request"}, status=500)
     
 
+@csrf_exempt
+def fetchVisitdataAll(request):
+    if request.method == "POST":
+        try:
+            data = list(models.Dashboard.objects.values())
+            return JsonResponse({"message": "Visit data fetched successfully", "data":data}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": "Invalid request"}, status=400)
+    else:
+        return JsonResponse({"error": "Invalid request"}, status=500)
+    
+
 
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -1321,3 +1342,30 @@ def fetchVisitDataWithDate(request, emp_no, date):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+@csrf_exempt  
+def add_consultation(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        print(data)  # Debugging: Print received data to console
+        emp_no = data.get('emp_no')
+        complaints = data.get('complaints')
+        diagnosis = data.get('diagnosis')
+        notifiable_remarks = data.get('notifiable_remarks')
+
+        print(f"Received data: emp_no={emp_no}, complaints={complaints}, diagnosis={diagnosis}, notifiable_remarks={notifiable_remarks}")  # Debugging: Print received data to console
+        try:
+            consultation = models.Consultation.objects.create(
+                emp_no=emp_no,
+                complaints=complaints,
+                diagnosis=diagnosis,
+                notifiable_remarks=notifiable_remarks
+            )
+            print(f"Consultation saved successfully! ID: {consultation.id}") # Debugging: Print successful save
+            return JsonResponse({'status': 'success', 'message': 'Consultation saved successfully!', 'consultation_id': consultation.id}) #Return a json message to indicate success, include the id
+        except Exception as e:
+            print(f"Error saving consultation: {str(e)}")  # Debugging: Print error message to console
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400) #Return detailed error message
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400) 

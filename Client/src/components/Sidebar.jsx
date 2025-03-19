@@ -17,7 +17,7 @@ const Sidebar = () => {
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
-      { name: "Appointments", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
     ],
     doctor: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
@@ -26,8 +26,7 @@ const Sidebar = () => {
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
-      { name: "Appointments", to: "../appointments", icon: <FaRegCalendarAlt /> },
-      { name: "Review People", to: "../reviewpeople", icon: <FaUsers /> },
+      { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
     ],
     admin: [
       { name: "Dashboard", to: "../admindashboard", icon: <MdDashboard /> },

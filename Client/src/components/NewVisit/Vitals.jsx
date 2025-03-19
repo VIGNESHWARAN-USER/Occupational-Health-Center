@@ -45,7 +45,7 @@ const VitalsForm = () => {
     try {
       const updatedformdata = { ...formData, emp_no: initialData.emp_no }
       console.log(updatedformdata)
-      const resp = await axios.post("https://occupational-health-center-1.onrender.com/addvitals", updatedformdata)
+      const resp = await axios.post("http://localhost:8000/addvitals", updatedformdata)
       if (resp.status === 200) {
         alert("Vitals added successfully")
       }

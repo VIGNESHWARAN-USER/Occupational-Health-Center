@@ -48,6 +48,8 @@ urlpatterns = [
     path("addCT",views.add_mri, name = "addCT"),
     path('members/add/', views.add_member, name='member-add'),
     path('members/<int:pk>/', views.member_detail, name='member-detail'),
+    path('visitData/', views.fetchVisitdataAll, name = 'fetchVisitdata'),
     path('visitData/<str:emp_no>', views.fetchVisitdata, name = 'fetchVisitdata'),
+    path('consultations/add/', views.add_consultation, name='add_consultation'),
     path('visitData/<str:emp_no>/<str:date>', views.fetchVisitDataWithDate, name = 'fetchVisitdata'),
 ]

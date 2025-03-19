@@ -29,7 +29,7 @@ const RecordsFilters = () => {
       const fetchDetails = async () => {
         setLoading(true);
         try {
-          const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          const response = await axios.post("http://localhost:8000/userData");
           setEmployees(response.data.data);
           setFilteredEmployees(response.data.data);
           console.log(response.data.data);

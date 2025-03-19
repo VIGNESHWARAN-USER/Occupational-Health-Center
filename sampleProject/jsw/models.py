@@ -834,22 +834,22 @@ class Appointment(BaseModel):
         COMPLETED = 'completed', 'Completed'
         DEFAULT = 'default', 'Default'
     
-    appointment_no = models.TextField(max_length = 255)
+    appointment_no = models.TextField(max_length = 255, blank=True)
     booked_date = models.DateField()
-    role = models.TextField(max_length=100)
-    name = models.TextField(max_length=100)
-    organization_name = models.TextField(max_length=100)
-    contractor_name = models.TextField(max_length=100)
-    consultated_by =models.TextField(max_length=100)
-    employer = models.TextField(max_length=255)
-    emp_no = models.TextField(max_length=255)
-    aadhar_no = models.TextField(max_length=225)
-    doctor_name = models.TextField(max_length=255)
+    role = models.TextField(max_length=100 , blank=True)
+    name = models.TextField(max_length=100, blank=True)
+    organization_name = models.TextField(max_length=100, blank=True)
+    contractor_name = models.TextField(max_length=100, blank=True)
+    consultated_by =models.TextField(max_length=100, blank=True)
+    employer = models.TextField(max_length=255, blank=True)
+    emp_no = models.TextField(max_length=255, blank=True)
+    aadhar_no = models.TextField(max_length=225, blank=True)
+    doctor_name = models.TextField(max_length=255, blank=True)
     purpose = models.TextField()
     date = models.DateField()
-    time = models.TextField(max_length=225)
-    booked_by = models.TextField(max_length=255)
-    mrd_no = models.TextField(max_length=255)
+    time = models.TextField(max_length=225, blank=True)
+    booked_by = models.TextField(max_length=255, blank=True)
+    mrd_no = models.TextField(max_length=255, blank=True)
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
@@ -940,3 +940,12 @@ class MedicalHistory(BaseModel):
 
     def _str_(self):
         return f"Medical History for Emp No: {self.emp_no}"
+    
+class Consultation(BaseModel):
+    emp_no = models.CharField(max_length=20, blank=True, null=True)  # Employee number
+    complaints = models.TextField(blank=True, null=True)  # Allowing empty complaints
+    diagnosis = models.TextField(blank=True, null=True)
+    notifiable_remarks = models.TextField(blank=True, null=True)
+
+    def _str_(self):
+        return f"Consultation {self.id} - Emp No: {self.emp_no}"

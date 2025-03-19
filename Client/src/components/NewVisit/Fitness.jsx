@@ -3,7 +3,9 @@ import React, { useState } from "react";
 const FitnessPage = ({ data }) => {
   const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue"];
   const [selectedOptions, setSelectedOptions] = useState([]);
+  console.log(data)
   const [formData, setFormData] = useState({
+    emp_no: data[0]?.emp_no,
     tremors: "",
     romberg_test: "",
     acrophobia: "",
@@ -37,7 +39,7 @@ const FitnessPage = ({ data }) => {
     };
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/fitness-tests/", {
+      const response = await fetch("http://localhost:8000/fitness-tests/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -18,10 +18,15 @@ import ProtectedRoute from './ProtectedRoute'
 import PrescriptionPDF from './components/NewVisit/PrescriptionPDF'
 import ReviewPeople from './components/ReviewPeople'
 import Summary from './components/EmployeeProfile.jsx/Summary'
+import MedicalCertificate from './components/MedicalCertificate'
+import AlcoholPage from './components/AlcoholPage'
+import EyeFitnessCertificate from './components/EyeFitness'
+import OphthalmicReport from './components/OpthalmicReport'
+import MedicalExaminationForm from './components/MedicalExamination'
 
 function App() {
   return (
-    <div className='bg-[#8fcadd] h-screen'>
+    <div className='bg-[#8fcadd] overflow-auto  h-screen'>
       <Routes>
       <Route path="*" element={<Navigate to="/" />} />
       <Route path='/' element={<Login/>}/>
@@ -39,8 +44,13 @@ function App() {
           <Route path = '/recordsfilters' element = {<RecordsFilters/>}/>
           <Route path = '/employeeprofile' element = {<EmployeeProfile/>}/>
           <Route path = '/pdf' element = {<PrescriptionPDF/>}/>
-          <Route path = 'reviewpeople' element = {<ReviewPeople/>}/>
-          <Route path = 'summary' element = {<Summary/>}/>
+          <Route path = '/reviewpeople' element = {<ReviewPeople/>}/>
+          <Route path = '/summary' element = {<Summary/>}/>
+          <Route path = '/fitnessCirtificate' element = {<MedicalCertificate/>}/>
+          <Route path = '/alcohol' element = {<AlcoholPage/>}/>
+          <Route path = '/eye' element = {<EyeFitnessCertificate/>}/>
+          <Route path = '/or' element = {<OphthalmicReport/>}/>
+          <Route path = '/me' element = {<MedicalExaminationForm/>}/>
       </Route>
     </Routes>
     </div>
