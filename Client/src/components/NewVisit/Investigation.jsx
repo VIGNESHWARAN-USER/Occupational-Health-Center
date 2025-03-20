@@ -55,7 +55,7 @@ function InvestigationForm({ data }) {
     // Initialize form data based on selected option
     const initializeFormData = (categoryData) => {
       if (categoryData) {
-        const { id, latest_id, emp_no, ...rest } = categoryData; // Remove id, latest_id and emp_no
+        const { id, latest_id, emp_no, entry_date, ...rest } = categoryData; // Remove id, latest_id, emp_no, and entry_date
         return { ...rest };
       }
       return {};
@@ -318,8 +318,8 @@ function InvestigationForm({ data }) {
 
     if (!categoryData) return null;
 
-    // Make sure to remove the id, latest_id and emp_no fields
-    const { id, latest_id, emp_no, ...filteredCategoryData } = categoryData;
+    // Make sure to remove the id, latest_id, emp_no, and entry_date fields
+    const { id, latest_id, emp_no, entry_date, ...filteredCategoryData } = categoryData;
     const fields = Object.keys(filteredCategoryData);
 
     return (

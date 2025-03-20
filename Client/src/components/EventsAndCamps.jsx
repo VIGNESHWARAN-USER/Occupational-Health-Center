@@ -453,6 +453,9 @@ const EventsAndCamps = () => {
                                                     Camp Name
                                                 </th>
                                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Hospital Name
+                                                </th>
+                                                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Start Date
                                                     (YYYY-MM-DD)
                                                 </th>
@@ -480,6 +483,7 @@ const EventsAndCamps = () => {
                                              {filteredCampData.map((camp) => (
                                                 <tr key={camp.id} className="hover:bg-gray-100">
                                                     <td className="px-4 py-2 whitespace-nowrap">{camp.camp_name}</td>
+                                                    <td className="px-4 py-2 whitespace-nowrap">{camp.hospital_name}</td>
                                                     <td className="px-4 py-2 whitespace-nowrap">{camp.start_date}</td>
                                                     <td className="px-4 py-2 whitespace-nowrap">{camp.end_date}</td>
                                                     <td className="px-4 py-2">{camp.camp_details}</td>
@@ -577,7 +581,7 @@ const EventsAndCamps = () => {
                                 </div>
                             )}
                             <form onSubmit={handleSubmit}>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                                     <div>
                                         <label className="block text-gray-700 text-sm font-bold mb-2">
                                             Camp Name
@@ -586,6 +590,19 @@ const EventsAndCamps = () => {
                                             type="text"
                                             name="camp_name"
                                             value={formDatas.camp_name}
+                                            onChange={handleChange}
+                                            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 text-sm font-bold mb-2">
+                                            Hospital Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="camp_name"
+                                            value={formDatas.hospital_name}
                                             onChange={handleChange}
                                             className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             required

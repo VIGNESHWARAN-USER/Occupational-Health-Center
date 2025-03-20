@@ -31,7 +31,6 @@ const Sidebar = () => {
     admin: [
       { name: "Dashboard", to: "../admindashboard", icon: <MdDashboard /> },
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
-      { name: "Dynamic Dropdown", to: "../dropdown", icon: <MdFilterList /> },
     ],
   };
 

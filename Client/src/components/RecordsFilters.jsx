@@ -18,44 +18,49 @@ const filterSections = [
 const RecordsFilters = () => {
   const accessLevel = localStorage.getItem("accessLevel");
   const navigate = useNavigate();
-  if (accessLevel === "nurse" || accessLevel == "doctor") {
-    const [selectedFilters, setSelectedFilters] = useState([]);
-    const [selectedSection, setSelectedSection] = useState(null);
-    const [employees, setEmployees] = useState([]);
-    const [filteredEmployees, setFilteredEmployees] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState([]);
+  const [selectedSection, setSelectedSection] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(""); // New state for role filter
 
-    useEffect(() => {
-      const fetchDetails = async () => {
-        setLoading(true);
-        try {
-          const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
-          setEmployees(response.data.data);
-          setFilteredEmployees(response.data.data);
-          console.log(response.data.data);
-        } catch (error) {
-          console.error("Error fetching data:", error);
-        }
-        setLoading(false);
-      };
-      fetchDetails();
-    }, []);
-
-    const handleFilterClick = (section) => {
-      setSelectedSection(section);
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        setEmployees(response.data.data);
+        setFilteredEmployees(response.data.data);
+        console.log(response.data.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+      setLoading(false);
     };
+    fetchDetails();
+  }, []);
 
-    const removeFilter = (section) => {
-      setSelectedFilters((prevFilters) =>
-        prevFilters.filter((item) => item !== section)
-      );
-    };
+  // Function to handle role selection
+  const handleRoleChange = (e) => {
+    setSelectedRole(e.target.value);
+  };
 
-    useEffect(() => {
-      applyFilters();
-    }, [selectedFilters, employees]);
+  const handleFilterClick = (section) => {
+    setSelectedSection(section);
+  };
 
-    const addFilter = (formData) => {
+  const removeFilter = (section) => {
+    setSelectedFilters((prevFilters) =>
+      prevFilters.filter((item) => item !== section)
+    );
+  };
+
+  useEffect(() => {
+    applyFilters();
+  }, [selectedFilters, employees, selectedRole]); // Add selectedRole to dependency array
+
+  const addFilter = (formData) => {
       setSelectedFilters((prevFilters) => {
         const updatedFilters = [...prevFilters];
         Object.entries(formData).forEach(([key, value]) => {
@@ -138,12 +143,18 @@ const RecordsFilters = () => {
       });
     };
 
-    const applyFilters = () => {
-      if (selectedFilters.length === 0) {
-        setFilteredEmployees([...employees]);
+  const applyFilters = () => {
+      let results = [...employees];
+
+      // Role Filter
+      if (selectedRole) {
+          results = results.filter(employee => employee.role === selectedRole);
+      }
+       if (selectedFilters.length === 0) {
+        setFilteredEmployees([...results]);
         return;
       }
-      let results = [...employees];
+
       selectedFilters.forEach((filter) => {
         const key = Object.keys(filter)[0];
         const value = Object.values(filter)[0];
@@ -305,224 +316,209 @@ const RecordsFilters = () => {
       setFilteredEmployees(results);
     };
 
-    return (
-      <div className="h-screen bg-[#8fcadd] flex">
-        <Sidebar />
-        <div className="h-screen overflow-auto flex w-4/5 flex-col">
-          <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300">
-            {selectedFilters.length > 0 ? (
-              selectedFilters.map((filter, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-full shadow"
-                >
-                  {(() => {
-                    const filterKey = Object.keys(filter)[0];
-                    const filterValue = Object.values(filter)[0];
+  return (
+    <div className="h-screen bg-[#8fcadd] flex">
+      <Sidebar />
+      <div className="h-screen overflow-auto flex w-4/5 flex-col">
+        <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300">
+          {selectedFilters.length > 0 ? (
+            selectedFilters.map((filter, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-full shadow"
+              >
+                {(() => {
+                  const filterKey = Object.keys(filter)[0];
+                  const filterValue = Object.values(filter)[0];
 
-                    if (filterKey === "param") {
-                      return `${filterKey.toUpperCase()}: ${filterValue.param} ${filterValue.from} - ${filterValue.to}`;
-                    } else if (filterKey == "investigation") {
-                      return `investigation : ${filterValue.form} ${filterValue.param} ${filterValue.from} - ${filterValue.to}`;
-                    } else if (filterKey === "fitness") {
-                      const fitnessDetails = Object.entries(filterValue)
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(", ");
-                      return `Fitness: ${fitnessDetails}`;
-                    } else if (filterKey === "smoking") {
-                      return `Smoking: ${filterValue}`;
-                    } else if (filterKey === "alcohol") {
-                      return `Alcohol: ${filterValue}`;
-                    } else if (filterKey === "paan") {
-                      return `Paan: ${filterValue}`;
-                    } else if (filterKey === "diet") {
-                      return `Diet: ${filterValue}`;
-                    } else if (filterKey === "drugAllergy") {
-                      return `Drug Allergy: ${filterValue}`;
-                    } else if (filterKey === "foodAllergy") {
-                      return `Food Allergy: ${filterValue}`;
-                    } else if (filterKey === "otherAllergies") {
-                      return `Other Allergies: ${filterValue}`;
-                    } else if (filterKey === "surgicalHistory") {
-                      return `Surgical History: ${filterValue}`;
-                    }  else {
-                      return `${filterKey.toUpperCase()} : ${filterValue}`;
-                    }
-                  })()}
-                  <X
-                    size={16}
-                    className="ml-2 cursor-pointer"
-                    onClick={() => removeFilter(filter)}
-                  />
-                </motion.div>
-              ))
-            ) : (
-              <p className="text-gray-500">No filters selected</p>
-            )}
-          </div>
+                  if (filterKey === "param") {
+                    return `${filterKey.toUpperCase()}: ${filterValue.param} ${filterValue.from} - ${filterValue.to}`;
+                  } else if (filterKey == "investigation") {
+                    return `investigation : ${filterValue.form} ${filterValue.param} ${filterValue.from} - ${filterValue.to}`;
+                  } else if (filterKey === "fitness") {
+                    const fitnessDetails = Object.entries(filterValue)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(", ");
+                    return `Fitness: ${fitnessDetails}`;
+                  } else if (filterKey === "smoking") {
+                    return `Smoking: ${filterValue}`;
+                  } else if (filterKey === "alcohol") {
+                    return `Alcohol: ${filterValue}`;
+                  } else if (filterKey === "paan") {
+                    return `Paan: ${filterValue}`;
+                  } else if (filterKey === "diet") {
+                    return `Diet: ${filterValue}`;
+                  } else if (filterKey === "drugAllergy") {
+                    return `Drug Allergy: ${filterValue}`;
+                  } else if (filterKey === "foodAllergy") {
+                    return `Food Allergy: ${filterValue}`;
+                  } else if (filterKey === "otherAllergies") {
+                    return `Other Allergies: ${filterValue}`;
+                  } else if (filterKey === "surgicalHistory") {
+                    return `Surgical History: ${filterValue}`;
+                  } else {
+                    return `${filterKey.toUpperCase()} : ${filterValue}`;
+                  }
+                })()}
+                <X
+                  size={16}
+                  className="ml-2 cursor-pointer"
+                  onClick={() => removeFilter(filter)}
+                />
+              </motion.div>
+            ))
+          ) : (
+            <p className="text-gray-500">No filters selected</p>
+          )}
+        </div>
 
-          <div className="relative p-4">
+        <div className="flex m-4 me-8 gap-4 my-4"> {/* Modified grid layout */}
             <select
-              className="w-full p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onChange={(e) => handleFilterClick(e.target.value)}
+                className="w-1/4 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={handleRoleChange}
+                value={selectedRole}
             >
-              <option value="" disabled selected>
-                Select Filters
-              </option>
-              {filterSections.map((section) => (
-                <option key={section.id} value={section.id}>
-                  {section.label}
-                </option>
-              ))}
+                <option value="">Overall</option>
+                <option value="Employee">Employee</option>
+                <option value="Contractor">Contractor</option>
+                <option value="Visitor">Visitor</option>
             </select>
-          </div>
+          
+          <select
+            className="w-4/5 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => handleFilterClick(e.target.value)}
+          >
+            <option value="" disabled selected>
+              Select Filters
+            </option>
+            {filterSections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          <div className="p-4">
-            <AnimatePresence>
-              {selectedSection && (
-                <motion.div
-                  key={selectedSection}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2 }}
-                  className="p-6 bg-white shadow rounded-lg"
-                >
-                  <h2 className="text-xl font-semibold mb-4">
-                    {
-                      filterSections.find((f) => f.id === selectedSection)
-                        ?.label
-                    }
-                  </h2>
-                  {selectedSection === "personaldetails" ? (
-                    <PersonalDetails addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "vitals" ? (
-                    <Vitals addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "fitness" ? (
-                    <Fitness addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "medicalhistory" ? (
-                    <MedicalHistoryForm addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "investigations" ? (
-                    <Investigations addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "vaccination" ? (
-                    <VaccinationForm addFilter={addFilter} />
-                  ) : null}
-                  {selectedSection === "purpose" ? (
-                    <PurposeFilter addFilter={addFilter} />
-                  ) : null}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+        <div className="p-4">
+          <AnimatePresence>
+            {selectedSection && (
+              <motion.div
+                key={selectedSection}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+                className="p-6 bg-white shadow rounded-lg"
+              >
+                <h2 className="text-xl font-semibold mb-4">
+                  {
+                    filterSections.find((f) => f.id === selectedSection)
+                      ?.label
+                  }
+                </h2>
+                {selectedSection === "personaldetails" ? (
+                  <PersonalDetails addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "vitals" ? (
+                  <Vitals addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "fitness" ? (
+                  <Fitness addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "medicalhistory" ? (
+                  <MedicalHistoryForm addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "investigations" ? (
+                  <Investigations addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "vaccination" ? (
+                  <VaccinationForm addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "purpose" ? (
+                  <PurposeFilter addFilter={addFilter} />
+                ) : null}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-          {/* Display Employee Data in Table */}
-          <div className="p-4">
-            <h2 className="text-xl font-semibold mb-4">Employee Records</h2>
-            <div className="mt-6 overflow-auto max-h-[400px] bg-gray-50 rounded-lg p-4 shadow-md">
-              <table className="min-w-full bg-white rounded-lg shadow-lg">
-                <thead className="bg-blue-500 text-white">
+        {/* Display Employee Data in Table */}
+        <div className="p-4">
+          <h2 className="text-xl font-semibold mb-4">Employee Records</h2>
+          <div className="mt-6 overflow-auto max-h-[400px] bg-gray-50 rounded-lg p-4 shadow-md">
+            <table className="min-w-full bg-white rounded-lg shadow-lg">
+              <thead className="bg-blue-500 text-white">
+                <tr>
+                  <th className="px-6 py-3 text-left text-sm font-medium">
+                    Employee ID
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">
+                    Age
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">
+                    Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {loading ? (
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium">
-                      Employee ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium">
-                      Age
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium">
-                      Gender
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-medium">
-                      Actions
-                    </th>
+                    <td colSpan="5" className="text-center py-4">
+                      <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {loading ? (
-                    <tr>
-                      <td colSpan="5" className="text-center py-4">
-                        <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                ) : filteredEmployees.length > 0 ? (
+                  filteredEmployees.map((emp) => (
+                    <tr
+                      key={emp.emp_no}
+                      className="hover:bg-gray-100 transition duration-200"
+                    >
+                      <td className="px-6 py-4">{emp.emp_no}</td>
+                      <td className="px-6 py-4">{emp.name}</td>
+                      <td className="px-6 py-4">
+                        {emp.dob
+                          ? new Date().getFullYear() -
+                            new Date(emp.dob).getFullYear()
+                          : "N/A"}
+                      </td>
+                      <td className="px-6 py-4">{emp.sex}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() =>
+                            navigate("../employeeprofile", {
+                              state: { data: emp },
+                            })
+                          }
+                          className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
-                  ) : filteredEmployees.length > 0 ? (
-                    filteredEmployees.map((emp) => (
-                      <tr
-                        key={emp.emp_no}
-                        className="hover:bg-gray-100 transition duration-200"
-                      >
-                        <td className="px-6 py-4">{emp.emp_no}</td>
-                        <td className="px-6 py-4">{emp.name}</td>
-                        <td className="px-6 py-4">
-                          {emp.dob
-                            ? new Date().getFullYear() -
-                              new Date(emp.dob).getFullYear()
-                            : "N/A"}
-                        </td>
-                        <td className="px-6 py-4">{emp.sex}</td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() =>
-                              navigate("../employeeprofile", {
-                                state: { data: emp },
-                              })
-                            }
-                            className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="text-center py-4 text-gray-500">
-                        No employee found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4 text-gray-500">
+                      No employee found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
-    );
-  } else {
-    return (
-      <section class="bg-white h-full flex items-center dark:bg-gray-900">
-        <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-          <div class="mx-auto max-w-screen-sm text-center">
-            <h1 class="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-gray-900 md:text-4xl dark:text-white">
-              404
-            </h1>
-            <p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">
-              Something's missing.
-            </p>
-            <p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">
-              Sorry, we can't find that page. You'll find lots to explore on
-              the home page.
-            </p>
-            <button
-              onClick={() => navigate(-1)}
-              class="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4"
-            >
-              Back
-            </button>
-          </div>
-        </div>
-      </section>
-    );
-  }
+    </div>
+  );
 };
 
 
@@ -578,230 +574,128 @@ function PurposeFilter({ addFilter }) {
 
     addFilter({ purpose: purposeFilter });
   };
-    const handleFilterClick = () => {
-      handleSubmit();
-    }
+
+  const handleFilterClick = () => {
+    handleSubmit();
+  }
+
+  // Function to extract all possible specific categories from a subcategory
+  const getSpecificCategories = () => {
+    if (!purpose || !subcategory) return [];
+
+    const subcategoryData = data[purpose][subcategory];
+
+    if (!subcategoryData) return [];
+
+    // Flatten the array and extract strings/object keys
+    const categories = subcategoryData.flatMap(item => {
+      if (typeof item === 'string') {
+        return item;
+      } else if (typeof item === 'object' && item !== null) {
+        return Object.keys(item);  // Returns array of keys
+      }
+      return [];
+    });
+
+    return categories;
+  };
+
 
   return (
-    <div className="p-4 max-w-lg mx-auto bg-white shadow-lg rounded-xl space-y-4">
-      <h2 className="text-xl font-bold">Purpose Filter</h2>
+    <div className="p-6 max-w-lg mx-auto bg-white rounded-xl shadow-md space-y-6">
+      <h2 className="text-xl font-semibold text-gray-800">Filter Options</h2>
 
-      <div className="flex space-x-4">
-        <input
-          type="date"
-          className="w-full p-2 border rounded"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-        />
-        <input
-          type="date"
-          className="w-full p-2 border rounded"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-        />
+      {/* Date Range */}
+      <div className="space-y-2">
+        <label htmlFor="dateRange" className="block text-gray-700 text-sm font-bold">Date Range</label>
+        <div className="flex space-x-4">
+          <input
+            type="date"
+            id="fromDate"
+            className="w-1/2 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+          />
+          <input
+            type="date"
+            id="toDate"
+            className="w-1/2 p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+          />
+        </div>
       </div>
 
-      <select
-        className="w-full p-2 border rounded"
-        onChange={(e) => {
-          setPurpose(e.target.value);
-          setSubcategory("");
-          setSpecificCategory("");
-        }}
-      >
-        <option value="">Select Purpose</option>
-        {Object.keys(data).map((key) => (
-          <option key={key} value={key}>{key}</option>
-        ))}
-      </select>
-
-      {purpose && (
+      {/* Purpose Selection */}
+      <div className="space-y-2">
+        <label htmlFor="purpose" className="block text-gray-700 text-sm font-bold">Purpose</label>
         <select
-          className="w-full p-2 border rounded"
+          id="purpose"
+          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={purpose}
           onChange={(e) => {
-            setSubcategory(e.target.value);
+            setPurpose(e.target.value);
+            setSubcategory("");
             setSpecificCategory("");
           }}
         >
-          <option value="">Select Subcategory</option>
-          {Object.keys(data[purpose]).map((key) => (
+          <option value="">Select Purpose</option>
+          {Object.keys(data).map((key) => (
             <option key={key} value={key}>{key}</option>
           ))}
         </select>
-      )}
-
-
-
-      <button onClick={handleFilterClick}>Submit</button>
-    </div>
-  );
-}
-
-const MedicalHistoryForm = ({ addFilter }) => {
-  const [formData, setFormData] = useState({
-    smoking: "",
-    alcohol: "",
-    paan: "",
-    diet: "",
-    drugAllergy: "",
-    foodAllergy: "",
-    otherAllergies: "",
-    surgicalHistory: ""
-  });
-
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-
-
-  const handleSubmit = () => {
-    addFilter(formData);
-  };
-
-  return (
-    <div className="p-6 bg-white shadow-lg rounded-lg">
-       
-      <div className="mb-6">
-      <h3 className="text-lg font-semibold mb-2">Personal History</h3>
-      <div className="grid grid-cols-2 gap-4">
-        {/* Smoking */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Smoking</label>
-          <select
-            name="smoking"
-            value={formData.smoking}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-        {/* Alcohol */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Alcohol</label>
-          <select
-           name="alcohol"
-            value={formData.alcohol}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-        {/* Paan */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Paan</label>
-          <select
-           name="paan"
-            value={formData.paan}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-        {/* Diet */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Diet</label>
-          <select
-             name="diet"
-            value={formData.diet}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Mixed">Mixed</option>
-            <option value="Veg">Veg</option>
-            <option value="Eggetarian">Eggetarian</option>
-          </select>
-        </div>
-        </div>
-        <h3 className="text-lg font-semibold mb-2">Allergy and Surgical History</h3>
-      <div className="grid grid-cols-2 gap-4">
-                {/* Drug Allergy */}
-                <div className="mb-4">
-                  
-          <label className="block text-sm font-medium text-gray-700">Drug Allergy</label>
-          <select
-           name="drugAllergy"
-            value={formData.drugAllergy}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-                         {/* Food Allergy */}
-                         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Food Allergy</label>
-          <select
-           name="foodAllergy"
-            value={formData.foodAllergy}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-                         {/* Other Allergies */}
-                         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Other Allergies</label>
-          <select
-           name="otherAllergies"
-            value={formData.otherAllergies}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-
-                         {/* Surgical History */}
-                         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700">Surgical History</label>
-          <select
-           name="surgicalHistory"
-            value={formData.surgicalHistory}
-            onChange={handleChange}
-            className="w-full mt-1 p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          >
-            <option value="">Select</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
-        </div>
-        </div>
       </div>
 
+      {/* Subcategory Selection */}
+      {purpose && (
+        <div className="space-y-2">
+          <label htmlFor="subcategory" className="block text-gray-700 text-sm font-bold">Subcategory</label>
+          <select
+            id="subcategory"
+            className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={subcategory}
+            onChange={(e) => {
+              setSubcategory(e.target.value);
+              setSpecificCategory("");
+            }}
+          >
+            <option value="">Select Subcategory</option>
+            {Object.keys(data[purpose]).map((key) => (
+              <option key={key} value={key}>{key}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Specific Category Selection - Conditionally Rendered */}
+      {purpose && subcategory && (
+        <div className="space-y-2">
+          <label htmlFor="specificCategory" className="block text-gray-700 text-sm font-bold">Specific Category</label>
+          <select
+            id="specificCategory"
+            className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={specificCategory}
+            onChange={(e) => setSpecificCategory(e.target.value)}
+            disabled={getSpecificCategories().length === 0}
+          >
+            <option value="">Select Specific Category</option>
+            {getSpecificCategories().map((category, index) => (
+              <option key={index} value={category}>{category}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Submit Button */}
       <button
-        onClick={handleSubmit}
-        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+        onClick={handleFilterClick}
+        className="w-full py-3 px-5 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
       >
-        Add to Filter
+        Apply Filter
       </button>
     </div>
   );
-};
+}
 
 const PersonalDetails = ({ addFilter }) => {
   const [formData, setformData] = useState({

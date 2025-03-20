@@ -1344,28 +1344,64 @@ def fetchVisitDataWithDate(request, emp_no, date):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-@csrf_exempt  
+@csrf_exempt
 def add_consultation(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        print(data)  # Debugging: Print received data to console
-        emp_no = data.get('emp_no')
-        complaints = data.get('complaints')
-        diagnosis = data.get('diagnosis')
-        notifiable_remarks = data.get('notifiable_remarks')
-
-        print(f"Received data: emp_no={emp_no}, complaints={complaints}, diagnosis={diagnosis}, notifiable_remarks={notifiable_remarks}")  # Debugging: Print received data to console
         try:
+            data = json.loads(request.body.decode('utf-8'))  # Decode byte string
+            print(data)  # Debugging: Print received data to console
+
+            # Extract all fields from the request data
+            emp_no = data.get('emp_no')
+            complaints = data.get('complaints')
+            diagnosis = data.get('diagnosis')
+            notifiable_remarks = data.get('notifiable_remarks')
+            examination = data.get('examination')
+            lexamination = data.get('lexamination')
+            obsnotes = data.get('obsnotes')
+            case_type = data.get('case_type')
+            other_case_details = data.get('other_case_details')
+            investigation_details = data.get('investigation_details')
+            referral = data.get('referral')
+            hospital_name = data.get('hospital_name')
+            doctor_name = data.get('doctor_name')
+            submitted_by_doctor = data.get('submitted_by_doctor')
+            submitted_by_nurse = data.get('submitted_by_nurse')
+            follow_up_date = data.get('follow_up_date')
+            speaciality = data.get('speaciality')
+
+            
+            # Create and save the Consultation object
             consultation = models.Consultation.objects.create(
                 emp_no=emp_no,
                 complaints=complaints,
                 diagnosis=diagnosis,
-                notifiable_remarks=notifiable_remarks
+                notifiable_remarks=notifiable_remarks,
+                examination=examination,
+                lexamination=lexamination,
+                obsnotes=obsnotes,
+                case_type=case_type,
+                other_case_details=other_case_details,
+                investigation_details=investigation_details,
+                referral=referral,
+                hospital_name=hospital_name,
+                doctor_name=doctor_name,
+                submitted_by_doctor=submitted_by_doctor,
+                submitted_by_nurse=submitted_by_nurse,
+                follow_up_date=follow_up_date,
+                speaciality = speaciality
             )
-            print(f"Consultation saved successfully! ID: {consultation.id}") # Debugging: Print successful save
-            return JsonResponse({'status': 'success', 'message': 'Consultation saved successfully!', 'consultation_id': consultation.id}) #Return a json message to indicate success, include the id
+
+            print(f"Consultation saved successfully! ID: {consultation.id}")  # Debugging: Print successful save
+            return JsonResponse({'status': 'success', 'message': 'Consultation saved successfully!', 'consultation_id': consultation.id})  # Return a JSON message to indicate success, include the ID
+
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON format: ' + str(e)}, status=400)
+
         except Exception as e:
             print(f"Error saving consultation: {str(e)}")  # Debugging: Print error message to console
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400) #Return detailed error message
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)  # Return detailed error message
 
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400) 
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)

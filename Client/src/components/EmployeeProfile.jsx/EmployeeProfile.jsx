@@ -31,7 +31,7 @@ const EmployeeProfile = () => {
             {/* Left Details */}
             <div className="flex flex-col space-y-3 w-1/2">
               <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
-                <span className="font-semibold text-gray-900">Aadhar No.:</span> {data.aadhar || "N/A"}
+                <span className="font-semibold text-gray-900">Employer:</span> {data.employer || "N/A"}
               </p>
               <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
                 <span className="font-semibold text-gray-900">Department:</span> {data.department || "N/A"}
@@ -44,10 +44,10 @@ const EmployeeProfile = () => {
             {/* Right Details */}
             <div className="flex flex-col space-y-3 w-1/2">
               <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
-                <span className="font-semibold text-gray-900">Phone No.:</span> {data.phone_Office || "N/A"}
+                <span className="font-semibold text-gray-900">Designation:</span> {data.designation || "N/A"}
               </p>
               <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500">
-                <span className="font-semibold text-gray-900">Blood Group:</span> {data.bloodgrp || "N/A"}
+                <span className="font-semibold text-gray-900">Nature Of Job:</span> {data.job_nature || "N/A"}
               </p>
             </div>
           </div>

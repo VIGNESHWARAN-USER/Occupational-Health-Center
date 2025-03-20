@@ -941,11 +941,25 @@ class MedicalHistory(BaseModel):
     def _str_(self):
         return f"Medical History for Emp No: {self.emp_no}"
     
-class Consultation(BaseModel):
+
+class Consultation(models.Model):
     emp_no = models.CharField(max_length=20, blank=True, null=True)  # Employee number
     complaints = models.TextField(blank=True, null=True)  # Allowing empty complaints
     diagnosis = models.TextField(blank=True, null=True)
     notifiable_remarks = models.TextField(blank=True, null=True)
+    examination = models.TextField(blank=True, null=True)
+    lexamination = models.TextField(blank=True, null=True)
+    obsnotes = models.TextField(blank=True, null=True)
+    case_type = models.CharField(max_length=100, blank=True, null=True)  # You might want to use a CharField with choices here
+    other_case_details = models.TextField(blank=True, null=True)
+    investigation_details = models.TextField(blank=True, null=True)
+    referral = models.CharField(max_length=10, blank=True, null=True)  # Could use a BooleanField if just Yes/No
+    hospital_name = models.CharField(max_length=255, blank=True, null=True)
+    doctor_name = models.CharField(max_length=255, blank=True, null=True)
+    submitted_by_doctor = models.CharField(max_length=50, blank=True, null=True)
+    submitted_by_nurse = models.CharField(max_length=50, blank=True, null=True)
+    follow_up_date = models.DateField(blank=True, null=True)
+    speaciality = models.CharField(max_length=50, blank = True, null = True)
 
-    def _str_(self):
+    def __str__(self):
         return f"Consultation {self.id} - Emp No: {self.emp_no}"

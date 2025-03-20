@@ -11,7 +11,6 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import Consultation from "./Consultation";
-import Referral from "./Referral";
 import Prescription from "./Prescription";
 
 const NewVisit = () => {
@@ -298,9 +297,8 @@ const NewVisit = () => {
     register !== "Alcohol Abuse" && purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
     register !== "Alcohol Abuse" && { id: "Vaccination", label: "Vaccination" },
     register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
-    register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation" },
+    register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation and Referral" },
     register !== "Alcohol Abuse" && visit === "Curative" && { id: "Prescription", label: "Prescription" },
-    register !== "Alcohol Abuse" && visit === "Preventive" && { id: "Referral", label: "Referral" },
   ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering)
 
 
@@ -828,7 +826,6 @@ const NewVisit = () => {
       register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
       register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation" },
       register !== "Alcohol Abuse" && visit === "Curative" && { id: "Prescription", label: "Prescription" },
-      register !== "Alcohol Abuse" && visit === "Preventive" && { id: "Referral", label: "Referral" },
     ].filter(Boolean);
 
     return (

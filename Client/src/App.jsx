@@ -9,7 +9,6 @@ import MockDrills from './components/MockDrills'
 import EventsAndCamps from './components/EventsAndCamps'
 import AddMember from './components/Admin/AddMember'
 import AdminDashboard from './components/Admin/AdminDashboard'
-import Dropdowns from './components/Admin/Dropdowns'
 import NewVisit from './components/NewVisit/NewVisit'
 import Search from './components/EmployeeProfile.jsx/Search'
 import RecordsFilters from './components/RecordsFilters'
@@ -39,7 +38,6 @@ function App() {
           <Route path = '/eventsandcamps' element = {<EventsAndCamps/>}/>
           <Route path = '/addmember' element = {<AddMember/>}/>
           <Route path = '/adminDashboard' element = {<AdminDashboard/>}/>
-          <Route path = '/dropdown' element = {<Dropdowns/>}/>
           <Route path = '/searchEmployee' element = {<Search/>}/>
           <Route path = '/recordsfilters' element = {<RecordsFilters/>}/>
           <Route path = '/employeeprofile' element = {<EmployeeProfile/>}/>

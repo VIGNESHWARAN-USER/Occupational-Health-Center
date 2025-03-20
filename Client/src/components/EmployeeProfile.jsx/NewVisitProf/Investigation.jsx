@@ -46,6 +46,8 @@ const Investigation = ({ data }) => {
         return data.liverfunctiontest;
       case "THYROID FUNCTION TEST":
         return data.thyroidfunctiontest;
+       case "AUTOIMMUNE TEST":
+        return data.autoimmunetest;  //Added this case.
       case "COAGULATION TEST":
         return data.coagulationtest;
       case "ENZYMES & CARDIAC Profile":
@@ -56,8 +58,16 @@ const Investigation = ({ data }) => {
         return data.serology;
       case "MOTION":
         return data.motion;
+      case "ROUTINE CULTURE & SENSITIVITY TEST":
+          return data.routinecultureandsensitivitytest; //Added this case
       case "Men's Pack":
         return data.menspack;
+      case "Women's Pack":
+        return data.womenspack; //Added this case
+      case "Occupational Profile":
+        return data.occupationalprofile; //Added this case
+      case "Others TEST":
+        return data.otherstest;  //Added this case
       case "OPHTHALMIC REPORT":
         return data.opthalamicreport;
       case "X-RAY":
@@ -78,7 +88,7 @@ const Investigation = ({ data }) => {
 
     if (!categoryData) return null;
 
-    const { id, latest_id, emp_no, ...filteredData } = categoryData; // Remove id, latest_id, emp_no
+    const { id, latest_id, emp_no, investigation, entry_date, ...filteredData } = categoryData; // Remove id, latest_id, emp_no, investigation and entry_date
     const entries = Object.entries(filteredData); // Convert object to array of [key, value] pairs
 
     return (

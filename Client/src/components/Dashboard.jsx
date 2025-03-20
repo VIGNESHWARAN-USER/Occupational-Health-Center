@@ -1,30 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from "./Sidebar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import moment from 'moment'; // Import moment
 
+// Animation variants for charts
+const chartVariants = {
+    initial: { opacity: 0, y: 50 },
+    animate: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.5,
+            delayChildren: 0.2,
+            staggerChildren: 0.1
+        }
+    },
+    exit: {
+        opacity: 0,
+        y: 50,
+        transition: { duration: 0.3 }
+    }
+};
 
+// Animation variants for individual bars
+const barVariants = {
+    initial: { scaleY: 0 },
+    animate: { scaleY: 1, transition: { duration: 0.4, ease: "easeOut" } },
+    exit: { scaleY: 0, transition: { duration: 0.3, ease: "easeIn" } }
+};
 
-const MyBarChart = ({ data, title, color, onItemClick, index }) => {
-    const variants = {
-        hidden: { opacity: 0, y: 50 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                duration: 0.5,
-                delay: index * 0.2,  // Staggered delay based on index
-            },
-        },
-    };
-
+const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
     return (
         <motion.div
-            className="bg-white p-4 rounded-lg shadow w-full"
-            variants={variants}
-            initial="hidden"
-            animate="visible"
+            className="bg-white p-4 rounded-lg shadow w-full overflow-hidden"
+            variants={chartVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            style={{ display: visible ? 'block' : 'none' }}  // Important for AnimatePresence
         >
             <h4 className="text-lg font-semibold text-gray-800 mb-3">{title}</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -34,12 +49,20 @@ const MyBarChart = ({ data, title, color, onItemClick, index }) => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey="count" fill={color} label={{ position: 'top' }} />
+                    <Bar
+                        dataKey="count"
+                        fill={color}
+                        label={{ position: 'top' }}
+                        // Apply bar-specific animation
+                        // Can't use variants directly on <Bar>, so do it with style
+                        style={{ scaleY: 1 }}
+                    />
                 </BarChart>
             </ResponsiveContainer>
         </motion.div>
     );
 };
+
 
 const OverAllFootFallDropdown = ({ value, onChange }) => {
     const variants = {
@@ -55,14 +78,11 @@ const OverAllFootFallDropdown = ({ value, onChange }) => {
 
     return (
         <motion.div
-            className="mb-4"
+            className="mb-4 w-4/6"
             variants={variants}
             initial="hidden"
             animate="visible"
         >
-            <label htmlFor="over-all-footfall" className="block text-gray-700 text-sm font-bold mb-2">
-                Overall Footfall:
-            </label>
             <select
                 id="over-all-footfall"
                 value={value}
@@ -70,10 +90,10 @@ const OverAllFootFallDropdown = ({ value, onChange }) => {
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             >
                 <option value="">Select Footfall Type</option>
+                <option value="Total">Total</option>
                 <option value="Employee">Employee</option>
                 <option value="Contractor">Contractor</option>
                 <option value="Employee+Contractor">Employee + Contractor</option>
-                <option value="Total">Total</option>
                 <option value="Visitor">Visitor</option>
             </select>
         </motion.div>
@@ -87,26 +107,26 @@ const App = () => {
     const [selectedBar, setSelectedBar] = useState(null);
     const [selectedSubBar, setSelectedSubBar] = useState(null);
     const [overAllFootFall, setOverAllFootFall] = useState("");
-    const [showCharts, setShowCharts] = useState(false); // State to control chart visibility
     const [fromDate, setFromDate] = useState(''); // State for "From" date
     const [toDate, setToDate] = useState(''); // State for "To" date
     const [visitData, setVisitData] = useState([]);
-
-
+    const [currentChartLevel, setCurrentChartLevel] = useState(1); // 1: main, 2: sub, 3: detail
+    const [originalVisitData, setOriginalVisitData] = useState([]);
 
     useEffect(() => {
-      const fetchData = async () => {
-        try {
-          const resp = await axios.post("https://occupational-health-center-1.onrender.com/visitData/");
-          console.log(resp.data);
-          setVisitData(resp.data.data); // Store the fetched data in state
-        } catch (error) {
-          console.error("Error fetching data:", error);
-        }
-      };
-    
-      fetchData();
-    
+        const fetchData = async () => {
+            try {
+                const resp = await axios.post("https://occupational-health-center-1.onrender.com/visitData/");
+                console.log(resp.data);
+                setVisitData(resp.data.data); // Store the fetched data in state
+                setOriginalVisitData(resp.data.data); // Store the original data for resetting filters
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        };
+
+        fetchData();
+
     }, []);
 
     const handleOverAllFootFallChange = (event) => {
@@ -115,7 +135,7 @@ const App = () => {
         setSelectedSubBar(null);
         setSecondBarChartData([]);
         setThirdBarChartData([]);
-        setShowCharts(true);  // Show charts after dropdown changes
+        setCurrentChartLevel(1);  // Reset to the main chart
     };
 
     const handleBarClick = (event) => {
@@ -124,18 +144,34 @@ const App = () => {
             setSelectedSubBar(null);
             setSecondBarChartData([]);
             setThirdBarChartData([]);
+            setCurrentChartLevel(2); // Move to sub chart
         }
     };
 
     const handleSubBarClick = (event) => {
         if (event && event.activePayload && event.activePayload[0]) {
             setSelectedSubBar(event.activePayload[0].payload.name);
+            setCurrentChartLevel(3); // Move to detail chart
+        }
+    };
+
+
+    const goBack = () => {
+        if (currentChartLevel === 2) {
+            setCurrentChartLevel(1);
+            setSelectedBar(null);
+            setSecondBarChartData([]);
+
+        } else if (currentChartLevel === 3) {
+            setCurrentChartLevel(2);
+            setSelectedSubBar(null);
+            setThirdBarChartData([]);
         }
     };
 
     useEffect(() => {
         if (!visitData || visitData.length === 0) {
-            return; // Don't proceed if visitData is empty or not yet loaded.
+            return;
         }
 
         let mainData = [];
@@ -162,7 +198,7 @@ const App = () => {
 
     useEffect(() => {
         if (!visitData || visitData.length === 0) {
-            return; // Don't proceed if visitData is empty or not yet loaded.
+            return;
         }
 
         let detailData = [];
@@ -214,7 +250,7 @@ const App = () => {
             // Group by register or other relevant field for the third chart
             const groupedData = {};
             filteredVisitData.forEach(item => {
-                const key = item.register || item.date ; // Group by date or any other relevant field
+                const key = item.register || item.date; // Group by date or any other relevant field
                 if (groupedData[key]) {
                     groupedData[key]++;
                 } else {
@@ -232,53 +268,34 @@ const App = () => {
     }, [selectedSubBar, visitData]);
 
 
-     const fetchChartData = () => {
-        // Placeholder for fetching data based on date range
-        console.log("Fetching data from:", fromDate, "to:", toDate);
-        // Add your data fetching logic here
-        // Example:
-        //  fetchData(fromDate, toDate).then(data => {
-        //    setChartData(processData(data));
-        //  });
+    const fetchChartData = () => {
+        if (!fromDate || !toDate) {
+            alert("Please select both 'From' and 'To' dates.");
+            return;
+        }
+
+        // Filter the originalVisitData based on the date range
+        const filteredData = originalVisitData.filter(item => {
+            const visitDate = moment(item.date); // Assuming 'date' field is in a recognizable format
+            const from = moment(fromDate);
+            const to = moment(toDate);
+            return visitDate.isSameOrAfter(from, 'day') && visitDate.isSameOrBefore(to, 'day');
+        });
+
+        setVisitData(filteredData);
     };
 
     const clearDateFilter = () => {
         setFromDate('');
         setToDate('');
-        // Optionally, refetch the original data
-        // fetchOriginalData().then(data => {
-        //   setChartData(processData(data));
-        // });
+        setVisitData(originalVisitData); // Reset to original data
     };
 
-    const chartData = [
-        {
-            title: "Overall Data Distribution",
-            data: barChartData,
-            color: "#3182CE",
-            onItemClick: handleBarClick,
-            show: true,  // Always show this chart
-        },
-        {
-            title: "Subdivision Details",
-            data: secondBarChartData,
-            color: "#82ca9d",
-            onItemClick: handleSubBarClick,
-            show: secondBarChartData.length > 0,
-        },
-        {
-            title: "Detailed Analysis",
-            data: thirdBarChartData,
-            color: "#E53E3E",
-            show: thirdBarChartData.length > 0,
-        },
-    ];
 
     return (
         <div className="h-screen flex bg-[#8fcadd]">
             <Sidebar />
-            <div className="flex-1 p-4 overflow-y-auto">  {/* Added overflow-y-auto */}
-
+            <div className="flex-1 p-4 overflow-y-auto">
                 {/* Header with Filters */}
                 <motion.div
                     className="bg-white p-6 rounded-lg shadow-md mb-6"
@@ -328,24 +345,53 @@ const App = () => {
                 </motion.div>
 
                 <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className='flex gap-4'>
                     <h2 className="text-2xl font-semibold mb-4">Footfall Analysis</h2>
 
                     <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
-
-                    <div className="flex flex-col gap-4">  {/* Changed to flex column */}
-                        {chartData.map((chart, index) => (
-                            chart.show && (
-                                <MyBarChart
-                                    key={index}
-                                    index={index}  // Pass the index
-                                    title={chart.title}
-                                    data={chart.data}
-                                    color={chart.color}
-                                    onItemClick={chart.onItemClick}
-                                />
-                            )
-                        ))}
+                        <button
+                        disabled={currentChartLevel === 1}
+                            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mb-4"
+                            onClick={goBack}
+                        >
+                            Back
+                        </button>
                     </div>
+                    
+
+                    <AnimatePresence mode="wait" >
+                        {currentChartLevel === 1 && (
+                            <MyBarChart
+                                key="chart1"  // Key for AnimatePresence
+                                title="Overall Data Distribution"
+                                data={barChartData}
+                                color="#3182CE"
+                                onItemClick={handleBarClick}
+                                visible={currentChartLevel === 1 && barChartData.length > 0}
+                            />
+                        )}
+
+                        {currentChartLevel === 2 && (
+                            <MyBarChart
+                                key="chart2"  // Key for AnimatePresence
+                                title="Subdivision Details"
+                                data={secondBarChartData}
+                                color="#82ca9d"
+                                onItemClick={handleSubBarClick}
+                                visible={currentChartLevel === 2 && secondBarChartData.length > 0}
+                            />
+                        )}
+
+                        {currentChartLevel === 3 && (
+                            <MyBarChart
+                                key="chart3"  // Key for AnimatePresence
+                                title="Detailed Analysis"
+                                data={thirdBarChartData}
+                                color="#E53E3E"
+                                visible={currentChartLevel === 3 && thirdBarChartData.length > 0}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>
