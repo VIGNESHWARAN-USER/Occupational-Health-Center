@@ -7,11 +7,15 @@ const Prescription = () => {
   const [creams, setCreams] = useState([{ drugName: '', qty: '' }]);
   const [others, setOthers] = useState([{ drugName: '', qty: '' }]);
   const [submittedBy, setSubmittedBy] = useState('SK');
-
+  const [issuedby, setIssuedby] = useState('Nurse');
   const timingOptions = ["FN", "AN", "N", "Stat"];
   const foodOptions = ["BF", "AF", "WF"];
+  const accessLevel = localStorage.getItem('accessLevel');
+  const isDoctor = accessLevel === 'doctor';
+  const isNurse = accessLevel === 'nurse';
 
   const addRow = (type) => {
+    if (!isDoctor) return; //Prevent adding rows for nurses
     switch (type) {
       case 'tablets':
         setTablets([...tablets, { drugName: '', qty: '', timing: '', food: '', days: '', comments: '' }]);
@@ -31,6 +35,7 @@ const Prescription = () => {
   };
 
   const handleInputChange = (e, type, index, field) => {
+    if (!isDoctor) return; //Prevent input change for nurses
     const { value } = e.target;
     switch (type) {
       case 'tablets':
@@ -58,8 +63,8 @@ const Prescription = () => {
     }
   };
 
-
   const removeRow = (type, index) => {
+    if (!isDoctor) return; //Prevent removing rows for nurses
     switch (type) {
       case 'tablets':
         const newTablets = [...tablets];
@@ -85,8 +90,10 @@ const Prescription = () => {
         break;
     }
   };
-  
+
   const renderInputFields = (type, items, index) => {
+    const isDisabled = !isDoctor;
+
     switch (type) {
       case 'tablets':
         return (
@@ -97,6 +104,7 @@ const Prescription = () => {
               value={items[index].drugName}
               onChange={(e) => handleInputChange(e, type, index, 'drugName')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
             <input
               type="text"
@@ -104,11 +112,13 @@ const Prescription = () => {
               value={items[index].qty}
               onChange={(e) => handleInputChange(e, type, index, 'qty')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
             <select
               value={items[index].timing}
               onChange={(e) => handleInputChange(e, type, index, 'timing')}
               className="px-3 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             >
               <option value="">Select Timing</option>
               {timingOptions.map((option) => (
@@ -121,6 +131,7 @@ const Prescription = () => {
               value={items[index].food}
               onChange={(e) => handleInputChange(e, type, index, 'food')}
               className="px-3 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             >
               <option value="">Select Food</option>
               {foodOptions.map((option) => (
@@ -135,6 +146,7 @@ const Prescription = () => {
               value={items[index].days}
               onChange={(e) => handleInputChange(e, type, index, 'days')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
             <input
               type="text"
@@ -142,6 +154,7 @@ const Prescription = () => {
               value={items[index].comments}
               onChange={(e) => handleInputChange(e, type, index, 'comments')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
           </>
         );
@@ -156,6 +169,7 @@ const Prescription = () => {
               value={items[index].drugName}
               onChange={(e) => handleInputChange(e, type, index, 'drugName')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
             <input
               type="text"
@@ -163,6 +177,7 @@ const Prescription = () => {
               value={items[index].qty}
               onChange={(e) => handleInputChange(e, type, index, 'qty')}
               className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isDisabled}
             />
           </>
         );
@@ -170,7 +185,6 @@ const Prescription = () => {
         return null;
     }
   };
-
   return (
     <div className="bg-white min-h-screen p-6">
       <h1 className="ext-3xl font-bold mb-8">Prescription Form</h1>
@@ -184,14 +198,17 @@ const Prescription = () => {
               <button
                 type="button"
                 onClick={() => removeRow('tablets', index)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center"  // Added w-8 and h-8 and flex
+                className={`bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={!isDoctor}
               >
                 <FaTrash size={12} /> {/*  Small Icon */}
               </button>
             )}
           </div>
         ))}
-        <button onClick={() => addRow('tablets')} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <button onClick={() => addRow('tablets')}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+          disabled={!isDoctor}>
           Add
         </button>
       </section>
@@ -201,18 +218,21 @@ const Prescription = () => {
         {injections.map((injection, index) => (
           <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3 items-center">
             {renderInputFields('injections', injections, index)}
-              {index > 0 && (
-                <button
-                  type="button"
-                  onClick={() => removeRow('injections', index)}
-                  className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center" // Added w-8 and h-8 and flex
-                >
-                  <FaTrash size={12} />  {/*  Small Icon */}
-                </button>
-              )}
+            {index > 0 && (
+              <button
+                type="button"
+                onClick={() => removeRow('injections', index)}
+                className={`bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={!isDoctor}
+              >
+                <FaTrash size={12} />  {/*  Small Icon */}
+              </button>
+            )}
           </div>
         ))}
-        <button onClick={() => addRow('injections')} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <button onClick={() => addRow('injections')}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+          disabled={!isDoctor}>
           Add
         </button>
       </section>
@@ -226,14 +246,17 @@ const Prescription = () => {
               <button
                 type="button"
                 onClick={() => removeRow('creams', index)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center" // Added w-8 and h-8 and flex
+                className={`bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={!isDoctor}
               >
                 <FaTrash size={12} />  {/*  Small Icon */}
               </button>
             )}
           </div>
         ))}
-        <button onClick={() => addRow('creams')} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <button onClick={() => addRow('creams')}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+          disabled={!isDoctor}>
           Add
         </button>
       </section>
@@ -247,14 +270,17 @@ const Prescription = () => {
               <button
                 type="button"
                 onClick={() => removeRow('others', index)}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center"  // Added w-8 and h-8 and flex
+                className={`bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded w-8 h-8 flex items-center justify-center ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+                disabled={!isDoctor}
               >
                 <FaTrash size={12} />  {/* Small Icon */}
               </button>
             )}
           </div>
         ))}
-        <button onClick={() => addRow('others')} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        <button onClick={() => addRow('others')}
+          className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+          disabled={!isDoctor}>
           Add
         </button>
       </section>
@@ -267,17 +293,37 @@ const Prescription = () => {
             value={submittedBy}
             onChange={(e) => setSubmittedBy(e.target.value)}
             className="px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={!isDoctor} // Disable for both nurse and unauthorized
           >
             <option>SK</option>
             <option>Doctor</option>
           </select>
         </div>
 
+        <div>
+          <label htmlFor="submittedBy" className="block text-gray-700 mr-2">Drugs Issued By:</label>
+          <select
+            id="issuedby"
+            value={issuedby}
+            onChange={(e) => setIssuedby(e.target.value)}
+            className="px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            
+          >
+            <option>Nurse</option>
+            <option>Nurse</option>
+          </select>
+        </div>
+
         <div className="mt-3 sm:mt-0">
-          <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2">
+          <button
+            className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2 ${!isDoctor ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!isDoctor}
+          >
             Submit
           </button>
-          <button className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+          <button
+            className={`bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded`}
+          >
             Generate Prescription
           </button>
         </div>

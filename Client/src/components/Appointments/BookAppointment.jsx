@@ -1,9 +1,13 @@
 // BookAppointment
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import axios from "axios";
 
 const BookAppointment = () => {
-  const [role, setRole] = useState("Employee");  // State for the selected role
+  const [role, setRole] = useState("Employee");
+  const [employees, setEmployees] = useState([]);
+  const [employeeIds, setEmployeeIds] = useState([]); // Store employee IDs in state
+  const [isEmployeeIdValid, setIsEmployeeIdValid] = useState(false); // Track employee ID validity
   const [formData, setFormData] = useState({
     role: "Employee", // Initial role value in formData
     name: "",
@@ -20,16 +24,49 @@ const BookAppointment = () => {
   });
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "employeeId") {
+      // Validate employee ID as it's entered
+      setIsEmployeeIdValid(employeeIds.includes(value));
+    }
+
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleRoleChange = (e) => {
     setRole(e.target.value);  // Update the role state
-    setFormData({...formData, role: e.target.value})
+    setFormData({...formData, role: e.target.value});
+    setIsEmployeeIdValid(false); // Reset validation when role changes
+    setFormData(prevState => ({ ...prevState, employeeId: "" }));
   };
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const fetchedEmployees = response.data.data;
+        setEmployees(fetchedEmployees);
+
+        // Extract employee IDs and store them in state
+        const extractedEmployeeIds = fetchedEmployees.map(employee => employee.emp_no);
+        setEmployeeIds(extractedEmployeeIds);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+
+    fetchDetails();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (role === "Employee" && !isEmployeeIdValid) {
+      alert("Please enter a valid Employee ID.");
+      return; // Prevent form submission if the employee ID is invalid
+    }
+
     try {
       const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
         method: "POST",
@@ -39,9 +76,9 @@ const BookAppointment = () => {
 
       const data = await response.json();
       if (response.ok) {
-          alert(data.message || "Appointment booked successfully!");
+        alert(data.message || "Appointment booked successfully!");
       } else {
-          alert(data.message || "Failed to book appointment.");
+        alert(data.message || "Failed to book appointment.");
       }
     } catch (error) {
       console.error("Error booking appointment:", error);
@@ -49,27 +86,29 @@ const BookAppointment = () => {
     }
   };
 
-
   const employeeFields = [
     {
       label: "Enter ID:",
       name: "employeeId",
       type: "text",
       placeholder: "Enter employee ID",
+      disabled: false,
     },
     {
       label: "Aadhar No:",
       name: "aadharNo",
       type: "text",
       placeholder: "Enter Aadhar No",
+      disabled: !isEmployeeIdValid,
     },
     {
       label: "Name of Institute / Organization:",
       name: "organization",
       type: "text",
       placeholder: "Enter name of organization",
+      disabled: !isEmployeeIdValid,
     },
-    
+
     {
       label: "Enter the purpose:",
       name: "purpose",
@@ -81,31 +120,35 @@ const BookAppointment = () => {
         "Periodical (Food Handler)",
         "Camps (Mandatory)",
         "Camps (Optional)",
-        "Special Work Fitness", 
+        "Special Work Fitness",
         "Special Work Fitness (Renewal)",
-        "Fitness After Medical Leave", 
+        "Fitness After Medical Leave",
         "Fitness After Long Leave",
         "Mock Drill",
         "BP Sugar Check  ( Normal Value)"
-        ]
+      ],
+      disabled: !isEmployeeIdValid,
     },
     {
       label: "Date of the appointment:",
       name: "appointmentDate",
       type: "date",
+      disabled: !isEmployeeIdValid,
     },
-    { label: "Time:", name: "time", type: "time" },
+    { label: "Time:", name: "time", type: "time", disabled: !isEmployeeIdValid },
     {
       label: "Booking by (Nurse):",
       name: "bookedBy",
       type: "select",
       options: ["A"],
+      disabled: !isEmployeeIdValid,
     },
     {
       label: "Consulting Doctor:",
       name: "consultedDoctor",
       type: "select",
       options: ["A"],
+      disabled: !isEmployeeIdValid,
     },
   ];
 
@@ -128,7 +171,7 @@ const BookAppointment = () => {
       type: "text",
       placeholder: "Enter contractor name",
     },
-    
+
     {
       label: "Enter the purpose:",
       name: "purpose",
@@ -140,13 +183,13 @@ const BookAppointment = () => {
         "Periodical (Food Handler)",
         "Camps (Mandatory)",
         "Camps (Optional)",
-        "Special Work Fitness", 
+        "Special Work Fitness",
         "Special Work Fitness (Renewal)",
-        "Fitness After Medical Leave", 
+        "Fitness After Medical Leave",
         "Fitness After Long Leave",
         "Mock Drill",
         "BP Sugar Check  ( Normal Value)"
-        ]
+      ]
     },
     {
       label: "Appointment Date:",
@@ -193,13 +236,13 @@ const BookAppointment = () => {
         "Periodical (Food Handler)",
         "Camps (Mandatory)",
         "Camps (Optional)",
-        "Special Work Fitness", 
+        "Special Work Fitness",
         "Special Work Fitness (Renewal)",
-        "Fitness After Medical Leave", 
+        "Fitness After Medical Leave",
         "Fitness After Long Leave",
         "Mock Drill",
         "BP Sugar Check  ( Normal Value)"
-        ]
+      ]
     },
     {
       label: "Appointment Date:",
@@ -228,7 +271,7 @@ const BookAppointment = () => {
       y: 0,
       transition: { duration: 0.4, ease: "easeInOut" },
     },
-    
+
   };
 
   let displayedFields;
@@ -287,6 +330,7 @@ const BookAppointment = () => {
                 className="px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData[field.name]}
                 onChange={handleChange}
+                disabled={field.disabled}
               >
                 {field.options.map((option, idx) => (
                   <option key={idx} value={option}>
@@ -302,6 +346,7 @@ const BookAppointment = () => {
                 placeholder={field.placeholder || ""}
                 value={formData[field.name]}
                 onChange={handleChange}
+                disabled={field.disabled}
               />
             )}
           </motion.div>
@@ -311,6 +356,7 @@ const BookAppointment = () => {
           <button
             type="submit"
             className="px-6 py-3 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={role === "Employee" && !isEmployeeIdValid}
           >
             Book the appointment
           </button>

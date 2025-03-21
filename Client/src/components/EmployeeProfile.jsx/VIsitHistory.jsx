@@ -13,7 +13,7 @@ const VisitHistory = ({ data }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const emp_no = data.emp_no;
-
+    console.log(data)
     useEffect(() => {
         const fetchVisitData = async () => {
             try {

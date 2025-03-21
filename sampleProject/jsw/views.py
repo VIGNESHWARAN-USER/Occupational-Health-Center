@@ -282,7 +282,7 @@ def add_basic_details(request):
             job_nature=data['job_nature'],
             doj=data['doj'],
             moj=data['moj'],
-            phone_Personal=data['phone_personal'],
+            phone_Personal=data['phone_Personal'],
             mail_id_Personal=data['mail_id_Personal'],
             emergency_contact_person=data['emergency_contact_person'],
             phone_Office=data['phone_Office'],
@@ -290,6 +290,9 @@ def add_basic_details(request):
             emergency_contact_relation=data['emergency_contact_relation'],
             mail_id_Emergency_Contact_Person=data['mail_id_Emergency_Contact_Person'],
             emergency_contact_phone=data['emergency_contact_phone'],
+            state = data['state'],
+            nationality = data['nationality'],
+            area = data['area'],
             address=data['address'],
         )
         return JsonResponse({"message": "Basic Details added successfully"}, status=200)
@@ -594,10 +597,23 @@ def update_appointment_status(request):
     return JsonResponse({"error": "Invalid request"}, status=400)
 
 
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime, timedelta
+from django.forms.models import model_to_dict
+from .models import Appointment  # Make sure to import your Appointment model
+import json
+from django.utils.timezone import make_aware
+import logging
+from django.core.exceptions import ValidationError
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def uploadAppointment(request):
     if request.method != "POST":
-        return JsonResponse({"error": "Invalid request"}, status=400)
+        return JsonResponse({"error": "Invalid request method"}, status=400)
 
     try:
         data = json.loads(request.body)
@@ -606,26 +622,25 @@ def uploadAppointment(request):
         if not appointments_data:
             return JsonResponse({"error": "No appointment data provided."}, status=400)
 
+        successful_appointments = 0  # Track successful appointments
+
         for i, appointment_data in enumerate(appointments_data):
             if i == 0:  # Skip header row
                 continue
 
-            # Ensure there are enough fields
-            expected_fields = 11
-            if len(appointment_data) < expected_fields:
-                return JsonResponse({"error": "Missing required fields in appointment row."}, status=400)
-
-            print("Processing appointment data:", appointment_data)
+            # Ensure there are enough fields (adjust based on maximum fields expected)
+            max_expected_fields = 11  # Assumes max fields across all types
+            if len(appointment_data) < 7:  # Ensure at least basic fields are present
+                logger.warning(f"Skipping appointment due to insufficient fields: {appointment_data}")
+                continue # skip to next appointment
+                #return JsonResponse({"error": "Missing required fields in appointment row."}, status=400)
 
             try:
-                role = str(appointment_data[1]).strip()
-                if role.lower() != "contractor":  # Only process contractors
-                    continue
+                role = str(appointment_data[1]).strip().lower() # Role is in the second column
 
-                emp_no = str(appointment_data[3]).strip()
-                aadhar_no = str(appointment_data[5]).strip()
-                contractor_name = str(appointment_data[6]).strip()
-                purpose = str(appointment_data[7]).strip()
+                # Extract common fields
+                emp_no = str(appointment_data[3]).strip() if len(appointment_data) > 3 else None
+                aadhar_no = str(appointment_data[5]).strip() if len(appointment_data) > 5 else None
 
                 # Date Parsing (Handles Excel Serial Dates & Strings)
                 def parse_date(value):
@@ -634,44 +649,73 @@ def uploadAppointment(request):
                     try:
                         return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
                     except ValueError:
-                        raise ValueError(f"Invalid date format: {value}")
+                         try: # Attempt to use a different format to parse the Date
+                            return datetime.strptime(str(value).strip(), "%m/%d/%Y").date()
+                         except ValueError:
+                             raise ValueError(f"Invalid date format: {value}.  Use YYYY-MM-DD or MM/DD/YYYY")
 
                 date = parse_date(appointment_data[8])  # Ensure only date is stored
                 time = str(appointment_data[9]).strip()
-                booked_by = str(appointment_data[10]).strip()
+                booked_by = str(appointment_data[10]).strip() if len(appointment_data) > 10 else ""
                 consulted_by = booked_by  # Assumed same as booked_by
+                purpose = str(appointment_data[7]).strip()
+
+                # -- Role-Specific Data --
+                contractor_name = None
+                organization = None
+
+                if role == "contractor":
+                    contractor_name = str(appointment_data[6]).strip() if len(appointment_data) > 6 else None
+
+                elif role == "visitor" or role =="employee":
+                    organization = str(appointment_data[6]).strip() if len(appointment_data) > 6 else None
 
                 # Generate appointment number
                 formatted_date = date.strftime("%d%m%Y")
                 appointment_count = Appointment.objects.filter(date=date).count() + 1
                 appointment_no = f"{appointment_count:04d}{formatted_date}"
 
-                print(f"Generated Appointment No: {appointment_no}")
-
+                print(f"Role: {role}, Generated Appointment No: {appointment_no}")
             except (IndexError, ValueError) as e:
-                return JsonResponse({"error": str(e)}, status=400)
+                logger.error(f"Error processing appointment data: {appointment_data}, Error: {str(e)}")
+                return JsonResponse({"error": f"Error processing appointment data: {str(e)}"}, status=400)
+            # -- Validate and Create based on role --
+            try:
+                if role in ["contractor", "employee", "visitor"]:
+                  Appointment.objects.create(
+                      appointment_no=appointment_no,
+                      role=role,
+                      emp_no=emp_no,
+                      aadhar_no=aadhar_no,
+                      contractor_name=contractor_name,
+                      booked_date = datetime.now().strftime("%Y-%m-%d"),
+                      purpose=purpose,
+                      date=date,
+                      time=time,
+                      booked_by=booked_by,
+                      doctor_name=consulted_by,
+                      organization = organization
+                  )
+                  successful_appointments += 1
+                else:
+                    logger.warning(f"Skipping appointment due to unknown role: {role}")
 
-            # Create and save the contractor appointment
-            Appointment.objects.create(
-                appointment_no=appointment_no,
-                role=role,
-                emp_no=emp_no,
-                aadhar_no=aadhar_no,
-                contractor_name=contractor_name,
-                booked_date = datetime.now().strftime("%Y-%m-%d"),
-                purpose=purpose,
-                date=date,
-                time=time,
-                booked_by=booked_by,
-                doctor_name=consulted_by
-            )
+            except ValidationError as e:
+                logger.error(f"Validation Error creating appointment: {str(e)}")
+                return JsonResponse({"error": f"Data Validation Error: {str(e)}"}, status=400)
 
-        return JsonResponse({"message": "Contractor appointments uploaded successfully."})
+        if successful_appointments > 0:
+            return JsonResponse({"message": f"{successful_appointments} appointments uploaded successfully."})
+        else:
+            return JsonResponse({"message": "No appointments were uploaded.  Check data for valid roles and formats."}, status=200) # OK but no records created
 
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON Decode Error: {str(e)}")
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        logger.exception("Unexpected error during appointment upload") # Log full exception
+        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
 @csrf_exempt
 def create_users(request):
     users = [
@@ -782,66 +826,31 @@ def fetch_vaccinations(request):
 
 @csrf_exempt
 def fitness_test(request, pk=None):
-    if request.method == "GET":
-        print("Pramoth")
-        if pk:
-            # Retrieve a single record
-            fitness_test = json.loads(FitnessAssessment)
-            return JsonResponse({
-                "id": fitness_test.get['id'],
-                "emp_no": fitness_test.get['emp_no'],
-                "tremors": fitness_test.get['tremors'],
-                "romberg_test": fitness_test.get['romberg_test'],
-                "acrophobia": fitness_test.get['acrophobia'],
-                "trendelenberg_test": fitness_test.get['trendelenberg_test'],
-                "job_nature": fitness_test.get['job_nature'],
-                "overall_fitness": fitness_test.get['overall_fitness'],
-                "comments": fitness_test.get['comments'],
-                "created_at": fitness_test.get['created_at']
-            })
-        else:
-            # Retrieve all records
-            tests = list(FitnessAssessment.objects.all().values())
-            return JsonResponse(tests, safe=False)
 
-    elif request.method == "POST":
+    if request.method == "POST":
         # Create a new record
         data = json.loads(request.body)
         print(data)
+        try:    
+            job_nature = json.loads(data.get("job_nature", "[]"))  # Try parsing, default to empty list
+        except (TypeError, json.JSONDecodeError):
+            job_nature = []  # If parsing fails, use an empty list
+
+
         fitness_test = FitnessAssessment.objects.create(
             emp_no=data.get("emp_no"),
             tremors=data.get("tremors"),
             romberg_test=data.get("romberg_test"),
             acrophobia=data.get("acrophobia"),
             trendelenberg_test=data.get("trendelenberg_test"),
-            job_nature=data.get("job_nature", ""),
+            job_nature=job_nature, #Assign Parsed list
             overall_fitness=data.get("overall_fitness", ""),
+            conditional_fit_feilds = data.get("conditional_fit_feilds", []),
+            validity = data.get("validity"),
             comments=data.get("comments", ""),
         )
         return JsonResponse({"message": "Fitness test created!", "id": fitness_test.id}, status=201)
-
-    elif request.method == "PUT" and pk:
-        # Update an existing record
-        fitness_test = get_object_or_404(FitnessAssessment, pk=pk)
-        data = json.loads(request.body)
-        fitness_test.emp_no = data.get("emp_no", fitness_test.emp_no)
-        fitness_test.tremors = data.get("tremors", fitness_test.tremors)
-        fitness_test.romberg_test = data.get("romberg_test", fitness_test.romberg_test)
-        fitness_test.acrophobia = data.get("acrophobia", fitness_test.acrophobia)
-        fitness_test.trendelenberg_test = data.get("trendelenberg_test", fitness_test.trendelenberg_test)
-        fitness_test.job_nature = data.get("job_nature", fitness_test.job_nature)
-        fitness_test.overall_fitness = data.get("overall_fitness", fitness_test.overall_fitness)
-        fitness_test.comments = data.get("comments", fitness_test.comments)
-        fitness_test.save()
-        return JsonResponse({"message": "Fitness test updated!"})
-
-    elif request.method == "DELETE" and pk:
-        # Delete a record
-        fitness_test = get_object_or_404(FitnessAssessment, pk=pk)
-        fitness_test.delete()
-        return JsonResponse({"message": "Fitness test deleted!"}, status=204)
-
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    
 
 from .models import mockdrills,ReviewCategory, Review
 
@@ -1276,14 +1285,45 @@ def fetchVisitdataAll(request):
     
 
 
+from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.timezone import make_aware
-from django.forms.models import model_to_dict
+from django.utils import timezone
 from datetime import datetime
+from django.forms.models import model_to_dict
+from . import models
+import json
+from django.utils.timezone import make_aware, is_aware
+from django.core.serializers.json import DjangoJSONEncoder
+
+# class CustomJSONEncoder(json.JSONEncoder):
+#     def default(self, obj):
+#         if isinstance(obj, ImageFieldFile):
+#             return obj.url  # Return the URL of the image
+#         return super().default(obj)
+
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from datetime import datetime
+from django.forms.models import model_to_dict
+from . import models
+import json
+from django.utils.timezone import make_aware, is_aware
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models.fields.files import ImageFieldFile
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) #Get a logger instance
+
+class CustomJSONEncoder(DjangoJSONEncoder): # DjangoJSONEncoder already handles dates!
+    def default(self, obj):
+        if isinstance(obj, ImageFieldFile):
+            return obj.url if obj else None
+        return super().default(obj)
+
 
 @csrf_exempt
 def fetchVisitDataWithDate(request, emp_no, date):
@@ -1302,40 +1342,31 @@ def fetchVisitDataWithDate(request, emp_no, date):
                 .last()
             )
 
-            # Convert model instance to dictionary
-            def get_latest_record(model):
-                record = (
-                    model.objects
-                    .filter(emp_no=emp_no, entry_date__lte=target_date)
-                    .last()
-                )
-                return model_to_dict(record) if record else {}
-
             employee_data = {
                 "employee": model_to_dict(latest_employee) if latest_employee else {},
-                "dashboard": get_latest_record(models.Dashboard),
-                "vitals": get_latest_record(models.vitals),
-                "msphistory": get_latest_record(models.MedicalHistory),
-                "haematology": get_latest_record(models.heamatalogy),
-                "routinesugartests": get_latest_record(models.RoutineSugarTests),
-                "renalfunctiontests": get_latest_record(models.RenalFunctionTest),
-                "lipidprofile": get_latest_record(models.LipidProfile),
-                "liverfunctiontest": get_latest_record(models.LiverFunctionTest),
-                "thyroidfunctiontest": get_latest_record(models.ThyroidFunctionTest),
-                "coagulationtest": get_latest_record(models.CoagulationTest),
-                "enzymesandcardiacprofile": get_latest_record(models.EnzymesCardiacProfile),
-                "urineroutine": get_latest_record(models.UrineRoutineTest),
-                "serology": get_latest_record(models.SerologyTest),
-                "motion": get_latest_record(models.MotionTest),
-                "menspack": get_latest_record(models.MensPack),
-                "opthalamicreport": get_latest_record(models.OphthalmicReport),
-                "usg": get_latest_record(models.USGReport),
-                "mri": get_latest_record(models.MRIReport),
-                "fitnessassessment": get_latest_record(models.FitnessAssessment),
-                "vaccination": get_latest_record(models.VaccinationRecord),
+                "dashboard": model_to_dict(models.Dashboard.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.Dashboard.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "vitals":  model_to_dict(models.vitals.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.vitals.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "msphistory":  model_to_dict(models.MedicalHistory.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.MedicalHistory.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "haematology":  model_to_dict(models.heamatalogy.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.heamatalogy.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "routinesugartests":  model_to_dict(models.RoutineSugarTests.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.RoutineSugarTests.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "renalfunctiontests":  model_to_dict(models.RenalFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.RenalFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "lipidprofile": model_to_dict(models.LipidProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.LipidProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "liverfunctiontest":  model_to_dict(models.LiverFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.LiverFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "thyroidfunctiontest":  model_to_dict(models.ThyroidFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.ThyroidFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "coagulationtest": model_to_dict(models.CoagulationTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if  models.CoagulationTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "enzymesandcardiacprofile":  model_to_dict(models.EnzymesCardiacProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.EnzymesCardiacProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "urineroutine":  model_to_dict(models.UrineRoutineTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.UrineRoutineTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "serology":  model_to_dict(models.SerologyTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.SerologyTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "motion": model_to_dict(models.MotionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.MotionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "menspack":  model_to_dict(models.MensPack.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.MensPack.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "opthalamicreport":  model_to_dict(models.OphthalmicReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.OphthalmicReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "usg":  model_to_dict(models.USGReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.USGReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "mri":  model_to_dict(models.MRIReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.MRIReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "fitnessassessment":  model_to_dict(models.FitnessAssessment.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.FitnessAssessment.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "vaccination":  model_to_dict(models.VaccinationRecord.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.VaccinationRecord.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
             }
-
-            return JsonResponse({"data": employee_data}, status=200)
+        
+            return JsonResponse({"data": employee_data}, encoder=CustomJSONEncoder, safe=False, status=200)
 
         except Exception as e:
             logger.error(f"Error in fetchVisitDataWithDate view: {str(e)}")

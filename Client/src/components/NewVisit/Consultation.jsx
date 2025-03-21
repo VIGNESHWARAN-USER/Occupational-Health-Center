@@ -1,4 +1,3 @@
-// Consultation.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
@@ -33,13 +32,15 @@ const Consultation = ({ data }) => {
   ];
 
   const emp_no = data[0]?.emp_no;
+  const accessLevel = localStorage.getItem('accessLevel');
+  const isDoctor = accessLevel === 'doctor';
 
   useEffect(() => {
     const setData = async () => {
       try {
-        setComplaints(data[0].consultation.complaints || '');
-        setDiagnosis(data[0].consultation.diagnosis || '');
-        setNotifiableRemarks(data[0].consultation.notifiable_remarks || '');
+        setComplaints(data[0]?.consultation?.complaints || '');
+        setDiagnosis(data[0]?.consultation?.diagnosis || '');
+        setNotifiableRemarks(data[0]?.consultation?.notifiable_remarks || '');
       } catch (error) {
         console.error('Error:', error);
       }
@@ -101,6 +102,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter complaints here..."
             value={complaints}
             onChange={(e) => setComplaints(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
 
@@ -113,6 +115,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter general examination details here..."
             value={examination}
             onChange={(e) => setExamination(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
 
@@ -125,6 +128,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter local examination details here..."
             value={lexamination}
             onChange={(e) => setLexamination(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
 
@@ -137,6 +141,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter diagnosis/procedure notes here..."
             value={diagnosis}
             onChange={(e) => setDiagnosis(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
         <div className="mb-6">
@@ -148,6 +153,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter observation notes here..."
             value={obsnotes}
             onChange={(e) => setObsnotes(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
 
@@ -160,6 +166,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter any notable remarks here..."
             value={notifiableRemarks}
             onChange={(e) => setNotifiableRemarks(e.target.value)}
+            disabled={!isDoctor}
           ></textarea>
         </div>
 
@@ -175,6 +182,7 @@ const Consultation = ({ data }) => {
               className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
               value={caseType}
               onChange={(e) => setCaseType(e.target.value)}
+              disabled={!isDoctor}
             >
               <option value="">Select Case Type</option>
               {caseTypeOptions.map((option) => (
@@ -196,6 +204,7 @@ const Consultation = ({ data }) => {
                 placeholder="Enter other case details..."
                 value={otherCaseDetails}
                 onChange={(e) => setOtherCaseDetails(e.target.value)}
+                disabled={!isDoctor}
               />
             </div>
           )}
@@ -210,6 +219,7 @@ const Consultation = ({ data }) => {
               placeholder="Suggest to do FBS/HBAL..."
               value={investigationDetails}
               onChange={(e) => setInvestigationDetails(e.target.value)}
+              disabled={!isDoctor}
             />
           </div>
 
@@ -221,6 +231,7 @@ const Consultation = ({ data }) => {
               id="adviceDetails"
               className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
               placeholder="Diet/exercise/salt/swep/hydration/BP/Sugar Control/Alcohol Absuse/Fat free/Oil free..."
+              disabled={!isDoctor}
             />
           </div>
 
@@ -234,6 +245,7 @@ const Consultation = ({ data }) => {
               className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
               value={followUpDate}
               onChange={(e) => setFollowUpDate(e.target.value)}
+              disabled={!isDoctor}
             />
           </div>
         </div>
@@ -251,6 +263,7 @@ const Consultation = ({ data }) => {
                 checked={referral === 'yes'}
                 onChange={() => setReferral('yes')}
                 className="form-radio text-blue-500"
+                disabled={!isDoctor}
               />
               Yes
             </label>
@@ -262,6 +275,7 @@ const Consultation = ({ data }) => {
                 checked={referral === 'no'}
                 onChange={() => setReferral('no')}
                 className="form-radio text-blue-500"
+                disabled={!isDoctor}
               />
               No
             </label>
@@ -279,6 +293,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter hospital name..."
             value={hospitalName}
             onChange={(e) => setHospitalName(e.target.value)}
+            disabled={!isDoctor}
           />
         </div>
 
@@ -293,6 +308,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter speaciality..."
             value={speaciality}
             onChange={(e) => setSpeciality(e.target.value)}
+            disabled={!isDoctor}
           />
         </div>
 
@@ -307,6 +323,7 @@ const Consultation = ({ data }) => {
             placeholder="Enter doctor name..."
             value={doctorName}
             onChange={(e) => setDoctorName(e.target.value)}
+            disabled={!isDoctor}
           />
         </div>
 
@@ -320,6 +337,7 @@ const Consultation = ({ data }) => {
               className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
               value={submittedByDoctor}
               onChange={(e) => setSubmittedByDoctor(e.target.value)}
+              disabled={!isDoctor}
             >
               <option value="">Select</option>
               <option value="doctor">Doctor</option>
@@ -337,6 +355,7 @@ const Consultation = ({ data }) => {
               className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
               value={submittedByNurse}
               onChange={(e) => setSubmittedByNurse(e.target.value)}
+              disabled={!isDoctor}
             >
               <option value="">Select</option>
               <option value="doctor">Doctor</option>
@@ -349,8 +368,8 @@ const Consultation = ({ data }) => {
         <div className="mt-6 flex justify-end">
           <button
             type="submit"
-            className="w-1/4 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-            disabled={isSubmitting} // Disable button while submitting
+            className={`w-1/4 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ${!isDoctor ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={!isDoctor || isSubmitting} // Disable button while submitting
           >
             {isSubmitting ? 'Submitting...' : 'Submit Data'} {/* Show 'Submitting...' when submitting */}
           </button>

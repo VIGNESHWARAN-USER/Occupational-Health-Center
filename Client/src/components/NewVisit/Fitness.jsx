@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const FitnessPage = ({ data }) => {
   const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue"];
   const [selectedOptions, setSelectedOptions] = useState([]);
-  console.log(data)
+  const [conditionalOptions, setConditionalOptions] = useState([]);
+  const [overallFitness, setOverallFitness] = useState("");
   const [formData, setFormData] = useState({
     emp_no: data[0]?.emp_no,
     tremors: "",
@@ -12,7 +13,28 @@ const FitnessPage = ({ data }) => {
     trendelenberg_test: "",
   });
 
-  console.log(data);
+  useEffect(() => {
+    if (data && data[0] && data[0].fitnessassessment) {
+      const assessmentData = data[0].fitnessassessment;
+
+      setFormData({
+        emp_no: assessmentData.emp_no || data[0]?.emp_no, // Prioritize existing emp_no
+        tremors: assessmentData.tremors || "",
+        romberg_test: assessmentData.romberg_test || "",
+        acrophobia: assessmentData.acrophobia || "",
+        trendelenberg_test: assessmentData.trendelenberg_test || "",
+      });
+
+      try {
+        setSelectedOptions(assessmentData.job_nature || []);
+      } catch (error) {
+        console.error("Error parsing job_nature:", error);
+        setSelectedOptions([]); // Set to empty array in case of parsing error
+      }
+      setConditionalOptions(assessmentData.conditional_fit_feilds || []);
+      setOverallFitness(assessmentData.overall_fitness || "");
+    }
+  }, [data]);
 
   const handleSelectChange = (e) => {
     const selectedValue = e.target.value;
@@ -29,12 +51,33 @@ const FitnessPage = ({ data }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleOverallFitnessChange = (e) => {
+    setOverallFitness(e.target.value);
+  };
+
+  const handleConditionalSelectChange = (e) => {
+    const selectedValue = e.target.value;
+    if (selectedValue && !conditionalOptions.includes(selectedValue)) {
+      setConditionalOptions([...conditionalOptions, selectedValue]);
+    }
+  };
+
+  const handleRemoveConditionalSelected = (value) => {
+    setConditionalOptions(conditionalOptions.filter((option) => option !== value));
+  };
+
   const handleSubmit = async () => {
+    const today = new Date();
+    const validityDate = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
+    const validityDateString = validityDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
     const payload = {
-      emp_no: "", // Replace with actual employee number
+      emp_no: data[0]?.emp_no,
       ...formData,
-      job_nature: selectedOptions,
-      overall_fitness: "",
+      job_nature: JSON.stringify(selectedOptions),  // Stringify this!
+      overall_fitness: overallFitness,
+      conditional_fit_feilds: conditionalOptions,
+      validity: validityDateString,
       comments: "",
     };
 
@@ -50,10 +93,14 @@ const FitnessPage = ({ data }) => {
       alert("Fitness data submitted successfully!");
       setFormData({ tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "" });
       setSelectedOptions([]);
+      setConditionalOptions([]);
+      setOverallFitness("");
     } catch (error) {
       alert(error.message);
     }
   };
+
+  const accessLevel = localStorage.getItem("accessLevel");
 
   return (
     <div className="bg-white min-h-screen p-6 relative">
@@ -80,7 +127,7 @@ const FitnessPage = ({ data }) => {
         ))}
       </div>
 
-      {/* Multi-Select Dropdown */}
+      {/* Multi-Select Dropdown for Job Nature */}
       <div className="bg-blue-100 p-6 rounded-lg shadow-md mt-8">
         <h2 className="text-lg font-semibold mb-4">Job Nature (Select Multiple Options)</h2>
         <select
@@ -110,6 +157,56 @@ const FitnessPage = ({ data }) => {
             <p className="text-sm text-gray-500">No options selected.</p>
           )}
         </div>
+
+        {accessLevel === "doctor" && (
+          <div className="mt-4">
+            <label className="block text-gray-700 text-sm font-semibold mb-1">Overall Fitness</label>
+            <select
+              className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
+              onChange={handleOverallFitnessChange}
+              value={overallFitness}
+            >
+              <option value="" disabled>Select an option</option>
+              <option value="fit">Fit</option>
+              <option value="unfit">Unfit</option>
+              <option value="conditional">Conditional Fit</option>
+            </select>
+          </div>
+        )}
+
+        {/* Conditional Fit Options */}
+        {accessLevel === "doctor" && overallFitness === "conditional" && (
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold mb-4">Fit For (Select Multiple Options)</h2>
+            <select
+              className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
+              onChange={handleConditionalSelectChange}
+            >
+              <option value="" disabled>-- Select an option --</option>
+              {allOptions.map((option, index) => (
+                <option key={index} value={option} disabled={conditionalOptions.includes(option)}>
+                  {option}
+                </option>
+              ))}
+            </select>
+
+            {/* Selected options in a single row */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {conditionalOptions.length > 0 ? (
+                conditionalOptions.map((option, index) => (
+                  <div key={index} className="flex items-center p-2 border border-gray-300 rounded-md bg-gray-100">
+                    <span className="mr-2">{option}</span>
+                    <button className="text-red-500 hover:underline" onClick={() => handleRemoveConditionalSelected(option)}>
+                      ✖
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">No options selected.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <div className="absolute bottom-6 right-6">

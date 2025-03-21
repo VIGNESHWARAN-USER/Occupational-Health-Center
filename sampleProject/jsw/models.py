@@ -43,21 +43,53 @@ class employee_details(BaseModel):
     emergency_contact_phone = models.TextField(max_length=225)
     address = models.TextField(max_length=225)
     role = models.TextField(max_length=50)
+    area = models.TextField(max_length=50)
+    nationality = models.TextField(max_length=50)
+    state = models.TextField(max_length=50)
+    profilepic = models.ImageField(upload_to='profilepics', blank=True)
     def __str__(self):
         return self.emp_no
         
 
 class vitals(BaseModel):
     emp_no = models.TextField(max_length=200)
+
     systolic = models.TextField(max_length=50)
-    diastolic= models.TextField(max_length=50)
-    pulse= models.TextField(max_length=50)
-    respiratory_rate= models.TextField(max_length=50)
-    temperature= models.TextField(max_length=50)
-    spO2= models.TextField(max_length=50)
-    weight= models.TextField(max_length=50)
-    height= models.TextField(max_length=50)
-    bmi= models.TextField(max_length=50)
+    systolic_status = models.TextField(max_length=50, null=True, blank=True)
+    systolic_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    diastolic = models.TextField(max_length=50)
+    diastolic_status = models.TextField(max_length=50, null=True, blank=True)
+    diastolic_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    pulse = models.TextField(max_length=50)
+    pulse_status = models.TextField(max_length=50, null=True, blank=True)
+    pulse_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    respiratory_rate = models.TextField(max_length=50)
+    respiratory_rate_status = models.TextField(max_length=50, null=True, blank=True)
+    respiratory_rate_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    temperature = models.TextField(max_length=50)
+    temperature_status = models.TextField(max_length=50, null=True, blank=True)
+    temperature_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    spO2 = models.TextField(max_length=50)
+    spO2_status = models.TextField(max_length=50, null=True, blank=True)
+    spO2_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    weight = models.TextField(max_length=50)
+    weight_status = models.TextField(max_length=50, null=True, blank=True)
+    weight_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    height = models.TextField(max_length=50)
+    height_status = models.TextField(max_length=50, null=True, blank=True)
+    height_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    bmi = models.TextField(max_length=50)
+    bmi_status = models.TextField(max_length=50, null=True, blank=True)
+    bmi_comment = models.TextField(max_length=255, null=True, blank=True)
+
 
     def __str__(self):
         return self.emp_no
@@ -870,8 +902,9 @@ class FitnessAssessment(BaseModel):
     romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
     acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
     trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
-
-    job_nature = models.TextField()
+    conditional_fit_feilds = models.JSONField(blank=True)
+    validity = models.DateField(blank=True, null=True)
+    job_nature = models.JSONField(blank=True, null=True)
     overall_fitness = models.TextField()
     comments = models.TextField(blank=True, null=True)
 

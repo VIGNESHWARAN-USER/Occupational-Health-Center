@@ -90,7 +90,7 @@ const OverAllFootFallDropdown = ({ value, onChange }) => {
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             >
                 <option value="">Select Footfall Type</option>
-                <option value="Total">Total</option>
+                <option value="Total">Total (Employee + Contractor + Visitor)</option>
                 <option value="Employee">Employee</option>
                 <option value="Contractor">Contractor</option>
                 <option value="Employee+Contractor">Employee + Contractor</option>

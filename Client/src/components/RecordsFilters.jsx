@@ -570,6 +570,9 @@ function PurposeFilter({ addFilter }) {
     const purposeFilter = {
       type_of_visit: purpose,
       register: subcategory,
+      specificCategory: specificCategory,
+      fromDate: fromDate,
+      toDate: toDate
     };
 
     addFilter({ purpose: purposeFilter });
@@ -579,7 +582,6 @@ function PurposeFilter({ addFilter }) {
     handleSubmit();
   }
 
-  // Function to extract all possible specific categories from a subcategory
   const getSpecificCategories = () => {
     if (!purpose || !subcategory) return [];
 
@@ -587,12 +589,11 @@ function PurposeFilter({ addFilter }) {
 
     if (!subcategoryData) return [];
 
-    // Flatten the array and extract strings/object keys
     const categories = subcategoryData.flatMap(item => {
       if (typeof item === 'string') {
         return item;
       } else if (typeof item === 'object' && item !== null) {
-        return Object.keys(item);  // Returns array of keys
+        return Object.keys(item);
       }
       return [];
     });
@@ -602,8 +603,8 @@ function PurposeFilter({ addFilter }) {
 
 
   return (
-    <div className="p-6 max-w-lg mx-auto bg-white rounded-xl shadow-md space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800">Filter Options</h2>
+    <div className="">
+      
 
       {/* Date Range */}
       <div className="space-y-2">
@@ -625,7 +626,7 @@ function PurposeFilter({ addFilter }) {
           />
         </div>
       </div>
-
+    <div className="flex justify-between items-center py-4">
       {/* Purpose Selection */}
       <div className="space-y-2">
         <label htmlFor="purpose" className="block text-gray-700 text-sm font-bold">Purpose</label>
@@ -635,8 +636,6 @@ function PurposeFilter({ addFilter }) {
           value={purpose}
           onChange={(e) => {
             setPurpose(e.target.value);
-            setSubcategory("");
-            setSpecificCategory("");
           }}
         >
           <option value="">Select Purpose</option>
@@ -647,49 +646,46 @@ function PurposeFilter({ addFilter }) {
       </div>
 
       {/* Subcategory Selection */}
-      {purpose && (
-        <div className="space-y-2">
-          <label htmlFor="subcategory" className="block text-gray-700 text-sm font-bold">Subcategory</label>
-          <select
-            id="subcategory"
-            className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={subcategory}
-            onChange={(e) => {
-              setSubcategory(e.target.value);
-              setSpecificCategory("");
-            }}
-          >
-            <option value="">Select Subcategory</option>
-            {Object.keys(data[purpose]).map((key) => (
-              <option key={key} value={key}>{key}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className="space-y-2">
+        <label htmlFor="subcategory" className="block text-gray-700 text-sm font-bold">Subcategory</label>
+        <select
+          id="subcategory"
+          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={subcategory}
+          onChange={(e) => {
+            setSubcategory(e.target.value);
+          }}
+          disabled={!purpose} // Disable if no purpose selected
+        >
+          <option value="">Select Subcategory</option>
+          {purpose && Object.keys(data[purpose]).map((key) => (
+            <option key={key} value={key}>{key}</option>
+          ))}
+        </select>
+      </div>
 
-      {/* Specific Category Selection - Conditionally Rendered */}
-      {purpose && subcategory && (
-        <div className="space-y-2">
-          <label htmlFor="specificCategory" className="block text-gray-700 text-sm font-bold">Specific Category</label>
-          <select
-            id="specificCategory"
-            className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={specificCategory}
-            onChange={(e) => setSpecificCategory(e.target.value)}
-            disabled={getSpecificCategories().length === 0}
-          >
-            <option value="">Select Specific Category</option>
-            {getSpecificCategories().map((category, index) => (
-              <option key={index} value={category}>{category}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
+      {/* Specific Category Selection */}
+      <div className="space-y-2">
+        <label htmlFor="specificCategory" className="block text-gray-700 text-sm font-bold">Specific Category</label>
+        <select
+          id="specificCategory"
+          className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={specificCategory}
+          onChange={(e) => setSpecificCategory(e.target.value)}
+          disabled={!purpose || !subcategory || getSpecificCategories().length === 0} // Disable if purpose or subcategory not selected or no specific categories
+        >
+          <option value="">Select Specific Category</option>
+          {getSpecificCategories().map((category, index) => (
+            <option key={index} value={category}>{category}</option>
+          ))}
+        </select>
+      </div>
+      </div>
       {/* Submit Button */}
       <button
         onClick={handleFilterClick}
         className="w-full py-3 px-5 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        disabled={!purpose} // Disable if no purpose is selected
       >
         Apply Filter
       </button>
@@ -1547,7 +1543,7 @@ className="w-full p-2 border border-gray-300 rounded-lg"
     >
       <option value="">Select</option>
       <option value="Full">Full</option>
-      <option value="Normal Doses">Normal Doses</option>
+      <option value="Normal Doses">Partial</option>
     </select>
   </div>
   </div>

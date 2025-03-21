@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FaSearch, FaCalendarAlt, FaFilter, FaSyncAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 const AllAppointments = () => {
   const [appointments, setAppointments] = useState([]);
@@ -9,6 +11,9 @@ const AllAppointments = () => {
   const [toDate, setToDate] = useState("");
   const [purpose, setPurpose] = useState("");
   const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState([]); // Changed from employee_data
+  const navigate = useNavigate();
+
   const purposeOptions = [
     "Pre employment",
     "Pre employment (Food Handler)",
@@ -25,12 +30,27 @@ const AllAppointments = () => {
   ];
 
   useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        console.log("fetching data");
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const fetchedEmployees = response.data.data;
+        setEmployees(fetchedEmployees);
+        console.log("fetched data");
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
 
+    fetchDetails();
+  }, []);
+
+  useEffect(() => {
     fetchAppointments();
   }, [fromDate, toDate, purpose]);
 
   const fetchAppointments = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
       let url = "https://occupational-health-center-1.onrender.com/appointments/";
       const params = new URLSearchParams();
@@ -54,9 +74,8 @@ const AllAppointments = () => {
     } catch (error) {
       console.error("Error fetching appointments:", error);
       setAppointments([]);
-    }
-    finally {
-      setLoading(false)
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,9 +86,19 @@ const AllAppointments = () => {
     fetchAppointments();
   };
 
-  const handleStatusChange = async (appointmentId, currentStatus) => {
-    if (currentStatus !== "initiate") {
-      window.location.href = "/Newvisit";
+  const handleStatusChange = async (appointment) => {  // Pass the whole appointment object
+    if (appointment.status !== "initiate") {
+      // Find the employee data by matching emp_no
+      const employee = employees.find(emp => emp.emp_no === appointment.emp_no);
+
+      if (employee) {
+        navigate("../newvisit", { state: { search: appointment.emp_no, reference: true } });
+      } else {
+        console.warn("Employee data not found for emp_no:", appointment.emp_no);
+        // Handle the case where employee data is not found, maybe show an error message
+        alert("Employee data not found.  Please ensure employee data is loaded."); // Optional
+      }
+
       return;
     }
 
@@ -80,7 +109,7 @@ const AllAppointments = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: appointmentId,
+          id: appointment.id,
         }),
       });
 
@@ -88,13 +117,23 @@ const AllAppointments = () => {
 
       if (data.success) {
         setAppointments((prevAppointments) =>
-          prevAppointments.map((appointment) =>
-            appointment.id === appointmentId
-              ? { ...appointment, status: data.status }
-              : appointment
+          prevAppointments.map((prevAppointment) =>
+            prevAppointment.id === appointment.id
+              ? { ...prevAppointment, status: data.status }
+              : prevAppointment
           )
         );
-        window.location.href = "/Newvisit";
+
+        // Find the employee data by matching emp_no
+        const employee = employees.find(emp => emp.emp_no === appointment.emp_no);
+
+        if (employee) {
+          navigate("../newvisit", { state: { data: employee, reference: false } }); // Pass data only after successful status update
+        } else {
+          console.warn("Employee data not found for emp_no:", appointment.emp_no);
+           alert("Employee data not found.  Please ensure employee data is loaded."); // Optional
+        }
+       // window.location.href = "/Newvisit"; // REMOVE THIS.  React Router's navigate() is preferred
       } else {
         console.error("Failed to update appointment:", data.message);
       }
@@ -206,27 +245,27 @@ const AllAppointments = () => {
             </tr>
           </thead>
           <tbody>
-            {(loading)? (
+            {loading ? (
               <tr>
-              <td colSpan="12" className="text-center py-4">
-                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
-              </td>
-            </tr>
-            ):  appointments.length > 0 ? (
+                <td colSpan="13" className="text-center py-4">
+                  <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                </td>
+              </tr>
+            ) : appointments.length > 0 ? (
               appointments.map((appointment) => (
                 <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.appointment_no|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.mrd_no|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_date|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.role|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.purpose|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.date|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.aadhar_no|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_by|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.consultated_by|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.contractor_name|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.doctor_name|| '-'}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.emp_no|| '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.appointment_no || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.mrd_no || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_date || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.role || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.purpose || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.date || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.aadhar_no || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.booked_by || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.consultated_by || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.contractor_name || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.doctor_name || '-'}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700 text-center truncate">{appointment.emp_no || '-'}</td>
                   <td className="px-4 py-2 text-sm text-gray-700 text-center">
                     <button
                       className={`px-2 py-1 md:px-4 md:py-2 rounded-lg text-xs md:text-sm font-semibold mx-auto ${appointment.status === "initiate"
@@ -235,7 +274,7 @@ const AllAppointments = () => {
                           ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
                           : "bg-green-100 text-green-600 hover:bg-green-200"
                         }`}
-                      onClick={() => handleStatusChange(appointment.id, appointment.status)}
+                      onClick={() => handleStatusChange(appointment)}  // Pass the appointment object
                     >
                       {appointment.status}
                     </button>

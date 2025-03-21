@@ -75,27 +75,86 @@ const VitalsDetails = ({ data }) => {
         <div className="mt-8 p-6 bg-white rounded-xl shadow-md">
             <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Vitals Details</h2>
 
-            <div className="grid grid-cols-3 gap-6 mb-12">
-                <DetailCard label="Systolic (mm Hg)" value={data?.systolic} />
-                <DetailCard label="Diastolic (mm Hg)" value={data?.diastolic} />
-                {/* Blood Pressure Visualization inserted here */}
-                <div className="col-span-1"> {/*  Ensure it takes a full column */}
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Blood Pressure</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Systolic (mm Hg)" value={data?.systolic} />
+                    <DetailCard label="Systolic Status" value={data?.systolic_status} />
+                    <DetailCard label="Systolic Comment" value={data?.systolic_comment} />
+                    <DetailCard label="Diastolic (mm Hg)" value={data?.diastolic} />
+                    <DetailCard label="Diastolic Status" value={data?.diastolic_status} />
+                    <DetailCard label="Diastolic Comment" value={data?.diastolic_comment} />
+                </div>
+                 {/* Ensure it takes a full row */}
+                <div className="mt-4">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Blood Pressure Visualization</h3>
                     {renderVisualization(data?.systolic, data?.diastolic)}
                 </div>
-                <DetailCard label="Pulse (Per Minute)" value={data?.pulse} />
-                <DetailCard label="Pulse Comments" value={data?.pulseComments} />
-                <DetailCard label="Respiratory Rate (Per Minute)" value={data?.respiratory_rate} />
-                <DetailCard label="Respiratory Rate Comments" value={data?.repoComments} />
-                <DetailCard label="Temperature (in °F)" value={data?.temperature} />
-                <DetailCard label="Temperature Comments" value={data?.temperatureComments} />
-                <DetailCard label="SpO2 (in %)" value={data?.spO2} />
-                <DetailCard label="SpO2 Comments" value={data?.Spo2Comments} />
-                <DetailCard label="Weight (in KG)" value={data?.weight} />
-                <DetailCard label="Height (in CM)" value={data?.height} />
-                <DetailCard label="BMI" value={data?.bmi} />
-
             </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Pulse</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Pulse (Per Minute)" value={data?.pulse} />
+                    <DetailCard label="Pulse Status" value={data?.pulse_status} />
+                    <DetailCard label="Pulse Comments" value={data?.pulse_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Respiratory Rate</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Respiratory Rate (Per Minute)" value={data?.respiratory_rate} />
+                    <DetailCard label="Respiratory Rate Status" value={data?.respiratory_rate_status} />
+                    <DetailCard label="Respiratory Rate Comments" value={data?.respiratory_rate_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Temperature</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Temperature (in °F)" value={data?.temperature} />
+                    <DetailCard label="Temperature Status" value={data?.temperature_status} />
+                    <DetailCard label="Temperature Comments" value={data?.temperature_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">SpO2</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="SpO2 (in %)" value={data?.spO2} />
+                    <DetailCard label="SpO2 Status" value={data?.spO2_status} />
+                    <DetailCard label="SpO2 Comments" value={data?.spO2_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Weight</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Weight (in KG)" value={data?.weight} />
+                    <DetailCard label="Weight Status" value={data?.weight_status} />
+                    <DetailCard label="Weight Comment" value={data?.weight_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Height</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="Height (in CM)" value={data?.height} />
+                    <DetailCard label="Height Status" value={data?.height_status} />
+                    <DetailCard label="Height Comment" value={data?.height_comment} />
+                </div>
+            </div>
+
+            <div className="mb-12">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">BMI</h3>
+                <div className="grid grid-cols-3 gap-6">
+                    <DetailCard label="BMI" value={data?.bmi} />
+                    <DetailCard label="BMI Status" value={data?.bmi_status} />
+                    <DetailCard label="BMI Comment" value={data?.bmi_comment} />
+                </div>
+            </div>
+
         </div>
     );
 };

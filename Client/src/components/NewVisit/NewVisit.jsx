@@ -7,7 +7,7 @@ import Vaccination from "./Vaccination";
 import Vitals from "./Vitals";
 import MedicalHistory from "./MedicalHistory";
 import { FaSearch } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import Consultation from "./Consultation";
@@ -16,7 +16,8 @@ import Prescription from "./Prescription";
 const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
   const navigate = useNavigate();
-
+  const [loading, setLoading] = useState(false);
+  const [searchId, setSearchId] = useState("");
   const [type, setType] = useState("Employee");
   const [visit, setVisit] = useState("Preventive");
   const [register, setRegister] = useState("");
@@ -25,7 +26,6 @@ const NewVisit = () => {
   const [data, setdata] = useState([]);
   const [singleData, setsingleData] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [searchId, setSearchId] = useState("");
   const [filteredEmployees, setFilteredEmployees] = useState([]);
   const [formData, setFormData] = useState({}); // Initialize as empty object
   const [formDataDashboard, setFormDataDashboard] = useState({
@@ -226,6 +226,11 @@ const NewVisit = () => {
       }
     }
   };
+
+  
+  
+
+
   const handleClear = () => {
     localStorage.removeItem("selectedEmployee");
     setdata([]);
@@ -233,9 +238,12 @@ const NewVisit = () => {
     setSearchId("");
   };
 
+  const {search, reference} = useLocation().state || {};
+
   useEffect(() => {
     const fetchDetails = async () => {
       try {
+        setLoading(false);
         localStorage.removeItem("selectedEmployee");
         const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
         setEmployees(response.data.data);                        
@@ -248,8 +256,19 @@ const NewVisit = () => {
           setdata([parsedEmployee]);
           setFormData(parsedEmployee);
         }
+
+        
+        console.log(search, reference);
+        
+        if(reference && search) {
+          console.log(search);
+          setSearchId(search);
+        }
+
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
+       setLoading(false);
       }
     };
 
@@ -290,6 +309,26 @@ const NewVisit = () => {
     setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); // Update dashboard data and reset
   };
 
+  const [age, setAge] = useState('');
+  
+    useEffect(() => {
+      if (formData.dob) {
+        calculateAge(formData.dob);
+      }
+    }, [formData.dob]);
+  
+    const calculateAge = (dob) => {
+      const today = new Date();
+      const birthDate = new Date(dob.split('-')[2], dob.split('-')[1] - 1, dob.split('-')[0]); 
+      console.log(birthDate)
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      setAge(age);
+    };
+
   const tabs = [
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
@@ -310,110 +349,117 @@ const NewVisit = () => {
             <h2 className="text-lg font-medium mb-4">Basic Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Name</label>
+                <label className="block text-sm font-medium text-gray-700 ">Name</label>
                 <input
                   name="name"
-                  value={formData.name || ''}  // Handle undefined
+                  value={formData.name}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Initial followed by Full Name"
+                  placeholder="Enter your full name"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Birth</label>
+                <label className="block text-sm font-medium text-gray-700 ">Date of Birth (dd/mm/yyyy)</label>
                 <input
                   name="dob"
-                  value={formData.dob || ''}
+                  value={formData.dob}
                   onChange={handleChange}
                   type="text"
-                  placeholder="DD/MM/YYYY"
+                  placeholder="Enter Date of Birth in dd/mm/yyyy"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Sex</label>
+                <label className="block text-sm font-medium text-gray-700 ">Age</label>
+                <input
+                  type="text"
+                  value={age}
+                  readOnly
+                  className="px-4 py-2 w-full bg-gray-200 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 ">Sex</label>
                 <select
                   name="sex"
                   value={formData.sex || ""}
                   onChange={handleChange}
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select Sex</option>
+                  <option value="">Select</option>
                   <option>Male</option>
                   <option>Female</option>
                   <option>Other</option>
                 </select>
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Aadhar No.</label>
+                <label className="block text-sm font-medium text-gray-700 ">Aadhar No.</label>
                 <input
                   name="aadhar"
-                  value={formData.aadhar || ''}
+                  value={formData.aadhar}
                   onChange={handleChange}
                   type="text"
-                  placeholder="0000 0000 0000"
+                  placeholder="Enter 12-digit Aadhar No."
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Blood Group</label>
+                <label className="block text-sm font-medium text-gray-700 ">Blood Group</label>
                 <input
                   name="bloodgrp"
-                  value={formData.bloodgrp || ''}
+                  value={formData.bloodgrp}
                   onChange={handleChange}
                   type="text"
-                  placeholder="e.g., A Positive"
+                  placeholder="e.g., A+, O-"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Mark 1</label>
+                <label className="block text-sm font-medium text-gray-700 ">Identification Marks 1</label>
                 <input
-                  name="identification_marks1"
-                  value={formData.identification_marks1 || ''}
+                  name="identification_marks"
+                  value={formData.identification_marks1}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Any visible identification marks"
+                  placeholder="Enter any visible identification marks"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Identification Mark 2</label>
+                <label className="block text-sm font-medium text-gray-700 ">Identification Marks 2</label>
                 <input
-                  name="identification_marks2"
-                  value={formData.identification_marks2 || ''}
+                  name="identification_marks"
+                  value={formData.identification_marks2}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Any visible identification marks"
+                  placeholder="Enter any visible identification marks"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Marital Status</label>
+                <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
                 <select
                   name="marital_status"
                   value={formData.marital_status || ""}
                   onChange={handleChange}
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select Status</option>
+                  <option value="">Select</option>
                   <option>Single</option>
                   <option>Married</option>
-                  <option>Seperated</option>
-                  <option>Divorced</option>
-                  <option>Widowed</option>
+                  <option>Other</option>
                 </select>
               </div>
             </div>
-
+      
             <h2 className="text-lg font-medium my-4">Employment Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Employee Number</label>
+                <label className="block text-sm font-medium text-gray-700 ">Employee Number</label>
                 <input
                   name="emp_no"
-                  value={formData.emp_no || ''}
+                  value={formData.emp_no}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter employee number"
@@ -421,10 +467,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Employer</label>
+                <label className="block text-sm font-medium text-gray-700">Employer</label>
                 <input
                   name="employer"
-                  value={formData.employer || ''}
+                  value={formData.employer || ""}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter employer name"
@@ -432,10 +478,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Designation</label>
+                <label className="block text-sm font-medium text-gray-700 ">Designation</label>
                 <input
                   name="designation"
-                  value={formData.designation || ''}
+                  value={formData.designation}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter job designation"
@@ -443,10 +489,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Department</label>
+                <label className="block text-sm font-medium text-gray-700 ">Department</label>
                 <input
                   name="department"
-                  value={formData.department || ''}
+                  value={formData.department}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter department"
@@ -454,10 +500,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Nature of Job</label>
+                <label className="block text-sm font-medium text-gray-700 ">Nature of Job</label>
                 <input
                   name="job_nature"
-                  value={formData.job_nature || ''}
+                  value={formData.job_nature}
                   onChange={handleChange}
                   type="text"
                   placeholder="e.g., Height Works, Fire Works"
@@ -465,10 +511,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Date of Joining</label>
+                <label className="block text-sm font-medium text-gray-700 ">Date of Joining</label>
                 <input
                   name="doj"
-                  value={formData.doj || ''}
+                  value={formData.doj}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter Date of Joining"
@@ -476,28 +522,28 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Mode of Joining</label>
+                <label className="block text-sm font-medium text-gray-700 ">Mode of Joining</label>
                 <select
                   name="moj"
                   value={formData.moj || ""}
                   onChange={handleChange}
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Select Mode</option>
+                  <option value="">Select</option>
                   <option>New Joinee</option>
                   <option>Transfer</option>
                 </select>
               </div>
             </div>
-
-
+      
+      
             <h2 className="text-lg font-medium my-4">Contact Details</h2>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Phone (Personal)</label>
+                <label className="block text-sm font-medium text-gray-700 ">Phone (Personal)</label>
                 <input
-                  name="phone_personal"
-                  value={formData.phone_personal || ''}
+                  name="phone_Personal"
+                  value={formData.phone_Personal}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter 10-digit phone number"
@@ -505,10 +551,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Personal)</label>
+                <label className="block text-sm font-medium text-gray-700 ">Mail Id (Personal)</label>
                 <input
                   name="mail_id_Personal"
-                  value={formData.mail_id_Personal || ''}
+                  value={formData.mail_id_Personal}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter the personal mail"
@@ -516,21 +562,21 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Person</label>
+                <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Person</label>
                 <input
                   name='emergency_contact_person'
-                  value={formData.emergency_contact_person || ''}
+                  value={formData.emergency_contact_person}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter 10-digit mobile number"
+                  placeholder="Enter Name of Contact Person"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Phone (Office)</label>
+                <label className="block text-sm font-medium text-gray-700 ">Phone (Office)</label>
                 <input
                   name='phone_Office'
-                  value={formData.phone_Office || ''}
+                  value={formData.phone_Office}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter office mobile number"
@@ -538,10 +584,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Office)</label>
+                <label className="block text-sm font-medium text-gray-700 ">Mail Id (Office)</label>
                 <input
                   name='mail_id_Office'
-                  value={formData.mail_id_Office || ''}
+                  value={formData.mail_id_Office}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter office mail id"
@@ -549,21 +595,21 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Relation</label>
+                <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Relation</label>
                 <input
                   name='emergency_contact_relation'
-                  value={formData.emergency_contact_relation || ''}
+                  value={formData.emergency_contact_relation}
                   onChange={handleChange}
                   type="text"
-                  placeholder="e.g.,Father,Spouse"
+                  placeholder="e.g., Father, Spouse"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Mail Id (Emergency Contact Person)</label>
+                <label className="block text-sm font-medium text-gray-700 ">Mail Id (Emergency Contact Person)</label>
                 <input
                   name='mail_id_Emergency_Contact_Person'
-                  value={formData.mail_id_Emergency_Contact_Person || ''}
+                  value={formData.mail_id_Emergency_Contact_Person}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter mail"
@@ -571,10 +617,10 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Emergency Contact Phone</label>
+                <label className="block text-sm font-medium text-gray-700 ">Emergency Contact Phone</label>
                 <input
                   name='emergency_contact_phone'
-                  value={formData.emergency_contact_phone || ''}
+                  value={formData.emergency_contact_phone}
                   onChange={handleChange}
                   type="text"
                   placeholder="Enter Emergency Contact number"
@@ -582,21 +628,54 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2 ">Address</label>
-                <textarea
-                  name='address'
-                  value={formData.address || ''}
+                <label className="block text-sm font-medium text-gray-700 ">Area</label>
+                <input
+                  name='area'
+                  value={formData.area}
                   onChange={handleChange}
                   type="text"
+                  placeholder="Enter Area"
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 ">State</label>
+                <input
+                  name='state'
+                  value={formData.state}
+                  onChange={handleChange}
+                  type="text"
+                  placeholder="Enter State"
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 ">Nationality</label>
+                <input
+                  name='nationality'
+                  value={formData.nationality}
+                  onChange={handleChange}
+                  type="text"
+                  placeholder="Enter Nationality"
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 ">Address</label>
+                <textarea
+                  name='address'
+                  value={formData.address}
+                  onChange={handleChange}
                   placeholder="Enter full address"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-            </div>
-            <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+              <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
               Add Basic Details
             </button>
-
+            </div>
+      
+      
           </div>
         );
       case "Fitness":
@@ -631,8 +710,12 @@ const NewVisit = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="p-1 overflow-y-auto">
-            <motion.div className="bg-white p-8 rounded-lg shadow-lg">
+            className="p-1 bg-white rounded-lg overflow-y-auto">
+            { (loading) ?(
+              <div className="flex justify-center p-6 items-center">
+              <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+              </div>
+            ) :(<motion.div className="bg-white p-8 rounded-lg shadow-lg">
 
               <div className="bg-white rounded-lg w-full p-6 shadow-lg">
                 <div className="w-full flex items-center mb-8 space-x-4">
@@ -810,7 +893,7 @@ const NewVisit = () => {
                   {renderTabContent()}
                 </div>
               </div>
-            </motion.div>
+            </motion.div>)}
           </motion.div>
         </div>
       </div>
