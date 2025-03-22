@@ -185,26 +185,37 @@ def addEntries(request):
             if not data.get('emp_no'):
                 return JsonResponse({"error": "Employee number is required"}, status=400)
 
-            print(data['emp_no'])
-            models.Dashboard.objects.create(
-                emp_no=data['emp_no'],
-                type_of_visit=data['formDataDashboard']['typeofVisit'],
-                type=data['formDataDashboard']['category'],
-                register=data['formDataDashboard']['register'],
-                purpose=data['formDataDashboard']['purpose']
-            )
+            emp_no = data['emp_no']
+            entry_date = datetime.now().date()  # Use date only for comparison
 
-            return JsonResponse({"message": "Entry added successfully"}, status=200)
+            try:
+                # Attempt to get the existing record for the given emp_no and date
+                dashboard, created = models.Dashboard.objects.update_or_create(
+                    emp_no=emp_no,
+                    date=entry_date, # Use entry date field
+                    defaults={
+                        'type_of_visit': data['formDataDashboard']['typeofVisit'],
+                        'type': data['formDataDashboard']['category'],
+                        'register': data['formDataDashboard']['register'],
+                        'purpose': data['formDataDashboard']['purpose']
+                    }
+                )
+
+                if created:
+                    message = "Entry added successfully"
+                else:
+                    message = "Entry updated successfully" # record exits, the data is updated
+
+                return JsonResponse({"message": message}, status=200)
+
+            except Exception as e:
+                print("Error:", e)
+                return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)  # Return detailed error
 
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
 
-        except Exception as e:
-            print("Error:", e)
-            return JsonResponse({"error": "Internal Server Error"}, status=500)
-
     return JsonResponse({"error": "Invalid request method"}, status=405)
-
 
 @csrf_exempt
 def dashboard_stats(request):
@@ -264,38 +275,55 @@ def dashboard_stats(request):
 def add_basic_details(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        print(data['role'])
-        basicdetails = models.employee_details.objects.create(
-            name=data['name'],
-            dob=data['dob'],
-            sex=data['sex'],
-            aadhar=data['aadhar'],
-            role = data['role'],
-            bloodgrp=data['bloodgrp'],
-            identification_marks1=data['identification_marks1'],
-            identification_marks2=data['identification_marks2'],
-            marital_status=data['marital_status'],
-            emp_no=data['emp_no'],
-            employer=data['employer'],
-            designation=data['designation'],
-            department=data['department'],
-            job_nature=data['job_nature'],
-            doj=data['doj'],
-            moj=data['moj'],
-            phone_Personal=data['phone_Personal'],
-            mail_id_Personal=data['mail_id_Personal'],
-            emergency_contact_person=data['emergency_contact_person'],
-            phone_Office=data['phone_Office'],
-            mail_id_Office=data['mail_id_Office'],
-            emergency_contact_relation=data['emergency_contact_relation'],
-            mail_id_Emergency_Contact_Person=data['mail_id_Emergency_Contact_Person'],
-            emergency_contact_phone=data['emergency_contact_phone'],
-            state = data['state'],
-            nationality = data['nationality'],
-            area = data['area'],
-            address=data['address'],
-        )
-        return JsonResponse({"message": "Basic Details added successfully"}, status=200)
+        emp_no = data['emp_no']
+        entry_date = datetime.now().date()
+
+        try:
+            # Attempt to get the existing record for the given emp_no and date
+            employee, created = models.employee_details.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date, #Check with date, this will ensure there is only entry in a particular date
+
+                defaults={
+                    'name': data['name'],
+                    'dob': data['dob'],
+                    'sex': data['sex'],
+                    'aadhar': data['aadhar'],
+                    'role': data['role'],
+                    'bloodgrp': data['bloodgrp'],
+                    'identification_marks1': data['identification_marks1'],
+                    'identification_marks2': data['identification_marks2'],
+                    'marital_status': data['marital_status'],
+                    'employer': data['employer'],
+                    'designation': data['designation'],
+                    'department': data['department'],
+                    'job_nature': data['job_nature'],
+                    'doj': data['doj'],
+                    'moj': data['moj'],
+                    'phone_Personal': data['phone_Personal'],
+                    'mail_id_Personal': data['mail_id_Personal'],
+                    'emergency_contact_person': data['emergency_contact_person'],
+                    'phone_Office': data['phone_Office'],
+                    'mail_id_Office': data['mail_id_Office'],
+                    'emergency_contact_relation': data['emergency_contact_relation'],
+                    'mail_id_Emergency_Contact_Person': data['mail_id_Emergency_Contact_Person'],
+                    'emergency_contact_phone': data['emergency_contact_phone'],
+                    'state': data['state'],
+                    'nationality': data['nationality'],
+                    'area': data['area'],
+                    'address': data['address'],
+                }
+            )
+
+            if created:
+                message = "Basic Details added successfully"
+            else:
+                message = "Basic Details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     else:
         return JsonResponse({"error": "Request method is wrong"}, status=405)
 
@@ -304,13 +332,33 @@ def add_basic_details(request):
 def add_vital_details(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        print(data)
-        # Filter out unexpected fields
+        emp_no = data.get('emp_no')  # Crucial: Get emp_no from the data
+        entry_date = datetime.now().date() # Date now
+        if not emp_no:
+            return JsonResponse({"error": "Employee number is required"}, status=400)
+
+        # Filter out unexpected fields (as before)
         allowed_fields = {field.name for field in models.vitals._meta.fields}
         allowed_fields.remove('id')
+        allowed_fields.remove('entry_date')# remove entrydate from allowed fields for updating it
         filtered_data = {key: value for key, value in data.items() if key in allowed_fields}
-        models.vitals.objects.create(**filtered_data)
-        return JsonResponse({"message": "Vital Details added successfully"}, status=200)
+
+        try:
+            vitals, created = models.vitals.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date = entry_date,
+                defaults=filtered_data
+            )
+
+            if created:
+                message = "Vital Details added successfully"
+            else:
+                message = "Vital Details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
 
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
@@ -319,8 +367,22 @@ def add_vital_details(request):
 def add_motion_test(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.MotionTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Motion Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            motion_test, created = models.MotionTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Motion Test details added successfully" if created else "Motion Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -328,8 +390,22 @@ def add_motion_test(request):
 def add_culture_sensitivity_test(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.CultureSensitivityTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Culture Sensitivity Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            culture_sensitivity_test, created = models.CultureSensitivityTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Culture Sensitivity Test details added successfully" if created else "Culture Sensitivity Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -337,8 +413,22 @@ def add_culture_sensitivity_test(request):
 def add_mens_pack(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.MensPack.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Mens Pack details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            mens_pack, created = models.MensPack.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Mens Pack details added successfully" if created else "Mens Pack details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -346,44 +436,134 @@ def add_mens_pack(request):
 def add_opthalmic_report(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.OphthalmicReport.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Ophthalmic Report details added successfully"}, status=200)
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
 
+        try:
+            opthalmic_report, created = models.OphthalmicReport.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Ophthalmic Report details added successfully" if created else "Ophthalmic Report details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+    return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 @csrf_exempt
 def add_usg_report(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.USGReport.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "USG Report details added successfully"}, status=200)
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
 
+        try:
+            usg_report, created = models.USGReport.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "USG Report details added successfully" if created else "USG Report details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+    return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 @csrf_exempt
 def add_mri_report(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.MRIReport.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "MRI Report details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            mri_report, created = models.MRIReport.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "MRI Report details added successfully" if created else "MRI Report details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
+
 
 @csrf_exempt
-def add_mri(request):
+def insert_vaccination(request):
     if request.method == "POST":
-        data = json.loads(request.body.decode('utf-8'))
-        models.MRIReport.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "MRI Report details added successfully"}, status=200)
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+        try:
+            print("Hii")
+            data = json.loads(request.body)  # Parse JSON request body
+            print(data)
+            emp_no = data.get("emp_no")
+            vaccination = data.get("vaccination")
 
+            if not emp_no or not vaccination:
+                return JsonResponse({"error": "emp_no and vaccination fields are required"}, status=400)
+            entry_date = datetime.now().date()
+
+            # Try to update if exists, otherwise create
+            vaccination_record, created = VaccinationRecord.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults={'vaccination': vaccination}
+            )
+
+            if created:
+                message = "Vaccination record saved successfully"
+            else:
+                message = "Vaccination record updated successfully"
+
+            return JsonResponse({
+                "message": message,
+                "created": {
+                    "id": vaccination_record.id,
+                    "emp_no": vaccination_record.emp_no,
+                    "vaccination": vaccination_record.vaccination,
+                    "entry_date": vaccination_record.entry_date.strftime("%Y-%m-%d %H:%M:%S")
+                }
+            }, status=200 if not created else 201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "An error occurred: " + str(e)}, status=500)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
 @csrf_exempt
 def add_haem_report(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.heamatalogy.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Haematology details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            haematology, created = models.heamatalogy.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Haematology details added successfully" if created else "Haematology details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -391,8 +571,22 @@ def add_haem_report(request):
 def add_routine_sugar(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.RoutineSugarTests.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Routine Sugar Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            routine_sugar, created = models.RoutineSugarTests.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Routine Sugar Test details added successfully" if created else "Routine Sugar Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -400,8 +594,22 @@ def add_routine_sugar(request):
 def add_renel_function(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.RenalFunctionTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Renal Function Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            renal_function, created = models.RenalFunctionTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Renal Function Test details added successfully" if created else "Renal Function Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -409,8 +617,22 @@ def add_renel_function(request):
 def add_lipid_profile(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.LipidProfile.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Lipid Profile details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            lipid_profile, created = models.LipidProfile.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Lipid Profile details added successfully" if created else "Lipid Profile details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -418,8 +640,22 @@ def add_lipid_profile(request):
 def add_liver_function(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.LiverFunctionTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Liver Function Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            liver_function, created = models.LiverFunctionTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Liver Function Test details added successfully" if created else "Liver Function Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -427,10 +663,23 @@ def add_liver_function(request):
 def add_thyroid_function(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.ThyroidFunctionTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Thyroid Function Test details added successfully"}, status=200)
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
 
+        try:
+            thyroid_function, created = models.ThyroidFunctionTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Thyroid Function Test details added successfully" if created else "Thyroid Function Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+    return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
 
@@ -438,8 +687,22 @@ def add_thyroid_function(request):
 def add_enzymes_cardiac(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.EnzymesCardiacProfile.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Enzymes Cardiac Profile details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            enzymes_cardiac, created = models.EnzymesCardiacProfile.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Enzymes Cardiac Profile details added successfully" if created else "Enzymes Cardiac Profile details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -447,17 +710,44 @@ def add_enzymes_cardiac(request):
 def add_urine_routine(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.UrineRoutineTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Urine Routine Test details added successfully"}, status=200)
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
 
+        try:
+            urine_routine, created = models.UrineRoutineTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Urine Routine Test details added successfully" if created else "Urine Routine Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+    return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 @csrf_exempt
 def add_serology(request):
     if request.method == "POST":
         data = json.loads(request.body.decode('utf-8'))
-        models.SerologyTest.objects.create(**data)  # Modified to create directly
-        return JsonResponse({"message": "Serology Test details added successfully"}, status=200)
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
+            serology, created = models.SerologyTest.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults=data
+            )
+
+            message = "Serology Test details added successfully" if created else "Serology Test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
     return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 
@@ -831,26 +1121,39 @@ def fitness_test(request, pk=None):
         # Create a new record
         data = json.loads(request.body)
         print(data)
-        try:    
+        emp_no = data.get('emp_no')
+        entry_date = datetime.now().date()
+
+        try:
             job_nature = json.loads(data.get("job_nature", "[]"))  # Try parsing, default to empty list
         except (TypeError, json.JSONDecodeError):
             job_nature = []  # If parsing fails, use an empty list
 
+        try:
+            fitness_test, created = FitnessAssessment.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date = entry_date,
+                defaults={
+                    'tremors': data.get("tremors"),
+                    'romberg_test': data.get("romberg_test"),
+                    'acrophobia': data.get("acrophobia"),
+                    'trendelenberg_test': data.get("trendelenberg_test"),
+                    'job_nature': job_nature, #Assign Parsed list
+                    'overall_fitness': data.get("overall_fitness", ""),
+                    'conditional_fit_feilds' : data.get("conditional_fit_feilds", []),
+                    'validity' : data.get("validity"),
+                    'comments': data.get("comments", ""),
+                    'employer': data.get("employer", "")
+                    }
+            )
 
-        fitness_test = FitnessAssessment.objects.create(
-            emp_no=data.get("emp_no"),
-            tremors=data.get("tremors"),
-            romberg_test=data.get("romberg_test"),
-            acrophobia=data.get("acrophobia"),
-            trendelenberg_test=data.get("trendelenberg_test"),
-            job_nature=job_nature, #Assign Parsed list
-            overall_fitness=data.get("overall_fitness", ""),
-            conditional_fit_feilds = data.get("conditional_fit_feilds", []),
-            validity = data.get("validity"),
-            comments=data.get("comments", ""),
-        )
-        return JsonResponse({"message": "Fitness test created!", "id": fitness_test.id}, status=201)
-    
+            message = "Fitness test details added successfully" if created else "Fitness test details updated successfully"
+            return JsonResponse({"message": message}, status=200)
+
+        except Exception as e:
+            print("Error:", e)
+            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+    return JsonResponse({"error": "Request method is wrong"}, status=405)
 
 from .models import mockdrills,ReviewCategory, Review
 
@@ -987,8 +1290,12 @@ def get_camps(request):
                 start_date__lte=today,
                 end_date__gte=today
             )
-        elif filter_status and filter_status != "Live":
-            camps = camps.filter(camp_type=filter_status)
+        elif filter_status:  # Check if filter_status is not empty
+            # Use a try-except block to handle potential invalid camp_type values
+            try:
+                camps = camps.filter(camp_type=filter_status)
+            except ValueError:
+                return JsonResponse({"error": "Invalid camp_type value"}, status=400)
 
         if date_from_str:
             try:
@@ -1021,12 +1328,13 @@ def get_camps(request):
             data.append(camp_data)
 
         return JsonResponse(data, safe=False)
+import os  # Import the 'os' module
 
 @csrf_exempt
 def upload_files(request):
     if request.method == 'POST':
         camp_id = request.POST.get('campId')
-        file_type = request.POST.get('fileType') #Get file type from request
+        file_type = request.POST.get('fileType')
 
         try:
             camp = eventsandcamps.objects.get(pk=camp_id)
@@ -1041,32 +1349,57 @@ def upload_files(request):
         file_extension = file.name.split('.')[-1].lower()
         if file_extension not in ALLOWED_FILE_TYPES:
             return JsonResponse({'error': 'Invalid file type'}, status=400)
+
         old_file = None
+        file_url = None  # Initialize file_url
 
-        if file_type == 'report1':
-            old_file = camp.report1
-            camp.report1 = file
-        elif file_type == 'report2':
-            old_file = camp.report2
-            camp.report2 = file
-        elif file_type == 'photos':
-            old_file = camp.photos
-            camp.photos = file
-        elif file_type == 'ppt':
-            old_file = camp.ppt
-            camp.ppt = file
-        else:
-            return JsonResponse({'error': 'Invalid file type'}, status=400)
+        try:
+            if file_type == 'report1':
+                old_file = camp.report1
+                camp.report1 = file
+            elif file_type == 'report2':
+                old_file = camp.report2
+                camp.report2 = file
+            elif file_type == 'photos':
+                old_file = camp.photos
+                camp.photos = file
+            elif file_type == 'ppt':
+                old_file = camp.ppt
+                camp.ppt = file
+            else:
+                return JsonResponse({'error': 'Invalid file type'}, status=400)
 
-        camp.save()
+            camp.save()
 
-        if old_file:
-            default_storage.delete(old_file.name)
-         # Return file URL for immediate update on the frontend
-        return JsonResponse({'message': 'File uploaded successfully', 'file_url': camp._getattribute_(file_type).url}, status=200)
+            # Get file URL after saving and before deleting the old file
+            # Use getattr() to safely access attributes
+            file_field = getattr(camp, file_type, None)  # Get the attribute (e.g., camp.report1)
+            if file_field:  # Check if the file field exists and is not None
+                file_url = file_field.url  # Get the URL
+            else:
+                file_url = None #If not valid file_field, set it to None
+
+            if old_file:
+                if default_storage.exists(old_file.name):
+                    default_storage.delete(old_file.name)
+
+            return JsonResponse({'message': 'File uploaded successfully', 'file_url': file_url}, status=200)
+
+        except Exception as e:
+            print("Error in upload_files view:", e)
+
+            # Delete the newly uploaded file on error
+            if file and hasattr(file, 'name'): # Check the file is defined and has a name
+                try:
+                     if default_storage.exists(file.name): # check if the file exist on server
+                         default_storage.delete(file.name) # delete it
+                except Exception as delete_error:
+                     print("Error deleting the problematic new file", delete_error)
+
+            return JsonResponse({'error': str(e)}, status=500)
+
     else:
         return JsonResponse({"error": "Invalid request method"}, status=400)
-
 def download_file(request):
     if request.method == "GET":
         camp_id = request.GET.get('campId')
@@ -1146,7 +1479,6 @@ def delete_file(request):
 
     return JsonResponse({"error": "Invalid request"}, status=400)
 
-
 @csrf_exempt
 def save_mockdrills(request):
 
@@ -1209,6 +1541,16 @@ from . import models
 
 logger = logging.getLogger(__name__)
 
+import json
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+from . import models
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def create_medical_history(request):
     if request.method == 'POST':
@@ -1218,32 +1560,44 @@ def create_medical_history(request):
             logger.info("Received data: %s", data)  # Log the received data
 
             # Validate required fields
-            required_fields = ['emp_no',  'personalHistory', 'medicalData', 'femaleWorker', 
-                              'surgicalHistory', 'familyHistory', 'healthConditions', 'submissionDetails', 
+            required_fields = ['emp_no',  'personalHistory', 'medicalData', 'femaleWorker',
+                              'surgicalHistory', 'familyHistory', 'healthConditions', 'submissionDetails',
                               'allergyFields', 'allergyComments', 'childrenData', 'conditions']
             for field in required_fields:
                 if field not in data:
                     logger.error("Missing required field: %s", field)
                     return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
 
+            emp_no = data['emp_no']
+            entry_date = datetime.now().date()  # Get the current date
+
             # Create medical history record
-            medical_history = models.MedicalHistory.objects.create(
-                emp_no=data['emp_no'],
-                personal_history=data['personalHistory'],
-                medical_data=data['medicalData'],
-                female_worker=data['femaleWorker'],
-                surgical_history=data['surgicalHistory'],
-                family_history=data['familyHistory'],
-                health_conditions=data['healthConditions'],
-                submission_details=data['submissionDetails'],
-                allergy_fields=data['allergyFields'],
-                allergy_comments=data['allergyComments'],
-                children_data=data['childrenData'],
-                conditions=data['conditions']
+            medical_history, created = models.MedicalHistory.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults={
+                    'personal_history': data['personalHistory'],
+                    'medical_data': data['medicalData'],
+                    'female_worker': data['femaleWorker'],
+                    'surgical_history': data['surgicalHistory'],
+                    'family_history': data['familyHistory'],
+                    'health_conditions': data['healthConditions'],
+                    'submission_details': data['submissionDetails'],
+                    'allergy_fields': data['allergyFields'],
+                    'allergy_comments': data['allergyComments'],
+                    'children_data': data['childrenData'],
+                    'conditions': data['conditions']
+                }
             )
 
-            logger.info("Medical history created successfully for emp_no: %s", data['emp_no'])
-            return JsonResponse({"message": "Medical history created successfully"}, status=201)
+            if created:
+                message = "Medical history created successfully"
+            else:
+                message = "Medical history updated successfully"
+
+
+            logger.info("Medical history created/updated successfully for emp_no: %s", data['emp_no'])
+            return JsonResponse({"message": message}, status=200)
 
         except json.JSONDecodeError:
             logger.error("Invalid JSON data received")
@@ -1252,7 +1606,7 @@ def create_medical_history(request):
             logger.error("Validation error: %s", str(e))
             return JsonResponse({"error": str(e)}, status=400)
         except Exception as e:
-            logger.error("Error creating medical history: %s", str(e))
+            logger.error("Error creating/updating medical history: %s", str(e))
             return JsonResponse({"error": "An internal server error occurred"}, status=500)
     else:
         return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
@@ -1278,6 +1632,17 @@ def fetchVisitdataAll(request):
         try:
             data = list(models.Dashboard.objects.values())
             return JsonResponse({"message": "Visit data fetched successfully", "data":data}, status=200)
+        except Exception as e:
+            return JsonResponse({"error": "Invalid request"}, status=400)
+    else:
+        return JsonResponse({"error": "Invalid request"}, status=500)
+    
+@csrf_exempt
+def fetchFitnessData(request):
+    if request.method == "POST":
+        try:
+            data = list(models.FitnessAssessment.objects.values())
+            return JsonResponse({"message": "Fitness data fetched successfully", "data":data}, status=200)
         except Exception as e:
             return JsonResponse({"error": "Invalid request"}, status=400)
     else:
@@ -1381,9 +1746,14 @@ def add_consultation(request):
         try:
             data = json.loads(request.body.decode('utf-8'))  # Decode byte string
             print(data)  # Debugging: Print received data to console
+            
+            emp_no = data.get('emp_no')
+            entry_date = datetime.now().date()
+
+            if not emp_no:
+                return JsonResponse({'status': 'error', 'message': 'Employee number is required'}, status=400)
 
             # Extract all fields from the request data
-            emp_no = data.get('emp_no')
             complaints = data.get('complaints')
             diagnosis = data.get('diagnosis')
             notifiable_remarks = data.get('notifiable_remarks')
@@ -1401,30 +1771,33 @@ def add_consultation(request):
             follow_up_date = data.get('follow_up_date')
             speaciality = data.get('speaciality')
 
-            
-            # Create and save the Consultation object
-            consultation = models.Consultation.objects.create(
+
+            consultation, created = models.Consultation.objects.update_or_create(
                 emp_no=emp_no,
-                complaints=complaints,
-                diagnosis=diagnosis,
-                notifiable_remarks=notifiable_remarks,
-                examination=examination,
-                lexamination=lexamination,
-                obsnotes=obsnotes,
-                case_type=case_type,
-                other_case_details=other_case_details,
-                investigation_details=investigation_details,
-                referral=referral,
-                hospital_name=hospital_name,
-                doctor_name=doctor_name,
-                submitted_by_doctor=submitted_by_doctor,
-                submitted_by_nurse=submitted_by_nurse,
-                follow_up_date=follow_up_date,
-                speaciality = speaciality
+                entry_date=entry_date,
+                defaults={
+                    'complaints': complaints,
+                    'diagnosis': diagnosis,
+                    'notifiable_remarks': notifiable_remarks,
+                    'examination': examination,
+                    'lexamination': lexamination,
+                    'obsnotes': obsnotes,
+                    'case_type': case_type,
+                    'other_case_details': other_case_details,
+                    'investigation_details': investigation_details,
+                    'referral': referral,
+                    'hospital_name': hospital_name,
+                    'doctor_name': doctor_name,
+                    'submitted_by_doctor': submitted_by_doctor,
+                    'submitted_by_nurse': submitted_by_nurse,
+                    'follow_up_date': follow_up_date,
+                    'speaciality' : speaciality
+                    }
             )
 
+            message = "Consultation added successfully" if created else "Consultation updated successfully"
             print(f"Consultation saved successfully! ID: {consultation.id}")  # Debugging: Print successful save
-            return JsonResponse({'status': 'success', 'message': 'Consultation saved successfully!', 'consultation_id': consultation.id})  # Return a JSON message to indicate success, include the ID
+            return JsonResponse({'status': 'success', 'message': message, 'consultation_id': consultation.id})  # Return a JSON message to indicate success, include the ID
 
         except json.JSONDecodeError as e:
             print(f"JSONDecodeError: {str(e)}")

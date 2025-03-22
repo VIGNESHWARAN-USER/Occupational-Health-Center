@@ -18,6 +18,10 @@ class user(BaseModel):
     
 
 class employee_details(BaseModel):
+    type = models.TextField(max_length=255)  
+    type_of_visit = models.TextField(max_length=255) 
+    register = models.TextField(max_length=255)
+    purpose = models.TextField(max_length=255)
     name = models.TextField(max_length=225)
     dob = models.TextField(max_length=225)
     sex = models.TextField(max_length=225)
@@ -132,6 +136,7 @@ class eventsandcamps(BaseModel):
     camp_name = models.TextField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
+    hospital_name = models.TextField(max_length=255)
     camp_details = models.TextField(max_length=225)
     camp_type = models.TextField(max_length=100, default="Upcoming")
     report1 = models.FileField(upload_to='camp_reports/', blank=True, null=True)
@@ -907,7 +912,7 @@ class FitnessAssessment(BaseModel):
     job_nature = models.JSONField(blank=True, null=True)
     overall_fitness = models.TextField()
     comments = models.TextField(blank=True, null=True)
-
+    employer = models.TextField(blank=True, null=True)
     def _str_(self):
         return f"Fitness Assessment for {self.emp_no.emp_no} - {self.overall_fitness}"
 

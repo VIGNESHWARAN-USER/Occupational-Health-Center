@@ -12,6 +12,7 @@ const FitnessPage = ({ data }) => {
     acrophobia: "",
     trendelenberg_test: "",
   });
+  const [comments, setComments] = useState("");
 
   useEffect(() => {
     if (data && data[0] && data[0].fitnessassessment) {
@@ -33,6 +34,7 @@ const FitnessPage = ({ data }) => {
       }
       setConditionalOptions(assessmentData.conditional_fit_feilds || []);
       setOverallFitness(assessmentData.overall_fitness || "");
+      setComments(assessmentData.comments || ""); // Load Existing Comments
     }
   }, [data]);
 
@@ -66,6 +68,10 @@ const FitnessPage = ({ data }) => {
     setConditionalOptions(conditionalOptions.filter((option) => option !== value));
   };
 
+  const handleCommentsChange = (e) => {
+    setComments(e.target.value);
+  };
+
   const handleSubmit = async () => {
     const today = new Date();
     const validityDate = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
@@ -73,12 +79,13 @@ const FitnessPage = ({ data }) => {
 
     const payload = {
       emp_no: data[0]?.emp_no,
+      employer: data[0]?.role,
       ...formData,
       job_nature: JSON.stringify(selectedOptions),  // Stringify this!
       overall_fitness: overallFitness,
       conditional_fit_feilds: conditionalOptions,
       validity: validityDateString,
-      comments: "",
+      comments: comments, // Include Comments
     };
 
     try {
@@ -95,6 +102,7 @@ const FitnessPage = ({ data }) => {
       setSelectedOptions([]);
       setConditionalOptions([]);
       setOverallFitness("");
+      setComments("");  //Clear Comments after submission
     } catch (error) {
       alert(error.message);
     }
@@ -159,54 +167,68 @@ const FitnessPage = ({ data }) => {
         </div>
 
         {accessLevel === "doctor" && (
-          <div className="mt-4">
-            <label className="block text-gray-700 text-sm font-semibold mb-1">Overall Fitness</label>
-            <select
-              className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
-              onChange={handleOverallFitnessChange}
-              value={overallFitness}
-            >
-              <option value="" disabled>Select an option</option>
-              <option value="fit">Fit</option>
-              <option value="unfit">Unfit</option>
-              <option value="conditional">Conditional Fit</option>
-            </select>
-          </div>
-        )}
-
-        {/* Conditional Fit Options */}
-        {accessLevel === "doctor" && overallFitness === "conditional" && (
-          <div className="mt-4">
-            <h2 className="text-lg font-semibold mb-4">Fit For (Select Multiple Options)</h2>
-            <select
-              className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
-              onChange={handleConditionalSelectChange}
-            >
-              <option value="" disabled>-- Select an option --</option>
-              {allOptions.map((option, index) => (
-                <option key={index} value={option} disabled={conditionalOptions.includes(option)}>
-                  {option}
-                </option>
-              ))}
-            </select>
-
-            {/* Selected options in a single row */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {conditionalOptions.length > 0 ? (
-                conditionalOptions.map((option, index) => (
-                  <div key={index} className="flex items-center p-2 border border-gray-300 rounded-md bg-gray-100">
-                    <span className="mr-2">{option}</span>
-                    <button className="text-red-500 hover:underline" onClick={() => handleRemoveConditionalSelected(option)}>
-                      ✖
-                    </button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No options selected.</p>
-              )}
+          <>
+            <div className="mt-4">
+              <label className="block text-gray-700 text-sm font-semibold mb-1">Overall Fitness</label>
+              <select
+                className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
+                onChange={handleOverallFitnessChange}
+                value={overallFitness}
+              >
+                <option value="" disabled>Select an option</option>
+                <option value="fit">Fit</option>
+                <option value="unfit">Unfit</option>
+                <option value="conditional">Conditional Fit</option>
+              </select>
             </div>
-          </div>
+
+            {overallFitness === "conditional" && (
+              <div className="mt-4">
+                <h2 className="text-lg font-semibold mb-4">Fit For (Select Multiple Options)</h2>
+                <select
+                  className="form-select block w-full p-3 border border-gray-300 rounded-md shadow-sm"
+                  onChange={handleConditionalSelectChange}
+                >
+                  <option value="" disabled>-- Select an option --</option>
+                  {allOptions.map((option, index) => (
+                    <option key={index} value={option} disabled={conditionalOptions.includes(option)}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Selected options in a single row */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {conditionalOptions.length > 0 ? (
+                    conditionalOptions.map((option, index) => (
+                      <div key={index} className="flex items-center p-2 border border-gray-300 rounded-md bg-gray-100">
+                        <span className="mr-2">{option}</span>
+                        <button className="text-red-500 hover:underline" onClick={() => handleRemoveConditionalSelected(option)}>
+                          ✖
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No options selected.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="mt-4">
+              <label htmlFor="comments" className="block text-gray-700 text-sm font-semibold mb-1">
+                Comments
+              </label>
+              <textarea
+                id="comments"
+                className="form-textarea block w-full p-3 border border-gray-300 rounded-md shadow-sm"
+                rows="3"
+                value={comments}
+                onChange={handleCommentsChange}
+              ></textarea>
+            </div>
+          </>
         )}
+
 
         {/* Submit Button */}
         <div className="absolute bottom-6 right-6">

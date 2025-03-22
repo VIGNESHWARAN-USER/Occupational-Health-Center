@@ -1,35 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from "./Sidebar";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
-import moment from 'moment'; // Import moment
+import moment from 'moment';
 
-// Animation variants for charts
-const chartVariants = {
-    initial: { opacity: 0, y: 50 },
-    animate: {
-        opacity: 1,
-        y: 0,
-        transition: {
-            duration: 0.5,
-            delayChildren: 0.2,
-            staggerChildren: 0.1
-        }
-    },
-    exit: {
-        opacity: 0,
-        y: 50,
-        transition: { duration: 0.3 }
-    }
-};
+// Animation variants (same as before)
+const chartVariants = { /* ... */ };
 
-// Animation variants for individual bars
-const barVariants = {
-    initial: { scaleY: 0 },
-    animate: { scaleY: 1, transition: { duration: 0.4, ease: "easeOut" } },
-    exit: { scaleY: 0, transition: { duration: 0.3, ease: "easeIn" } }
-};
+const renderCustomizedLabel = (props) => { /* ... */ };
 
 const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
     return (
@@ -39,7 +18,7 @@ const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
             initial="initial"
             animate="animate"
             exit="exit"
-            style={{ display: visible ? 'block' : 'none' }}  // Important for AnimatePresence
+            style={{ display: visible ? 'block' : 'none' }}
         >
             <h4 className="text-lg font-semibold text-gray-800 mb-3">{title}</h4>
             <ResponsiveContainer width="100%" height={300}>
@@ -52,9 +31,7 @@ const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
                     <Bar
                         dataKey="count"
                         fill={color}
-                        label={{ position: 'top' }}
-                        // Apply bar-specific animation
-                        // Can't use variants directly on <Bar>, so do it with style
+                        label={<LabelList dataKey="count" content={renderCustomizedLabel} position="top" />}
                         style={{ scaleY: 1 }}
                     />
                 </BarChart>
@@ -63,22 +40,22 @@ const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
     );
 };
 
+const footFallOptions = [
+    { value: "", label: "Select Footfall Type" },
+    { value: "Employee", label: "Employee" },
+    { value: "Contractor", label: "Contractor" },
+    { value: "Employee+Contractor", label: "Employee + Contractor"}, // ADDED
+    { value: "Visitor", label: "Visitor" },
+    { value: "Total", label: "Total (Employee + Contractor + Visitor)" },
+    { value: "Fitness", label: "Fitness" }
+];
 
 const OverAllFootFallDropdown = ({ value, onChange }) => {
-    const variants = {
-        hidden: { opacity: 0, y: 50 },
-        visible: {
-            opacity: 1,
-            y: 0,
-            transition: {
-                duration: 0.5,
-            },
-        },
-    };
+    const variants = { /* ... */ };
 
     return (
         <motion.div
-            className="mb-4 w-4/6"
+            className="mb-4 w-full md:w-4/6"
             variants={variants}
             initial="hidden"
             animate="visible"
@@ -89,12 +66,11 @@ const OverAllFootFallDropdown = ({ value, onChange }) => {
                 onChange={onChange}
                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             >
-                <option value="">Select Footfall Type</option>
-                <option value="Total">Total (Employee + Contractor + Visitor)</option>
-                <option value="Employee">Employee</option>
-                <option value="Contractor">Contractor</option>
-                <option value="Employee+Contractor">Employee + Contractor</option>
-                <option value="Visitor">Visitor</option>
+                {footFallOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
             </select>
         </motion.div>
     );
@@ -107,61 +83,84 @@ const App = () => {
     const [selectedBar, setSelectedBar] = useState(null);
     const [selectedSubBar, setSelectedSubBar] = useState(null);
     const [overAllFootFall, setOverAllFootFall] = useState("");
-    const [fromDate, setFromDate] = useState(''); // State for "From" date
-    const [toDate, setToDate] = useState(''); // State for "To" date
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [visitData, setVisitData] = useState([]);
-    const [currentChartLevel, setCurrentChartLevel] = useState(1); // 1: main, 2: sub, 3: detail
+    const [currentChartLevel, setCurrentChartLevel] = useState(1);
     const [originalVisitData, setOriginalVisitData] = useState([]);
+    const [fitnessChartData, setFitnessChartData] = useState([]);
+    const [originalFitnessData, setOriginalFitnessData] = useState([]);  // Store original fitness data
+    const [fitnessVisitData, setFitnessVisitData] = useState([]);
+    const [userFilters, setUserFilters] = useState({});
+
+    // User Filter Reference (same as before)
+    const userFiltersReference = { /* ... */ };
+
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchFitnessData = async () => {
+            try {
+                const resp = await axios.post("https://occupational-health-center-1.onrender.com/fitnessData/");
+                console.log("Fitness data:", resp.data.data);
+                setFitnessVisitData(resp.data.data);
+                setOriginalFitnessData(resp.data.data);
+            } catch (error) {
+                console.error("Error fetching fitness data:", error);
+            }
+        };
+
+        const fetchVisitData = async () => {
             try {
                 const resp = await axios.post("https://occupational-health-center-1.onrender.com/visitData/");
-                console.log(resp.data);
-                setVisitData(resp.data.data); // Store the fetched data in state
-                setOriginalVisitData(resp.data.data); // Store the original data for resetting filters
+                console.log("Visit data:", resp.data.data);
+                setVisitData(resp.data.data);
+                setOriginalVisitData(resp.data.data);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
         };
 
-        fetchData();
-
+        fetchFitnessData();
+        fetchVisitData();
     }, []);
 
+
     const handleOverAllFootFallChange = (event) => {
-        setOverAllFootFall(event.target.value);
+        const selectedValue = event.target.value;
+        setOverAllFootFall(selectedValue);
         setSelectedBar(null);
         setSelectedSubBar(null);
         setSecondBarChartData([]);
         setThirdBarChartData([]);
-        setCurrentChartLevel(1);  // Reset to the main chart
+        setCurrentChartLevel(1);
+        setFitnessChartData([]);
+        setUserFilters(userFiltersReference[selectedValue] || {});
     };
 
     const handleBarClick = (event) => {
         if (event && event.activePayload && event.activePayload[0]) {
-            setSelectedBar(event.activePayload[0].payload.name);
+            const clickedBarName = event.activePayload[0].payload.name;
+            setSelectedBar(clickedBarName);
             setSelectedSubBar(null);
             setSecondBarChartData([]);
             setThirdBarChartData([]);
-            setCurrentChartLevel(2); // Move to sub chart
+            setCurrentChartLevel(2);
         }
     };
 
     const handleSubBarClick = (event) => {
         if (event && event.activePayload && event.activePayload[0]) {
-            setSelectedSubBar(event.activePayload[0].payload.name);
-            setCurrentChartLevel(3); // Move to detail chart
+            const clickedBarName = event.activePayload[0].payload.name;
+            setSelectedSubBar(clickedBarName);
+            setCurrentChartLevel(3);
         }
     };
-
 
     const goBack = () => {
         if (currentChartLevel === 2) {
             setCurrentChartLevel(1);
             setSelectedBar(null);
             setSecondBarChartData([]);
-
         } else if (currentChartLevel === 3) {
             setCurrentChartLevel(2);
             setSelectedSubBar(null);
@@ -169,134 +168,192 @@ const App = () => {
         }
     };
 
-    useEffect(() => {
-        if (!visitData || visitData.length === 0) {
-            return;
-        }
-
-        let mainData = [];
-
-        if (overAllFootFall) {
-            let filteredData = visitData;
-
-            if (overAllFootFall !== "Total") {
-                filteredData = visitData.filter(item => item.type === overAllFootFall);
-            }
-            console.log("Filtered data:", filteredData);
-
-            const preventiveCount = filteredData.filter(item => item.type_of_visit === "Preventive").length;
-            const curativeCount = filteredData.filter(item => item.type_of_visit === "Curative").length;
-
-            mainData = [
-                { name: 'Preventive', count: preventiveCount },
-                { name: 'Curative', count: curativeCount },
-            ];
-        }
-        setBarChartData(mainData);
-
-    }, [overAllFootFall, visitData]);
-
-    useEffect(() => {
-        if (!visitData || visitData.length === 0) {
-            return;
-        }
-
-        let detailData = [];
-
-        if (selectedBar) {
-            let filteredData = visitData;
-
-            if (overAllFootFall !== "Total") {
-                filteredData = visitData.filter(item => item.type === overAllFootFall);
-            }
-
-            let subFilteredData;
-
-            if (selectedBar === "Preventive") {
-                subFilteredData = filteredData.filter(item => item.type_of_visit === "Preventive");
-            } else if (selectedBar === "Curative") {
-                subFilteredData = filteredData.filter(item => item.type_of_visit === "Curative");
-            }
-
-            if (subFilteredData) {
-                // Group by purpose or register based on what's relevant
-                const groupedData = {};
-                subFilteredData.forEach(item => {
-                    const key = item.purpose || item.register; // Use 'purpose' if available, otherwise 'register'
-
-                    if (groupedData[key]) {
-                        groupedData[key]++;
-                    } else {
-                        groupedData[key] = 1;
-                    }
-                });
-
-                detailData = Object.keys(groupedData).map(key => ({
-                    name: key,
-                    count: groupedData[key],
-                }));
-            }
-        }
-        setSecondBarChartData(detailData);
-
-    }, [selectedBar, overAllFootFall, visitData]);
-
-    useEffect(() => {
-        let thirdData = [];
-
-        if (selectedSubBar) {
-            const filteredVisitData = visitData.filter(item => item.purpose === selectedSubBar || item.register === selectedSubBar);
-
-            // Group by register or other relevant field for the third chart
-            const groupedData = {};
-            filteredVisitData.forEach(item => {
-                const key = item.register || item.date; // Group by date or any other relevant field
-                if (groupedData[key]) {
-                    groupedData[key]++;
-                } else {
-                    groupedData[key] = 1;
-                }
-            });
-
-            thirdData = Object.keys(groupedData).map(key => ({
-                name: key,
-                count: groupedData[key],
-            }));
-        }
-
-        setThirdBarChartData(thirdData);
-    }, [selectedSubBar, visitData]);
-
-
     const fetchChartData = () => {
         if (!fromDate || !toDate) {
             alert("Please select both 'From' and 'To' dates.");
             return;
         }
 
-        // Filter the originalVisitData based on the date range
-        const filteredData = originalVisitData.filter(item => {
-            const visitDate = moment(item.date); // Assuming 'date' field is in a recognizable format
-            const from = moment(fromDate);
-            const to = moment(toDate);
+        const from = moment(fromDate);
+        const to = moment(toDate);
+
+        const filteredVisitData = originalVisitData.filter(item => {
+            const visitDate = moment(item.date);
             return visitDate.isSameOrAfter(from, 'day') && visitDate.isSameOrBefore(to, 'day');
         });
+        setVisitData(filteredVisitData);
 
-        setVisitData(filteredData);
+        const filteredFitnessData = originalFitnessData.filter(item => {
+            const entryDate = moment(item.entry_date);
+            return entryDate.isSameOrAfter(from, 'day') && entryDate.isSameOrBefore(to, 'day');
+        });
+        setFitnessVisitData(filteredFitnessData);
     };
 
     const clearDateFilter = () => {
         setFromDate('');
         setToDate('');
-        setVisitData(originalVisitData); // Reset to original data
+        setVisitData(originalVisitData);
+        setFitnessVisitData(originalFitnessData);
     };
 
+    useEffect(() => {
+        if (!visitData || overAllFootFall === "Fitness") {
+            setBarChartData([]);
+            return;
+        }
+
+        let mainData = [];
+        let filteredData = visitData;
+
+        // Add the Employee+Contractor option
+        if (overAllFootFall === "Employee+Contractor") {
+            filteredData = visitData.filter(item => item.type === "Employee" || item.type === "Contractor");
+        } else if (overAllFootFall !== "Total" && overAllFootFall !== "") {
+            filteredData = visitData.filter(item => item.type === overAllFootFall);
+        }
+
+        // LEVEL 1 Chart: type_of_visit Breakdown
+        const groupedData = {};
+        filteredData.forEach(item => {
+            const key = item.type_of_visit;
+            if (groupedData[key]) {
+                groupedData[key]++;
+            } else {
+                groupedData[key] = 1;
+            }
+        });
+        mainData = Object.keys(groupedData).map(key => ({
+            name: key,
+            count: groupedData[key],
+        }));
+        setBarChartData(mainData);
+    }, [overAllFootFall, visitData]);
+
+    useEffect(() => {
+        // Level 2 Chart: Purpose Breakdown based on selected type_of_visit
+        if (!visitData || overAllFootFall === "Fitness") {
+            setSecondBarChartData([]);
+            return;
+        }
+
+        let detailData = [];
+        if (selectedBar) {
+            let filteredData = visitData;
+
+            if (overAllFootFall === "Employee+Contractor") {
+                filteredData = visitData.filter(item => item.type === "Employee" || item.type === "Contractor");
+            }  else if (overAllFootFall !== "Total" && overAllFootFall !== "") {
+                 filteredData = visitData.filter(item => item.type === overAllFootFall);
+             }
+
+            const subFilteredData = filteredData.filter(item => item.type_of_visit === selectedBar);
+
+            const groupedData = {};
+            subFilteredData.forEach(item => {
+                const key = item.purpose;
+                if (groupedData[key]) {
+                    groupedData[key]++;
+                } else {
+                    groupedData[key] = 1;
+                }
+            });
+            detailData = Object.keys(groupedData).map(key => ({
+                name: key,
+                count: groupedData[key],
+            }));
+        }
+        setSecondBarChartData(detailData);
+    }, [selectedBar, overAllFootFall, visitData]);
+
+    useEffect(() => {
+        // Level 3 Chart: Register Breakdown based on selected Purpose
+        let thirdData = [];
+        if (selectedSubBar) {
+            const filteredVisitData = visitData.filter(item => item.purpose === selectedSubBar);
+            const groupedData = {};
+            filteredVisitData.forEach(item => {
+                const key = item.register;
+                if (groupedData[key]) {
+                    groupedData[key]++;
+                } else {
+                    groupedData[key] = 1;
+                }
+            });
+            thirdData = Object.keys(groupedData).map(key => ({
+                name: key,
+                count: groupedData[key],
+            }));
+        }
+        setThirdBarChartData(thirdData);
+    }, [selectedSubBar, visitData]);
+
+    useEffect(() => {
+        // Level 1 Fitness Data
+        if (overAllFootFall === "Fitness") {
+            if (!fitnessVisitData) {
+                return;
+            }
+            const fitnessData = [
+                { name: 'TotalFitness', count: fitnessVisitData.length },
+                { name: 'Employee', count: fitnessVisitData.filter(item => item.employer === "Employee").length },
+                { name: 'Contractor', count: fitnessVisitData.filter(item => item.employer === "Contractor").length },
+                { name: 'Employee+Contractor', count: fitnessVisitData.filter(item => item.employer === "Employee+Contractor").length },
+                { name: 'Visitor', count: fitnessVisitData.filter(item => item.employer === "Visitor").length },
+            ];
+            setFitnessChartData(fitnessData);
+        }
+        else {
+            setFitnessChartData([]);
+        }
+    }, [overAllFootFall, fitnessVisitData]);
+
+    useEffect(() => {
+        // Level 2 Fitness data Detail chart for fit, unfit and conditional (including Pending)
+        if (overAllFootFall === "Fitness" && selectedBar) {
+            let fitnessDetailData = [];
+
+            let filteredFitnessData = [];
+            switch (selectedBar) {
+                case 'TotalFitness':
+                    filteredFitnessData = fitnessVisitData;
+                    break;
+                case 'Employee':
+                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Employee");
+                    break;
+                case 'Contractor':
+                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Contractor");
+                    break;
+                case 'Employee+Contractor':
+                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Employee" || item.employer === "Contractor");
+                    break;
+                case 'Visitor':
+                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Visitor");
+                    break;
+                default:
+                    filteredFitnessData = [];
+            }
+
+            const fitCount = filteredFitnessData.filter(item => item.overall_fitness === "fit").length;
+            const unfitCount = filteredFitnessData.filter(item => item.overall_fitness === "unfit").length;
+            const conditionalCount = filteredFitnessData.filter(item => item.overall_fitness === "conditional").length;
+            const pendingCount = filteredFitnessData.filter(item => !item.overall_fitness).length; //Count empty data
+
+            fitnessDetailData = [
+                { name: 'Fit', count: fitCount },
+                { name: 'Unfit', count: unfitCount },
+                { name: 'Conditional Fit', count: conditionalCount },
+                 { name: 'Pending', count: pendingCount } // Add the pending
+            ];
+
+            setSecondBarChartData(fitnessDetailData);
+        }
+    }, [overAllFootFall, selectedBar, fitnessVisitData]);
 
     return (
-        <div className="h-screen flex bg-[#8fcadd]">
+        <div className="min-h-screen flex bg-[#8fcadd]">
             <Sidebar />
             <div className="flex-1 p-4 overflow-y-auto">
-                {/* Header with Filters */}
                 <motion.div
                     className="bg-white p-6 rounded-lg shadow-md mb-6"
                     initial={{ opacity: 0, y: -20 }}
@@ -305,7 +362,7 @@ const App = () => {
                 >
                     <h2 className="text-2xl font-semibold mb-4">Dashboard Statistics</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        <div>
+                        <div className="w-full">
                             <label htmlFor="fromDate" className="block text-gray-700 text-sm font-bold mb-2">From Date:</label>
                             <input
                                 type="date"
@@ -315,7 +372,7 @@ const App = () => {
                                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                             />
                         </div>
-                        <div>
+                        <div className="w-full">
                             <label htmlFor="toDate" className="block text-gray-700 text-sm font-bold mb-2">To Date:</label>
                             <input
                                 type="date"
@@ -325,7 +382,7 @@ const App = () => {
                                 className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                             />
                         </div>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end w-full">
                             <button
                                 className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2"
                                 type="button"
@@ -345,24 +402,22 @@ const App = () => {
                 </motion.div>
 
                 <div className="bg-white rounded-lg shadow-md p-6">
-                    <div className='flex gap-4'>
-                    <h2 className="text-2xl font-semibold mb-4">Footfall Analysis</h2>
-
-                    <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
+                    <div className='flex flex-col md:flex-row gap-4 items-start md:items-center'>
+                        <h2 className="text-2xl font-semibold mb-4">Footfall Analysis</h2>
+                        <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
                         <button
-                        disabled={currentChartLevel === 1}
+                            disabled={currentChartLevel === 1}
                             className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mb-4"
                             onClick={goBack}
                         >
                             Back
                         </button>
                     </div>
-                    
 
-                    <AnimatePresence mode="wait" >
-                        {currentChartLevel === 1 && (
+                    <AnimatePresence mode="wait">
+                        {overAllFootFall !== "Fitness" && currentChartLevel === 1 && (
                             <MyBarChart
-                                key="chart1"  // Key for AnimatePresence
+                                key="chart1"
                                 title="Overall Data Distribution"
                                 data={barChartData}
                                 color="#3182CE"
@@ -371,24 +426,34 @@ const App = () => {
                             />
                         )}
 
-                        {currentChartLevel === 2 && (
+                        {overAllFootFall === "Fitness" && currentChartLevel === 1 && (
                             <MyBarChart
-                                key="chart2"  // Key for AnimatePresence
-                                title="Subdivision Details"
-                                data={secondBarChartData}
-                                color="#82ca9d"
-                                onItemClick={handleSubBarClick}
-                                visible={currentChartLevel === 2 && secondBarChartData.length > 0}
+                                key="fitnessChart"
+                                title="Fitness Category Breakdown"
+                                data={fitnessChartData}
+                                color="#6B46C1"
+                                onItemClick={handleBarClick}
+                                visible={overAllFootFall === "Fitness" && currentChartLevel === 1}
                             />
                         )}
 
+                        {currentChartLevel === 2 && (
+                            <MyBarChart
+                                key="fitnessDetailChart"
+                                title={`Breakdown by Purpose (${selectedBar})`}
+                                data={secondBarChartData}
+                                color="#82ca9d"
+                                onItemClick={handleSubBarClick}
+                                visible={currentChartLevel === 2}
+                            />
+                        )}
                         {currentChartLevel === 3 && (
                             <MyBarChart
-                                key="chart3"  // Key for AnimatePresence
-                                title="Detailed Analysis"
+                                key="thirdHierarchy"
+                                title={`Breakdown by Register (${selectedSubBar})`}
                                 data={thirdBarChartData}
-                                color="#E53E3E"
-                                visible={currentChartLevel === 3 && thirdBarChartData.length > 0}
+                                color="#a855f7"
+                                visible={currentChartLevel === 3}
                             />
                         )}
                     </AnimatePresence>
