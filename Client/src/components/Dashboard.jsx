@@ -321,8 +321,11 @@ const App = () => {
     useEffect(() => {
         // Level 3 Chart: Register Breakdown based on selected Purpose
         let thirdData = [];
-        if (selectedSubBar) {
-            const filteredVisitData = visitData.filter(item => item.purpose === selectedSubBar);
+        if (selectedSubBar && selectedBar) { // Ensure both are selected
+            const filteredVisitData = visitData.filter(item => 
+                item.purpose === selectedSubBar && item.type_of_visit === selectedBar
+            );
+
             const groupedData = {};
             filteredVisitData.forEach(item => {
                 const key = item.register;
@@ -338,7 +341,7 @@ const App = () => {
             }));
         }
         setThirdBarChartData(thirdData);
-    }, [selectedSubBar, visitData]);
+    }, [selectedSubBar, selectedBar, visitData]); // Add selectedBar to dependency array
 
     useEffect(() => {
         // Process and update fitness data for Clustered Bar Chart
