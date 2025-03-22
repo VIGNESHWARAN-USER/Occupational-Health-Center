@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fortawesome/free-regular-svg-icons": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.4.3",
@@ -22,6 +25,7 @@
     "react-router-dom": "^7.1.1",
     "react-select": "^5.10.1",
     "react-spinners": "^0.15.0",
+    "react-switch": "^7.1.0",
     "recharts": "^2.15.1",
     "xlsx": "^0.18.5"
   },

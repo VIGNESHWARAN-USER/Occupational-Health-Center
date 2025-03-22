@@ -1,14 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from "./Sidebar";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ResponsiveContainer,
+    LabelList,
+    Brush
+} from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import moment from 'moment';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartBar, faHeartbeat } from '@fortawesome/free-solid-svg-icons';
+import { faCalendar } from '@fortawesome/free-regular-svg-icons';
 
 // Animation variants (same as before)
-const chartVariants = { /* ... */ };
+const chartVariants = {
+    initial: {
+        opacity: 0,
+        y: 20,
+    },
+    animate: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            duration: 0.3,
+        },
+    },
+    exit: {
+        opacity: 0,
+        y: 20,
+        transition: {
+            duration: 0.2,
+        },
+    },
+};
 
-const renderCustomizedLabel = (props) => { /* ... */ };
+const renderCustomizedLabel = (props) => {
+    const { x, y, width, height, value } = props;
+    const radius = 10;
+
+    return (
+        <g>
+            <text
+                x={x + width / 2}
+                y={y - radius}
+                fill="#444"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="0.8em"  // Adjust font size for labels
+            >
+                {value}
+            </text>
+        </g>
+    );
+};
 
 const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
     return (
@@ -22,20 +73,16 @@ const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
         >
             <h4 className="text-lg font-semibold text-gray-800 mb-3">{title}</h4>
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data} onClick={onItemClick}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar
-                        dataKey="count"
-                        fill={color}
-                        label={<LabelList dataKey="count" content={renderCustomizedLabel} position="top" />}
-                        style={{ scaleY: 1 }}
-                    />
-                </BarChart>
-            </ResponsiveContainer>
+    <BarChart data={data} onClick={onItemClick}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Legend />
+        <Bar dataKey="count" fill={color} isAnimationActive={false}>
+            <LabelList dataKey="count" content={renderCustomizedLabel} />
+        </Bar>
+    </BarChart>
+</ResponsiveContainer>
         </motion.div>
     );
 };
@@ -44,18 +91,20 @@ const footFallOptions = [
     { value: "", label: "Select Footfall Type" },
     { value: "Employee", label: "Employee" },
     { value: "Contractor", label: "Contractor" },
-    { value: "Employee+Contractor", label: "Employee + Contractor"}, // ADDED
+    { value: "Employee+Contractor", label: "Employee + Contractor" },
     { value: "Visitor", label: "Visitor" },
-    { value: "Total", label: "Total (Employee + Contractor + Visitor)" },
-    { value: "Fitness", label: "Fitness" }
+    { value: "Total", label: "Total (Employee + Contractor + Visitor)" }
 ];
 
 const OverAllFootFallDropdown = ({ value, onChange }) => {
-    const variants = { /* ... */ };
+    const variants = {
+        hidden: { opacity: 0, x: -20 },
+        visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+    };
 
     return (
         <motion.div
-            className="mb-4 w-full md:w-4/6"
+            className="mb-4 w-full md:w-1/3"
             variants={variants}
             initial="hidden"
             animate="visible"
@@ -88,15 +137,16 @@ const App = () => {
     const [visitData, setVisitData] = useState([]);
     const [currentChartLevel, setCurrentChartLevel] = useState(1);
     const [originalVisitData, setOriginalVisitData] = useState([]);
+
+    // Fitness Analysis State
     const [fitnessChartData, setFitnessChartData] = useState([]);
-    const [originalFitnessData, setOriginalFitnessData] = useState([]);  // Store original fitness data
+    const [originalFitnessData, setOriginalFitnessData] = useState([]);
     const [fitnessVisitData, setFitnessVisitData] = useState([]);
-    const [userFilters, setUserFilters] = useState({});
 
-    // User Filter Reference (same as before)
-    const userFiltersReference = { /* ... */ };
+    // Display Toggle State
+    const [activeAnalysis, setActiveAnalysis] = useState("footfall");  // 'footfall' or 'fitness'
 
-
+    // API calls,  visitData set to https://occupational-health-center-1.onrender.com/visitData/
     useEffect(() => {
         const fetchFitnessData = async () => {
             try {
@@ -124,7 +174,6 @@ const App = () => {
         fetchVisitData();
     }, []);
 
-
     const handleOverAllFootFallChange = (event) => {
         const selectedValue = event.target.value;
         setOverAllFootFall(selectedValue);
@@ -133,8 +182,7 @@ const App = () => {
         setSecondBarChartData([]);
         setThirdBarChartData([]);
         setCurrentChartLevel(1);
-        setFitnessChartData([]);
-        setUserFilters(userFiltersReference[selectedValue] || {});
+
     };
 
     const handleBarClick = (event) => {
@@ -183,6 +231,7 @@ const App = () => {
         });
         setVisitData(filteredVisitData);
 
+        // Apply date filter to fitness data as well
         const filteredFitnessData = originalFitnessData.filter(item => {
             const entryDate = moment(item.entry_date);
             return entryDate.isSameOrAfter(from, 'day') && entryDate.isSameOrBefore(to, 'day');
@@ -198,7 +247,8 @@ const App = () => {
     };
 
     useEffect(() => {
-        if (!visitData || overAllFootFall === "Fitness") {
+        // Visit Data Processing (Level 1)
+        if (!visitData) {
             setBarChartData([]);
             return;
         }
@@ -206,14 +256,16 @@ const App = () => {
         let mainData = [];
         let filteredData = visitData;
 
-        // Add the Employee+Contractor option
+        // Apply dropdown filter (e.g., Employee, Contractor)
         if (overAllFootFall === "Employee+Contractor") {
             filteredData = visitData.filter(item => item.type === "Employee" || item.type === "Contractor");
-        } else if (overAllFootFall !== "Total" && overAllFootFall !== "") {
+        } else if (overAllFootFall && overAllFootFall !== "Total") {
             filteredData = visitData.filter(item => item.type === overAllFootFall);
         }
+        else if (overAllFootFall === "Total") {
+            filteredData = visitData; //No filter needed
+        }
 
-        // LEVEL 1 Chart: type_of_visit Breakdown
         const groupedData = {};
         filteredData.forEach(item => {
             const key = item.type_of_visit;
@@ -223,16 +275,18 @@ const App = () => {
                 groupedData[key] = 1;
             }
         });
+
         mainData = Object.keys(groupedData).map(key => ({
             name: key,
             count: groupedData[key],
         }));
+
         setBarChartData(mainData);
     }, [overAllFootFall, visitData]);
 
     useEffect(() => {
         // Level 2 Chart: Purpose Breakdown based on selected type_of_visit
-        if (!visitData || overAllFootFall === "Fitness") {
+        if (!visitData) {
             setSecondBarChartData([]);
             return;
         }
@@ -240,13 +294,11 @@ const App = () => {
         let detailData = [];
         if (selectedBar) {
             let filteredData = visitData;
-
             if (overAllFootFall === "Employee+Contractor") {
                 filteredData = visitData.filter(item => item.type === "Employee" || item.type === "Contractor");
-            }  else if (overAllFootFall !== "Total" && overAllFootFall !== "") {
-                 filteredData = visitData.filter(item => item.type === overAllFootFall);
-             }
-
+            } else if (overAllFootFall && overAllFootFall !== "Total") {
+                filteredData = visitData.filter(item => item.type === overAllFootFall);
+            }
             const subFilteredData = filteredData.filter(item => item.type_of_visit === selectedBar);
 
             const groupedData = {};
@@ -289,78 +341,58 @@ const App = () => {
     }, [selectedSubBar, visitData]);
 
     useEffect(() => {
-        // Level 1 Fitness Data
-        if (overAllFootFall === "Fitness") {
-            if (!fitnessVisitData) {
-                return;
-            }
-            const fitnessData = [
-                { name: 'TotalFitness', count: fitnessVisitData.length },
-                { name: 'Employee', count: fitnessVisitData.filter(item => item.employer === "Employee").length },
-                { name: 'Contractor', count: fitnessVisitData.filter(item => item.employer === "Contractor").length },
-                { name: 'Employee+Contractor', count: fitnessVisitData.filter(item => item.employer === "Employee+Contractor").length },
-                { name: 'Visitor', count: fitnessVisitData.filter(item => item.employer === "Visitor").length },
-            ];
-            setFitnessChartData(fitnessData);
+        // Process and update fitness data for Clustered Bar Chart
+        if (!fitnessVisitData) {
+            return;
         }
-        else {
-            setFitnessChartData([]);
-        }
-    }, [overAllFootFall, fitnessVisitData]);
 
-    useEffect(() => {
-        // Level 2 Fitness data Detail chart for fit, unfit and conditional (including Pending)
-        if (overAllFootFall === "Fitness" && selectedBar) {
-            let fitnessDetailData = [];
+        const employerTypes = ['Overall', 'Employee', 'Contractor', 'Visitor']; // Added 'Overall' at the start
+        //const fitnessCategories = ['Fit', 'Unfit', 'Conditional Fit', 'Pending'];
 
-            let filteredFitnessData = [];
-            switch (selectedBar) {
-                case 'TotalFitness':
-                    filteredFitnessData = fitnessVisitData;
-                    break;
-                case 'Employee':
-                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Employee");
-                    break;
-                case 'Contractor':
-                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Contractor");
-                    break;
-                case 'Employee+Contractor':
-                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Employee" || item.employer === "Contractor");
-                    break;
-                case 'Visitor':
-                    filteredFitnessData = fitnessVisitData.filter(item => item.employer === "Visitor");
-                    break;
-                default:
-                    filteredFitnessData = [];
+        const fitnessData = employerTypes.map(employer => {
+            let filteredData = fitnessVisitData;
+
+            if (employer !== 'Overall') {
+                filteredData = fitnessVisitData.filter(item => item.employer === employer);
             }
 
-            const fitCount = filteredFitnessData.filter(item => item.overall_fitness === "fit").length;
-            const unfitCount = filteredFitnessData.filter(item => item.overall_fitness === "unfit").length;
-            const conditionalCount = filteredFitnessData.filter(item => item.overall_fitness === "conditional").length;
-            const pendingCount = filteredFitnessData.filter(item => !item.overall_fitness).length; //Count empty data
+            const fitCount = filteredData.filter(item => item.overall_fitness === "fit").length;
+            const unfitCount = filteredData.filter(item => item.overall_fitness === "unfit").length;
+            const conditionalCount = filteredData.filter(item => item.overall_fitness === "conditional").length;
+            const pendingCount = filteredData.filter(item => !item.overall_fitness || item.overall_fitness === "").length; //Corrected pending logic
 
-            fitnessDetailData = [
-                { name: 'Fit', count: fitCount },
-                { name: 'Unfit', count: unfitCount },
-                { name: 'Conditional Fit', count: conditionalCount },
-                 { name: 'Pending', count: pendingCount } // Add the pending
-            ];
+            return {
+                name: employer,
+                Fit: fitCount,
+                Unfit: unfitCount,
+                Conditional: conditionalCount,
+                Pending: pendingCount
+            };
+        });
 
-            setSecondBarChartData(fitnessDetailData);
-        }
-    }, [overAllFootFall, selectedBar, fitnessVisitData]);
+        setFitnessChartData(fitnessData);
+    }, [fitnessVisitData]);
+
+    const toggleAnalysis = (analysisType) => {
+        setActiveAnalysis(analysisType);
+    };
 
     return (
         <div className="min-h-screen flex bg-[#8fcadd]">
             <Sidebar />
-            <div className="flex-1 p-4 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto">
+
+                {/* Top Section with Date Filters */}
                 <motion.div
                     className="bg-white p-6 rounded-lg shadow-md mb-6"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <h2 className="text-2xl font-semibold mb-4">Dashboard Statistics</h2>
+                    <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                        <FontAwesomeIcon icon={faCalendar} className="mr-2" />
+                        Dashboard Statistics
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                         <div className="w-full">
                             <label htmlFor="fromDate" className="block text-gray-700 text-sm font-bold mb-2">From Date:</label>
@@ -384,14 +416,14 @@ const App = () => {
                         </div>
                         <div className="flex justify-end w-full">
                             <button
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2"
+                                className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mr-2"
                                 type="button"
                                 onClick={fetchChartData}
                             >
                                 Apply
                             </button>
                             <button
-                                className="bg-gray-400 hover:bg-gray-500 text-gray-700 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                                className="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                                 type="button"
                                 onClick={clearDateFilter}
                             >
@@ -401,63 +433,136 @@ const App = () => {
                     </div>
                 </motion.div>
 
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <div className='flex flex-col md:flex-row gap-4 items-start md:items-center'>
-                        <h2 className="text-2xl font-semibold mb-4">Footfall Analysis</h2>
-                        <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
-                        <button
-                            disabled={currentChartLevel === 1}
-                            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mb-4"
-                            onClick={goBack}
-                        >
-                            Back
-                        </button>
-                    </div>
+                {/* Analysis Toggle Buttons */}
+                
 
-                    <AnimatePresence mode="wait">
-                        {overAllFootFall !== "Fitness" && currentChartLevel === 1 && (
-                            <MyBarChart
-                                key="chart1"
-                                title="Overall Data Distribution"
-                                data={barChartData}
-                                color="#3182CE"
-                                onItemClick={handleBarClick}
-                                visible={currentChartLevel === 1 && barChartData.length > 0}
-                            />
-                        )}
 
-                        {overAllFootFall === "Fitness" && currentChartLevel === 1 && (
-                            <MyBarChart
-                                key="fitnessChart"
-                                title="Fitness Category Breakdown"
-                                data={fitnessChartData}
-                                color="#6B46C1"
-                                onItemClick={handleBarClick}
-                                visible={overAllFootFall === "Fitness" && currentChartLevel === 1}
-                            />
-                        )}
-
-                        {currentChartLevel === 2 && (
-                            <MyBarChart
-                                key="fitnessDetailChart"
-                                title={`Breakdown by Purpose (${selectedBar})`}
-                                data={secondBarChartData}
-                                color="#82ca9d"
-                                onItemClick={handleSubBarClick}
-                                visible={currentChartLevel === 2}
-                            />
-                        )}
-                        {currentChartLevel === 3 && (
-                            <MyBarChart
-                                key="thirdHierarchy"
-                                title={`Breakdown by Register (${selectedSubBar})`}
-                                data={thirdBarChartData}
-                                color="#a855f7"
-                                visible={currentChartLevel === 3}
-                            />
-                        )}
-                    </AnimatePresence>
+                {/* Footfall Analysis */}
+                {activeAnalysis === 'footfall' && (
+                    <motion.div
+                        className="bg-white rounded-lg shadow-md p-6"
+                        variants={chartVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                    >
+                        
+                        <div className='flex flex-col md:flex-row gap-4 items-start md:items-center'>
+                        <h2 className="text-2xl font-semibold mb-4  text-gray-800">Fitness Analysis</h2>
+                        <div className="flex justify-around gap-4 mb-6">
+                    <button
+                        className={`flex items-center bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+                        onClick={() => toggleAnalysis('footfall')}
+                    >
+                        <FontAwesomeIcon icon={faChartBar} className="mr-2" />
+                        Footfall Analysis
+                    </button>
+                    <button
+                        className={`flex items-center bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+                        onClick={() => toggleAnalysis('fitness')}
+                    >
+                        <FontAwesomeIcon icon={faHeartbeat} className="mr-2" />
+                        Fitness Analysis
+                    </button>
                 </div>
+                <OverAllFootFallDropdown value={overAllFootFall} onChange={handleOverAllFootFallChange} />
+                            <button
+                                disabled={currentChartLevel === 1}
+                                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded mb-4"
+                                onClick={goBack}
+                            >
+                                Back
+                            </button>
+                </div>
+
+                        <AnimatePresence mode="wait">
+                            {currentChartLevel === 1 && (
+                                <MyBarChart
+                                    key="chart1"
+                                    title="Overall Data Distribution"
+                                    data={barChartData}
+                                    color="#3182CE"
+                                    onItemClick={handleBarClick}
+                                    visible={barChartData.length > 0}
+                                />
+                            )}
+
+                            {currentChartLevel === 2 && (
+                                <MyBarChart
+                                    key="chart2"
+                                    title={`Breakdown by Purpose (${selectedBar})`}
+                                    data={secondBarChartData}
+                                    color="#82ca9d"
+                                    onItemClick={handleSubBarClick}
+                                    visible={currentChartLevel === 2}
+                                />
+                            )}
+
+                            {currentChartLevel === 3 && (
+                                <MyBarChart
+                                    key="thirdHierarchy"
+                                    title={`Breakdown by Register (${selectedSubBar})`}
+                                    data={thirdBarChartData}
+                                    color="#a855f7"
+                                    visible={currentChartLevel === 3}
+                                />
+                            )}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+
+
+                {/* Fitness Analysis */}
+                {activeAnalysis === 'fitness' && (
+                    <motion.div
+                        className="bg-white rounded-lg shadow-md p-6 mt-6"
+                        variants={chartVariants}
+                        initial="initial"
+                        animate="animate"
+                        exit="exit"
+                    >
+                        <div className='flex flex-col md:flex-row gap-4 items-start md:items-center'>
+                        <h2 className="text-2xl font-semibold mb-4  text-gray-800">Fitness Analysis</h2>
+                        <div className="flex justify-around gap-4 mb-6">
+                    <button
+                        className={`flex items-center bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+                        onClick={() => toggleAnalysis('footfall')}
+                    >
+                        <FontAwesomeIcon icon={faChartBar} className="mr-2" />
+                        Footfall Analysis
+                    </button>
+                    <button
+                        className={`flex items-center bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
+                        onClick={() => toggleAnalysis('fitness')}
+                    >
+                        <FontAwesomeIcon icon={faHeartbeat} className="mr-2" />
+                        Fitness Analysis
+                    </button>
+                </div>
+                </div>
+                        <ResponsiveContainer width="100%" height={400}>
+                            <BarChart data={fitnessChartData} margin={{ top: 50, right: 30, left: 20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Legend />
+                                <Bar dataKey="Fit" fill="#2ecc71">
+                                    <LabelList dataKey="Fit" content={renderCustomizedLabel} />
+                                </Bar>
+                                <Bar dataKey="Unfit" fill="#e74c3c">
+                                    <LabelList dataKey="Unfit" content={renderCustomizedLabel} />
+                                </Bar>
+                                <Bar dataKey="Conditional" fill="#f39c12">
+                                    <LabelList dataKey="Conditional" content={renderCustomizedLabel} />
+                                </Bar>
+                                <Bar dataKey="Pending" fill="#95a5a6">
+                                    <LabelList dataKey="Pending" content={renderCustomizedLabel} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </motion.div>
+                )}
+
             </div>
         </div>
     );
