@@ -137,7 +137,7 @@ def fetchdata(request):
             fitnessassessment_dict, fitnessassessment_default = get_latest_records(models.FitnessAssessment)
             vaccination_dict, vaccination_default = get_latest_records(models.VaccinationRecord)
             consultation_dict, consultation_default = get_latest_records(models.Consultation)
-            # If no employees found, return a meaningful response
+            prescription_dict, prescription_default = get_latest_records(models.Prescription)
             if not employees:
                 return JsonResponse({"data": []}, status=200)
 
@@ -166,6 +166,7 @@ def fetchdata(request):
                 emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, fitnessassessment_default or {})
                 emp["vaccination"] = vaccination_dict.get(emp_no, vaccination_default or {})
                 emp["consultation"] = consultation_dict.get(emp_no, consultation_default or {})
+                emp["prescription"] = prescription_dict.get(emp_no, prescription_default or {})
                 merged_data.append(emp)
 
             return JsonResponse({"data": merged_data}, status=200)
@@ -1809,3 +1810,55 @@ def add_consultation(request):
 
     else:
         return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+
+
+
+@csrf_exempt
+def add_prescription(request):
+    """
+    View to handle adding or updating prescription data.
+    Expects JSON data in the request body.
+    """
+    if request.method == "POST":
+        try:
+            print("Hii")
+            data = json.loads(request.body.decode('utf-8'))
+            print(data)
+            emp_no = data.get('emp_no', None)
+            tablets = data.get('tablets', [])  
+            injections = data.get('injections', [])
+            creams = data.get('creams', [])
+            others = data.get('others', [])
+            submitted_by = data.get('submittedBy') 
+            issued_by = data.get('issuedby') 
+            nurse_notes = data.get('nurseNotes')
+
+            if not submitted_by or not issued_by:
+                return JsonResponse({"error": "submitted_by and issued_by are required fields"}, status=400)
+
+
+            prescription, created = models.Prescription.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date = datetime.now().date(),
+                defaults={
+                    'tablets': tablets,
+                    'injections': injections,
+                    'creams': creams,
+                    'others': others,
+                    'submitted_by': submitted_by,
+                    'issued_by': issued_by,
+                    'nurse_notes':nurse_notes,
+                }
+            )
+
+            message = "Prescription details added successfully" if created else "Prescription details updated successfully"
+            return JsonResponse({"message": message, "prescription_id": prescription.id}, status=200)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data in request body"}, status=400)
+        except Exception as e:
+            print("Error:", e) 
+            return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
+    else:
+        return JsonResponse({"error": "Request method must be POST"}, status=405)

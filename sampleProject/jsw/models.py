@@ -918,6 +918,25 @@ class FitnessAssessment(BaseModel):
 
 
 
+class Prescription(BaseModel):
+
+    tablets = models.JSONField(blank=True, null=True)
+    injections = models.JSONField(blank=True, null=True)
+    creams = models.JSONField(blank=True, null=True)
+    others = models.JSONField(blank=True, null=True)
+    submitted_by = models.CharField(max_length=50)
+    issued_by = models.CharField(max_length=50)
+    nurse_notes= models.TextField(blank=True, null=True)
+    emp_no = models.CharField(max_length=20, blank=True, null=True)  
+
+    def __str__(self):
+        return f"Prescription #{self.id} - {self.patient_id or 'No Patient ID'}"
+
+    class Meta:
+        verbose_name = "Prescription"
+        verbose_name_plural = "Prescriptions"
+
+
 class VaccinationRecord(BaseModel):
     emp_no = models.CharField(max_length=30)  # Employee number
     vaccination = models.JSONField(default=list)

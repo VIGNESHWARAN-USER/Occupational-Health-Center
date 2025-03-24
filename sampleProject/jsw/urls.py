@@ -53,4 +53,5 @@ urlpatterns = [
     path('visitData/<str:emp_no>', views.fetchVisitdata, name = 'fetchVisitdata'),
     path('consultations/add/', views.add_consultation, name='add_consultation'),
     path('visitData/<str:emp_no>/<str:date>', views.fetchVisitDataWithDate, name = 'fetchVisitdata'),
+    path('prescriptions/', views.add_prescription, name='add_prescription'),
 ]

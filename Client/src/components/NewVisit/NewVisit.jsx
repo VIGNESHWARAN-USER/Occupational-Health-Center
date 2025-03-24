@@ -693,7 +693,7 @@ const NewVisit = () => {
       case "Referral":
         return <Referral data = {data}/>;
       case "Prescription":
-        return <Prescription />;
+        return <Prescription data = {data}/>;
       default:
         return <div>Unknown Tab</div>;
     }

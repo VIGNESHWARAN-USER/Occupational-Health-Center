@@ -1,47 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import Sidebar from "./Sidebar";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import Sidebar from "./Sidebar"; // Keep if you intend to use this
+import { useNavigate } from "react-router-dom"; // Keep if you intend to use this
 
 const filterSections = [
+  { id: "employementstatus", label: "Employement Status" },
   { id: "personaldetails", label: "Personal Details" },
-  { id: "vitals", label: "Vitals" },
-  { id: "fitness", label: "Fitness" },
+  { id: "employementdetails", label: "Employement Details" },
   { id: "medicalhistory", label: "Medical History" },
-  { id: "investigations", label: "Investigations" },
   { id: "vaccination", label: "Vaccination" },
-  { id: "purpose", label: "Purpose Filter" }
+  { id: "purpose", label: "Purpose Filter" },
+  { id: "vitals", label: "Vitals" },
+  { id: "investigations", label: "Investigations" },
+  { id: "diagnosis", label: "Diagnosis" },
+  { id: "fitness", label: "Fitness" },
+  { id:"prescriptions", label: "Prescriptions" },
+  { id: "referrals", label: "Referrals" },
+  { id: "notableremarks", label: "Notable Remarks" },
+  { id: "statutoryforms", label: "Statutory Forms" },
 ];
 
 const RecordsFilters = () => {
-  const accessLevel = localStorage.getItem("accessLevel");
-  const navigate = useNavigate();
+  //const accessLevel = localStorage.getItem("accessLevel"); // Remove backend reference
+  const navigate = useNavigate(); // Keep if you intend to use this
   const [selectedFilters, setSelectedFilters] = useState([]);
   const [selectedSection, setSelectedSection] = useState(null);
-  const [employees, setEmployees] = useState([]);
-  const [filteredEmployees, setFilteredEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(""); // New state for role filter
+  //const [employees, setEmployees] = useState([]);  // Remove backend reference
+  //const [filteredEmployees, setFilteredEmployees] = useState([]); // Remove backend reference
+  //const [loading, setLoading] = useState(false); // Remove backend reference
+  const [selectedRole, setSelectedRole] = useState("");
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
-        setEmployees(response.data.data);
-        setFilteredEmployees(response.data.data);
-        console.log(response.data.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-      setLoading(false);
-    };
-    fetchDetails();
-  }, []);
+  // Remove useEffect and axios calls
 
-  // Function to handle role selection
   const handleRoleChange = (e) => {
     setSelectedRole(e.target.value);
   };
@@ -56,265 +47,92 @@ const RecordsFilters = () => {
     );
   };
 
-  useEffect(() => {
-    applyFilters();
-  }, [selectedFilters, employees, selectedRole]); // Add selectedRole to dependency array
+  // Removed the useEffect that calls applyFilters
+  // Removed the applyFilters function
 
   const addFilter = (formData) => {
-      setSelectedFilters((prevFilters) => {
-        const updatedFilters = [...prevFilters];
-        Object.entries(formData).forEach(([key, value]) => {
-          let existingIndex;
-          if (
-            key !== "param" &&
-            key !== "investigation" &&
-            key !== "fitness" &&
-            key !== "smoking" &&
-            key !== "alcohol" &&
-            key !== "paan" &&
-            key !== "diet" &&
-            key !== "drugAllergy" &&
-            key !== "foodAllergy" &&
-            key !== "otherAllergies" &&
-            key !== "surgicalHistory" &&
-            key != "purpose"
-          ) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
+    setSelectedFilters((prevFilters) => {
+      const updatedFilters = [...prevFilters];
+      Object.entries(formData).forEach(([key, value]) => {
+        let existingIndex;
+        if (
+          key !== "param" &&
+          key !== "investigation" &&
+          key !== "fitness" &&
+          key !== "smoking" &&
+          key !== "alcohol" &&
+          key !== "paan" &&
+          key !== "diet" &&
+          key !== "drugAllergy" &&
+          key !== "foodAllergy" &&
+          key !== "otherAllergies" &&
+          key !== "surgicalHistory" &&
+          key != "purpose"
+        ) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
 
-            );
-          } else if (key === "param") {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === value.form
-            );
-          } else if (key === "investigation") {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === value.form
-            );
-          } else if (key === "fitness") {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          }  else if (key === "smoking" && value.length > 0) {
-            console.log(value)
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "alcohol" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "paan" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "diet" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "drugAllergy" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "foodAllergy" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "otherAllergies" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "surgicalHistory" && value.length > 0) {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          } else if (key === "purpose") {
-            existingIndex = updatedFilters.findIndex(
-              (filter) => Object.keys(filter)[0] === key
-            );
-          }
-          if (existingIndex !== -1) {
-            updatedFilters[existingIndex] = { [key]: value };
-          } else {
-            updatedFilters.push({ [key]: value });
-          }
-        });
-        return updatedFilters;
+          );
+        } else if (key === "param") {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === value.form
+          );
+        } else if (key === "investigation") {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === value.form
+          );
+        } else if (key === "fitness") {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        }  else if (key === "smoking" && value.length > 0) {
+          console.log(value)
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "alcohol" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "paan" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "diet" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "drugAllergy" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "foodAllergy" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "otherAllergies" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "surgicalHistory" && value.length > 0) {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        } else if (key === "purpose") {
+          existingIndex = updatedFilters.findIndex(
+            (filter) => Object.keys(filter)[0] === key
+          );
+        }
+        if (existingIndex !== -1) {
+          updatedFilters[existingIndex] = { [key]: value };
+        } else {
+          updatedFilters.push({ [key]: value });
+        }
       });
-    };
+      return updatedFilters;
+    });
+  };
 
-  const applyFilters = () => {
-      let results = [...employees];
-
-      // Role Filter
-      if (selectedRole) {
-          results = results.filter(employee => employee.role === selectedRole);
-      }
-       if (selectedFilters.length === 0) {
-        setFilteredEmployees([...results]);
-        return;
-      }
-
-      selectedFilters.forEach((filter) => {
-        const key = Object.keys(filter)[0];
-        const value = Object.values(filter)[0];
-        console.log(key, value);
-        results = results.filter((employee) => {
-          if (key === "param") {
-            // Special handling for vitals
-            const { param, from, to } = value;
-            if (
-              !employee.vitals ||
-              employee.vitals[param] === undefined ||
-              employee.vitals[param] === null
-            ) {
-              return false; // If vitals data or the specific parameter is missing, skip this employee
-            }
-
-            const paramValue = parseFloat(employee.vitals[param]); // Convert vitals value to a number
-
-            if (isNaN(paramValue)) {
-              return false; // Skip if the value is not a number
-            }
-
-            const fromValue = parseFloat(from);
-            const toValue = parseFloat(to);
-
-            if (isNaN(fromValue) || isNaN(toValue)) {
-              return true; // if from or to value is not valid number, skip filtering
-            }
-
-            return paramValue >= fromValue && paramValue <= toValue; // Check if the vitals parameter falls within the range
-          } else if (key === "investigation") {
-            const { form, param, from, to } = value;
-
-            if (
-              !employee[form] ||
-              employee[form][param] === undefined ||
-              employee[form][param] === null
-            ) {
-              return false;
-            }
-
-            const paramValue = parseFloat(employee[form][param]);
-
-            if (isNaN(paramValue)) {
-              return false;
-            }
-
-            const fromValue = parseFloat(from);
-            const toValue = parseFloat(to);
-
-            if (isNaN(fromValue) || isNaN(toValue)) {
-              return true;
-            }
-
-            return paramValue >= fromValue && paramValue <= toValue;
-          } else if (key === "fitness") {
-            // Fitness Filter Logic
-            if (!employee.fitnessassessment) {
-              return false;
-            }
-
-            let matchesAll = true; // Assume it matches all filters until proven otherwise
-
-            for (const assessmentKey in value) {
-              if (value.hasOwnProperty(assessmentKey)) {
-                const filterValue = value[assessmentKey];
-
-                if (filterValue) {
-                  // Only filter if there's a filter value
-                  if (
-                    employee.fitnessassessment[assessmentKey] !== filterValue
-                  ) {
-                    matchesAll = false; // If ANY filter fails, it's a mismatch
-                    break; // No need to check other assessments, exit loop.
-                  }
-                }
-              }
-            }
-            return matchesAll; // Return true only if ALL the filters match
-          } else if (key === "smoking") {
-            return employee.msphistory?.personal_history?.smoking?.yesNo === value.toLowerCase();
-          } else if (key === "alcohol") {
-            return employee.msphistory?.personal_history?.alcohol?.yesNo === value.toLowerCase();
-          } else if (key === "paan") {
-            return employee.msphistory?.personal_history?.paan?.yesNo === value.toLowerCase();
-          } else if (key === "diet") {
-            return employee.msphistory?.personal_history?.diet  === value.toLowerCase();
-          }else if (key === "drugAllergy") {
-            console.log(employee)
-            return employee.msphistory?.allergy_fields?.drug?.yesNo === value.toLowerCase();
-          } else if (key === "foodAllergy") {
-            return employee.msphistory?.allergy_fields?.food?.yesNo === value.toLowerCase();
-          } else if (key === "otherAllergies") {
-            return employee.msphistory?.allergy_fields?.others?.yesNo === value.toLowerCase();
-          } else if (key === "surgicalHistory") {
-            if(value === "Yes" && employee.msphistory?.surgical_history?.children?.length > 0 ) return true;
-            else if(value === "No" && employee.msphistory?.surgical_history?.children?.length === 0) return true;
-            else return false;
-          } else if (key === "purpose") {
-            // Purpose Filter Logic
-            const { type_of_visit, register } = value;
-
-            return results.filter((employee) => {
-             if(employee.dashboard){
-                if (type_of_visit && employee.dashboard.type_of_visit !== type_of_visit) {
-                return false;
-              }
-              if (register && employee.dashboard.register !== register) {
-                return false;
-              }
-              return true;
-             }
-
-              return false;
-
-            })
-          }
-
-          else {
-            let empValue;
-            if(key === "age")
-            {
-              const age = new Date().getFullYear() - new Date(employee.dob).getFullYear();
-              if (typeof age === 'number' && typeof value === 'string' && String(age) === value) {
-                empValue = age;
-            }
-              else empValue = null;
-            }
-
-            else empValue = employee[key];
-            console.log(empValue)
-            if (empValue === null || empValue === undefined) {
-              return false;
-            }
-
-            if (typeof empValue === "object" ) {
-              function checkNestedObject(obj, val) {
-                for (const prop in obj) {
-                  if (obj.hasOwnProperty(prop)) {
-                    const nestedValue = obj[prop];
-                    if (nestedValue === value) {
-                      return true;
-                    }
-                  }
-                }
-                return false;
-              }
-
-              return checkNestedObject(empValue, value);
-            } else {
-              if((typeof empValue === 'number' && typeof value === 'string' ))
-                return String(empValue) === value
-              return empValue === value
-            }
-          }
-        });
-      });
-
-      setFilteredEmployees(results);
-    };
 
   return (
     <div className="h-screen bg-[#8fcadd] flex">
@@ -419,8 +237,14 @@ const RecordsFilters = () => {
                       ?.label
                   }
                 </h2>
+                {selectedSection === "employementstatus" ? (
+                  <EmployementStatus addFilter={addFilter} /> 
+                ) : null}
                 {selectedSection === "personaldetails" ? (
                   <PersonalDetails addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "employementdetails" ? (
+                  <EmploymentDetails addFilter={addFilter} />
                 ) : null}
                 {selectedSection === "vitals" ? (
                   <Vitals addFilter={addFilter} />
@@ -439,6 +263,21 @@ const RecordsFilters = () => {
                 ) : null}
                 {selectedSection === "purpose" ? (
                   <PurposeFilter addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "diagnosis" ? (
+                  <Diagnosis addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "prescriptions" ? (
+                  <Prescriptions addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "referrals" ? (
+                  <Referrals addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "notableremarks" ? (
+                  <NotableRemarks addFilter={addFilter} />
+                ) : null}
+                {selectedSection === "statutoryforms" ? (
+                  <StatutoryForms addFilter={addFilter} />
                 ) : null}
               </motion.div>
             )}
@@ -470,48 +309,12 @@ const RecordsFilters = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan="5" className="text-center py-4">
-                      <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
-                    </td>
-                  </tr>
-                ) : filteredEmployees.length > 0 ? (
-                  filteredEmployees.map((emp) => (
-                    <tr
-                      key={emp.emp_no}
-                      className="hover:bg-gray-100 transition duration-200"
-                    >
-                      <td className="px-6 py-4">{emp.emp_no}</td>
-                      <td className="px-6 py-4">{emp.name}</td>
-                      <td className="px-6 py-4">
-                        {emp.dob
-                          ? new Date().getFullYear() -
-                            new Date(emp.dob).getFullYear()
-                          : "N/A"}
-                      </td>
-                      <td className="px-6 py-4">{emp.sex}</td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() =>
-                            navigate("../employeeprofile", {
-                              state: { data: emp },
-                            })
-                          }
-                          className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300"
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+               
                   <tr>
                     <td colSpan="5" className="text-center py-4 text-gray-500">
                       No employee found
                     </td>
                   </tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -553,9 +356,6 @@ const data = {
       "Over Counter Injury Outside the Premises"
     ],
     "Alcohol Abuse": ["Alcohol Abuse"]
-  },
-  "Separate (Unhealthy)": {
-    "Special Medical Leave SML / Special Disability Leave SDL (2nd Phase)": []
   }
 };
 
@@ -693,43 +493,171 @@ function PurposeFilter({ addFilter }) {
   );
 }
 
-const PersonalDetails = ({ addFilter }) => {
-  const [formData, setformData] = useState({
-    age: "",
-    sex: "",
-    bloodgrp: "",
-    marital_status: "",
-    designation: "",
-    department: "",
-    moj: "",
-    employer:"",
-    doj: "",
-    job_nature: "",
-  });
 
-  const employmentOptions = {
-    "JSW Steel": "JSW Steel",
-    "JSW Cement": "JSW Cement",
-    "JSW Foundation": "JSW Foundation",
-  };
+
+const EmployementStatus = ({ addFilter }) => {
+  const [formData, setFormData] = useState({
+    status: "", // Combined status field
+    from: "",
+    to: "",
+    transferred_to: "", // Conditional field for transferred_to
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(e.target);
-    setformData((prevFormData) => ({ ...prevFormData, [name]: value })); // Updated handleChange
+    setFormData((prevFormData) => ({ ...prevFormData, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
+    addFilter(filteredData);
+  };
+
+  const showTransferredTo = formData.status === "transferred_to";
+
+  return (
+    <div className="grid grid-cols-1 gap-x-10 gap-y-6">
+      {/* Employment Status Dropdown */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Employment Status</label>
+        <select
+          name="status"
+          value={formData.status}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Status</option>
+          <option value="active">Active</option>
+          <option value="transferred_to">Transferred To</option>
+          <option value="resigned">Resigned</option>
+          <option value="retired">Retired</option>
+          <option value="deceased">Deceased</option>
+          <option value="unauthorized_absence">Unauthorized Absence</option>
+          <option value="others">Others</option>
+        </select>
+      </div>
+
+      {/* Conditional Transferred To Text Input */}
+      {showTransferredTo && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Transferred To</label>
+          <input
+            type="text"
+            name="transferred_to"
+            value={formData.transferred_to}
+            onChange={handleChange}
+            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter Department"
+          />
+        </div>
+      )}
+
+      {/* Date Range Inputs (Conditional) */}
+      {!showTransferredTo && (
+        <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">From</label>
+            <input
+              type="date"
+              name="from"
+              value={formData.from}
+              onChange={handleChange}
+              className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">To</label>
+            <input
+              type="date"
+              name="to"
+              value={formData.to}
+              onChange={handleChange}
+              className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Submit Button */}
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+        disabled={formData.status === "" && formData.transferred_to ==="" && formData.from === ""}
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
+
+const Diagnosis = ({addFilter}) =>{
+
+}
+
+const Prescriptions = ({addFilter}) =>{
+
+}
+
+const Referrals = ({addFilter}) =>{
+
+}
+
+const NotableRemarks = ({addFilter}) =>{
+
+}
+
+const StatutoryForms = ({addFilter}) =>{
+
+}
+
+const PersonalDetails = ({ addFilter }) => {
+  const [formData, setformData] = useState({
+    ageFrom: "",
+    ageTo: "",
+    sex: "",
+    bloodgrp: "",
+    marital_status: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setformData((prevFormData) => ({ ...prevFormData, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
+    addFilter(filteredData);
   };
 
   return (
     <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-      {/* Age Input */}
+      {/* Age Range Input */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">Age</label>
+        <label className="block text-sm font-medium text-gray-700">Age From</label>
         <input
           type="number"
-          name="age"
-          value={formData.age}
-          onChange={handleChange}          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter age"
+          name="ageFrom"
+          value={formData.ageFrom}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="From Age"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Age To</label>
+        <input
+          type="number"
+          name="ageTo"
+          value={formData.ageTo}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="To Age"
         />
       </div>
 
@@ -747,7 +675,7 @@ const PersonalDetails = ({ addFilter }) => {
           <option value="">Select Sex</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
-          <option value="Other">Other</option>
+          <option value="Other">Others</option>
         </select>
       </div>
 
@@ -756,235 +684,332 @@ const PersonalDetails = ({ addFilter }) => {
         <label htmlFor="bloodgrp" className="block text-sm font-medium text-gray-700">
           Blood Group
         </label>
-        <input
-          type="text"
+        <select
           name="bloodgrp"
           value={formData.bloodgrp}
           onChange={handleChange}
           className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter Blood Group"
-          />
-        </div>
-  
+        >
+          <option value="">Select Blood Group</option>
+          <option value="A+">A+</option>
+          <option value="A-">A-</option>
+          <option value="B+">B+</option>
+          <option value="B-">B-</option>
+          <option value="AB+">AB+</option>
+          <option value="AB-">AB-</option>
+          <option value="O+">O+</option>
+          <option value="O-">O-</option>
+        </select>
+      </div>
+
+      <div>
+        <label
+          htmlFor="marital_status"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Marital Status
+        </label>
+        <select
+          name="marital_status"
+          value={formData.marital_status}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Marital Status</option>
+          <option value="Single">Single</option>
+          <option value="Married">Married</option>
+          <option value="Separated">Separated</option>
+          <option value="Divorced">Divorced</option>
+          <option value="Widowed">Widowed</option>
+        </select>
+      </div>
+
+      {/* Submit Button */}
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
+
+
+
+const EmploymentDetails = ({ addFilter }) => {
+  const [formData, setformData] = useState({
+    designation: "",
+    department: "",
+    moj: "",
+    employer: "",
+    doj: "",
+    job_nature: "",
+  });
+
+  const employmentOptions = {
+    "JSW Steel": "JSW Steel",
+    "JSW Cement": "JSW Cement",
+    "JSW Foundation": "JSW Foundation",
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setformData((prevFormData) => ({ ...prevFormData, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
+    addFilter(filteredData);
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+
+    {/* Employment Status Input */}
+    <div>
+        <label
+          htmlFor="employer"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Employer
+        </label>
+        <select
+          name="employer"
+          value={formData.employer}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Employer</option>
+          {Object.entries(employmentOptions).map(([key, value]) => (
+            <option key={key} value={key}>
+              {key}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label
+          htmlFor="job_nature"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Mode of Joining
+        </label>
+        <select
+          name="moj"
+          value={formData.moj}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Mode of Joining</option>
+          <option value="New Joinee">New Joinee</option>
+          <option value="Transfer">Transfer</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700">Date of Joining</label>
+        <input
+          type="date"
+          name="doj"
+          value={formData.doj}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* designation Input */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Designation
+        </label>
+        <input
+          type="text"
+          name="designation"
+          value={formData.designation}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter Designation"
+        />
+      </div>
+
+      {/* Department Input */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700">
+          Department
+        </label>
+        <input
+          type="text"
+          name="department"
+          value={formData.department}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Enter Department"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor="job_nature"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Job Nature
+        </label>
+        <select
+          name="job_nature"
+          value={formData.job_nature}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Job Nature</option>
+          <option value="Contract">Contract</option>
+          <option value="Permanent">Permanent</option>
+          <option value="Consultant">Consultant</option>
+        </select>
+      </div>
+
+      
+
+      
+
+      {/* Submit Button */}
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
+
+
+const Vitals = ({ addFilter }) => {
+  const [formData, setFormData] = useState({
+    param: "systolic",
+    bmiCategory: "", // New state for BMI category
+    from: "", // Keep for other numerical vitals
+    to: "", // Keep for other numerical vitals
+  });
+
+  const bmiOptions = {
+    "Under weight": "Under weight",
+    Normal: "Normal",
+    "Over weight": "Over weight",
+    Obese: "Obese",
+    "Extremely Obese": "Extremely Obese",
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = () => {
+    const { param, bmiCategory, from, to } = formData;
+
+    if (param === "bmi" && bmiCategory) {
+      addFilter({ param: { param, value: bmiCategory } }); // Send only category for BMI
+    } else if (param && param !== "bmi" && from && to) {
+      // For other numerical vitals
+      addFilter({ param: { param, from, to } });
+    }
+  };
+
+  const showBmiDropdown = formData.param === "bmi";
+  const showRangeInputs = formData.param !== "bmi" && formData.param !== "";
+
+  return (
+    <div className="grid grid-cols-3 gap-x-10 gap-y-6">
+      <div>
+        <label htmlFor="param" className="block text-sm font-medium text-gray-700">
+          Select Parameter
+        </label>
+        <select
+          name="param"
+          value={formData.param}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="systolic">Systolic</option>
+          <option value="diastolic">Diastolic</option>
+          <option value="pulse">Pulse</option>
+          <option value="respiratory_rate">Respiratory rate</option>
+          <option value="temperature">Temperature</option>
+          <option value="spO2">SpO2</option>
+          <option value="height">Height</option>
+          <option value="weight">Weight</option>
+          <option value="bmi">BMI</option>
+        </select>
+      </div>
+
+      {/* BMI Category Dropdown */}
+      {showBmiDropdown && (
         <div>
-          <label
-            htmlFor="marital_status"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Marital Status
+          <label htmlFor="bmiCategory" className="block text-sm font-medium text-gray-700">
+            Select BMI Category
           </label>
           <select
-            name="marital_status"
-            value={formData.marital_status}
+            name="bmiCategory"
+            value={formData.bmiCategory}
             onChange={handleChange}
             className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="">Select Marital Status</option>
-            <option value="Single">Single</option>
-            <option value="Married">Married</option>
-            <option value="Divorced">Divorced</option>
-            <option value="Widowed">Widowed</option>
-          </select>
-        </div>
-  
-        {/* designation Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            designation
-          </label>
-          <input
-            type="text"
-            name="designation"
-            value={formData.designation}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter designation"
-          />
-        </div>
-  
-        {/* Department Input */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Department
-          </label>
-          <input
-            type="text"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter Department"
-          />
-        </div>
-  
-        <div>
-          <label className="block text-sm font-medium text-gray-700">doj</label>
-          <input
-            type="date"
-            name="doj"
-            value={formData.doj}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Enter age"
-          />
-        </div>
-  
-        <div>
-          <label
-            htmlFor="job_nature"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Job Nature
-          </label>
-          <select
-            name="job_nature"
-            value={formData.job_nature}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select job_nature</option>
-            <option value="Contract">Contract</option>
-            <option value="Permanent">Permanent</option>
-            <option value="Consultant">Consultant</option>
-          </select>
-        </div>
-  
-        <div>
-          <label
-            htmlFor="job_nature"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Mode of Joining
-          </label>
-          <select
-            name="moj"
-            value={formData.moj}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select mode</option>
-            <option value="New Joinee">New Joinee</option>
-            <option value="Transfer">Transfer</option>
-          </select>
-        </div>
-  
-        {/* Employment Status Input */}
-        <div>
-          <label
-            htmlFor="employmentStatus"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Employer
-          </label>
-          <select
-            name="employer"
-            value={formData.employer}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Employer Value</option>
-            {Object.entries(employmentOptions).map(([key, value]) => (
+            <option value="">Select BMI Category</option>
+            {Object.entries(bmiOptions).map(([key, value]) => (
               <option key={key} value={key}>
-                {key}
+                {value}
               </option>
             ))}
           </select>
         </div>
-  
-        {/* Submit Button */}
-        <button
-          onClick={() => {
-            const filteredData = Object.fromEntries(
-              Object.entries(formData).filter(([_, value]) => value !== "")
-            );
-            addFilter(filteredData);
-          }}
-          className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-        >
-          Add to Filter
-        </button>
-      </div>
-    );
-  };
-  const Vitals = ({ addFilter }) => {
-    const [formData, setFormData] = useState({
-      param: "",
-      from: "",
-      to: "",
-    });
-  
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData({ ...formData, [name]: value });
-    };
-  
-    const handleSubmit = () => {
-      const { param, from, to } = formData;
-  
-      if (param && from !== "" && to !== "") {
-        addFilter({ param: { param, from, to } });
-      }
-    };
-  
-    return (
-      <div className="grid grid-cols-3 gap-x-10 gap-y-6">
-        <div>
-          <label htmlFor="param" className="block text-sm font-medium text-gray-700">
-            Select Parameter
-          </label>
-          <select
-            name="param"
-            value={formData.param}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select Parameter</option>
-            <option value="systolic">Systolic</option>
-            <option value="diastolic">Diastolic</option>
-            <option value="pulse">Pulse</option>
-            <option value="respiratory_rate">Respiratory rate</option>
-            <option value="temperature">Temperature</option>
-            <option value="spO2">SpO2</option>
-            <option value="height">Height</option>
-            <option value="weight">Weight</option>
-            <option value="bmi">BMI</option>
-          </select>
-        </div>
-  
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Range from</label>
-          <input
-            type="number"
-            name="from"
-            value={formData.from}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="From"
-          />
-        </div>
-  
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Range to</label>
-          <input
-            type="number"
-            name="to"
-            value={formData.to}
-            onChange={handleChange}
-            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="To"
-          />
-        </div>
-  
-        {/* Submit Button */}
-        <button
-          onClick={handleSubmit}
-          className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-        >
-          Add to Filter
-        </button>
-      </div>
-    );
-  };
+      )}
+
+      {showRangeInputs && (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Range from</label>
+            <input
+              type="number"
+              name="from"
+              value={formData.from}
+              onChange={handleChange}
+              className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="From"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Range to</label>
+            <input
+              type="number"
+              name="to"
+              value={formData.to}
+              onChange={handleChange}
+              className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="To"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Submit Button */}
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+        disabled={formData.param === "" || (formData.param === "bmi" && !formData.bmiCategory) || (formData.param !== "bmi" && (!formData.from || !formData.to))}
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
   
   
   const formOptions = {
@@ -1261,6 +1286,7 @@ const PersonalDetails = ({ addFilter }) => {
       param: "",
       from: "",
       to: "",
+      status: "",
     });
   
     useEffect(() => {
@@ -1349,7 +1375,21 @@ const PersonalDetails = ({ addFilter }) => {
             placeholder="To"
           />
         </div>
-  
+
+        {/* Status */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Status</label>
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Select</option>
+            <option value="normal">Normal</option>
+            <option value="abnormal">Abnormal</option>
+          </select>
+              </div>
         {/* Submit Button */}
         <button
           onClick={handleSubmit}
@@ -1491,71 +1531,370 @@ const PersonalDetails = ({ addFilter }) => {
 </div>);
 };
 
+const MedicalHistoryForm = ({ addFilter }) => {
+  const [formData, setFormData] = useState({
+    smoking: "",
+    alcohol: "",
+    paan: "",
+    diet: "",
+    drugAllergy: "",
+    foodAllergy: "",
+    otherAllergies: "",
+    surgicalHistory: ""
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
+    addFilter(filteredData);
+  };
+
+  return (
+    <div className="p-6 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl font-semibold text-gray-800 my-4">
+        Personal History
+      </h2>
+      <div className="grid grid-cols-4 gap-4">
+        {/* Smoking */}
+        <div>
+          <label className="block font-medium">Smoking</label>
+          <select
+            name="smoking"
+            value={formData.smoking}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="Cessased">Cessased</option>
+          </select>
+        </div>
+
+        {/* Alcohol */}
+        <div>
+          <label className="block font-medium">Alcohol</label>
+          <select
+            name="alcohol"
+            value={formData.alcohol}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="Cessased">Cessased</option>
+          </select>
+        </div>
+
+        {/* Paan */}
+        <div>
+          <label className="block font-medium">Paan, beetal chewer</label>
+          <select
+            name="paan"
+            value={formData.paan}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+            <option value="Cessased">Cessased</option>  
+          </select>
+        </div>
+
+        {/* Diet */}
+        <div>
+          <label className="block font-medium">Food Pattern</label>
+          <select
+            name="diet"
+            value={formData.diet}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Veg">Pure Veg</option>
+            <option value="Non-Veg">Mixed Diet</option>
+            <option value="Eggetarian">Eggetarian</option>
+          </select>
+        </div>
+        </div>
+        <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block font-medium">Personal Conditions Parameters</label>
+          <select
+            name="personalconditions"
+            value={formData.personalconditions}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="HTN">HTN</option>
+            <option value="DM">DM</option>
+            <option value="Epileptic">Epileptic</option>
+            <option value="Hyper thyroid">Hyper thyroid</option>
+            <option value="Hypo thyroid">Hypo thyroid</option>
+            <option value="Asthma">Asthma</option>
+            <option value="CVS">CVS</option>
+            <option value="CNS">CNS</option>
+            <option value="RS">RS</option>
+            <option value="GIT">GIT</option>
+            <option value="KUB">KUB</option>
+            <option value="CANCER">CANCER</option>
+            <option value="Defective Colour Vision">Defective Colour Vision</option>
+            <option value="OTHERS">OTHERS</option>
+            <option value="Obstetric">Obstetric</option>
+            <option value="Gynaec">Gynaec</option>    
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-medium">Personal Conditions</label>
+          <select
+            name="personalconditionsans"
+            value={formData.personalconditionsans}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        </div>
+          {/* Surgical History */}
+          <h2 className="text-xl font-semibold text-gray-800 my-4">
+        Surgical History
+      </h2>
+      <div className="grid grid-cols-2 gap-6">
+        <div>
+          <label className="block font-medium">Surgical History</label>
+          <select
+            name="surgicalHistory"
+            value={formData.surgicalHistory}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+        <h2 className="text-xl font-semibold text-gray-800 my-4">
+        Allergical History
+      </h2>
+      <div className="grid grid-cols-3 gap-4">
+        {/* Drug Allergy */}
+        <div>
+          <label className="block font-medium">Drug Allergy</label>
+          <select
+            name="drugAllergy"
+            value={formData.drugAllergy}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        {/* Food Allergy */}
+        <div>
+          <label className="block font-medium">Food Allergy</label>
+          <select
+            name="foodAllergy"
+            value={formData.foodAllergy}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        {/* Other Allergies */}
+        <div>
+          <label className="block font-medium">Other Allergies</label>
+          <select
+            name="otherAllergies"
+            value={formData.otherAllergies}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+        </div>
+        <h2 className="text-xl font-semibold text-gray-800 my-4">
+        Family History
+      </h2>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block font-medium">Family Conditions Parameters</label>
+          <select
+            name="personalconditions"
+            value={formData.personalconditions}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="HTN">HTN</option>
+            <option value="DM">DM</option>
+            <option value="Epileptic">Epileptic</option>
+            <option value="Hyper thyroid">Hyper thyroid</option>
+            <option value="Hypo thyroid">Hypo thyroid</option>
+            <option value="Asthma">Asthma</option>
+            <option value="CVS">CVS</option>
+            <option value="CNS">CNS</option>
+            <option value="RS">RS</option>
+            <option value="GIT">GIT</option>
+            <option value="KUB">KUB</option>
+            <option value="CANCER">CANCER</option>
+            <option value="Defective Colour Vision">Defective Colour Vision</option>
+            <option value="OTHERS">OTHERS</option>
+            <option value="Obstetric">Obstetric</option>
+            <option value="Gynaec">Gynaec</option>    
+          </select>
+        </div>
+        
+        <div>
+          <label className="block font-medium">Family Conditions</label>
+          <select
+            name="personalconditionsans"
+            value={formData.personalconditionsans}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-medium">Relation</label>
+          <select
+            name="personalconditionsans"
+            value={formData.personalconditionsans}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Father">Father</option>
+            <option value="Mother">Mother</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Son">Son</option>
+            <option value="Daughter">Daughter</option>
+          </select>
+        </div>
+        </div>
+      
+
+      <button
+        onClick={handleSubmit}
+        className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
+
 const VaccinationForm = ({ addFilter }) => {
-const [formData, setFormData] = useState({
-vaccine: "",
-status: "",
-});
+  const [formData, setFormData] = useState({
+    disease: "",
+    vaccine: "",
+    status: "",
+  });
 
-const handleChange = (e) => {
-const { name, value } = e.target;
-setFormData({ ...formData, [name]: value });
-};
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
-const handleSubmit = () => {
-const filteredData = Object.fromEntries(
-Object.entries(formData).filter(([_, value]) => value !== "")
-);
+  const handleSubmit = () => {
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "")
+    );
 
-addFilter(filteredData);
-};
+    addFilter(filteredData);
+  };
 
-return (
-<div className="p-6 bg-white shadow-lg rounded-lg">
-<h2 className="text-xl font-semibold text-gray-800 mb-4">
-Vaccination Information
-</h2>
-<div className="grid grid-cols-2 gap-6">
-{/* Select Vaccine */}
-<div >
-<label className="block font-medium">Select Vaccine</label>
-<select
-name="vaccine"
-value={formData.vaccine}
-onChange={handleChange}
-className="w-full p-2 border border-gray-300 rounded-lg"
->
-<option value="">Select</option>
-<option value="Covid-19">Covid-19</option>
-<option value="Hepatitis B">Hepatitis B</option>
-<option value="Influenza">Influenza</option>
-</select>
-</div>
+  return (
+    <div className="p-6 bg-white shadow-lg rounded-lg">
+      <h2 className="text-xl font-semibold text-gray-800 mb-4">
+        Vaccination Information
+      </h2>
+      <div className="grid grid-cols-3 gap-4">
+        {/* Select Vaccine */}
+        <div >
+          <label className="block font-medium">Select Disease</label>
+          <select
+            name="disease"
+            value={formData.disease}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Covid-19">Covid-19</option>
+            <option value="Hepatitis B">Hepatitis B</option>
+            <option value="Influenza">Influenza</option>
+          </select>
+        </div>
 
-{/* Status */}
-  <div className="">
-    <label className="block font-medium">Status</label>
-    <select
-      name="status"
-      value={formData.status}
-      onChange={handleChange}
-      className="w-full p-2 border border-gray-300 rounded-lg"
-    >
-      <option value="">Select</option>
-      <option value="Full">Full</option>
-      <option value="Normal Doses">Partial</option>
-    </select>
-  </div>
-  </div>
-  {/* Submit Button */}
-  <button
-    onClick={handleSubmit}
-    className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
-  >
-    Add to Filter
-  </button>
-</div>
-);
+        {/* Select Vaccine */}
+        <div >
+          <label className="block font-medium">Select Vaccine</label>
+          <select
+            name="vaccine"
+            value={formData.vaccine}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          >
+            <option value="">Select</option>
+            <option value="Covid-19">Covid-19</option>
+            <option value="Hepatitis B">Hepatitis B</option>
+            <option value="Influenza">Influenza</option>
+          </select>
+        </div>
+
+        {/* Status */}
+          <div className="">
+            <label className="block font-medium">Status</label>
+            <select
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Select</option>
+              <option value="Full">Complete</option>
+              <option value="Normal Doses">Incomplete</option>
+            </select>
+          </div>
+          </div>
+          {/* Submit Button */}
+          <button
+            onClick={handleSubmit}
+            className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition duration-300"
+          >
+            Add to Filter
+          </button>
+        </div>
+  );
 };
 
 export default RecordsFilters;

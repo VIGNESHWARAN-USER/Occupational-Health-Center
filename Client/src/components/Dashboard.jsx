@@ -18,6 +18,7 @@ import moment from 'moment';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartBar, faHeartbeat } from '@fortawesome/free-solid-svg-icons';
 import { faCalendar } from '@fortawesome/free-regular-svg-icons';
+import { GrRun } from "react-icons/gr";
 
 // Animation variants (same as before)
 const chartVariants = {
@@ -381,7 +382,7 @@ const App = () => {
     };
 
     return (
-        <div className="min-h-screen flex bg-[#8fcadd]">
+        <div className="h-screen flex bg-[#8fcadd]">
             <Sidebar />
             <div className="flex-1 p-6 overflow-y-auto">
 
@@ -464,7 +465,8 @@ const App = () => {
                         className={`flex items-center bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
                         onClick={() => toggleAnalysis('fitness')}
                     >
-                        <FontAwesomeIcon icon={faHeartbeat} className="mr-2" />
+                        <GrRun className='text-xl me-2'/>
+
                         Fitness Analysis
                     </button>
                 </div>
