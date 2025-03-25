@@ -53,11 +53,13 @@ const Login = () => {
         );
         if (response.status === 200) {
           localStorage.setItem("accessLevel", response.data.accessLevel);
-          setLoading(false);
+          
           navigate(response.data.accessLevel === "admin" ? "../admindashboard" : "../dashboard");
         } else setErr("Password incorrect");
       } catch (error) {
         setErr("Invalid details");
+      }finally{
+        setLoading(false);
       }
     }
   };

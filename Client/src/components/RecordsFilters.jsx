@@ -13,11 +13,10 @@ const filterSections = [
   { id: "purpose", label: "Purpose Filter" },
   { id: "vitals", label: "Vitals" },
   { id: "investigations", label: "Investigations" },
-  { id: "diagnosis", label: "Diagnosis" },
+  { id: "diagnosis", label: "Diagnosis and Notable Remarks" },
   { id: "fitness", label: "Fitness" },
   { id:"prescriptions", label: "Prescriptions" },
   { id: "referrals", label: "Referrals" },
-  { id: "notableremarks", label: "Notable Remarks" },
   { id: "statutoryforms", label: "Statutory Forms" },
 ];
 
@@ -272,9 +271,6 @@ const RecordsFilters = () => {
                 ) : null}
                 {selectedSection === "referrals" ? (
                   <Referrals addFilter={addFilter} />
-                ) : null}
-                {selectedSection === "notableremarks" ? (
-                  <NotableRemarks addFilter={addFilter} />
                 ) : null}
                 {selectedSection === "statutoryforms" ? (
                   <StatutoryForms addFilter={addFilter} />
@@ -594,20 +590,409 @@ const EmployementStatus = ({ addFilter }) => {
 
 
 const Diagnosis = ({addFilter}) =>{
+  const [formData, setFormData] = useState({
+    disease: "",
+    notable_remarks: ""
+  });
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    addFilter(formData);
+    setFormData({
+      disease: "",
+      notable_remarks: ""
+    });
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <div>
+        <label htmlFor="sex" className="block text-sm font-medium text-gray-700">
+          Disease
+        </label>
+        <select
+          name="disease"
+          value={formData.disease}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Disease</option>
+          <option value="Covid-19">Covid-19</option>
+          <option value="Hepatitis B">Hepatitis B</option>
+          <option value="Influenza">Influenza</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="sex" className="block text-sm font-medium text-gray-700">
+          Disease
+        </label>
+        <select
+          name="notable_remarks"
+          value={formData.notable_remarks}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Notable Remarks</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <button
+        onClick={handleSubmit}
+        className="mt-4 w-1/4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
+};
 
-}
+
 
 const Prescriptions = ({addFilter}) =>{
-
+  const [formData, setFormData] = useState({
+    tablets: "",
+    injections: "",
+    creams: "",
+    others: "",
+    notes: "",
+  });
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    addFilter(formData);
+    setFormData({
+      tablets: "",
+      injections: "",
+      creams: "",
+      others: "",
+      notes: "",
+    });
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-4 gap-4">
+      <div>
+        <label htmlFor="tablets" className="block text-sm font-medium text-gray-700">
+          Tablets
+        </label>
+        <select
+          name="tablets"
+          value={formData.tablets}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Tablets</option>
+          <option value="aspirin">Aspirin</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="paracetamol">Paracetamol</option>
+          <option value="acetaminophen">Acetaminophen</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="injections" className="block text-sm font-medium text-gray-700">
+          Injections
+        </label>
+        <select
+          name="injections"
+          value={formData.injections}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Injections</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="paracetamol">Paracetamol</option>
+          <option value="acetaminophen">Acetaminophen</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="creams" className="block text-sm font-medium text-gray-700">
+          Creams
+        </label>
+        <select
+          name="creams"
+          value={formData.creams}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Creams</option>
+          <option value="aspirin">Aspirin</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="paracetamol">Paracetamol</option>
+          <option value="acetaminophen">Acetaminophen</option>
+        </select>
+      </div>
+      <div>
+        <label htmlFor="others" className="block text-sm font-medium text-gray-700">
+          Others
+        </label>
+        <select
+          name="others"
+          value={formData.others}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select Others</option>
+          <option value="aspirin">Aspirin</option>
+          <option value="ibuprofen">Ibuprofen</option>
+          <option value="paracetamol">Paracetamol</option>
+          <option value="acetaminophen">Acetaminophen</option>
+        </select>
+      </div>
+      </div>
+      <div>
+        <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+          Notes
+        </label>
+        <textarea
+          name="notes"
+          value={formData.notes}
+          onChange={handleChange}
+          className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        ></textarea>
+      </div>
+      <button
+        onClick={handleSubmit}
+        className="mt-4 w-1/4 bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+      >
+        Add to Filter
+      </button>
+    </div>
+  );
 }
 
-const Referrals = ({addFilter}) =>{
+const Referrals = ({ addFilter }) => {
+  const [caseType, setCaseType] = useState('');
+  const [otherCaseDetails, setOtherCaseDetails] = useState('');
+  const [investigationDetails, setInvestigationDetails] = useState('');
+  const [adviceDetails, setAdviceDetails] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [referralNeeded, setReferralNeeded] = useState(''); // Renamed to avoid conflict
+  const [hospitalName, setHospitalName] = useState('');
+  const [speciality, setSpeciality] = useState('');
 
-}
+  const caseTypeOptions = [
+    { value: 'diabetes', label: 'Diabetes' },
+    { value: 'hypertension', label: 'Hypertension' },
+    { value: 'cardiac', label: 'Cardiac' },
+    { value: 'other', label: 'Other' },
+  ];
 
-const NotableRemarks = ({addFilter}) =>{
+  const [isDoctor, setIsDoctor] = useState(true); // Replace with your actual logic
 
-}
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    switch (name) {
+      case 'caseType':
+        setCaseType(value);
+        break;
+      case 'otherCaseDetails':
+        setOtherCaseDetails(value);
+        break;
+      case 'investigationDetails':
+        setInvestigationDetails(value);
+        break;
+      case 'adviceDetails':
+        setAdviceDetails(value);
+        break;
+      case 'followUpDate':
+        setFollowUpDate(value);
+        break;
+      case 'hospitalName':
+        setHospitalName(value);
+        break;
+      case 'speciality':
+        setSpeciality(value);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleReferralNeededChange = (value) => {
+    setReferralNeeded(value);
+  };
+
+
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Prevent default form submission
+    const referralData = {
+      caseType,
+      otherCaseDetails,
+      investigationDetails,
+      adviceDetails,
+      followUpDate,
+      referralNeeded,
+      hospitalName,
+      speciality,
+    };
+    addFilter({ referrals: referralData });  // Wrap under "referrals" key
+  };
+
+  useEffect(() => {
+    // You can remove this useEffect now, as handleSubmit now directly calls addFilter.
+  }, [addFilter, caseType, otherCaseDetails, investigationDetails, adviceDetails, followUpDate, referralNeeded, hospitalName, speciality]);
+
+  return (
+    <form onSubmit={handleSubmit}> {/* Wrap the form in a <form> element */}
+      <h2 className="text-3xl font-bold mb-4">Referral</h2>
+
+      <div className="mb-6">
+        <div className="mb-4">
+          <label htmlFor="caseType" className="block text-gray-700 text-lg font-medium mb-2">
+            Case Type
+          </label>
+          <select
+            id="caseType"
+            name="caseType"  // Add name attribute
+            className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+            value={caseType}
+            onChange={handleChange}
+            disabled={!isDoctor}
+          >
+            <option value="">Select Case Type</option>
+            {caseTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {caseType === 'other' && (
+          <div className="mb-4">
+            <label htmlFor="otherDetails" className="block text-gray-700 text-lg font-medium mb-2">
+              Other Case Details
+            </label>
+            <textarea
+              id="otherDetails"
+              name="otherCaseDetails" // Add name attribute
+              className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+              placeholder="Enter other case details..."
+              value={otherCaseDetails}
+              onChange={handleChange}
+              disabled={!isDoctor}
+            />
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label htmlFor="investigationDetails" className="block text-gray-700 text-lg font-medium mb-2">
+            Investigation
+          </label>
+          <textarea
+            id="investigationDetails"
+            name="investigationDetails" // Add name attribute
+            className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+            placeholder="Suggest to do FBS/HBAL..."
+            value={investigationDetails}
+            onChange={handleChange}
+            disabled={!isDoctor}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="adviceDetails" className="block text-gray-700 text-lg font-medium mb-2">
+            Advice
+          </label>
+          <textarea
+            id="adviceDetails"
+            name="adviceDetails" // Add name attribute
+            className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+            placeholder="Diet/exercise/salt/swep/hydration/BP/Sugar Control/Alcohol Absuse/Fat free/Oil free..."
+            value={adviceDetails}
+            onChange={handleChange}
+            disabled={!isDoctor}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label htmlFor="followUpDate" className="block text-gray-700 text-lg font-medium mb-2">
+            Follow Up (Review Date):
+          </label>
+          <input
+            type="date"
+            id="followUpDate"
+            name="followUpDate"  // Add name attribute
+            className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+            value={followUpDate}
+            onChange={handleChange}
+            disabled={!isDoctor}
+          />
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label className="block text-gray-700 text-lg font-medium mb-2">
+          Do you need a referral?
+        </label>
+        <div className="flex items-center gap-6">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="referralNeeded"  // Add name attribute
+              value="yes"
+              checked={referralNeeded === 'yes'}
+              onChange={() => handleReferralNeededChange('yes')}
+              className="form-radio text-blue-500"
+              disabled={!isDoctor}
+            />
+            Yes
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="referralNeeded"  // Add name attribute
+              value="no"
+              checked={referralNeeded === 'no'}
+              onChange={() => handleReferralNeededChange('no')}
+              className="form-radio text-blue-500"
+              disabled={!isDoctor}
+            />
+            No
+          </label>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <label htmlFor="hospitalName" className="block text-gray-700 text-lg font-medium mb-2">
+          Hospital Name
+        </label>
+        <input
+          id="hospitalName"
+          type="text"
+          name="hospitalName"  // Add name attribute
+          className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+          placeholder="Enter hospital name..."
+          value={hospitalName}
+          onChange={handleChange}
+          disabled={!isDoctor}
+        />
+      </div>
+
+      <div className="mb-6">
+        <label htmlFor="speciality" className="block text-gray-700 text-lg font-medium mb-2">
+          Speciality
+        </label>
+        <input
+          id="speciality"
+          type="text"
+          name="speciality"  // Add name attribute
+          className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
+          placeholder="Enter speciality..."
+          value={speciality}
+          onChange={handleChange}
+          disabled={!isDoctor}
+        />
+      </div>
+
+      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Apply Referral Filter</button>
+    </form>
+  );
+};
 
 const StatutoryForms = ({addFilter}) =>{
 
@@ -1428,7 +1813,7 @@ const Vitals = ({ addFilter }) => {
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Fitness Assessment
         </h2>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-4 gap-6">
           {/* Tremors */}
           <div>
             <label className="block font-medium">Tremors</label>
@@ -1488,7 +1873,8 @@ const Vitals = ({ addFilter }) => {
               <option value="Negative">Negative</option>
             </select>
           </div>
-  
+          </div>
+          <div className="grid grid-cols-2 mt-6 gap-6">
           {/* Job Nature */}
           <div>
             <label className="block font-medium">Job Nature</label>
@@ -1500,27 +1886,27 @@ const Vitals = ({ addFilter }) => {
             >
               <option value="">Select</option>
               <option value="DeskJob">Desk Job</option>
-<option value="Field Work">Field Work</option>
-<option value="Manual Labor">Manual Labor</option>
-</select>
-</div>
+              <option value="Field Work">Field Work</option>
+              <option value="Manual Labor">Manual Labor</option>
+              </select>
+          </div>
 
-{/* Overall Fitness */}
-    <div>
-      <label className="block font-medium">Overall Fitness</label>
-      <select
-        name="overall_fitness"
-        value={formData.overall_fitness}
-        onChange={handleChange}
-        className="w-full p-2 border border-gray-300 rounded-lg"
-      >
-        <option value="">Select</option>
-        <option value="Fit">Fit</option>
-        <option value="Conditionally Fit">Conditionally Fit</option>
-        <option value="Unfit">Unfit</option>
-      </select>
-    </div>
-  </div>
+        {/* Overall Fitness */}
+            <div>
+              <label className="block font-medium">Overall Fitness</label>
+              <select
+                name="overall_fitness"
+                value={formData.overall_fitness}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Select</option>
+                <option value="Fit">Fit</option>
+                <option value="Conditionally Fit">Conditionally Fit</option>
+                <option value="Unfit">Unfit</option>
+              </select>
+            </div>
+      </div>
 
   <button
     onClick={handleSubmit}

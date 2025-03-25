@@ -968,18 +968,29 @@ class Review(BaseModel):
     def _str_(self):
         return f"{self.name} - {self.category.name}"
     
-
-class Member(BaseModel):
-    employee_number = models.CharField(max_length=50, unique=True)
-    name = models.CharField(max_length=100)
-    designation = models.CharField(max_length=50, choices=[("Admin", "Admin"), ("Manager", "Manager"), ("Staff", "Staff")])
-    email = models.EmailField(unique=True)
-    role = models.CharField(max_length=50, choices=[("HR", "HR"), ("IT", "IT"), ("Finance", "Finance")])
+class Member(models.Model):
+    # Common fields
+    name = models.CharField(max_length=255)
+    designation = models.CharField(max_length=255)
+    email = models.EmailField()
+    role = models.CharField(max_length=255, blank=True)
+    job_nature = models.CharField(max_length=255, blank=True)
     date_exited = models.DateField(null=True, blank=True)
+    doj = models.DateField(null=True, blank=True)
+
+    # OHC Staff Specific Fields (Nullable)
+    employee_number = models.CharField(max_length=50, unique=True, null=True, blank=True) #making unique property to false also
+    
+
+    # External Hospital Specific Fields (Nullable)
+    hospital_name = models.CharField(max_length=255, null=True, blank=True)
+    contact_number = models.CharField(max_length=20, blank=True, null=True) #validation is needed
+    aadhar = models.CharField(max_length=20, blank=True, null=True)  #validation is needed
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
+    
 
     def _str_(self):
         return self.name
-    
 
 class MedicalHistory(BaseModel):
     emp_no = models.CharField(max_length=255, null=True, blank=True)  # Add emp_no field

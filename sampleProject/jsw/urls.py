@@ -1,6 +1,8 @@
 from . import views
 from django.urls import path
 from .views import get_categories, get_reviews, add_review
+from django.conf.urls.static import static
+
 
 urlpatterns = [
     path('login', views.login, name='login'),
@@ -54,4 +56,5 @@ urlpatterns = [
     path('consultations/add/', views.add_consultation, name='add_consultation'),
     path('visitData/<str:emp_no>/<str:date>', views.fetchVisitDataWithDate, name = 'fetchVisitdata'),
     path('prescriptions/', views.add_prescription, name='add_prescription'),
+    path('updateProfileImage/<str:emp_no>', views.uploadImage, name='upload_image')
 ]

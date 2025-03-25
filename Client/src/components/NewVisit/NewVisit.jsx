@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Sidebar from "../Sidebar";
-import BasicDetails from "./BasicDetails";
 import Fitness from "./Fitness";
 import Investigation from "./Investigation";
 import Vaccination from "./Vaccination";
 import Vitals from "./Vitals";
 import MedicalHistory from "./MedicalHistory";
-import { FaSearch } from "react-icons/fa";
+import { FaSearch, FaUserCircle, FaCamera, FaUpload, FaRedo } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -27,13 +26,20 @@ const NewVisit = () => {
   const [singleData, setsingleData] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
-  const [formData, setFormData] = useState({}); // Initialize as empty object
+  const [formData, setFormData] = useState({});
   const [formDataDashboard, setFormDataDashboard] = useState({
     typeofVisit: "Preventive",
     category: "Employee",
     register: "Pre employement",
     purpose: "Medical Examination"
   });
+  const [profileImage, setProfileImage] = useState(null); // State for profile image (data URL)
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState(null); // New state for image upload
+  const [uploadError, setUploadError] = useState(null);
+
 
   //New states
   const [annualPeriodicalFields, setAnnualPeriodicalFields] = useState({
@@ -46,8 +52,6 @@ const NewVisit = () => {
     campName: "",
     hospitalName: "",
   });
-
-
 
   const dataMapping = {
     Employee: {
@@ -100,18 +104,15 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Followup Visits": "Outpatient",
-        "BP Sugar ( Abnormal Value)": "Outpatient",
-        "Injury Outside the Premises": "Outpatient",
-        "Over Counter Injury Outside the Premises": "Outpatient",
-        "Alcohol Abuse": "Alcohol Abuse"
-      }
-    },
-    Visitor: {
-      Preventive: {
-        "Visitors Outsider Fitness": "Visitors Outsider Fitness"
+        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)"
       },
-      Curative: {
-        "Visitors Outsider Patient": "Visitors Outsider Patient"
+      Visitor: {
+        Preventive: {
+          "Visitors Outsider Fitness": "Visitors Outsider Fitness"
+        },
+        Curative: {
+          "Visitors Outsider Patient": "Visitors Outsider Patient"
+        }
       }
     }
   };
@@ -131,13 +132,13 @@ const NewVisit = () => {
       alert("Employee number is required!");
       return;
     }
-      let extraData = {};
+    let extraData = {};
 
-      if (register === "Annual / Periodical") {
-          extraData = { ...annualPeriodicalFields };
-      } else if (register.startsWith("Camps")) {
-          extraData = { ...campFields };
-      }
+    if (register === "Annual / Periodical") {
+      extraData = { ...annualPeriodicalFields };
+    } else if (register.startsWith("Camps")) {
+      extraData = { ...campFields };
+    }
 
     try {
       const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
@@ -168,7 +169,7 @@ const NewVisit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const updatedformData = {...formData, role: type}
+      const updatedformData = { ...formData, role: type }
       const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
@@ -192,6 +193,7 @@ const NewVisit = () => {
       setdata([]); // Reset data when no input
       localStorage.removeItem("selectedEmployee"); // Remove saved employee
       setFormData({});//clears the input fields
+      setUploadedImage(null)
     } else {
       try {
         const filtered = employees.filter(emp =>
@@ -201,7 +203,7 @@ const NewVisit = () => {
         if (filtered.length > 0) {
           // Get the latest record by sorting by id (or updated_at)
           const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
-
+            console.log("Latest Employee:", latestEmployee);
           setFilteredEmployees([latestEmployee]);
           setdata([latestEmployee]);
           setsingleData([latestEmployee]);
@@ -212,6 +214,13 @@ const NewVisit = () => {
           setPurpose("");   // Reset purpose
           setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" }));
           localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee)); // Save latest matched employee
+          setProfileImage(latestEmployee.profileImage || null); // Set profile image if it exists
+          if (latestEmployee.profilepic_url) { //Use profilepic_url here directly since its already fully constructed in backend
+            console.log("profilepic_url:", latestEmployee.profilepic_url);
+            setUploadedImage(latestEmployee.profilepic_url); // profilepic_url is full url
+          }
+
+
         } else {
           alert("Employee not found!");
           setFilteredEmployees([]);
@@ -219,6 +228,8 @@ const NewVisit = () => {
           setsingleData([]);
           setFormData({});
           localStorage.removeItem("selectedEmployee");
+          setProfileImage(null);
+          setUploadedImage(null);
         }
       } catch (error) {
         console.error("Error during search:", error);
@@ -227,48 +238,44 @@ const NewVisit = () => {
     }
   };
 
-  
-  
-
-
   const handleClear = () => {
     localStorage.removeItem("selectedEmployee");
     setdata([]);
     setFormData({}); // Clear the form
     setSearchId("");
+    setProfileImage(null); // Clear profile image
+    setUploadedImage(null);
   };
 
-  const {search, reference} = useLocation().state || {};
+  const { search, reference } = useLocation().state || {};
 
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        setLoading(false);
+        setLoading(true);
         localStorage.removeItem("selectedEmployee");
         const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
-        setEmployees(response.data.data);                        
-        setFilteredEmployees(response.data.data);
+          console.log("API Response Data:", response.data.data);
+        setEmployees(response.data.data);
         console.log(response.data.data);
-                                                                    
+        setFilteredEmployees(response.data.data);
+
         const savedEmployee = localStorage.getItem("selectedEmployee");
         if (savedEmployee) {
           const parsedEmployee = JSON.parse(savedEmployee);
           setdata([parsedEmployee]);
           setFormData(parsedEmployee);
+          setProfileImage(parsedEmployee.profileImage || null);
         }
 
-        
-        console.log(search, reference);
-        
-        if(reference && search) {
-          console.log(search);
+        if (reference && search) {
           setSearchId(search);
         }
 
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-       setLoading(false);
+        setLoading(false);
       }
     };
 
@@ -282,15 +289,15 @@ const NewVisit = () => {
   };
 
   const handleRegisterChange = (e) => {
-      const selectedRegister = e.target.value;
-      setRegister(selectedRegister);
-      const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
-      setPurpose(autoPurpose);
-      setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
+    const selectedRegister = e.target.value;
+    setRegister(selectedRegister);
+    const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
+    setPurpose(autoPurpose);
+    setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
 
-      // Reset additional fields when register changes
-      setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
-      setCampFields({ campName: "", hospitalName: "" });
+    // Reset additional fields when register changes
+    setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
+    setCampFields({ campName: "", hospitalName: "" });
   };
 
   const handleTypeChange = (e) => {
@@ -310,24 +317,24 @@ const NewVisit = () => {
   };
 
   const [age, setAge] = useState('');
-  
-    useEffect(() => {
-      if (formData.dob) {
-        calculateAge(formData.dob);
-      }
-    }, [formData.dob]);
-  
-    const calculateAge = (dob) => {
-      const today = new Date();
-      const birthDate = new Date(dob.split('-')[2], dob.split('-')[1] - 1, dob.split('-')[0]); 
-      console.log(birthDate)
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      setAge(age);
-    };
+
+  useEffect(() => {
+    if (formData.dob) {
+      calculateAge(formData.dob);
+    }
+  }, [formData.dob]);
+
+  const calculateAge = (dob) => {
+    const today = new Date();
+    const [day, month, year] = dob.split('-');
+    const birthDate = new Date(year, month - 1, day);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    setAge(age);
+  };
 
   const tabs = [
     { id: "BasicDetails", label: "Basic Details" },
@@ -341,6 +348,25 @@ const NewVisit = () => {
   ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering)
 
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Please upload an image file.');
+        return;
+      }
+
+      setUploadError(null); // Clear any previous errors
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setUploadedImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const renderTabContent = () => {
     switch (activeTab) {
       case "BasicDetails":
@@ -348,6 +374,7 @@ const NewVisit = () => {
           <div className="mt-8 p-4">
             <h2 className="text-lg font-medium mb-4">Basic Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 ">Name</label>
                 <input
@@ -418,7 +445,7 @@ const NewVisit = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 ">Identification Marks 1</label>
                 <input
-                  name="identification_marks"
+                  name="identification_marks1"
                   value={formData.identification_marks1}
                   onChange={handleChange}
                   type="text"
@@ -429,7 +456,7 @@ const NewVisit = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 ">Identification Marks 2</label>
                 <input
-                  name="identification_marks"
+                  name="identification_marks2"
                   value={formData.identification_marks2}
                   onChange={handleChange}
                   type="text"
@@ -452,7 +479,7 @@ const NewVisit = () => {
                 </select>
               </div>
             </div>
-      
+
             <h2 className="text-lg font-medium my-4">Employment Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
               <div>
@@ -515,8 +542,7 @@ const NewVisit = () => {
                 <input
                   name="doj"
                   value={formData.doj}
-                  onChange={handleChange}
-                  type="text"
+                  onChange={handleChange}                  type="text"
                   placeholder="Enter Date of Joining"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
@@ -535,8 +561,8 @@ const NewVisit = () => {
                 </select>
               </div>
             </div>
-      
-      
+
+
             <h2 className="text-lg font-medium my-4">Contact Details</h2>
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -671,15 +697,15 @@ const NewVisit = () => {
                 />
               </div>
               <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-              Add Basic Details
-            </button>
+                Add Basic Details
+              </button>
             </div>
-      
-      
+
+
           </div>
         );
       case "Fitness":
-        return <Fitness data = {data}/>;
+        return <Fitness data={data} />;
       case "Investigations":
         return <Investigation data={singleData} />;
       case "Vaccination":
@@ -689,17 +715,138 @@ const NewVisit = () => {
       case "MedicalHistory":
         return <MedicalHistory data={data} />;
       case "Consultation":
-        return <Consultation data = {data}/>;
-      case "Referral":
-        return <Referral data = {data}/>;
+        return <Consultation data={data} />;
       case "Prescription":
-        return <Prescription data = {data}/>;
+        return <Prescription data={data} />;
       default:
         return <div>Unknown Tab</div>;
     }
   };
 
-  if (accessLevel === "nurse") {
+  const startWebcam = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setIsWebcamActive(true); // Set webcam to active if stream is obtained
+      }
+    } catch (err) {
+      console.error("Error accessing webcam:", err);
+    }
+  };
+
+  useEffect(() => {
+    let stream;
+    if (isWebcamActive) {
+      startWebcam();
+    }
+
+    return () => {
+      // Cleanup on unmount.  Important to stop the webcam stream!
+      if (videoRef.current && videoRef.current.srcObject) {
+        stream = videoRef.current.srcObject;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+        setIsWebcamActive(false);
+      }
+    };
+  }, [isWebcamActive]);  // Depend on 'image' to restart webcam if needed
+
+  const handleProfileIconClick = () => {
+    // Toggle webcam state
+    setProfileImage(null)
+    setUploadedImage(null)
+    setIsWebcamActive(!isWebcamActive);
+  };
+
+  const captureImage = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (video && canvas) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+      const dataURL = canvas.toDataURL('image/jpeg'); // Or 'image/png'
+      setProfileImage(dataURL);
+      setIsWebcamActive(false); // Deactivate webcam after capture
+      // Stop the webcam stream after capturing
+      if (video.srcObject) {
+        const stream = video.srcObject;
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (profileImage) {
+      // *IMPORTANT:*  This is where you'd upload the image (data URL) to your server.
+      // You'll need an API endpoint to handle this.
+      // Example (Conceptual):
+      console.log("Uploading image:", profileImage);
+      try {
+        // Convert Data URL to Blob
+        const blob = dataURLtoBlob(profileImage);
+        const formDataImg = new FormData();
+        formDataImg.append('image', blob, `profile_${formData.emp_no}.jpg`);
+
+        // const response = await fetch('/api/upload-profile-picture', { // Replace with your API endpoint
+        //   method: 'POST',
+        //   body: formData,
+        // });
+
+        // if (response.ok) {
+        //   console.log("Image uploaded successfully!");
+        // Optionally, update the profile with the new image URL from the server
+        // Update local state and database
+        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage });
+        if (updateResponse.status === 200) {
+          alert("Profile image updated successfully!");
+          // Refresh employee list or update local state
+          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          setEmployees(fetchResponse.data.data);
+          setFilteredEmployees(fetchResponse.data.data);
+          console.log(fetchResponse.data.data);
+          setdata([{ ...formData, profileImage: profileImage }]); // Update local
+          // Function to convert Data URL to Blob
+
+        }
+        // }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Error uploading uploading image!");
+      }
+    }
+  };
+  // Function to convert Data URL to Blob
+  const dataURLtoBlob = (dataURL) => {
+    // Convert base64/URLEncoded data component to raw binary data held in a string
+    let byteString;
+    if (dataURL.split(',')[0].indexOf('base64') >= 0)
+      byteString = atob(dataURL.split(',')[1]);
+    else
+      byteString = unescape(dataURL.split(',')[1]);
+
+    // Separate out the mime component
+    const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
+
+    // Write the bytes of the string to a typed array
+    const ia = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([ia], { type: mimeString });
+  }
+
+
+  const handleRetake = () => {
+    setProfileImage(null); // Clear the image to reactivate the webcam
+    setIsWebcamActive(true);
+  };
+
+  if (accessLevel === "nurse" || accessLevel === "doctor") {
     return (
       <div className="h-screen flex bg-[#8fcadd]">
         <Sidebar />
@@ -711,39 +858,133 @@ const NewVisit = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="p-1 bg-white rounded-lg overflow-y-auto">
-            { (loading) ?(
+            {(loading) ? (
               <div className="flex justify-center p-6 items-center">
-              <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
               </div>
-            ) :(<motion.div className="bg-white p-8 rounded-lg shadow-lg">
+            ) : (<motion.div className="bg-white p-8 rounded-lg shadow-lg">
 
               <div className="bg-white rounded-lg w-full p-6 shadow-lg">
-                <div className="w-full flex items-center mb-8 space-x-4">
-                  <h1 className="text-2xl font-semibold text-gray-700">Get User</h1>
-                  <div className="relative flex-grow">
-                    {/* Search Icon */}
-                    <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-4 text-gray-400" />
-
-                    {/* Input Field */}
-                    <input
-                      type="text"
-                      placeholder="Search by Employee ID"
-                      className="w-full bg-white py-3 pl-12 pr-5 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out"
-                      value={searchId}
-                      onChange={(e) => setSearchId(e.target.value)}
+                <div className="flex items-center justify-between mb-4">
+                  {uploadedImage ? ( // Display the uploaded image
+                    <img
+                      src={uploadedImage}
+                      alt="Profile"
+                      className="rounded-full w-44 h-44 object-cover mr-4"
                     />
-                  </div>
+                  ) : profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="rounded-full w-44 h-44 object-cover mr-4" // Increased size to w-20 h-20
+                    />
+                  ) : (
+                    <>
+                      {isWebcamActive ? (
+                        <>
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            className="w-44 h-44 rounded-full object-cover" // Increased size to w-20 h-20
+                          />
+                        </>
+                      ) : (
+                        <div className="relative">
+                          <FaUserCircle
+                            className="text-blue-600 w-44 h-44 mr-4 cursor-pointer" // Increased icon size to 6xl
+                            onClick={handleProfileIconClick}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
 
-                  <div className="flex flex-grow">
-                    <button onClick={handleSearch} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-                      Get
-                    </button>
-                    <button onClick={handleClear} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ml-2 mr-2">
-                      Clear
-                    </button>
-                    <button onClick={handleSubmitEntries} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-                      Add Entry
-                    </button>
+                  <div className="flex flex-col space-y-2">
+                    {isWebcamActive && (
+                      <button
+                        onClick={captureImage}
+                        className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
+                      >
+                        <FaCamera className="mr-2" /> Capture
+                      </button>
+                    )}
+                    {profileImage && (
+                      <>
+                        <button
+                          onClick={handleUpload}
+                          className="flex items-center bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700"
+                        >
+                          <FaUpload className="mr-2" /> Upload
+                        </button>
+                        <button
+                          onClick={handleRetake}
+                          className="flex items-center bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700"
+                        >
+                          <FaRedo className="mr-2" /> Retake
+                        </button>
+                      </>
+                    )}
+                    {!profileImage && !isWebcamActive && (
+                      <>
+                        <div className="flex flex-col space-y-2">
+                          <label htmlFor="imageUpload" className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 cursor-pointer">
+                            <FaUpload className="mr-2" /> Upload Image
+                          </label>
+                          <input
+                            id="imageUpload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            style={{ display: 'none' }}
+                          />
+                          {uploadError && <p className="text-red-500">{uploadError}</p>}
+                        </div>
+                        <button
+                          onClick={handleProfileIconClick}
+                          className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
+                        >
+                          <FaCamera className="mr-2" /> Take Picture
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <canvas ref={canvasRef} style={{ display: 'none' }} />
+                  <div className="w-full ms-4 flex items-center mb-8 space-x-4">
+                    <div className="relative flex items-center">
+
+                      {/* Search Icon */}
+                      <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-6 text-gray-400" />
+
+                      {/* Input Field */}
+                      <input
+                        type="text"
+                        placeholder="Search by Employee ID"
+                        className="w-full bg-white py-3 pl-12 pr-5 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out"
+                        value={searchId}
+                        onChange={(e) => setSearchId(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="flex flex-grow">
+                      <button
+                        onClick={handleSearch}
+                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                      >
+                        Get
+                      </button>
+                      <button
+                        onClick={handleClear}
+                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ml-2 mr-2"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={handleSubmitEntries}
+                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                      >
+                        Add Entry
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -812,61 +1053,61 @@ const NewVisit = () => {
                   </div>
                 </div>
 
-                  {/* Conditionally Rendered Fields */}
-                  {register === "Annual / Periodical" && (
-                      <div className="grid grid-cols-3 gap-4 mb-6">
-                          <div>
-                              <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
-                              <input
-                                  type="text"
-                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                  value={annualPeriodicalFields.year}
-                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, year: e.target.value }))}
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-gray-70                                  text-sm font-bold mb-2">Batch</label>
-                              <input
-                                  type="text"
-                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                  value={annualPeriodicalFields.batch}
-                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, batch: e.target.value }))}
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
-                              <input
-                                  type="text"
-                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                  value={annualPeriodicalFields.hospitalName}
-                                  onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, hospitalName: e.target.value }))}
-                              />
-                          </div>
-                      </div>
-                  )}
+                {/* Conditionally Rendered Fields */}
+                {register === "Annual / Periodical" && (
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={annualPeriodicalFields.year}
+                        onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, year: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Batch</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={annualPeriodicalFields.batch}
+                        onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, batch: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={annualPeriodicalFields.hospitalName}
+                        onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
 
-                  {register.startsWith("Camps") && (
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                          <div>
-                              <label className="block text-gray-700 text-sm font-bold mb-2">Camp Name</label>
-                              <input
-                                  type="text"
-                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                  value={campFields.campName}
-                                  onChange={(e) => setCampFields(prev => ({ ...prev, campName: e.target.value }))}
-                              />
-                          </div>
-                          <div>
-                              <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
-                              <input
-                                  type="text"
-                                  className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                  value={campFields.hospitalName}
-                                  onChange={(e) => setCampFields(prev => ({ ...prev, hospitalName: e.target.value }))}
-                              />
-                          </div>
-                      </div>
-                  )}
+                {register.startsWith("Camps") && (
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Camp Name</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={campFields.campName}
+                        onChange={(e) => setCampFields(prev => ({ ...prev, campName: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
+                      <input
+                        type="text"
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={campFields.hospitalName}
+                        onChange={(e) => setCampFields(prev => ({ ...prev, hospitalName: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <hr className="h-4 text-blue-100" />
                 <div className="border-b border-gray-200 mb-4">
@@ -877,7 +1118,7 @@ const NewVisit = () => {
                         onClick={() => setActiveTab(tab.id)}
                         aria-selected={activeTab === tab.id}
                         className={`relative whitespace-nowrap font-bold py-2 px-3 font-medium text-sm focus:outline-none transition-all duration-300 ease-in-out
-        ${activeTab === tab.id
+                      ${activeTab === tab.id
                             ? "text-blue-600"
                             : "text-gray-500 hover:text-gray-700"}`}
                       >
@@ -885,7 +1126,7 @@ const NewVisit = () => {
                         {/* Active Tab Indicator */}
                         <span
                           className={`absolute left-0 bottom-0 h-1 w-full rounded-full bg-blue-500 transition-all duration-300 ease-in-out
-          ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
+                        ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
                         ></span>
                       </button>
                     ))}
@@ -899,218 +1140,15 @@ const NewVisit = () => {
       </div>
     );
   }
-  else if (accessLevel === "doctor") {
-    const tabs = [
-      { id: "BasicDetails", label: "Basic Details" },
-      { id: "Vitals", label: "Vitals" },
-      register !== "Alcohol Abuse" && { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-      register !== "Alcohol Abuse" && purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
-      register !== "Alcohol Abuse" && { id: "Vaccination", label: "Vaccination" },
-      register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
-      register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation" },
-      register !== "Alcohol Abuse" && visit === "Curative" && { id: "Prescription", label: "Prescription" },
-    ].filter(Boolean);
-
-    return (
-      <div className="h-screen flex bg-[#8fcadd]">
-        <Sidebar />
-        <div className="w-4/5 p-8 overflow-y-auto">
-          <h2 className="text-4xl font-bold mb-8 text-gray-800">New Visit</h2>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="p-1 overflow-y-auto">
-            <motion.div className="bg-white p-8 rounded-lg shadow-lg">
-
-              <div className="bg-white rounded-lg w-full p-6 shadow-lg">
-                <div className="w-full flex items-center mb-8 space-x-4">
-                  <h1 className="text-2xl font-semibold text-gray-700">Get User</h1>
-                  <div className="relative flex-grow">
-                    {/* Search Icon */}
-                    <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-4 text-gray-400" />
-
-                    {/* Input Field */}
-                    <input
-                      type="text"
-                      placeholder="Search by Employee ID"
-                      className="w-full bg-white py-3 pl-12 pr-5 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out"
-                      value={searchId}
-                      onChange={(e) => setSearchId(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="flex flex-grow">
-                    <button onClick={handleSearch} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-                      Get
-                    </button>
-                    <button onClick={handleClear} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ml-2 mr-2">
-                      Clear
-                    </button>
-                    <button onClick={handleSubmitEntries} className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-                      Add Entry
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {/* Type Selection */}
-                  <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                      Select Type
-                    </label>
-                    <select
-                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                      value={type}
-                      onChange={handleTypeChange}
-                    >
-                      <option>Employee</option>
-                      <option>Contractor</option>
-                      <option>Visitor</option>
-                    </select>
-                  </div>
-
-                  {/* Visit Selection */}
-                  <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                      Select Type of Visit
-                    </label>
-                    <select
-                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                      value={visit}
-                      onChange={handleVisitChange}
-                    >
-                      <option>Preventive</option>
-                      <option>Curative</option>
-                    </select>
-                  </div>
-
-                  {/* Register Selection */}
-                  <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                      Select Register
-                    </label>
-                    <select
-                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                      value={register}
-                      onChange={handleRegisterChange}
-                    >
-                      <option value="">Select Register</option>
-                      {getRegisterOptions().map((option) => (
-                        <option key={option}>{option}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Purpose (Auto-selected) */}
-                  <div>
-                    <label className="block text-gray-700 text-sm font-bold mb-2">
-                      Purpose
-                    </label>
-                    <input
-                      type="text"
-                      value={purpose}
-                      readOnly
-                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100"
-                    />
-                  </div>
-                </div>
-                      {/* Conditionally Rendered Fields */}
-                      {register === "Annual / Periodical" && (
-                          <div className="grid grid-cols-3 gap-4 mb-6">
-                              <div>
-                                  <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
-                                  <input
-                                      type="text"
-                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                      value={annualPeriodicalFields.year}
-                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, year: e.target.value }))}
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-gray-700 text-sm font-bold mb-2">Batch</label>
-                                  <input
-                                      type="text"
-                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                      value={annualPeriodicalFields.batch}
-                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, batch: e.target.value }))}
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
-                                  <input
-                                      type="text"
-                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                      value={annualPeriodicalFields.hospitalName}
-                                      onChange={(e) => setAnnualPeriodicalFields(prev => ({ ...prev, hospitalName: e.target.value }))}
-                                  />
-                              </div>
-                          </div>
-                      )}
-
-                      {register.startsWith("Camps") && (
-                          <div className="grid grid-cols-2 gap-4 mb-6">
-                              <div>
-                                  <label className="block text-gray-700 text-sm font-bold mb-2">Camp Name</label>
-                                  <input
-                                      type="text"
-                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                      value={campFields.campName}
-                                      onChange={(e) => setCampFields(prev => ({ ...prev, campName: e.target.value }))}
-                                  />
-                              </div>
-                              <div>
-                                  <label className="block text-gray-700 text-sm font-bold mb-2">Hospital Name</label>
-                                  <input
-                                      type="text"
-                                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                                      value={campFields.hospitalName}
-                                      onChange={(e) => setCampFields(prev => ({ ...prev, hospitalName: e.target.value }))}
-                                  />
-                              </div>
-                          </div>
-                      )}
-
-                <hr className="h-4 text-blue-100" />
-                <div className="border-b border-gray-200 mb-4">
-                  <nav className="relative flex justify-evenly space-x-4 bg-gray-50 p-3 rounded-lg shadow-sm" aria-label="Tabs">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        aria-selected={activeTab === tab.id}
-                        className={`relative whitespace-nowrap font-bold py-2 px-3 font-medium text-sm focus:outline-none transition-all duration-300 ease-in-out
-        ${activeTab === tab.id
-                            ? "text-blue-600"
-                            : "text-gray-500 hover:text-gray-700"}`}
-                      >
-                        {tab.label}
-                        {/* Active Tab Indicator */}
-                        <span
-                          className={`absolute left-0 bottom-0 h-1 w-full rounded-full bg-blue-500 transition-all duration-300 ease-in-out
-          ${activeTab === tab.id ? "opacity-100 scale-x-100" : "opacity-0 scale-x-0"}`}
-                        ></span>
-                      </button>
-                    ))}
-                  </nav>
-                  {renderTabContent()}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
   else {
     return (
-      <section class="bg-white h-full flex items-center dark:bg-gray-900">
-        <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-          <div class="mx-auto max-w-screen-sm text-center">
-            <h1 class="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-gray-900 md:text-4xl dark:text-white">404</h1>
-            <p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Something's missing.</p>
-            <p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, we can't find that page. You'll find lots to explore on the home page. </p>
-            <button onClick={() => navigate(-1)} class="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4">Back</button>
+      <section className="bg-white h-full flex items-center dark:bg-gray-900">
+        <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
+          <div className="mx-auto max-w-screen-sm text-center">
+            <h1 className="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-gray-900 md:text-4xl dark:text-white">404</h1>
+            <p className="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Something's missing.</p>
+            <p className="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, we can't find that page. You'll find lots to explore on the home page. </p>
+            <button onClick={() => navigate(-1)} className="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4">Back</button>
           </div>
         </div>
       </section>

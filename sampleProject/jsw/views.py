@@ -64,28 +64,180 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
+import base64
+import uuid
+import json
+from django.db.models import Max
+from . import models  # Important to import your models correctly
+from django.conf import settings  # Import settings to access MEDIA_URL
+from django.db.models.fields.files import ImageField  # Import ImageField explicitly
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
+import base64
+import uuid
+import json
+from django.db.models import Max
+from . import models  # Important to import your models correctly
+from django.conf import settings  # Import settings to access MEDIA_URL
+from django.db.models.fields.files import ImageField  # Import ImageField explicitly
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+@csrf_exempt
+def uploadImage(request, emp_no):
+    if request.method == 'PUT':
+        try:
+            # Check if 'profileImage' is in the request data
+            data = json.loads(request.body.decode('utf-8'))
+            if 'profileImage' in data:
+                image_data = data['profileImage']
+
+                # Extract the image format and base64 encoded data
+                format, imgstr = image_data.split(';base64,')
+                ext = format.split('/')[ -1]
+
+                # Decode the base64 string
+                image_data = base64.b64decode(imgstr)
+
+                # Create a unique filename
+                file_name = f"{uuid.uuid4()}.{ext}"
+
+                # Create a Django ContentFile object from the decoded data
+                data = ContentFile(image_data, name=file_name)
+
+                try:
+                    # Get the latest employee object
+                    employee = models.employee_details.objects.filter(emp_no=emp_no).order_by('-id').first()
+
+                    if employee:
+                        # Delete the old image, if any exists
+                        if employee.profilepic:
+                            storage = employee.profilepic.storage
+                            if storage.exists(employee.profilepic.name):
+                                storage.delete(employee.profilepic.name)
+
+                        employee.profilepic.save(file_name, data, save=True)  # Pass file_name and ContentFile
+                        employee.save()
+
+                        # Log the image URL for debugging (after it's saved)
+                        logger.info(
+                            f"Successfully updated image for emp_no {emp_no}")
+
+                        return JsonResponse({'status': 'success', 'message': 'Image updated successfully'})
+
+                    else:
+                        # Create a new employee object if it does not exist
+                        employee = models.employee_details(
+                            type=data.get('type', ''),  # Use data.get() for optional fields
+                            type_of_visit=data.get('type_of_visit', ''),
+                            register=data.get('register', ''),
+                            purpose=data.get('purpose', ''),
+                            name=data.get('name', ''),
+                            dob=data.get('dob', ''),
+                            sex=data.get('sex', ''),
+                            aadhar=data.get('aadhar', ''),
+                            bloodgrp=data.get('bloodgrp', ''),
+                            identification_marks1=data.get('identification_marks1', ''),
+                            identification_marks2=data.get('identification_marks2', ''),
+                            marital_status=data.get('marital_status', ''),
+                            emp_no=emp_no,
+                            employer=data.get('employer', ''),
+                            designation=data.get('designation', ''),
+                            department=data.get('department', ''),
+                            job_nature=data.get('job_nature', ''),
+                            doj=data.get('doj', ''),
+                            moj=data.get('moj', ''),
+                            phone_Personal=data.get('phone_Personal', ''),
+                            mail_id_Personal=data.get('mail_id_Personal', ''),
+                            emergency_contact_person=data.get('emergency_contact_person', ''),
+                            phone_Office=data.get('phone_Office', ''),
+                            mail_id_Office=data.get('mail_id_Office', ''),
+                            emergency_contact_relation=data.get('emergency_contact_relation', ''),
+                            mail_id_Emergency_Contact_Person=data.get('mail_id_Emergency_Contact_Person', ''),
+                            emergency_contact_phone=data.get('emergency_contact_phone', ''),
+                            address=data.get('address', ''),
+                            role=data.get('role', ''),
+                            area=data.get('area', ''),
+                            nationality=data.get('nationality', ''),
+                            state=data.get('state', ''),
+                        )
+                        employee.profilepic.save(file_name, data, save=True)  # Pass file_name and ContentFile
+                        employee.save()
+                        return JsonResponse({'status': 'success', 'message': 'New record added with image successfully'})
+
+                except models.employee_details.DoesNotExist:
+                    return JsonResponse({'status': 'error', 'message': 'Employee not found'}, status=404)
+
+            else:
+                return JsonResponse({'status': 'error', 'message': 'No profileImage data found in the request body.'},
+                                    status=400)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data in the request body'}, status=400)
+
+        except Exception as e:
+            logger.error(f"Error in uploadImage view: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+
+from django.http import JsonResponse
+from django.conf import settings
+from . import models
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @csrf_exempt
 def fetchdata(request):
     if request.method == "POST":
         try:
+            #1. Fetch Latest Employee Records
+
+            # Use values to fetch only required fields from employee_details
             latest_employees = (
-                models.employee_details.objects.values("emp_no")
-                    .annotate(latest_id=Max("id"))  # Ensure latest record
+                models.employee_details.objects
+                .values("emp_no", "profilepic")  # Fetch profilepic here!
+                .annotate(latest_id=Max("id"))
             )
 
+            # Use a subquery to efficiently filter employees
             latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
             employees = list(models.employee_details.objects.filter(id__in=latest_employee_ids).values())
 
-            # Fetch latest records for other tables using emp_no
+            #2. Add the correct image URL to each employee
+            media_url = settings.MEDIA_URL  # Get MEDIA_URL from settings
+
+            for emp in employees:
+                # Construct the full image URL
+                if emp["profilepic"]:
+                    emp["profilepic_url"] = f"{request.scheme}://{request.get_host()}{settings.MEDIA_URL}{emp['profilepic']}"  # full image URL
+                else:
+                    emp["profilepic_url"] = None  # Or some default value if there is no image
+
+            # Function to fetch latest records for other related tables
             def get_latest_records(model):
                 print(model._meta.db_table)
                 records = list(model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees]).values())
                 if records:
-                    all_keys = records[0].keys()  # Get keys from the first record
-                    default_structure = {key: "" for key in all_keys}  # Default empty structure
+                    all_keys = records[0].keys()
+                    default_structure = {key: "" for key in all_keys}
                     return {record["emp_no"]: record for record in records}, default_structure
                 else:
-                    # When no records exist, provide a default structure
+                     # When no records exist, provide a default structure
                     try:
                         # Instantiate a model instance (not saved to the DB)
                         instance = model()
@@ -138,10 +290,11 @@ def fetchdata(request):
             vaccination_dict, vaccination_default = get_latest_records(models.VaccinationRecord)
             consultation_dict, consultation_default = get_latest_records(models.Consultation)
             prescription_dict, prescription_default = get_latest_records(models.Prescription)
+
+            # Add all data from model.py (or the appropriate module)
             if not employees:
                 return JsonResponse({"data": []}, status=200)
 
-            # Merge data with empty structures where necessary
             merged_data = []
             for emp in employees:
                 emp_no = emp["emp_no"]
@@ -168,14 +321,15 @@ def fetchdata(request):
                 emp["consultation"] = consultation_dict.get(emp_no, consultation_default or {})
                 emp["prescription"] = prescription_dict.get(emp_no, prescription_default or {})
                 merged_data.append(emp)
-
+          
             return JsonResponse({"data": merged_data}, status=200)
 
         except Exception as e:
-            logger.error(f"Error in fetchdata view: {str(e)}")  # Log the error for debugging
+            logger.error(f"Error in fetchdata view: {str(e)}")
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Invalid request method"}, status=405)
+
 
 @csrf_exempt
 def addEntries(request):
@@ -1187,22 +1341,73 @@ def add_review(request):
             return JsonResponse({"error": str(e)}, status=400)
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-# Add a new member
+from .models import Member  # Import your Member model
+import json
+
+
 @csrf_exempt
 def add_member(request):
     if request.method == 'POST':
-        data = json.loads(request.body)
-        print(data)
-        member = models.Member.objects.create(
-            employee_number=data['employee_number'],
-            name=data['name'],
-            designation=data['designation'],
-            email=data['email'],
-            role=data['role'],
-            date_exited=data.get('date_exited')
-        )
-        return JsonResponse({'message': 'Member added successfully', 'id': member.id})
-    
+        try:
+            data = json.loads(request.body) # Parse JSON data from the request body
+            member_type = data.get('memberType')  # Get the member type
+            
+            if member_type == 'ohc':
+                employee_number = data.get('employee_number', None)  # Make employee_number optional and allow None
+                name = data.get('name')
+                designation = data.get('designation')
+                email = data.get('email')
+                role = ','.join(data.get('role', []))  # Convert role list to comma-separated string
+                doj = data.get('doj', None)  # Make doj optional and allow None
+                date_exited = data.get('date_exited', None)  # Make date_exited optional and allow None
+                job_nature = data.get('job_nature', None) #make job_nature optional
+
+                member = Member.objects.create(
+                    employee_number=employee_number,
+                    name=name,
+                    designation=designation,
+                    email=email,
+                    role=role,
+                    doj=doj,
+                    date_exited=date_exited,
+                    job_nature = job_nature
+                )
+
+            elif member_type == 'external':
+                name = data.get('name')
+                designation = data.get('designation')
+                email = data.get('email')
+                role = ','.join(data.get('role', []))  # Convert role list to comma-separated string
+                hospital_name = data.get('hospital_name')
+                aadhar = data.get('aadhar', None)  # Allow null
+                phone_number = data.get('phone_number', None)  # Allow null
+                date_exited = data.get('date_exited', None) # Allow null
+                job_nature = data.get('job_nature', None) #make job_nature optional
+
+                member = Member.objects.create(
+                    name=name,
+                    designation=designation,
+                    email=email,
+                    role=role,
+                    hospital_name=hospital_name,
+                    aadhar=aadhar,
+                    phone_number=phone_number,
+                    date_exited=date_exited,
+                    job_nature = job_nature
+                )
+            else:
+                return JsonResponse({'message': 'Invalid memberType'}, status=401)
+
+            return JsonResponse({'message': 'Member added successfully'}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({'message': 'Invalid JSON format'}, status=400)
+        except Exception as e:
+            return JsonResponse({'message': str(e)}, status=402)
+    else:
+        return JsonResponse({'message': 'Only POST method is allowed'}, status=405)
+
+        
 # Get, Update, Delete a single member
 @csrf_exempt
 def member_detail(request, pk):
@@ -1261,6 +1466,7 @@ def add_camp(request):
 
             camp = eventsandcamps.objects.create(
                 camp_name=data.get("camp_name"),
+                hospital_name=data.get("hospital_name"),
                 start_date=start_date,
                 end_date=end_date,
                 camp_details=data.get("camp_details"),
@@ -1317,6 +1523,7 @@ def get_camps(request):
             camp_data = {
                 'id': camp.id,
                 'camp_name': camp.camp_name,
+                'hospital_name': camp.hospital_name,
                 'start_date': str(camp.start_date),
                 'end_date': str(camp.end_date),
                 'camp_details': camp.camp_details,
@@ -1862,3 +2069,5 @@ def add_prescription(request):
             return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
     else:
         return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+

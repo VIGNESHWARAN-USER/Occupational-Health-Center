@@ -21,7 +21,11 @@ const EmployeeProfile = () => {
         <div className="bg-white shadow-lg rounded-xl p-6 flex space-x-8 items-center transition-all duration-300 hover:shadow-xl border-t-4 border-blue-600">
           {/* Employee Icon and Basic Details */}
           <div className="flex flex-col items-center w-1/5 space-y-4">
-            <FaUserCircle className="text-blue-600 text-9xl" />
+            {(data.profilepic_url) ? (
+            <img src={data.profilepic_url} alt="Employee Profile Picture" className="w-32 h-32 rounded-full" />
+            ) : (
+              <FaUserCircle className="text-blue-600 text-9xl" />
+            )}
             <h2 className="text-xl font-bold text-blue-700">{data.name || "Employee"}</h2>
             <span className="text-sm text-gray-500 font-medium">Emp ID: {data.emp_no || "N/A"}</span>
           </div>

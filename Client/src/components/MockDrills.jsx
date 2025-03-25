@@ -53,7 +53,7 @@ const MockDrills = () => {
 
     const handleViewMockDrills = async () => {
         try {
-            let url = `https://occupational-health-center-1.onrender.com/get-mockdrills/?`;
+            let url = 'https://occupational-health-center-1.onrender.com/get-mockdrills/?'; // Corrected URL
             if (fromDate) {
                 url += `from_date=${fromDate}&`;
             }
@@ -194,7 +194,8 @@ const MockDrills = () => {
                 <Sidebar />
                 <div className="w-4/5 h-screen overflow-auto p-8">
 
-                    <div className="flex justify-start space-x-4 mb-4">
+                    {/* Buttons moved to the top right corner */}
+                    <div className="flex justify-end space-x-4 mb-4">
                         <button
                             style={buttonStyleView}
                             onClick={handleViewMockDrills}
@@ -208,6 +209,7 @@ const MockDrills = () => {
                             Add Mock Drill
                         </button>
                     </div>
+
                     {detailedView && (
                         <div className="mb-4 flex space-x-4">
                             <div>
@@ -237,11 +239,11 @@ const MockDrills = () => {
                                 </button>
                             </div>
                             <div>
-                            <button    
+                                <button
                                     onClick={generateExcel}
                                     className="bg-blue-700 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-6 "
                                 >
-                                    Export to Excel             
+                                    Export to Excel
                                 </button>
                             </div>
                         </div>
@@ -337,7 +339,7 @@ const MockDrills = () => {
                                             />
                                         </div>
                                         <div>
-                                        <label className="block text-gray-700 text-sm font-bold mb-2">Ambulance time</label>
+                                            <label className="block text-gray-700 text-sm font-bold mb-2">Ambulance time</label>
                                             <input
                                                 type="time"
                                                 name="ambulance_timing"
@@ -574,13 +576,13 @@ const MockDrills = () => {
                                             </tr>
                                         ))}
                                     </tbody>
-                                  
+
                                 </table>
                             </div>
                         </motion.div>
-                       
+
                     )}
-                     
+
                     {selectedDrill && (
                         <motion.div
                             className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center overflow-auto"
