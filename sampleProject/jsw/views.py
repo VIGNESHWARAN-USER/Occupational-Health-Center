@@ -259,7 +259,7 @@ def fetchdata(request):
                     logger.error(f"Error fetching records for model {model.__name__}: {str(e)}")
                     return {}, {}
 
-            # Fetch all data with proper structure
+            
             dashboard_dict, dashboard_default = get_latest_records(models.Dashboard)
             vitals_dict, vitals_default = get_latest_records(models.vitals)
             msphistory_dict, msphistory_default = get_latest_records(models.MedicalHistory)
@@ -323,87 +323,110 @@ def fetchdata(request):
     logger.warning("fetchdata failed: Invalid request method. Only POST allowed.")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from . import models  # Import your models
+
+logger = logging.getLogger(__name__)
+
+def parse_date(date_str):
+    """Converts date string to YYYY-MM-DD format if valid, else returns None."""
+    if not date_str:
+        print("date_str is None")
+        return date.today()
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()  # Ensure correct format
+    except ValueError:
+        logger.warning(f"Invalid date format received: {date_str}")
+        return None  # Invalid format
+
 @csrf_exempt
 def addEntries(request):
     """Adds or updates dashboard and basic employee details entries."""
-    if request.method == "POST":
+    if request.method != "POST":
+        logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        if not data.get('emp_no'):
+            logger.warning("addEntries failed: Employee number is required")
+            return JsonResponse({"error": "Employee number is required"}, status=400)
+
+        emp_no = data['emp_no']
+        entry_date = datetime.now().date()
+
         try:
-            data = json.loads(request.body.decode('utf-8'))
+            # Dashboard entry
+            dashboard_data = data.get('formDataDashboard', {})
+            dashboard, created = models.Dashboard.objects.update_or_create(
+                emp_no=emp_no,
+                date=entry_date,
+                defaults={
+                    'type_of_visit': dashboard_data.get('typeofVisit', ''),
+                    'type': dashboard_data.get('category', ''),
+                    'register': dashboard_data.get('register', ''),
+                    'purpose': dashboard_data.get('purpose', '')
+                }
+            )
+            dashboard_message = "Entry added successfully" if created else "Entry updated successfully"
 
-            if not data.get('emp_no'):
-                logger.warning("addEntries failed: Employee number is required")
-                return JsonResponse({"error": "Employee number is required"}, status=400)
+            # Employee Details entry
+            employee_data = data.get('formData', {})
+            logger.info(f"Received dates: dob={employee_data.get('dob')}, doj={employee_data.get('doj')}, moj={employee_data.get('moj')}")
 
-            emp_no = data['emp_no']
-            entry_date = datetime.now().date()
+            employee, created = models.employee_details.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date,
+                defaults={
+                    'name': employee_data.get('name', ''),
+                    'dob': parse_date(employee_data.get('dob')),
+                    'sex': employee_data.get('sex', ''),
+                    'aadhar': employee_data.get('aadhar', ''),
+                    'role': employee_data.get('role', ''),
+                    'bloodgrp': employee_data.get('bloodgrp', ''),
+                    'identification_marks1': employee_data.get('identification_marks1', ''),
+                    'identification_marks2': employee_data.get('identification_marks2', ''),
+                    'marital_status': employee_data.get('marital_status', ''),
+                    'employer': employee_data.get('employer', ''),
+                    'designation': employee_data.get('designation', ''),
+                    'department': employee_data.get('department', ''),
+                    'job_nature': employee_data.get('job_nature', ''),
+                    'doj': parse_date(employee_data.get('doj')),
+                    'moj': parse_date(employee_data.get('moj')),
+                    'phone_Personal': employee_data.get('phone_Personal', ''),
+                    'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
+                    'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
+                    'phone_Office': employee_data.get('phone_Office', ''),
+                    'mail_id_Office': employee_data.get('mail_id_Office', ''),
+                    'emergency_contact_relation': employee_data.get('emergency_contact_relation', ''),
+                    'mail_id_Emergency_Contact_Person': employee_data.get('mail_id_Emergency_Contact_Person', ''),
+                    'emergency_contact_phone': employee_data.get('emergency_contact_phone', ''),
+                    'state': employee_data.get('state', ''),
+                    'nationality': employee_data.get('nationality', ''),
+                    'area': employee_data.get('area', ''),
+                    'address': employee_data.get('address', ''),
+                }
+            )
+            employee_message = "Basic Details added successfully" if created else "Basic Details updated successfully"
 
-            try:
-                # Dashboard entry
-                dashboard, created = models.Dashboard.objects.update_or_create(
-                    emp_no=emp_no,
-                    date=entry_date,
-                    defaults={
-                        'type_of_visit': data['formDataDashboard']['typeofVisit'],
-                        'type': data['formDataDashboard']['category'],
-                        'register': data['formDataDashboard']['register'],
-                        'purpose': data['formDataDashboard']['purpose']
-                    }
-                )
-                dashboard_message = "Entry added successfully" if created else "Entry updated successfully"
+            logger.info(f"addEntries successful for emp_no: {emp_no}")
+            return JsonResponse({"message": f"{dashboard_message}, {employee_message}"}, status=200)
 
-                # Employee Details entry
-                employee_data = json.loads(request.body.decode('utf-8'))['formData']
-                employee, created = models.employee_details.objects.update_or_create(
-                    emp_no=emp_no,
-                    entry_date=entry_date,
-                    defaults={
-                        'name': employee_data['name'],
-                        'dob': employee_data['dob'],
-                        'sex': employee_data['sex'],
-                        'aadhar': employee_data['aadhar'],
-                        'role': employee_data['role'],
-                        'bloodgrp': employee_data['bloodgrp'],
-                        'identification_marks1': employee_data['identification_marks1'],
-                        'identification_marks2': employee_data['identification_marks2'],
-                        'marital_status': employee_data['marital_status'],
-                        'employer': employee_data['employer'],
-                        'designation': employee_data['designation'],
-                        'department': employee_data['department'],
-                        'job_nature': employee_data['job_nature'],
-                        'doj': employee_data['doj'],
-                        'moj': employee_data['moj'],
-                        'phone_Personal': employee_data['phone_Personal'],
-                        'mail_id_Personal': employee_data['mail_id_Personal'],
-                        'emergency_contact_person': employee_data['emergency_contact_person'],
-                        'phone_Office': employee_data['phone_Office'],
-                        'mail_id_Office': employee_data['mail_id_Office'],
-                        'emergency_contact_relation': employee_data['emergency_contact_relation'],
-                        'mail_id_Emergency_Contact_Person': employee_data['mail_id_Emergency_Contact_Person'],
-                        'emergency_contact_phone': employee_data['emergency_contact_phone'],
-                        'state': employee_data['state'],
-                        'nationality': employee_data['nationality'],
-                        'area': employee_data['area'],
-                        'address': employee_data['address'],
-                    }
-                )
-                employee_message = "Basic Details added successfully" if created else "Basic Details updated successfully"
-
-                logger.info(f"addEntries successful for emp_no: {emp_no}")
-                return JsonResponse({"message": f"{dashboard_message}, {employee_message}"}, status=200)
-
-            except Exception as e:
-                logger.exception(f"addEntries failed for emp_no {emp_no}: An unexpected error occurred.")
-                return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"addEntries failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            logger.exception("addEntries failed: An unexpected error occurred.")
+            logger.exception(f"addEntries failed for emp_no {emp_no}: {str(e)}")
             return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
 
-    logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+    except json.JSONDecodeError as e:
+        logger.error(f"addEntries failed: Invalid JSON data. Error: {str(e)}")
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        logger.exception("addEntries failed: An unexpected error occurred.")
+        return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
+
 
 @csrf_exempt
 def dashboard_stats(request):

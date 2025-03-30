@@ -86,7 +86,8 @@ const NewVisit = () => {
       Preventive: {
         "Pre employment": "Medical Examination",
         "Pre employment (Food Handler)": "Medical Examination",
-        "Pre Placement": "Medical Examination",
+        "Pre Placement Same Contract": "Medical Examination",
+        "Pre Employment Contract change": "Medical Examination",
         "Annual / Periodical": "Medical Examination",
         "Periodical (Food Handler)": "Medical Examination",
         "Camps (Mandatory)": "Medical Examination",
@@ -106,13 +107,14 @@ const NewVisit = () => {
         "Followup Visits": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)"
       },
-      Visitor: {
-        Preventive: {
-          "Visitors Outsider Fitness": "Visitors Outsider Fitness"
-        },
-        Curative: {
-          "Visitors Outsider Patient": "Visitors Outsider Patient"
-        }
+    },
+    Visitor: {
+      Preventive: {
+        "Visitors Outsider Fitness": "Visitors Outsider Fitness"
+      },
+      Curative: {
+        "Visitors Outsider Patient": "Visitors Outsider Patient",
+        "Followup Visits": "Followup Visits"
       }
     }
   };
@@ -136,7 +138,7 @@ const NewVisit = () => {
 
 
 
-    if (register === "Annual / Periodical") {
+    if (register === "Annual / Periodical" || "Periodical (Food Handler)") {
       extraData = { ...annualPeriodicalFields };
     } else if (register.startsWith("Camps")) {
       extraData = { ...campFields };
@@ -229,7 +231,7 @@ const NewVisit = () => {
         } else {
           // Employee not found. Ask if it's a new employee with a duplicate ID.
           const isDuplicateNew = window.confirm(
-            "Employee not found. Is this a duplicate ID for a new employee?"
+            "Employee not found. Is this a dummy ID for a new employee?"
           );
 
           if (isDuplicateNew) {
@@ -1249,7 +1251,7 @@ return (
             </div>
 
             {/* Conditionally Rendered Fields */}
-            {register === "Annual / Periodical" && (
+            {(register === "Annual / Periodical" || register === "Periodical (Food Handler)") && (
               <div className="grid grid-cols-3 gap-4 mb-6">
                 <div>
                   <label className="block text-gray-700 text-sm font-bold mb-2">Year</label>
