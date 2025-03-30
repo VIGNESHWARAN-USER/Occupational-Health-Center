@@ -343,7 +343,7 @@ const MedicalHistory1 = ({ data }) => {
       ...prev,
       [allergyType]: {
         ...prev[allergyType],
-        yesNo: prev[allergyType].yesNo === "yes" ? "no" : "yes",
+        yesNo: prev[allergyType]?.yesNo === "yes" ? "no" : "yes",
       },
     }));
   };
@@ -466,13 +466,17 @@ const MedicalHistory1 = ({ data }) => {
     };
 
     try {
-      if (formData["surgicalHistory"]["comments"].length != 0) {
-        formData["surgicalHistory"]["children"].push(
-          formData["surgicalHistory"]["comments"]
-        );
+      if (formData["surgicalHistory"]["comments"].length !== 0) {
+        if (!Array.isArray(formData["surgicalHistory"]["children"])) {
+          formData["surgicalHistory"]["children"] = []; // Initialize if not an array
+        }
+        formData["surgicalHistory"]["children"].push(formData["surgicalHistory"]["comments"]);
         formData["surgicalHistory"]["comments"] = "";
       }
+      console.log(formData)
+
       const updatedFormdata = { ...formData, emp_no: emp_no };
+      console.log(updatedFormdata)
       console.log(updatedFormdata);
       const response = await fetch("https://occupational-health-center-1.onrender.com/medical-history/", {
         method: "POST",
@@ -522,7 +526,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="smoking-yes"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.smoking.yesNo === "yes"}
+                checked={personalHistory?.smoking?.yesNo === "yes"}
                 disabled={!isEditMode}
               />
               <label htmlFor="smoking-yes">Yes</label>
@@ -535,7 +539,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="smoking-no"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.smoking.yesNo === "no"}
+                checked={personalHistory?.smoking?.yesNo === "no"}
                 disabled={!isEditMode}
               />
               <label htmlFor="smoking-no">No</label>
@@ -546,7 +550,7 @@ const MedicalHistory1 = ({ data }) => {
               placeholder="Years of Smoking"
               className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
               onChange={handlePersonalHistoryChange}
-              value={personalHistory.smoking.years || ""}
+              value={personalHistory?.smoking?.years || ""}
               disabled={!isEditMode}
             />
             <input
@@ -555,7 +559,7 @@ const MedicalHistory1 = ({ data }) => {
               placeholder="Cigarettes per day"
               className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
               onChange={handlePersonalHistoryChange}
-              value={personalHistory.smoking.perDay || ""}
+              value={personalHistory?.smoking?.perDay || ""}
               disabled={!isEditMode}
             />
           </div>
@@ -572,7 +576,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="alcohol-yes"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.alcohol.yesNo === "yes"}
+                checked={personalHistory?.alcohol?.yesNo === "yes"}
                 disabled={!isEditMode}
               />
               <label htmlFor="alcohol-yes">Yes</label>
@@ -585,7 +589,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="alcohol-no"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.alcohol.yesNo === "no"}
+                checked={personalHistory?.alcohol?.yesNo === "no"}
                 disabled={!isEditMode}
               />
               <label htmlFor="alcohol-no">No</label>
@@ -596,7 +600,7 @@ const MedicalHistory1 = ({ data }) => {
               placeholder="Years of Drinking"
               className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
               onChange={handlePersonalHistoryChange}
-              value={personalHistory.alcohol.years || ""}
+              value={personalHistory?.alcohol?.years || ""}
               disabled={!isEditMode}
             />
             <input
@@ -605,7 +609,7 @@ const MedicalHistory1 = ({ data }) => {
               placeholder="Consuming per day"
               className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
               onChange={handlePersonalHistoryChange}
-              value={personalHistory.alcohol.frequency || ""}
+              value={personalHistory?.alcohol?.frequency || ""}
               disabled={!isEditMode}
             />
           </div>
@@ -624,7 +628,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="paan-yes"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.paan.yesNo === "yes"}
+                checked={personalHistory?.paan?.yesNo === "yes"}
                 disabled={!isEditMode}
               />
               <label htmlFor="paan-yes">Yes</label>
@@ -637,7 +641,7 @@ const MedicalHistory1 = ({ data }) => {
                 id="paan-no"
                 className="form-radio h-6 w-6" // Adjusted size here
                 onChange={handlePersonalHistoryChange}
-                checked={personalHistory.paan.yesNo === "no"}
+                checked={personalHistory?.paan?.yesNo === "no"}
                 disabled={!isEditMode}
               />
               <label htmlFor="paan-no">No</label>
@@ -648,7 +652,7 @@ const MedicalHistory1 = ({ data }) => {
               placeholder="Years of Chewing"
               className="px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
               onChange={handlePersonalHistoryChange}
-              value={personalHistory.paan.years || ""}
+              value={personalHistory?.paan?.years || ""}
               disabled={!isEditMode}
             />
           </div>
@@ -660,7 +664,7 @@ const MedicalHistory1 = ({ data }) => {
             className="px-4 py-2 w-56 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500"
             name="diet"
             onChange={handlePersonalHistoryChange}
-            value={personalHistory.diet || ""}
+            value={personalHistory?.diet || ""}
             disabled={!isEditMode}
           >
             <option value="">Select Diet</option>

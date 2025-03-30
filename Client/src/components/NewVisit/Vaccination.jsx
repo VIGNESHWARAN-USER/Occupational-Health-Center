@@ -8,10 +8,10 @@ const Vaccination = ({ data }) => {
     <p className=" p-4 flex justify-center items-center">Get the employee details</p>
   )}else{
   const emp_no = data[0]?.emp_no;
-
+  console.log(data)
   useEffect(() => {
-    if (data) {
-      setVaccinationData(data[0].vaccination.vaccination || []);
+    if (data && data[0]?.vaccination?.vaccination.length > 0) {
+      setVaccinationData(data[0]?.vaccination?.vaccination || []);
     }
   }, [data]);
 
@@ -59,7 +59,6 @@ const Vaccination = ({ data }) => {
     updatedData[vIndex][type][field][dIndex] = value;
     setVaccinationData(updatedData);
   };
-
   return (
     <div className="mt-4 bg-white rounded-lg shadow-md p-4">
       <h1 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
@@ -69,7 +68,7 @@ const Vaccination = ({ data }) => {
       {vaccinationData.length === 0 ? (
         <p className="text-center text-gray-500">No vaccination records available.</p>
       ) : (
-        vaccinationData.map((vaccination, vIndex) => (
+        vaccinationData?.map((vaccination, vIndex) => (
           <div key={vIndex} className="mb-4 p-3 border flex gap-4 rounded-md bg-gray-50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
               <div className="col-span-1">

@@ -1,5 +1,7 @@
-from django.db import models
+from django.db import models, transaction
 from datetime import date
+
+
 
 class BaseModel(models.Model):
     entry_date = models.DateField(auto_now=True)
@@ -15,45 +17,81 @@ class user(BaseModel):
 
     def __str__(self):
         return self.name
-    
+
+
+from django.db import models
 
 class employee_details(BaseModel):
-    type = models.TextField(max_length=255)  
-    type_of_visit = models.TextField(max_length=255) 
-    register = models.TextField(max_length=255)
-    purpose = models.TextField(max_length=255)
-    name = models.TextField(max_length=225)
-    dob = models.TextField(max_length=225)
-    sex = models.TextField(max_length=225)
-    aadhar = models.TextField(max_length=225)
-    bloodgrp = models.TextField(max_length=225)
-    identification_marks1 = models.TextField(max_length=225)
-    identification_marks2 = models.TextField(max_length=225)
-    marital_status = models.TextField(max_length=225)
-    emp_no = models.TextField(max_length=200)
-    employer = models.TextField(max_length=225)
-    designation = models.TextField(max_length=225)
-    department = models.TextField(max_length=225)
-    job_nature = models.TextField(max_length=225)
-    doj = models.TextField(max_length=225)
-    moj = models.TextField(max_length=225)
-    phone_Personal = models.TextField(max_length=225)
-    mail_id_Personal = models.TextField(max_length=225)
-    emergency_contact_person = models.TextField(max_length=225)
-    phone_Office = models.TextField(max_length=225)
-    mail_id_Office = models.TextField(max_length=225)
-    emergency_contact_relation = models.TextField(max_length=225)
-    mail_id_Emergency_Contact_Person = models.TextField(max_length=225)
-    emergency_contact_phone = models.TextField(max_length=225)
-    address = models.TextField(max_length=225)
-    role = models.TextField(max_length=50)
-    area = models.TextField(max_length=50)
-    nationality = models.TextField(max_length=50)
-    state = models.TextField(max_length=50)
-    profilepic = models.ImageField(upload_to='profilepics', blank=True)
+    EMPLOYEE_TYPES = [
+        ('Employee', 'Employee'),
+        ('Contractor', 'Contractor'),
+        ('Visitor', 'Visitor'),
+    ]
+
+    MARITAL_STATUS_CHOICES = [
+        ('Single', 'Single'),
+        ('Married', 'Married'),
+        ('Other', 'Other'),
+        ('Divorced', 'Divorced'),
+        ('Widowed', 'Widowed'),
+        ('Separated', 'Separated'),
+    ]
+    type = models.CharField(max_length=50, choices=EMPLOYEE_TYPES, default='Employee')
+    type_of_visit = models.CharField(max_length=255, blank=True)
+    register = models.CharField(max_length=255, blank=True)
+    purpose = models.CharField(max_length=255, blank=True)
+    name = models.CharField(max_length=225)
+    dob = models.DateField(null=True, blank=True)  # Store as Date
+    sex = models.CharField(max_length=50, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True)
+    bloodgrp = models.CharField(max_length=225, blank=True)
+    identification_marks1 = models.CharField(max_length=225, blank=True)
+    identification_marks2 = models.CharField(max_length=225, blank=True)
+    marital_status = models.CharField(
+        max_length=50,
+        choices=MARITAL_STATUS_CHOICES,
+        blank=True
+    )
+    emp_no = models.CharField(max_length=200,blank=True)  # Consider unique=True
+    employer = models.CharField(max_length=225, blank=True)
+    designation = models.CharField(max_length=225, blank=True)
+    department = models.CharField(max_length=225, blank=True)
+    job_nature = models.CharField(max_length=225, blank=True)
+    doj = models.DateField(null=True, blank=True) # Store as Date
+    moj = models.CharField(max_length=225, blank=True)
+    phone_Personal = models.CharField(max_length=225, blank=True)
+    mail_id_Personal = models.EmailField(max_length=225, blank=True) # Use EmailField
+    emergency_contact_person = models.CharField(max_length=225, blank=True)
+    phone_Office = models.CharField(max_length=225, blank=True)
+    mail_id_Office = models.EmailField(max_length=225, blank=True) # Use EmailField
+    emergency_contact_relation = models.CharField(max_length=225, blank=True)
+    mail_id_Emergency_Contact_Person = models.EmailField(max_length=225, blank=True) # Use EmailField
+    emergency_contact_phone = models.CharField(max_length=225, blank=True)
+    address = models.TextField(blank=True) # Remove max_length
+    role = models.CharField(max_length=50, blank=True)  # Consider choices here too
+    area = models.CharField(max_length=50, blank=True)
+    nationality = models.CharField(max_length=50, blank=True)
+    state = models.CharField(max_length=50, blank=True)
+    profilepic = models.ImageField(upload_to='profilepics', blank=True, null=True)  # Allow null for new records
+    profilepic_url = models.URLField(max_length=255, blank=True)
+    other_site_id = models.CharField(max_length=255, blank=True)
+    organization = models.CharField(max_length=255, blank=True)
+    addressOrganization = models.CharField(max_length=255, blank=True)
+    visiting_department = models.CharField(max_length=255, blank=True)
+    visiting_date_from = models.DateField(null=True, blank=True)
+    stay_in_guest_house = models.CharField(max_length=50, blank=True)
+    visiting_purpose = models.CharField(max_length=255, blank=True)
+
     def __str__(self):
         return self.emp_no
-        
+
+    def save(self, *args, **kwargs):
+        # Ensure profilepic_url is set to an empty string if profilepic is cleared
+        if not self.profilepic:
+            self.profilepic_url = ''
+        super().save(*args, **kwargs)
+
+
 
 class vitals(BaseModel):
     emp_no = models.TextField(max_length=200)
@@ -968,7 +1006,7 @@ class Review(BaseModel):
     def _str_(self):
         return f"{self.name} - {self.category.name}"
     
-class Member(models.Model):
+class Member(BaseModel):
     # Common fields
     name = models.CharField(max_length=255)
     designation = models.CharField(max_length=255)
@@ -1010,7 +1048,7 @@ class MedicalHistory(BaseModel):
         return f"Medical History for Emp No: {self.emp_no}"
     
 
-class Consultation(models.Model):
+class Consultation(BaseModel):
     emp_no = models.CharField(max_length=20, blank=True, null=True)  # Employee number
     complaints = models.TextField(blank=True, null=True)  # Allowing empty complaints
     diagnosis = models.TextField(blank=True, null=True)
@@ -1031,3 +1069,134 @@ class Consultation(models.Model):
 
     def __str__(self):
         return f"Consultation {self.id} - Emp No: {self.emp_no}"
+    
+
+class PharmacyStock(BaseModel):
+    class MedicineFormChoices(models.TextChoices):
+        TABLET = "Tablet", "Tablet"
+        SYRUP = "Syrup", "Syrup"
+        INJECTION = "Injection", "Injection"
+        CREAMS = "Creams", "Creams"
+        DROPS = "Drops", "Drops"
+        FLUIDS = "Fluids", "Fluids"
+        OTHER = "Other", "Other"
+
+    medicine_form = models.CharField(max_length=20, choices=MedicineFormChoices.choices)
+    item_name = models.CharField(max_length=255)
+    dose_volume = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+    removed_month = models.DateField(blank=True, null=True)  # Optional field
+
+    def _str_(self):
+        return f"{self.item_name} - {self.medicine_form}"
+
+
+class ExpiryRegister(BaseModel):
+    medicine_form = models.CharField(max_length=20)
+    item_name = models.CharField(max_length=255)
+    dose_volume = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+    removed_date = models.DateField(auto_now_add=True)  # Date when it was removed
+
+    def _str_(self):
+        return f"{self.item_name} - {self.dose_volume} ({self.expiry_date})"
+    
+class Form17(models.Model):
+    dept = models.CharField(max_length=255, blank=True, null=True)
+    worksNumber = models.CharField(max_length=255, blank=True, null=True)
+    workerName = models.CharField(max_length=255, blank=True, null=True)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
+    dob = models.DateField(blank=True, null=True)
+    age = models.IntegerField(blank=True, null=True)
+    employmentDate = models.DateField(blank=True, null=True)
+    leavingDate = models.DateField(blank=True, null=True)
+    reason = models.CharField(max_length=255, blank=True, null=True)
+    transferredTo = models.CharField(max_length=255, blank=True, null=True)
+    jobNature = models.CharField(max_length=255, blank=True, null=True)
+    rawMaterial = models.CharField(max_length=255, blank=True, null=True)
+    medicalExamDate = models.DateField(blank=True, null=True)
+    medicalExamResult = models.CharField(max_length=255, blank=True, null=True)
+    suspensionDetails = models.CharField(max_length=255, blank=True, null=True)
+    recertifiedDate = models.DateField(blank=True, null=True)
+    unfitnessCertificate = models.CharField(max_length=255, blank=True, null=True)
+    surgeonSignature = models.TextField(blank=True, null=True) # Store as text (base64 encoded)
+    fmoSignature = models.TextField(blank=True, null=True)
+
+    def _str_(self):
+        return f"Form 17 - {self.workerName}"
+
+
+class Form38(models.Model):
+    serialNumber = models.CharField(max_length=255, blank=True, null=True)
+    department = models.CharField(max_length=255, blank=True, null=True)
+    workerName = models.CharField(max_length=255, blank=True, null=True)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
+    age = models.IntegerField(blank=True, null=True)
+    jobNature = models.CharField(max_length=255, blank=True, null=True)
+    employmentDate = models.DateField(blank=True, null=True)
+    eyeExamDate = models.DateField(blank=True, null=True)
+    result = models.CharField(max_length=255, blank=True, null=True)
+    opthamologistSignature = models.TextField(blank=True, null=True)
+    fmoSignature = models.TextField(blank=True, null=True)
+    remarks = models.CharField(max_length=255, blank=True, null=True)
+
+    def _str_(self):
+        return f"Form 38 - {self.workerName}"
+
+class Form39(models.Model):
+    serialNumber = models.CharField(max_length=255, blank=True, null=True)
+    workerName = models.CharField(max_length=255, blank=True, null=True)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
+    age = models.IntegerField(blank=True, null=True)
+    proposedEmploymentDate = models.DateField(blank=True, null=True)
+    jobOccupation = models.CharField(max_length=255, blank=True, null=True)
+    rawMaterialHandled = models.CharField(max_length=255, blank=True, null=True)
+    medicalExamDate = models.DateField(blank=True, null=True)
+    medicalExamResult = models.CharField(max_length=255, blank=True, null=True)
+    certifiedFit = models.CharField(max_length=20, choices=[('fit', 'Fit'), ('unfit', 'Unfit'), ('conditional', 'Conditional')], blank=True, null=True)
+    certifyingSurgeonSignature = models.TextField(blank=True, null=True)
+    departmentSection = models.CharField(max_length=255, blank=True, null=True)
+
+    def _str_(self):
+        return f"Form 39 - {self.workerName}"
+
+class Form40(models.Model):
+    serialNumber = models.CharField(max_length=255, blank=True, null=True)
+    dateOfEmployment = models.DateField(blank=True, null=True)
+    workerName = models.CharField(max_length=255, blank=True, null=True)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
+    age = models.IntegerField(blank=True, null=True)
+    sonWifeDaughterOf = models.CharField(max_length=255, blank=True, null=True)
+    natureOfJob = models.CharField(max_length=255, blank=True, null=True)
+    urineResult = models.CharField(max_length=255, blank=True, null=True)
+    bloodResult = models.CharField(max_length=255, blank=True, null=True)
+    fecesResult = models.CharField(max_length=255, blank=True, null=True)
+    xrayResult = models.CharField(max_length=255, blank=True, null=True)
+    otherExamResult = models.CharField(max_length=255, blank=True, null=True)
+    deworming = models.CharField(max_length=255, blank=True, null=True)
+    typhoidVaccinationDate = models.DateField(blank=True, null=True)
+    signatureOfFMO = models.TextField(blank=True, null=True)
+    remarks = models.CharField(max_length=255, blank=True, null=True)
+
+    def _str_(self):
+        return f"Form 40 - {self.workerName}"
+
+
+class Form27(models.Model):
+    serialNumber = models.CharField(max_length=255, blank=True, null=True)
+    date = models.DateField(blank=True, null=True)
+    department = models.CharField(max_length=255, blank=True, null=True)
+    nameOfWorks = models.CharField(max_length=255, blank=True, null=True)
+    sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
+    dateOfBirth = models.DateField(blank=True, null=True)
+    age = models.IntegerField(blank=True, null=True)
+    nameOfTheFather = models.CharField(max_length=255, blank=True, null=True)
+    natureOfJobOrOccupation = models.CharField(max_length=255, blank=True, null=True)
+    signatureOfFMO = models.TextField(blank=True, null=True)
+    descriptiveMarks = models.CharField(max_length=255, blank=True, null=True)
+    signatureOfCertifyingSurgeon = models.TextField(blank=True, null=True)
+
+    def _str_(self):
+        return f"Form 27 - {self.nameOfWorks}"

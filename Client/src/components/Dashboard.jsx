@@ -73,7 +73,7 @@ const MyBarChart = ({ data, title, color, onItemClick, visible }) => {
             style={{ display: visible ? 'block' : 'none' }}
         >
             <h4 className="text-lg font-semibold text-gray-800 mb-3">{title}</h4>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={360}>
     <BarChart data={data} onClick={onItemClick}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="name" />

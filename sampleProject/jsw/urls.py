@@ -56,5 +56,9 @@ urlpatterns = [
     path('consultations/add/', views.add_consultation, name='add_consultation'),
     path('visitData/<str:emp_no>/<str:date>', views.fetchVisitDataWithDate, name = 'fetchVisitdata'),
     path('prescriptions/', views.add_prescription, name='add_prescription'),
-    path('updateProfileImage/<str:emp_no>', views.uploadImage, name='upload_image')
+    path('updateProfileImage/<str:emp_no>', views.uploadImage, name='upload_image'),
+    path("add-stock/", views.add_stock, name="add_stock"),
+    path('current_stock/', views.get_current_stock, name='current_stock'),
+    path('current_expiry/', views.get_current_expiry, name='current_expiry'),
+    path('remove_expiry/', views.remove_expired_medicine, name='remove_expiry')
 ]

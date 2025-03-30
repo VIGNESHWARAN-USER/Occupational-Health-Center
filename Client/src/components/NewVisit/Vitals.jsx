@@ -3,20 +3,18 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaFileUpload } from 'react-icons/fa';
 
-const VitalsForm = () => {
-    const initialData = JSON.parse(localStorage.getItem("selectedEmployee")) || {};
+const VitalsForm = ({data}) => {
+    const initialData = data[0] || {};
     const [formData, setFormData] = useState({});
     const [selectedFiles, setSelectedFiles] = useState({});
 
-    // Use useRef to store the initialData to prevent re-renders if initialData changes
-    const initialDataRef = useRef(initialData);
-
+    console.log(initialData)
     useEffect(() => {
-        const initial = initialDataRef.current;
+        const initial = initialData;
 
         if (initial && initial.vitals) {
             // Create a copy of initial.vitals to avoid modifying it directly
-            const initialVitals = { ...initial.vitals };
+            const initialVitals = { ...initial.vitals, emp_no: initial.emp_no };
             setFormData(initialVitals);
         } else {
             // Initialize formData with empty strings for all fields if no vitals data is found
@@ -82,8 +80,9 @@ const VitalsForm = () => {
         }
 
         try {
-            const initial = initialDataRef.current; // get current value from ref
-            const updatedformdata = { ...formData, emp_no: initial.emp_no }
+             
+            console.log(initialData.emp_no)
+            const updatedformdata = { ...formData }
             console.log(updatedformdata)
             const resp = await axios.post("https://occupational-health-center-1.onrender.com/addvitals", updatedformdata)
             if (resp.status === 200) {
