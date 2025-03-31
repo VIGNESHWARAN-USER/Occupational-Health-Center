@@ -1,5 +1,5 @@
 from django.db import models, transaction
-from datetime import date
+from datetime import date, datetime
 
 
 
@@ -19,7 +19,15 @@ class user(BaseModel):
         return self.name
 
 
+
 from django.db import models
+
+class BaseModel(models.Model):  # You likely have this already
+    entry_date = models.DateField(auto_now=True)
+
+    class Meta:
+        abstract = True  # Make sure this is an abstract base class
+
 
 class employee_details(BaseModel):
     EMPLOYEE_TYPES = [
@@ -82,14 +90,48 @@ class employee_details(BaseModel):
     stay_in_guest_house = models.CharField(max_length=50, blank=True)
     visiting_purpose = models.CharField(max_length=255, blank=True)
 
+    # Extra fields for conditional registers
+    year = models.CharField(max_length=4, blank=True)
+    batch = models.CharField(max_length=255, blank=True)
+    hospitalName = models.CharField(max_length=255, blank=True)
+    campName = models.CharField(max_length=255, blank=True)
+    contractName = models.CharField(max_length=255, blank=True)
+    prevcontractName = models.CharField(max_length=255, blank=True)
+    old_emp_no = models.CharField(max_length=200, blank=True)
+    reason = models.CharField(max_length=255, blank=True)  # For Special Work Fitness
+    status = models.CharField(max_length=255, blank=True)  # For BP Sugar Check
+
     def __str__(self):
         return self.emp_no
 
     def save(self, *args, **kwargs):
-        # Ensure profilepic_url is set to an empty string if profilepic is cleared
         if not self.profilepic:
             self.profilepic_url = ''
         super().save(*args, **kwargs)
+
+
+class Dashboard(BaseModel):
+    emp_no = models.TextField(max_length=200)
+    type = models.TextField(max_length=255)  # Represents "Type"
+    type_of_visit = models.TextField(max_length=255)  # Represents "Type of visit"
+    register = models.TextField(max_length=255)
+    purpose = models.TextField(max_length=255)
+    date = models.DateField(auto_now=True)
+
+    # Extra fields for conditional registers
+    year = models.CharField(max_length=4, blank=True)
+    batch = models.CharField(max_length=255, blank=True)
+    hospitalName = models.CharField(max_length=255, blank=True)
+    campName = models.CharField(max_length=255, blank=True)
+    contractName = models.CharField(max_length=255, blank=True)
+    prevcontractName = models.CharField(max_length=255, blank=True)
+    old_emp_no = models.CharField(max_length=200, blank=True)
+    reason = models.CharField(max_length=255, blank=True)  # For Special Work Fitness
+    status = models.CharField(max_length=255, blank=True)  # For BP Sugar Check
+
+
+    def _str_(self):
+        return f"Dashboard Record {self.id}"
 
 
 
@@ -890,16 +932,6 @@ class MRIReport(BaseModel):
     def __str__(self):
         return f"MRI Report {self.id}"
 
-
-class Dashboard(BaseModel):
-    emp_no = models.TextField(max_length=200)
-    type = models.TextField(max_length=255)  # Represents "Type"
-    type_of_visit = models.TextField(max_length=255)  # Represents "Type of visit"
-    register = models.TextField(max_length=255)
-    purpose = models.TextField(max_length=255)
-    date = models.DateField(auto_now=True)
-    def _str_(self):
-        return f"Dashboard Record {self.id}"
 
 
 class Appointment(BaseModel):

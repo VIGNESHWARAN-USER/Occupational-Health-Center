@@ -53,6 +53,8 @@ const NewVisit = () => {
     hospitalName: "",
   });
 
+
+
   const dataMapping = {
     Employee: {
       Preventive: {
@@ -134,14 +136,52 @@ const NewVisit = () => {
       alert("Employee number is required!");
       return;
     }
+
     let extraData = {};
 
+    // Conditionally add fields to the extraData object
+    if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
+      extraData = { ...extraData, ...annualPeriodicalFields };
+    }
+    if (register.startsWith("Camps")) {
+      extraData = { ...extraData, ...campFields };
+    }
+    if (register.startsWith("Pre Placement Same Contract")) {
+        extraData = { ...extraData, ...campFields }; // Corrected: using campFields as contractName is stored there
+    }
+    if (register.startsWith("Pre Placement Contract change")) {
+       extraData = { ...extraData, ...campFields }; // Corrected: using campFields as prevcontractName and old_emp_no are stored there
+    }
+    if (register.startsWith("Special Work Fitness")) {
+        // Assuming you have a state variable to hold the selected reason
+        const reasonSelect = document.getElementById("reason");
+        const selectedReason = reasonSelect.value;
+        extraData = { ...extraData, reason: selectedReason };
+    }
+    if (register.startsWith("BP Sugar Check")) {
+        const bpStatusSelect = document.getElementById("reason");
+        const selectedBpStatus = bpStatusSelect.value;
+        extraData = { ...extraData, status: selectedBpStatus };
+    }
+     if (register.startsWith("Illness")) {
+        const illnessReasonSelect = document.getElementById("reason");
+        const selectedIllnessReason = illnessReasonSelect.value;
+        extraData = { ...extraData, reason: selectedIllnessReason };
+    }
+     if (register.startsWith("BP Sugar Chart")) {
+        const bpChartReasonSelect = document.getElementById("reason");
+        const selectedBpChartReason = bpChartReasonSelect.value;
+        extraData = { ...extraData, reason: selectedBpChartReason };
+    }
+    if (register.startsWith("Followup Visits")) {
+      const followupPurposeSelect = document.getElementById("reason");
+      const selectedFollowupPurpose = followupPurposeSelect.value;
 
-
-    if (register === "Annual / Periodical" || "Periodical (Food Handler)") {
-      extraData = { ...annualPeriodicalFields };
-    } else if (register.startsWith("Camps")) {
-      extraData = { ...campFields };
+      extraData = { ...extraData, purpose: selectedFollowupPurpose };
+      // Add the 'others' input if the purpose is 'Others'
+      if (selectedFollowupPurpose === "Others") {
+        extraData = { ...extraData, purpose_others: purpose }; // Assuming 'purpose' state holds the 'Others' input value
+      }
     }
 
     try {
@@ -977,25 +1017,12 @@ if (video && canvas) {
 
 const handleUpload = async () => {
 if (profileImage) {
-// IMPORTANT: This is where you'd upload the image (data URL) to your server.
-// You'll need an API endpoint to handle this.
-// Example (Conceptual):
 console.log("Uploading image:", profileImage);
 try {
 // Convert Data URL to Blob
 const blob = dataURLtoBlob(profileImage);
 const formDataImg = new FormData();
 formDataImg.append('image', blob, `profile_${formData.emp_no}.jpg`);
-
-// const response = await fetch('/api/upload-profile-picture', { // Replace with your API endpoint
-    //   method: 'POST',
-    //   body: formData,
-    // });
-
-    // if (response.ok) {
-    //   console.log("Image uploaded successfully!");
-    // Optionally, update the profile with the new image URL from the server
-    // Update local state and database
     const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage, formData });
     if (updateResponse.status === 200) {
       alert("Profile image updated successfully!");
@@ -1306,6 +1333,128 @@ return (
               </div>
             )}
 
+            {register.startsWith("Pre Placement Same Contract") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Contract Name</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                    value={campFields.contractName}
+                    onChange={(e) => setCampFields(prev => ({ ...prev, contractName: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {register.startsWith("Pre Placement Contract change") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Previous Contract Name</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                    value={campFields.prevcontractName}
+                    onChange={(e) => setCampFields(prev => ({ ...prev, prevcontractName: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Employee number</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                    value={campFields.old_emp_no}
+                    onChange={(e) => setCampFields(prev => ({ ...prev, old_emp_no: e.target.value }))}
+                  />
+                </div>
+              </div>
+            )}
+
+            {register.startsWith("Special Work Fitness") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
+                  <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Select</option>
+                    <option value="Height">Height</option>
+                    <option value="Gas Line">Gas Line</option>
+                    <option value="Confined Space">Confined Space</option>
+                    <option value="SCBA Rescue">SCBA Rescue</option>
+                    <option value="Fire Rescue">Fire Rescue</option>
+                    <option value="Lone">Lone</option>
+                    <option value="Fisher Man">Fisher Man</option>
+                    <option value="Snake Catcher">Snake Catcher</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+{register.startsWith("BP Sugar Check") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Patient Status</label>
+                  <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Select</option>
+                    <option value="Normal People">Normal People</option>
+                    <option value="Patient under control">Patient under control</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+{register.startsWith("Illness") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
+                  <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Select</option>
+                    Newly detected BP / DM , Patient not in control
+                    <option value="Newly detected BP / DM">Newly detected BP / DM</option>
+                    <option value="Patient not in control">Patient not in control</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+{register.startsWith("BP Sugar Chart") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
+                  <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Select</option>
+                    <option value="Newly detected">Newly detected</option>
+                    <option value="Patient <150 <100">Patient &lt; 150 &lt; 100</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+        {register.startsWith("Followup Visits") && (
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Purpose</label>
+                  <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Select</option>
+                    <option value="Dressing">Dressing</option>
+                    <option value="Consultation">Consultation</option>
+                    <option value="Suture Removal">Suture Removal</option>
+                    <option value="Others">Others</option>
+                  </select>
+                </div>
+                {purpose === "others" && (
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">Others</label>
+                    <input
+                      type="text"
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                      value={purpose}
+                      onChange={(e) => setPurpose(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             <hr className="h-4 text-blue-100" />
             <div className="border-b border-gray-200 mb-4">
               <nav className="relative flex justify-evenly space-x-4 bg-gray-50 p-3 rounded-lg shadow-sm" aria-label="Tabs">
@@ -1356,4 +1505,7 @@ return (
 };
 
 export default NewVisit;
+
+
+
 

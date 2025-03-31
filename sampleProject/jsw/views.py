@@ -352,25 +352,78 @@ def addEntries(request):
 
     try:
         data = json.loads(request.body.decode('utf-8'))
+        print(data)
         if not data.get('emp_no'):
             logger.warning("addEntries failed: Employee number is required")
             return JsonResponse({"error": "Employee number is required"}, status=400)
 
         emp_no = data['emp_no']
         entry_date = datetime.now().date()
+        extra_data = data.get('extraData', {})
+        dashboard_data = data.get('formDataDashboard', {})
+        register = dashboard_data.get('register', '') # Get register value from dashboard data
+        #register = data['register'] # Get register value
 
         try:
             # Dashboard entry
-            dashboard_data = data.get('formDataDashboard', {})
+
+            dashboard_defaults = {
+                'type_of_visit': dashboard_data.get('typeofVisit', ''),
+                'type': dashboard_data.get('category', ''),
+                'register': register,  # Use the extracted register value
+                'purpose': dashboard_data.get('purpose', '')
+            }
+
+            # Add extra data to dashboard defaults based on register
+            if register in ["Annual / Periodical", "Periodical (Food Handler)"]:
+                dashboard_defaults.update({
+                    'year': extra_data.get('year', ''),
+                    'batch': extra_data.get('batch', ''),
+                    'hospitalName': extra_data.get('hospitalName', '')
+                })
+            elif register.startswith("Camps"):
+                dashboard_defaults.update({
+                    'campName': extra_data.get('campName', ''),
+                    'hospitalName': extra_data.get('hospitalName', '')
+                })
+            elif register == "Pre Placement Same Contract":
+                dashboard_defaults.update({
+                    'contractName': extra_data.get('contractName', '')
+                })
+            elif register == "Pre Employment Contract change":
+                dashboard_defaults.update({
+                    'prevcontractName': extra_data.get('prevcontractName', ''),
+                    'old_emp_no': extra_data.get('old_emp_no', '')
+                })
+            elif register.startswith("Special Work Fitness"):
+                dashboard_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("BP Sugar Check"):
+                dashboard_defaults.update({
+                    'status': extra_data.get('status', '')
+                })
+            elif register.startswith("Illness"):
+                dashboard_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("BP Sugar Chart"):
+                 dashboard_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("Followup Visits"):
+                 dashboard_defaults.update({
+                    'purpose': extra_data.get('purpose', '')
+                })
+                 if extra_data.get('purpose') == "Others":
+                     dashboard_defaults.update({
+                         'purpose_others': extra_data.get('purpose_others', '')
+                     })
+
             dashboard, created = models.Dashboard.objects.update_or_create(
                 emp_no=emp_no,
                 date=entry_date,
-                defaults={
-                    'type_of_visit': dashboard_data.get('typeofVisit', ''),
-                    'type': dashboard_data.get('category', ''),
-                    'register': dashboard_data.get('register', ''),
-                    'purpose': dashboard_data.get('purpose', '')
-                }
+                defaults=dashboard_defaults
             )
             dashboard_message = "Entry added successfully" if created else "Entry updated successfully"
 
@@ -378,38 +431,90 @@ def addEntries(request):
             employee_data = data.get('formData', {})
             logger.info(f"Received dates: dob={employee_data.get('dob')}, doj={employee_data.get('doj')}, moj={employee_data.get('moj')}")
 
+            employee_defaults = {
+                'name': employee_data.get('name', ''),
+                'dob': parse_date(employee_data.get('dob')),
+                'sex': employee_data.get('sex', ''),
+                'aadhar': employee_data.get('aadhar', ''),
+                'role': employee_data.get('role', ''),
+                'bloodgrp': employee_data.get('bloodgrp', ''),
+                'identification_marks1': employee_data.get('identification_marks1', ''),
+                'identification_marks2': employee_data.get('identification_marks2', ''),
+                'marital_status': employee_data.get('marital_status', ''),
+                'employer': employee_data.get('employer', ''),
+                'designation': employee_data.get('designation', ''),
+                'department': employee_data.get('department', ''),
+                'job_nature': employee_data.get('job_nature', ''),
+                'doj': parse_date(employee_data.get('doj')),
+                'moj': employee_data.get('moj'),
+                'phone_Personal': employee_data.get('phone_Personal', ''),
+                'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
+                'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
+                'phone_Office': employee_data.get('phone_Office', ''),
+                'mail_id_Office': employee_data.get('mail_id_Office', ''),
+                'emergency_contact_relation': employee_data.get('emergency_contact_relation', ''),
+                'mail_id_Emergency_Contact_Person': employee_data.get('mail_id_Emergency_Contact_Person', ''),
+                'emergency_contact_phone': employee_data.get('emergency_contact_phone', ''),
+                'state': employee_data.get('state', ''),
+                'nationality': employee_data.get('nationality', ''),
+                'area': employee_data.get('area', ''),
+                'address': employee_data.get('address', ''),
+                'type_of_visit': dashboard_data.get('typeofVisit', ''),
+                'type': dashboard_data.get('category', ''),
+                'register': register,  # Use the extracted register value
+                'purpose': dashboard_data.get('purpose', '')
+            }
+
+            # Add extra data to employee details defaults based on register
+            if register in ["Annual / Periodical", "Periodical (Food Handler)"]:
+                employee_defaults.update({
+                    'year': extra_data.get('year', ''),
+                    'batch': extra_data.get('batch', ''),
+                    'hospitalName': extra_data.get('hospitalName', '')
+                })
+            elif register.startswith("Camps"):
+                employee_defaults.update({
+                    'campName': extra_data.get('campName', ''),
+                    'hospitalName': extra_data.get('hospitalName', '')
+                })
+            elif register == "Pre Placement Same Contract":
+                employee_defaults.update({
+                    'contractName': extra_data.get('contractName', '')
+                })
+            elif register == "Pre Employment Contract change":
+                employee_defaults.update({
+                    'prevcontractName': extra_data.get('prevcontractName', ''),
+                    'old_emp_no': extra_data.get('old_emp_no', '')
+                })
+            elif register.startswith("Special Work Fitness"):
+                employee_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("BP Sugar Check"):
+                employee_defaults.update({
+                    'status': extra_data.get('status', '')
+                })
+            elif register.startswith("Illness"):
+                employee_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("BP Sugar Chart"):
+                 employee_defaults.update({
+                    'reason': extra_data.get('reason', '')
+                })
+            elif register.startswith("Followup Visits"):
+                 employee_defaults.update({
+                    'purpose': extra_data.get('purpose', '')
+                })
+                 if extra_data.get('purpose') == "Others":
+                     employee_defaults.update({
+                         'purpose_others': extra_data.get('purpose_others', '')
+                     })
+
             employee, created = models.employee_details.objects.update_or_create(
                 emp_no=emp_no,
                 entry_date=entry_date,
-                defaults={
-                    'name': employee_data.get('name', ''),
-                    'dob': parse_date(employee_data.get('dob')),
-                    'sex': employee_data.get('sex', ''),
-                    'aadhar': employee_data.get('aadhar', ''),
-                    'role': employee_data.get('role', ''),
-                    'bloodgrp': employee_data.get('bloodgrp', ''),
-                    'identification_marks1': employee_data.get('identification_marks1', ''),
-                    'identification_marks2': employee_data.get('identification_marks2', ''),
-                    'marital_status': employee_data.get('marital_status', ''),
-                    'employer': employee_data.get('employer', ''),
-                    'designation': employee_data.get('designation', ''),
-                    'department': employee_data.get('department', ''),
-                    'job_nature': employee_data.get('job_nature', ''),
-                    'doj': parse_date(employee_data.get('doj')),
-                    'moj': parse_date(employee_data.get('moj')),
-                    'phone_Personal': employee_data.get('phone_Personal', ''),
-                    'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
-                    'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
-                    'phone_Office': employee_data.get('phone_Office', ''),
-                    'mail_id_Office': employee_data.get('mail_id_Office', ''),
-                    'emergency_contact_relation': employee_data.get('emergency_contact_relation', ''),
-                    'mail_id_Emergency_Contact_Person': employee_data.get('mail_id_Emergency_Contact_Person', ''),
-                    'emergency_contact_phone': employee_data.get('emergency_contact_phone', ''),
-                    'state': employee_data.get('state', ''),
-                    'nationality': employee_data.get('nationality', ''),
-                    'area': employee_data.get('area', ''),
-                    'address': employee_data.get('address', ''),
-                }
+                defaults=employee_defaults
             )
             employee_message = "Basic Details added successfully" if created else "Basic Details updated successfully"
 
@@ -426,7 +531,6 @@ def addEntries(request):
     except Exception as e:
         logger.exception("addEntries failed: An unexpected error occurred.")
         return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
-
 
 @csrf_exempt
 def dashboard_stats(request):
@@ -484,7 +588,7 @@ def add_basic_details(request):
             data = json.loads(request.body.decode('utf-8'))
             emp_no = data['emp_no']
             entry_date = datetime.now().date()
-
+            print(data)
             employee, created = models.employee_details.objects.update_or_create(
                 emp_no=emp_no,
                 entry_date=entry_date,
