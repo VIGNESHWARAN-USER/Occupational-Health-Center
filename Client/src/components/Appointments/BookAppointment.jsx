@@ -44,7 +44,7 @@ const BookAppointment = () => {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         const fetchedEmployees = response.data.data;
         setEmployees(fetchedEmployees);
 
@@ -68,7 +68,7 @@ const BookAppointment = () => {
     }
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
+      const response = await fetch("http://localhost:8000/bookAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

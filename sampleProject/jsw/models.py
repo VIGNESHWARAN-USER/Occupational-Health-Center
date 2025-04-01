@@ -20,15 +20,6 @@ class user(BaseModel):
 
 
 
-from django.db import models
-
-class BaseModel(models.Model):  # You likely have this already
-    entry_date = models.DateField(auto_now=True)
-
-    class Meta:
-        abstract = True  # Make sure this is an abstract base class
-
-
 class employee_details(BaseModel):
     EMPLOYEE_TYPES = [
         ('Employee', 'Employee'),
@@ -75,11 +66,15 @@ class employee_details(BaseModel):
     emergency_contact_relation = models.CharField(max_length=225, blank=True)
     mail_id_Emergency_Contact_Person = models.EmailField(max_length=225, blank=True) # Use EmailField
     emergency_contact_phone = models.CharField(max_length=225, blank=True)
-    address = models.TextField(blank=True) # Remove max_length
     role = models.CharField(max_length=50, blank=True)  # Consider choices here too
-    area = models.CharField(max_length=50, blank=True)
-    nationality = models.CharField(max_length=50, blank=True)
-    state = models.CharField(max_length=50, blank=True)
+    permanent_address = models.TextField(blank=True) # Remove max_length
+    permanent_area = models.CharField(max_length=50, blank=True)
+    permanent_nationality = models.CharField(max_length=50, blank=True)
+    permanent_state = models.CharField(max_length=50, blank=True)
+    residential_address = models.TextField(blank=True) # Remove max_length
+    residential_area = models.CharField(max_length=50, blank=True)
+    residential_nationality = models.CharField(max_length=50, blank=True)
+    residential_state = models.CharField(max_length=50, blank=True)
     profilepic = models.ImageField(upload_to='profilepics', blank=True, null=True)  # Allow null for new records
     profilepic_url = models.URLField(max_length=255, blank=True)
     other_site_id = models.CharField(max_length=255, blank=True)
@@ -1070,7 +1065,6 @@ class MedicalHistory(BaseModel):
     surgical_history = models.JSONField(null=True, blank=True)
     family_history = models.JSONField(null=True, blank=True)
     health_conditions = models.JSONField(null=True, blank=True)
-    submission_details = models.JSONField(null=True, blank=True)
     allergy_fields = models.JSONField(null=True, blank=True)
     allergy_comments = models.JSONField(null=True, blank=True)
     children_data = models.JSONField(null=True, blank=True)
@@ -1232,3 +1226,96 @@ class Form27(models.Model):
 
     def _str_(self):
         return f"Form 27 - {self.nameOfWorks}"
+    
+
+from django.db import models
+# Assuming you have a BaseModel or just use models.Model
+# from .base import BaseModel # If you have a base model
+
+# If not using a custom BaseModel, inherit from models.Model
+class BaseModel(models.Model): # Example placeholder if you don't have one
+    entry_date = models.DateField(auto_now_add=True, null=True, blank=True) # Example common field
+    # Add other common fields like created_at, updated_at if needed
+    class Meta:
+        abstract = True # Important if this is just for inheritance
+
+
+class SignificantNotes(BaseModel):
+    # Choices based on React component's options (can be refined)
+    COMMUNICABLE_DISEASE_CHOICES = [
+        ('CD1', 'CD1'),
+        ('CD2', 'CD2'),
+        ('Unknown', 'Unknown'),
+        ('', 'Select...'), # Optional: Allow empty selection
+    ]
+    INCIDENT_TYPE_CHOICES = [
+        ('FAC', 'Fac'),
+        ('LTI', 'LTI'),
+        ('MTC', 'MTC'),
+        ('FATAL', 'Fatal'),
+         ('', 'Select...'),
+    ]
+    INCIDENT_CHOICES = [
+        ('Occupational Injury', 'Occupational Injury'),
+        ('Domestic Injury', 'Domestic Injury'),
+        ('Communication Injury', 'Communication Injury'),
+        ('Other Injury', 'Other Injury'),
+         ('', 'Select...'),
+    ]
+    ILLNESS_TYPE_CHOICES = [
+        ('Occupational Illness', 'Occupational Illness'),
+        ('Occupational Disease', 'Occupational Disease'),
+         ('', 'Select...'),
+    ]
+
+    emp_no = models.CharField(max_length=20, blank=True, null=True) # Link to employee
+    # entry_date inherited from BaseModel or add here: models.DateField(null=True, blank=True)
+
+    # Fields corresponding to the React state
+    healthsummary = models.JSONField(default=list, blank=True, null=True)
+    remarks = models.JSONField(default=list, blank=True, null=True)
+    communicable_disease = models.CharField(
+        max_length=50,
+        choices=COMMUNICABLE_DISEASE_CHOICES,
+        blank=True,
+        null=True,
+        default='', # Default to empty string for dropdowns
+        verbose_name="Communicable Disease"
+    )
+    incident_type = models.CharField(
+        max_length=50,
+        choices=INCIDENT_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        default='',
+        verbose_name="Incident Type"
+    )
+    incident = models.CharField(
+        max_length=100,
+        choices=INCIDENT_CHOICES,
+        blank=True,
+        null=True,
+        default='',
+        verbose_name="Incident"
+    )
+    illness_type = models.CharField(
+        max_length=100,
+        choices=ILLNESS_TYPE_CHOICES,
+        blank=True,
+        null=True,
+        default='',
+        verbose_name="Illness Type"
+    )
+
+    # Add other fields if necessary (e.g., submitted_by)
+
+    def __str__(self):
+        # Handle potential None for entry_date if not inheriting or not set
+        date_str = self.entry_date.strftime('%Y-%m-%d') if self.entry_date else 'No Date'
+        return f"Significant Notes for Emp {self.emp_no or 'N/A'} on {date_str}"
+
+    class Meta:
+        verbose_name = "Significant Note"
+        verbose_name_plural = "Significant Notes"
+        # Optional: Add ordering
+        # ordering = ['-entry_date', 'emp_no']

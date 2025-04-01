@@ -166,10 +166,7 @@ const MedicalHistory1 = ({ data }) => {
 
   const [healthConditions, setHealthConditions] = useState({});
 
-  const [submissionDetails, setSubmissionDetails] = useState({
-    bookedTo: "",
-    submittedBy: "",
-  });
+  
 
   const [allergyFields, setAllergyFields] = useState({
     drug: { yesNo: "" },
@@ -478,7 +475,7 @@ const MedicalHistory1 = ({ data }) => {
       const updatedFormdata = { ...formData, emp_no: emp_no };
       console.log(updatedFormdata)
       console.log(updatedFormdata);
-      const response = await fetch("https://occupational-health-center-1.onrender.com/medical-history/", {
+      const response = await fetch("http://localhost:8000/medical-history/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -517,7 +514,7 @@ const MedicalHistory1 = ({ data }) => {
 
         <div className="mb-4">
           <label className="block font-medium mb-2">Smoking</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="flex items-center space-x-2">
               <input
                 type="radio"
@@ -542,7 +539,20 @@ const MedicalHistory1 = ({ data }) => {
                 checked={personalHistory?.smoking?.yesNo === "no"}
                 disabled={!isEditMode}
               />
-              <label htmlFor="smoking-no">No</label>
+              <label htmlFor="smoking-cessased">No</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="smoking"
+                value="cessased"
+                id="smoking-cessased"
+                className="form-radio h-6 w-6" // Adjusted size here
+                onChange={handlePersonalHistoryChange}
+                checked={personalHistory?.smoking?.yesNo === "cessased"}
+                disabled={!isEditMode}
+              />
+              <label htmlFor="smoking-no">Cessased</label>
             </div>
             <input
               type="text"
@@ -567,7 +577,7 @@ const MedicalHistory1 = ({ data }) => {
         {/* Alcohol Consumption */}
         <div className="mb-4">
           <label className="block font-medium mb-2">Alcohol Consumption</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="flex items-center space-x-2">
               <input
                 type="radio"
@@ -594,6 +604,19 @@ const MedicalHistory1 = ({ data }) => {
               />
               <label htmlFor="alcohol-no">No</label>
             </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="alcohol"
+                value="cessased"
+                id="alcohol-cessased"
+                className="form-radio h-6 w-6" // Adjusted size here
+                onChange={handlePersonalHistoryChange}
+                checked={personalHistory?.alcohol?.yesNo === "cessased"}
+                disabled={!isEditMode}
+              />
+              <label htmlFor="alcohol-no">Cessased</label>
+            </div>
             <input
               type="text"
               name="alcohol-years"
@@ -619,7 +642,7 @@ const MedicalHistory1 = ({ data }) => {
           <label className="block font-medium mb-2">
             Paan/Beetle Consumption
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="flex items-center space-x-2">
               <input
                 type="radio"
@@ -645,6 +668,19 @@ const MedicalHistory1 = ({ data }) => {
                 disabled={!isEditMode}
               />
               <label htmlFor="paan-no">No</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="paan"
+                value="cessased"
+                id="paan-cessased"
+                className="form-radio h-6 w-6" // Adjusted size here
+                onChange={handlePersonalHistoryChange}
+                checked={personalHistory?.paan?.yesNo === "cessased"}
+                disabled={!isEditMode}
+              />
+              <label htmlFor="paan-no">Cessased</label>
             </div>
             <input
               type="text"
@@ -2169,47 +2205,7 @@ disabled={!isEditMode}
         )}
       </div>
 
-      {/* Submission Details */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">Submission Details</h2>
-        <div className="flex space-x-4">
-          {/* Nurse Selection */}
-          <div className="w-1/2">
-            <label className="block font-medium mb-2">Submitted By Nurse</label>
-            <select
-              className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              name="submittedBy"
-              onChange={handleSubmissionDetailsChange}
-              style={selectStyle}
-              value={submissionDetails.submittedBy || ""}
-              disabled={!isEditMode}
-            >
-              <option value="">Select Nurse</option>
-              <option value="nurse1">Nurse 1</option>
-              <option value="nurse2">Nurse 2</option>
-              <option value="nurse3">Nurse 3</option>
-            </select>
-          </div>
-
-          {/* Doctor Selection */}
-          <div className="w-1/2">
-            <label className="block font-medium mb-2">Patient Booked to Dr.</label>
-            <select
-              className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              name="bookedTo"
-              onChange={handleSubmissionDetailsChange}
-              style={selectStyle}
-              value={submissionDetails.bookedTo || ""}
-              disabled={!isEditMode}
-            >
-              <option value="">Select Doctor</option>
-              <option value="dr1">Dr. Smith</option>
-              <option value="dr2">Dr. John</option>
-              <option value="dr3">Dr. Emily</option>
-            </select>
-          </div>
-        </div>
-      </div>
+    
 
       <div className="mt-6 flex justify-end">
         <button

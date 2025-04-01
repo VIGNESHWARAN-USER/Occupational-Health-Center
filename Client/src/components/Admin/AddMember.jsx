@@ -73,7 +73,7 @@ function AddMember() {
         }
 
         try {
-            const response = await fetch("https://occupational-health-center-1.onrender.com/members/add/", {
+            const response = await fetch("http://localhost:8000/members/add/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

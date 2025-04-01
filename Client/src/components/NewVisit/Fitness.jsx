@@ -233,7 +233,7 @@ const FitnessPage = ({ data }) => {
         };
 
         try {
-            const response = await fetch("https://occupational-health-center-1.onrender.com/fitness-tests/", {
+            const response = await fetch("http://localhost:8000/fitness-tests/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -408,13 +408,13 @@ const FitnessPage = ({ data }) => {
     return (
         <div className="bg-white min-h-screen p-6 relative">
             <h1 className="text-3xl font-bold mb-8">Fitness</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
                 {["tremors", "romberg_test", "acrophobia", "trendelenberg_test"].map((test) => (
                     <div key={test} className="bg-blue-100 p-6 rounded-lg shadow-md">
                         <h2 className="text-lg font-semibold mb-4">{test.replace("_", " ")}</h2>
                         <div className="space-y-2">
-                            {["positive", "negative"].map((value) => (
-                                <label key={value} className="flex items-center space-x-2">
+                            {["positive","Double Positive","Triple Positive","negative"].map((value) => (
+                                <label key={value} className="ms-4 items-center space-x-2">
                                     <input
                                         type="radio"
                                         name={test}

@@ -73,7 +73,7 @@ const Consultation = ({ data }) => {
       speaciality: speaciality
     };
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationData);
+      const response = await axios.post("http://localhost:8000/consultations/add/", consultationData);
       if (response.status === 200) {
         alert("Consultation data submitted successfully!");
       } else {
@@ -158,41 +158,7 @@ const Consultation = ({ data }) => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-gray-700 mb-2 text-lg font-medium" htmlFor="notifiableRemarks">Notable Remarks</label>
-          <textarea
-            id="notifiableRemarks"
-            className="w-full p-4 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
-            rows="4"
-            placeholder="Enter any notable remarks here..."
-            value={notifiableRemarks}
-            onChange={(e) => setNotifiableRemarks(e.target.value)}
-            disabled={!isDoctor}
-          ></textarea>
-        </div>
-
-        <h2 className="text-3xl font-bold mb-4">Referral</h2>
-
-        <div className="mb-6">
-          <div className="mb-4">
-            <label htmlFor="caseType" className="block text-gray-700 text-lg font-medium mb-2">
-              Case Type
-            </label>
-            <select
-              id="caseType"
-              className="w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300"
-              value={caseType}
-              onChange={(e) => setCaseType(e.target.value)}
-              disabled={!isDoctor}
-            >
-              <option value="">Select Case Type</option>
-              {caseTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
+         
           {caseType === 'other' && (
             <div className="mb-4">
               <label htmlFor="otherDetails" className="block text-gray-700 text-lg font-medium mb-2">

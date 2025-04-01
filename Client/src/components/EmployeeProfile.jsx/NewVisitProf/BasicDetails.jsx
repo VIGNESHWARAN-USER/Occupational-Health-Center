@@ -254,30 +254,7 @@ const BasicDetails = ({  data }) => {
             {data?.emergency_contact_phone || 'N/A'}
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 ">Area</label>
-          <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
-            {data?.area || 'N/A'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 ">State</label>
-          <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
-            {data?.state || 'N/A'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 ">Nationality</label>
-          <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
-            {data?.nationality || 'N/A'}
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 ">Address</label>
-          <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
-            {data?.address || 'N/A'}
-          </div>
-        </div>
+        
       </div>
 
     </div>

@@ -12,7 +12,7 @@ const Sidebar = () => {
   const menus = {
     nurse: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Employee Profile", to: "../searchemployee", icon: <FaUsers /> },
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
       { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
@@ -21,7 +21,7 @@ const Sidebar = () => {
     ],
     doctor: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Employee Profile", to: "../searchemployee", icon: <FaUsers /> },
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
       { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },

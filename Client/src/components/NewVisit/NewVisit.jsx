@@ -11,6 +11,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import Consultation from "./Consultation";
 import Prescription from "./Prescription";
+import SignificantNotes from "./SignificantNotes";
 
 const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
@@ -185,7 +186,7 @@ const NewVisit = () => {
     }
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
+      const response = await axios.post("http://localhost:8000/addEntries", {
         formDataDashboard,
         emp_no: formData.emp_no,
         extraData,
@@ -215,7 +216,7 @@ const NewVisit = () => {
     e.preventDefault();
     try {
       const updatedformData = { ...formData, role: type }
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -278,8 +279,10 @@ const NewVisit = () => {
             // Initialize form with the entered employee ID and reset other fields.
             setFormData({
             aadhar: "",
-            address:"", 
-            area: "",
+            pernament_address:"",
+            residential_address:"",
+            permanent_area: "",
+            residential_area: "",
             bloodgrp:"",
             coagulationtest: {},
             consultation: {},
@@ -313,7 +316,8 @@ const NewVisit = () => {
             mri: {},
             msphistory: {},
             name: "",
-            nationality: "",
+            permanent_nationality: "",
+            residential_nationality: "",
             opthalamicreport: {},
             phone_Office: "",
             phone_Personal: "",
@@ -327,13 +331,15 @@ const NewVisit = () => {
             routinesugartests: {},
             serology: {},
             sex: "",
-            state: "",
+            permanent_state: "",
+            residential_state: "",
             thyroidfunctiontest: {},
             type: "",
             type_of_visit: "",
             urineroutine: {},
             usg: {},
             vaccination: {},
+            significant_notes: {},
             vitals:{}
           });
             setFilteredEmployees([formData]);
@@ -379,7 +385,7 @@ const NewVisit = () => {
       try {
         setLoading(true);
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         console.log("API Response Data:", response.data.data);
         setEmployees(response.data.data);
         console.log(response.data.data);
@@ -470,6 +476,7 @@ const NewVisit = () => {
     register !== "Alcohol Abuse" && { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
     register !== "Alcohol Abuse" && purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
     register !== "Alcohol Abuse" && { id: "Vaccination", label: "Vaccination" },
+    register !== "Alcohol Abuse" && { id: "SignificantNotes", label: "Significant Notes" },
     register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
     register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation and Referral" },
     register !== "Alcohol Abuse" && visit === "Curative" && { id: "Prescription", label: "Prescription" },
@@ -879,11 +886,17 @@ placeholder="Enter Emergency Contact number"
 className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 />
 </div>
+
+
+</div>
+<h2 className="text-lg mt-6 font-medium my-4">Permanent Address</h2>
+<div className="grid grid-cols-3 gap-4">
+
 <div>
 <label className="block text-sm font-medium text-gray-700 ">Area</label>
 <input
-name='area'
-value={formData.area || ''}
+name='permanent_area'
+value={formData.permanent_area || ''}
 onChange={handleChange}
 type="text"
 placeholder="Enter Area"
@@ -893,8 +906,8 @@ className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow
 <div>
 <label className="block text-sm font-medium text-gray-700 ">State</label>
 <input
-name='state'
-value={formData.state || ''}
+name='permanent_state'
+value={formData.permanent_state || ''}
 onChange={handleChange}
 type="text"
 placeholder="Enter State"
@@ -904,29 +917,79 @@ className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow
 <div>
 <label className="block text-sm font-medium text-gray-700 ">Nationality</label>
 <input
-name='nationality'
-value={formData.nationality || ''}
+name='permanent_nationality'
+value={formData.permanent_nationality || ''}
 onChange={handleChange}
 type="text"
 placeholder="Enter Nationality"
 className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 />
 </div>
+</div>
 <div>
 <label className="block text-sm font-medium text-gray-700 ">Address</label>
 <textarea
-name='address'
-value={formData.address || ''}
+name='permanent_address'
+value={formData.permanent_address || ''}
 onChange={handleChange}
 placeholder="Enter full address"
 className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 />
 </div>
+
+
+<h2 className="text-lg mt-6 font-medium my-4">Residential Address</h2>
+<div className="grid grid-cols-3 gap-4">
+
+<div>
+<label className="block text-sm font-medium text-gray-700 ">Area</label>
+<input
+name='residential_area'
+value={formData.residential_area || ''}
+onChange={handleChange}
+type="text"
+placeholder="Enter Area"
+className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+</div>
+<div>
+<label className="block text-sm font-medium text-gray-700 ">State</label>
+<input
+name='residential_state'
+value={formData.residential_state || ''}
+onChange={handleChange}
+type="text"
+placeholder="Enter State"
+className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+</div>
+<div>
+<label className="block text-sm font-medium text-gray-700 ">Nationality</label>
+<input
+name='residential_nationality'
+value={formData.residential_nationality || ''}
+onChange={handleChange}
+type="text"
+placeholder="Enter Nationality"
+className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+</div>
+</div>
+<div>
+<label className="block text-sm font-medium text-gray-700 ">Address</label>
+<textarea
+name='residential_address'
+value={formData.residential_address || ''}
+onChange={handleChange}
+placeholder="Enter full address"
+className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+/>
+</div>
+
+
 <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
 Add Basic Details
 </button>
-</div>
-
 </div>
     );
   case "Fitness":
@@ -935,6 +998,8 @@ Add Basic Details
     return <Investigation data={singleData} />;
   case "Vaccination":
     return <Vaccination data={data} />;
+  case "SignificantNotes":
+    return <SignificantNotes data={data} />;
   case "Vitals":
     return <Vitals data={data} />;
   case "MedicalHistory":
@@ -1023,11 +1088,11 @@ try {
 const blob = dataURLtoBlob(profileImage);
 const formDataImg = new FormData();
 formDataImg.append('image', blob, `profile_${formData.emp_no}.jpg`);
-    const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage, formData });
+    const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage, formData });
     if (updateResponse.status === 200) {
       alert("Profile image updated successfully!");
       // Refresh employee list or update local state
-      const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+      const fetchResponse = await axios.post("http://localhost:8000/userData");
       setEmployees(fetchResponse.data.data);
       setFilteredEmployees(fetchResponse.data.data);
       console.log(fetchResponse.data.data);

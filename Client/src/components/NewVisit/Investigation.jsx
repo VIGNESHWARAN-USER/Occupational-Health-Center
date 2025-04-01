@@ -153,67 +153,67 @@ function InvestigationForm({ data }) {
 
     switch (selectedOption) {
       case "HAEMATALOGY":
-        url = "https://occupational-health-center-1.onrender.com/addInvestigation";
+        url = "http://localhost:8000/addInvestigation";
         dataToSend = formData;
         break;
       case "ROUTINE SUGAR TESTS":
-        url = "https://occupational-health-center-1.onrender.com/addRoutineSugarTest"; // Update with your endpoint
+        url = "http://localhost:8000/addRoutineSugarTest"; // Update with your endpoint
         dataToSend = formData;
         break;
       case "LIPID PROFILE":
-        url = "https://occupational-health-center-1.onrender.com/addLipidProfile";
+        url = "http://localhost:8000/addLipidProfile";
         dataToSend = formData;
         break;
       case "LIVER FUNCTION TEST":
-        url = "https://occupational-health-center-1.onrender.com/addLiverFunctionTest";
+        url = "http://localhost:8000/addLiverFunctionTest";
         dataToSend = formData;
         break;
       case "THYROID FUNCTION TEST":
-        url = "https://occupational-health-center-1.onrender.com/addThyroidFunctionTest";
+        url = "http://localhost:8000/addThyroidFunctionTest";
         dataToSend = formData;
         break;
       case "COAGULATION TEST":
-        url = "https://occupational-health-center-1.onrender.com/addCoagulationTest";
+        url = "http://localhost:8000/addCoagulationTest";
         dataToSend = formData;
         break;
       case "ENZYMES & CARDIAC Profile":
-        url = "https://occupational-health-center-1.onrender.com/addEnzymesAndCardiacProfile";
+        url = "http://localhost:8000/addEnzymesAndCardiacProfile";
         dataToSend = formData;
         break;
       case "URINE ROUTINE":
-        url = "https://occupational-health-center-1.onrender.com/addUrineRoutine";
+        url = "http://localhost:8000/addUrineRoutine";
         dataToSend = formData;
         break;
       case "SEROLOGY":
-        url = "https://occupational-health-center-1.onrender.com/addSerology";
+        url = "http://localhost:8000/addSerology";
         dataToSend = formData;
         break;
       case "MOTION":
-        url = "https://occupational-health-center-1.onrender.com/addMotion";
+        url = "http://localhost:8000/addMotion";
         dataToSend = formData;
         break;
       case "Men's Pack":
-        url = "https://occupational-health-center-1.onrender.com/addMensPack";
+        url = "http://localhost:8000/addMensPack";
         dataToSend = formData;
         break;
       case "OPHTHALMIC REPORT":
-        url = "https://occupational-health-center-1.onrender.com/addOpthalmicReport";
+        url = "http://localhost:8000/addOpthalmicReport";
         dataToSend = formData;
         break;
       case "X-RAY":
-        url = "https://occupational-health-center-1.onrender.com/addXRay";
+        url = "http://localhost:8000/addXRay";
         dataToSend = formData;
         break;
       case "USG":
-        url = "https://occupational-health-center-1.onrender.com/addUSG";
+        url = "http://localhost:8000/addUSG";
         dataToSend = formData;
         break;
       case "CT":
-        url = "https://occupational-health-center-1.onrender.com/addCT";
+        url = "http://localhost:8000/addCT";
         dataToSend = formData;
         break;
       case "MRI":
-        url = "https://occupational-health-center-1.onrender.com/addMRI";
+        url = "http://localhost:8000/addMRI";
         dataToSend = formData;
         break;
       default:

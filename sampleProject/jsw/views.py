@@ -282,7 +282,7 @@ def fetchdata(request):
             vaccination_dict, vaccination_default = get_latest_records(models.VaccinationRecord)
             consultation_dict, consultation_default = get_latest_records(models.Consultation)
             prescription_dict, prescription_default = get_latest_records(models.Prescription)
-
+            significant_notes_dict, significant_notes_default = get_latest_records(models.SignificantNotes)
             if not employees:
                 logger.info("No employee records found.")
                 return JsonResponse({"data": []}, status=200)
@@ -312,6 +312,7 @@ def fetchdata(request):
                 emp["vaccination"] = vaccination_dict.get(emp_no, vaccination_default or {})
                 emp["consultation"] = consultation_dict.get(emp_no, consultation_default or {})
                 emp["prescription"] = prescription_dict.get(emp_no, prescription_default or {})
+                emp["significant_notes"] = significant_notes_dict.get(emp_no, significant_notes_default or {})
                 merged_data.append(emp)
           
             return JsonResponse({"data": merged_data}, status=200)
@@ -343,193 +344,195 @@ def parse_date(date_str):
         logger.warning(f"Invalid date format received: {date_str}")
         return None  # Invalid format
 
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime
+# Import your models and the parse_date helper
+from . import models # Adjust the import path if needed
+# from .utils import parse_date # Or import from where you placed it
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Make sure parse_date is defined as shown above or imported
+
 @csrf_exempt
 def addEntries(request):
-    """Adds or updates dashboard and basic employee details entries."""
+    """Adds or updates an employee_details record for a specific visit entry."""
     if request.method != "POST":
         logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
-        print(data)
-        if not data.get('emp_no'):
+        logger.debug(f"Received data for addEntries: {data}")
+
+        emp_no = data.get('emp_no')
+        if not emp_no:
             logger.warning("addEntries failed: Employee number is required")
             return JsonResponse({"error": "Employee number is required"}, status=400)
 
-        emp_no = data['emp_no']
-        entry_date = datetime.now().date()
+        entry_date = datetime.now().date() # Use current date for the entry
         extra_data = data.get('extraData', {})
         dashboard_data = data.get('formDataDashboard', {})
-        register = dashboard_data.get('register', '') # Get register value from dashboard data
-        #register = data['register'] # Get register value
+        employee_data = data.get('formData', {}) # Basic details payload
 
-        try:
-            # Dashboard entry
+        register = dashboard_data.get('register', '') # Get register value
 
-            dashboard_defaults = {
-                'type_of_visit': dashboard_data.get('typeofVisit', ''),
-                'type': dashboard_data.get('category', ''),
-                'register': register,  # Use the extracted register value
-                'purpose': dashboard_data.get('purpose', '')
-            }
+        # Prepare defaults for the employee_details model
+        employee_defaults = {
+            # Basic Details from formData
+            'name': employee_data.get('name', ''),
+            'dob': parse_date(employee_data.get('dob')),
+            'sex': employee_data.get('sex', ''),
+            'aadhar': employee_data.get('aadhar', ''),
+            'role': employee_data.get('role', ''), # Employee/Contractor/Visitor role
+            'bloodgrp': employee_data.get('bloodgrp', ''),
+            'identification_marks1': employee_data.get('identification_marks1', ''),
+            'identification_marks2': employee_data.get('identification_marks2', ''),
+            'marital_status': employee_data.get('marital_status', ''),
+            'employer': employee_data.get('employer', ''),
+            'designation': employee_data.get('designation', ''),
+            'department': employee_data.get('department', ''),
+            'job_nature': employee_data.get('job_nature', ''),
+            'doj': parse_date(employee_data.get('doj')),
+            'moj': employee_data.get('moj', ''), # Corrected from parse_date
+            'phone_Personal': employee_data.get('phone_Personal', ''),
+            'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
+            'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
+            'phone_Office': employee_data.get('phone_Office', ''),
+            'mail_id_Office': employee_data.get('mail_id_Office', ''),
+            'emergency_contact_relation': employee_data.get('emergency_contact_relation', ''),
+            'mail_id_Emergency_Contact_Person': employee_data.get('mail_id_Emergency_Contact_Person', ''),
+            'emergency_contact_phone': employee_data.get('emergency_contact_phone', ''),
 
-            # Add extra data to dashboard defaults based on register
-            if register in ["Annual / Periodical", "Periodical (Food Handler)"]:
-                dashboard_defaults.update({
-                    'year': extra_data.get('year', ''),
-                    'batch': extra_data.get('batch', ''),
-                    'hospitalName': extra_data.get('hospitalName', '')
-                })
-            elif register.startswith("Camps"):
-                dashboard_defaults.update({
-                    'campName': extra_data.get('campName', ''),
-                    'hospitalName': extra_data.get('hospitalName', '')
-                })
-            elif register == "Pre Placement Same Contract":
-                dashboard_defaults.update({
-                    'contractName': extra_data.get('contractName', '')
-                })
-            elif register == "Pre Employment Contract change":
-                dashboard_defaults.update({
-                    'prevcontractName': extra_data.get('prevcontractName', ''),
-                    'old_emp_no': extra_data.get('old_emp_no', '')
-                })
-            elif register.startswith("Special Work Fitness"):
-                dashboard_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("BP Sugar Check"):
-                dashboard_defaults.update({
-                    'status': extra_data.get('status', '')
-                })
-            elif register.startswith("Illness"):
-                dashboard_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("BP Sugar Chart"):
-                 dashboard_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("Followup Visits"):
-                 dashboard_defaults.update({
-                    'purpose': extra_data.get('purpose', '')
-                })
-                 if extra_data.get('purpose') == "Others":
-                     dashboard_defaults.update({
-                         'purpose_others': extra_data.get('purpose_others', '')
-                     })
+            # New Address Fields from formData
+            'permanent_address': employee_data.get('permanent_address', ''),
+            'permanent_area': employee_data.get('permanent_area', ''),
+            'permanent_state': employee_data.get('permanent_state', ''),
+            'permanent_nationality': employee_data.get('permanent_nationality', ''),
+            'residential_address': employee_data.get('residential_address', ''),
+            'residential_area': employee_data.get('residential_area', ''),
+            'residential_state': employee_data.get('residential_state', ''),
+            'residential_nationality': employee_data.get('residential_nationality', ''),
 
-            dashboard, created = models.Dashboard.objects.update_or_create(
-                emp_no=emp_no,
-                date=entry_date,
-                defaults=dashboard_defaults
-            )
-            dashboard_message = "Entry added successfully" if created else "Entry updated successfully"
+             # Visitor Fields from formData (if applicable)
+            'other_site_id': employee_data.get('other_site_id', ''),
+            'organization': employee_data.get('organization', ''),
+            'addressOrganization': employee_data.get('addressOrganization', ''),
+            'visiting_department': employee_data.get('visiting_department', ''),
+            'visiting_date_from': parse_date(employee_data.get('visiting_date_from')),
+            'stay_in_guest_house': employee_data.get('stay_in_guest_house', ''),
+            'visiting_purpose': employee_data.get('visiting_purpose', ''), # Purpose specific to visitor form
 
-            # Employee Details entry
-            employee_data = data.get('formData', {})
-            logger.info(f"Received dates: dob={employee_data.get('dob')}, doj={employee_data.get('doj')}, moj={employee_data.get('moj')}")
+            # Visit Details from formDataDashboard
+            'type': dashboard_data.get('category', 'Employee'), # Employee/Contractor/Visitor Type
+            'type_of_visit': dashboard_data.get('typeofVisit', ''), # Preventive/Curative
+            'register': register,
+            'purpose': dashboard_data.get('purpose', ''), # Auto-derived purpose
 
-            employee_defaults = {
-                'name': employee_data.get('name', ''),
-                'dob': parse_date(employee_data.get('dob')),
-                'sex': employee_data.get('sex', ''),
-                'aadhar': employee_data.get('aadhar', ''),
-                'role': employee_data.get('role', ''),
-                'bloodgrp': employee_data.get('bloodgrp', ''),
-                'identification_marks1': employee_data.get('identification_marks1', ''),
-                'identification_marks2': employee_data.get('identification_marks2', ''),
-                'marital_status': employee_data.get('marital_status', ''),
-                'employer': employee_data.get('employer', ''),
-                'designation': employee_data.get('designation', ''),
-                'department': employee_data.get('department', ''),
-                'job_nature': employee_data.get('job_nature', ''),
-                'doj': parse_date(employee_data.get('doj')),
-                'moj': employee_data.get('moj'),
-                'phone_Personal': employee_data.get('phone_Personal', ''),
-                'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
-                'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
-                'phone_Office': employee_data.get('phone_Office', ''),
-                'mail_id_Office': employee_data.get('mail_id_Office', ''),
-                'emergency_contact_relation': employee_data.get('emergency_contact_relation', ''),
-                'mail_id_Emergency_Contact_Person': employee_data.get('mail_id_Emergency_Contact_Person', ''),
-                'emergency_contact_phone': employee_data.get('emergency_contact_phone', ''),
-                'state': employee_data.get('state', ''),
-                'nationality': employee_data.get('nationality', ''),
-                'area': employee_data.get('area', ''),
-                'address': employee_data.get('address', ''),
-                'type_of_visit': dashboard_data.get('typeofVisit', ''),
-                'type': dashboard_data.get('category', ''),
-                'register': register,  # Use the extracted register value
-                'purpose': dashboard_data.get('purpose', '')
-            }
+            # Conditional Extra Fields based on register (from extraData)
+            'year': '',
+            'batch': '',
+            'hospitalName': '',
+            'campName': '',
+            'contractName': '',
+            'prevcontractName': '',
+            'old_emp_no': '',
+            'reason': '',
+            'status': '',
+            # Note: The specific Followup Visit purpose (Dressing, Others) doesn't have a separate field
+            # in the current model. We are storing the auto-derived 'purpose' above.
+        }
 
-            # Add extra data to employee details defaults based on register
-            if register in ["Annual / Periodical", "Periodical (Food Handler)"]:
-                employee_defaults.update({
-                    'year': extra_data.get('year', ''),
-                    'batch': extra_data.get('batch', ''),
-                    'hospitalName': extra_data.get('hospitalName', '')
-                })
-            elif register.startswith("Camps"):
-                employee_defaults.update({
-                    'campName': extra_data.get('campName', ''),
-                    'hospitalName': extra_data.get('hospitalName', '')
-                })
-            elif register == "Pre Placement Same Contract":
-                employee_defaults.update({
-                    'contractName': extra_data.get('contractName', '')
-                })
-            elif register == "Pre Employment Contract change":
-                employee_defaults.update({
-                    'prevcontractName': extra_data.get('prevcontractName', ''),
-                    'old_emp_no': extra_data.get('old_emp_no', '')
-                })
-            elif register.startswith("Special Work Fitness"):
-                employee_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("BP Sugar Check"):
-                employee_defaults.update({
-                    'status': extra_data.get('status', '')
-                })
-            elif register.startswith("Illness"):
-                employee_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("BP Sugar Chart"):
-                 employee_defaults.update({
-                    'reason': extra_data.get('reason', '')
-                })
-            elif register.startswith("Followup Visits"):
-                 employee_defaults.update({
-                    'purpose': extra_data.get('purpose', '')
-                })
-                 if extra_data.get('purpose') == "Others":
-                     employee_defaults.update({
-                         'purpose_others': extra_data.get('purpose_others', '')
-                     })
+        # Update defaults with specific extra data based on the register type
+        if register in ["Annual / Periodical", "Periodical (Food Handler)"]:
+            employee_defaults.update({
+                'year': extra_data.get('year', ''),
+                'batch': extra_data.get('batch', ''),
+                'hospitalName': extra_data.get('hospitalName', '')
+            })
+        elif register.startswith("Camps"):
+            employee_defaults.update({
+                'campName': extra_data.get('campName', ''),
+                'hospitalName': extra_data.get('hospitalName', '') # Re-uses hospitalName field
+            })
+        elif register == "Pre Placement Same Contract":
+             employee_defaults.update({
+                'contractName': extra_data.get('contractName', '')
+            })
+        # Corrected register name check
+        elif register == "Pre Employment Contract change":
+            employee_defaults.update({
+                'prevcontractName': extra_data.get('prevcontractName', ''),
+                'old_emp_no': extra_data.get('old_emp_no', '')
+            })
+        elif register.startswith("Special Work Fitness"):
+             # Store the selected reason (Height, Gas Line, etc.) in the 'reason' field
+            employee_defaults.update({
+                'reason': extra_data.get('reason', '')
+            })
+        elif register.startswith("BP Sugar Check"):
+             # Store the selected status (Normal, Patient under control) in the 'status' field
+            employee_defaults.update({
+                'status': extra_data.get('status', '')
+            })
+        # You might want distinct fields or use 'reason'/'status' more generically if needed
+        elif register.startswith("Illness"):
+             # Example: Store 'Newly detected BP / DM' or 'Patient not in control' in 'reason'
+             employee_defaults.update({
+                'reason': extra_data.get('reason', '') # Reuse 'reason' field
+            })
+        elif register.startswith("BP Sugar Chart"):
+             # Example: Store 'Newly detected' or 'Patient <150 <100' in 'reason'
+             employee_defaults.update({
+                'reason': extra_data.get('reason', '') # Reuse 'reason' field
+            })
+        elif register.startswith("Followup Visits"):
+            # The model doesn't have a dedicated field for 'Dressing', 'Consultation', 'Others'.
+            # The main 'purpose' (like 'Outpatient') is already stored.
+            # If 'Others' was selected, extraData['purpose_others'] contains the text.
+            # You could potentially store this in 'reason' if it's not used otherwise for followups,
+            # or add a new 'visit_details' TextField to the model.
+            followup_purpose = extra_data.get('purpose')
+            if followup_purpose == "Others":
+                 # Option 1: Store in 'reason' (if appropriate)
+                 employee_defaults['reason'] = extra_data.get('purpose_others', '')
+                 # Option 2: Log it
+                 logger.info(f"Followup 'Others' purpose for {emp_no}: {extra_data.get('purpose_others', '')}")
+                 # Option 3: Store in a dedicated field if you add one to the model
+            else:
+                 # Store the specific purpose like 'Dressing'/'Consultation' in reason?
+                 employee_defaults['reason'] = followup_purpose
+                 pass # Or do nothing if only the main 'purpose' field is sufficient
 
-            employee, created = models.employee_details.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=employee_defaults
-            )
-            employee_message = "Basic Details added successfully" if created else "Basic Details updated successfully"
 
-            logger.info(f"addEntries successful for emp_no: {emp_no}")
-            return JsonResponse({"message": f"{dashboard_message}, {employee_message}"}, status=200)
+        # Add logic to handle profile image if sent in this request (less common)
+        # profile_image = employee_data.get('profileImage') # Assuming base64 string
+        # if profile_image:
+        #    # Logic to decode base64 and save to ImageField 'profilepic'
+        #    pass
 
-        except Exception as e:
-            logger.exception(f"addEntries failed for emp_no {emp_no}: {str(e)}")
-            return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
+
+        # Use update_or_create for the employee_details record for this specific entry date
+        employee_entry, created = models.employee_details.objects.update_or_create(
+            emp_no=emp_no,
+            # Assuming entry_date is part of the unique key for a visit record
+            # If you only want ONE record per employee EVER, remove entry_date here.
+            entry_date=entry_date,
+            defaults=employee_defaults
+        )
+
+        message = "Visit Entry added successfully" if created else "Visit Entry updated successfully"
+        logger.info(f"addEntries successful for emp_no: {emp_no} on {entry_date}. Created: {created}")
+        return JsonResponse({"message": message}, status=200)
 
     except json.JSONDecodeError as e:
         logger.error(f"addEntries failed: Invalid JSON data. Error: {str(e)}")
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
-        logger.exception("addEntries failed: An unexpected error occurred.")
+        logger.exception(f"addEntries failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
         return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
 
 @csrf_exempt
@@ -580,61 +583,109 @@ def dashboard_stats(request):
         logger.exception("Error in dashboard_stats view: An unexpected error occurred.")
         return JsonResponse({"error": str(e)}, status=500)
 
+# ... (imports remain the same: json, JsonResponse, csrf_exempt, datetime, models, parse_date, logging)
+
 @csrf_exempt
 def add_basic_details(request):
-    """Adds or updates basic employee details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data['emp_no']
-            entry_date = datetime.now().date()
-            print(data)
-            employee, created = models.employee_details.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults={
-                    'name': data['name'],
-                    'dob': data['dob'],
-                    'sex': data['sex'],
-                    'aadhar': data['aadhar'],
-                    'role': data['role'],
-                    'bloodgrp': data['bloodgrp'],
-                    'identification_marks1': data['identification_marks1'],
-                    'identification_marks2': data['identification_marks2'],
-                    'marital_status': data['marital_status'],
-                    'employer': data['employer'],
-                    'designation': data['designation'],
-                    'department': data['department'],
-                    'job_nature': data['job_nature'],
-                    'doj': data['doj'],
-                    'moj': data['moj'],
-                    'phone_Personal': data['phone_Personal'],
-                    'mail_id_Personal': data['mail_id_Personal'],
-                    'emergency_contact_person': data['emergency_contact_person'],
-                    'phone_Office': data['phone_Office'],
-                    'mail_id_Office': data['mail_id_Office'],
-                    'emergency_contact_relation': data['emergency_contact_relation'],
-                    'mail_id_Emergency_Contact_Person': data['mail_id_Emergency_Contact_Person'],
-                    'emergency_contact_phone': data['emergency_contact_phone'],
-                    'state': data['state'],
-                    'nationality': data['nationality'],
-                    'area': data['area'],
-                    'address': data['address'],
-                }
-            )
-
-            message = "Basic Details added successfully" if created else "Basic Details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_basic_details failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_basic_details failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-    else:
+    """Adds or updates basic employee details for a specific date."""
+    if request.method != "POST":
         logger.warning("add_basic_details failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Request method is wrong"}, status=405)
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Received data for add_basic_details: {data}")
+
+        emp_no = data.get('emp_no')
+        if not emp_no:
+            logger.warning("add_basic_details failed: Employee number is required")
+            return JsonResponse({"error": "Employee number is required"}, status=400)
+
+        # Decide if basic details update should also be tied to date or update the single canonical record
+        entry_date = datetime.now().date() # Creates/updates today's record
+        # OR: If you want to update THE single record for the employee, don't use entry_date as identifier below.
+
+        basic_defaults = {
+            'name': data.get('name', ''),
+            'dob': parse_date(data.get('dob')),
+            'sex': data.get('sex', ''),
+            'aadhar': data.get('aadhar', ''),
+            'role': data.get('role', ''), # Employee/Contractor/Visitor role
+            'bloodgrp': data.get('bloodgrp', ''),
+            'identification_marks1': data.get('identification_marks1', ''),
+            'identification_marks2': data.get('identification_marks2', ''),
+            'marital_status': data.get('marital_status', ''),
+            'employer': data.get('employer', ''),
+            'designation': data.get('designation', ''),
+            'department': data.get('department', ''),
+            'job_nature': data.get('job_nature', ''),
+            'doj': parse_date(data.get('doj')),
+            'moj': data.get('moj', ''), # Corrected from parse_date
+            'phone_Personal': data.get('phone_Personal', ''),
+            'mail_id_Personal': data.get('mail_id_Personal', ''),
+            'emergency_contact_person': data.get('emergency_contact_person', ''),
+            'phone_Office': data.get('phone_Office', ''),
+            'mail_id_Office': data.get('mail_id_Office', ''),
+            'emergency_contact_relation': data.get('emergency_contact_relation', ''),
+            'mail_id_Emergency_Contact_Person': data.get('mail_id_Emergency_Contact_Person', ''),
+            'emergency_contact_phone': data.get('emergency_contact_phone', ''),
+
+            # New Address Fields
+            'permanent_address': data.get('permanent_address', ''),
+            'permanent_area': data.get('permanent_area', ''),
+            'permanent_state': data.get('permanent_state', ''),
+            'permanent_nationality': data.get('permanent_nationality', ''),
+            'residential_address': data.get('residential_address', ''),
+            'residential_area': data.get('residential_area', ''),
+            'residential_state': data.get('residential_state', ''),
+            'residential_nationality': data.get('residential_nationality', ''),
+
+            # Visitor Fields (if applicable, sent with basic details)
+            'other_site_id': data.get('other_site_id', ''),
+            'organization': data.get('organization', ''),
+            'addressOrganization': data.get('addressOrganization', ''),
+            'visiting_department': data.get('visiting_department', ''),
+            'visiting_date_from': parse_date(data.get('visiting_date_from')),
+            'stay_in_guest_house': data.get('stay_in_guest_house', ''),
+            'visiting_purpose': data.get('visiting_purpose', ''), # Purpose specific to visitor form
+
+            # Set the 'type' based on role if not already set or if basic details update should set it
+            'type': data.get('role', 'Employee'), # Defaulting to Employee if role is missing
+
+            # We typically don't set visit-specific fields like register, type_of_visit, purpose here
+            # unless the basic details save implies a default visit type.
+        }
+
+        # Handle potential profile image update if sent via this endpoint
+        # profile_image_b64 = data.get('profileImage')
+        # if profile_image_b64:
+        #    # Logic to decode and save to basic_defaults['profilepic']
+        #    pass
+
+
+        # Create or update the record
+        employee, created = models.employee_details.objects.update_or_create(
+            emp_no=emp_no,
+            # Use entry_date here if basic details updates are also per-date snapshots
+            entry_date=entry_date,
+            # If you want only ONE record per employee updated by this view, remove entry_date:
+            # emp_no=emp_no,
+            defaults=basic_defaults
+        )
+
+        message = "Basic Details added successfully" if created else "Basic Details updated successfully"
+        logger.info(f"add_basic_details successful for emp_no: {emp_no} on {entry_date}. Created: {created}")
+        return JsonResponse({"message": message}, status=200)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"add_basic_details failed: Invalid JSON data. Error: {str(e)}")
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except KeyError as e:
+        logger.error(f"add_basic_details failed: Missing key in data - {str(e)}")
+        return JsonResponse({"error": f"Missing expected data field: {str(e)}"}, status=400)
+    except Exception as e:
+        logger.exception(f"add_basic_details failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
+        return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
 
 @csrf_exempt
 def add_vital_details(request):
@@ -2007,7 +2058,7 @@ def create_medical_history(request):
             data = json.loads(request.body)
 
             required_fields = ['emp_no',  'personalHistory', 'medicalData', 'femaleWorker',
-                              'surgicalHistory', 'familyHistory', 'healthConditions', 'submissionDetails',
+                              'surgicalHistory', 'familyHistory', 'healthConditions', 
                               'allergyFields', 'allergyComments', 'childrenData', 'conditions']
             for field in required_fields:
                 if field not in data:
@@ -2027,7 +2078,6 @@ def create_medical_history(request):
                     'surgical_history': data['surgicalHistory'],
                     'family_history': data['familyHistory'],
                     'health_conditions': data['healthConditions'],
-                    'submission_details': data['submissionDetails'],
                     'allergy_fields': data['allergyFields'],
                     'allergy_comments': data['allergyComments'],
                     'children_data': data['childrenData'],
@@ -2134,6 +2184,9 @@ def fetchVisitDataWithDate(request, emp_no, date):
                 "mri":  model_to_dict(models.MRIReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.MRIReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
                 "fitnessassessment":  model_to_dict(models.FitnessAssessment.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.FitnessAssessment.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
                 "vaccination":  model_to_dict(models.VaccinationRecord.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.VaccinationRecord.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "significant_notes":  model_to_dict(models.SignificantNotes.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.SignificantNotes.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "consultation":  model_to_dict(models.Consultation.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.Consultation.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
+                "prescription":  model_to_dict(models.Prescription.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last()) if models.Prescription.objects.filter(emp_no=emp_no, entry_date__lte=target_date).last() else {},
             }
 
             return JsonResponse({"data": employee_data}, encoder=CustomJSONEncoder, safe=False, status=200)
@@ -2457,3 +2510,88 @@ def remove_expired_medicine(request):
         else:
             logger.warning("get_mockdrills failed: Invalid request method. Only GET allowed.")
             return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import datetime
+from . import models # Adjust import path as necessary
+import logging
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def add_significant_notes(request):
+    """Adds or updates significant notes for an employee on a specific date."""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            logger.debug(f"Received data for add_significant_notes: {data}")
+
+            emp_no = data.get('emp_no')
+            # Determine entry_date - Use today's date as the default
+            entry_date = datetime.now().date()
+            # Optionally allow overriding date from payload if needed:
+            # entry_date_str = data.get('entry_date')
+            # if entry_date_str:
+            #    try:
+            #        entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
+            #    except (ValueError, TypeError):
+            #        logger.warning(f"Invalid entry_date format received: {entry_date_str}. Using today's date.")
+            #        entry_date = datetime.now().date()
+
+
+            if not emp_no:
+                logger.warning("add_significant_notes failed: Employee number is required")
+                return JsonResponse({'status': 'error', 'message': 'Employee number is required'}, status=400)
+
+            # Extract data using snake_case keys expected from the React component's handleSubmit
+            health_summary = data.get('health_summary') # Note: key name matches payload
+            remarks = data.get('remarks')
+            communicable_disease = data.get('communicable_disease')
+            incident_type = data.get('incident_type')
+            incident = data.get('incident')
+            illness_type = data.get('illness_type')
+
+            # Prepare defaults dictionary mapping payload keys to model field names
+            note_defaults = {
+                'healthsummary': health_summary,           # model field: variable from payload
+                'remarks': remarks,
+                'communicable_disease': communicable_disease,
+                'incident_type': incident_type,
+                'incident': incident,
+                'illness_type': illness_type,
+                # Add any other fields like 'submitted_by' if needed
+                # 'submitted_by': data.get('submitted_by'),
+            }
+
+            # Use update_or_create to either create a new note or update an existing one
+            # for the same employee on the same date.
+            significant_note, created = models.SignificantNotes.objects.update_or_create(
+                emp_no=emp_no,
+                entry_date=entry_date, # Assumes notes are per-day per-employee
+                defaults=note_defaults
+            )
+
+            message = "Significant Notes added successfully" if created else "Significant Notes updated successfully"
+            logger.info(f"SignificantNotes saved for emp_no {emp_no} on {entry_date}. Created: {created}. ID: {significant_note.id}")
+            return JsonResponse({
+                'status': 'success',
+                'message': message,
+                'significant_note_id': significant_note.id # Return the ID
+            }, status=200 if not created else 201) # Use 201 for Created
+
+        except json.JSONDecodeError as e:
+            logger.error(f"add_significant_notes failed: Invalid JSON data. Error: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON format: ' + str(e)}, status=400)
+        except Exception as e:
+            # Catch any other unexpected errors during processing or DB interaction
+            logger.exception(f"add_significant_notes failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
+            # Provide a generic error message to the client
+            return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
+
+    else:
+        # Handle incorrect HTTP methods (e.g., GET, PUT)
+        logger.warning(f"add_significant_notes failed: Invalid request method ({request.method}). Only POST allowed.")
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405) # 405 Method Not Allowed
