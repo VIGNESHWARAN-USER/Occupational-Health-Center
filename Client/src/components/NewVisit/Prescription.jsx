@@ -224,7 +224,7 @@ const Prescription = ({ data }) => {
         };
 
         try {
-            const response = await axios.post('http://localhost:8000/prescriptions/', prescriptionData); // Adjust the endpoint as needed
+            const response = await axios.post('https://occupational-health-center-1.onrender.com/prescriptions/', prescriptionData); // Adjust the endpoint as needed
             console.log('Prescription data submitted successfully:', response.data);
             // Optionally, reset the form after successful submission
             setTablets([{ drugName: '', qty: '', timing: '', food: '', days: '', comments: '' }]);

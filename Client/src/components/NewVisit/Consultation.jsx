@@ -73,7 +73,7 @@ const Consultation = ({ data }) => {
       speaciality: speaciality
     };
     try {
-      const response = await axios.post("http://localhost:8000/consultations/add/", consultationData);
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationData);
       if (response.status === 200) {
         alert("Consultation data submitted successfully!");
       } else {

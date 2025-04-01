@@ -93,7 +93,7 @@ const SignificantNotes = ({ data }) => {
     try {
       // *** IMPORTANT: Update the URL to your actual endpoint for saving significant notes ***
       // The previous URL '/consultations/add/' might be incorrect for this specific data.
-      const response = await axios.post("http://localhost:8000/significant_notes/add/", significantNotesData); // Example URL
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/significant_notes/add/", significantNotesData); // Example URL
 
       if (response.status === 200 || response.status === 201) { // Check for 201 Created as well
         alert("Significant notes submitted successfully!");
