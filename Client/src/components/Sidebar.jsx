@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { FaUserMd, FaUsers, FaRegCalendarAlt, FaSignOutAlt } from "react-icons/fa";
-import { MdDashboard, MdEvent, MdFilterList, MdLibraryAdd } from "react-icons/md";
+import { FaUserMd, FaUsers, FaRegCalendarAlt, FaSignOutAlt, FaPills } from "react-icons/fa";
+import { MdDashboard, MdDelete, MdEvent, MdFilterList, MdInventory, MdLibraryAdd, MdReceipt, MdWarning } from "react-icons/md";
 import img from "../assets/logo.png";
 
 const Sidebar = () => {
@@ -18,6 +18,7 @@ const Sidebar = () => {
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt /> },
     ],
     doctor: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
@@ -27,10 +28,21 @@ const Sidebar = () => {
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt /> },
     ],
     admin: [
       { name: "Dashboard", to: "../admindashboard", icon: <MdDashboard /> },
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
+    ],
+    pharmacy: [
+      { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
+      { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
+      { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
+      { name: "Prescription Issued / Prescribed Out", to: "../prescribedout", icon: <MdReceipt /> },
+      { name: "Current Expiry", to: "../currentexpiry", icon: <MdWarning /> },
+      { name: "Expiry Register", to: "../expiryregister", icon: <MdWarning /> },
+      { name: "Discard/Damaged", to: "../discarddamaged", icon: <MdDelete /> },
+      { name: "Ward Consumable", to: "../wardconsumable", icon: <MdInventory /> },
     ],
   };
 

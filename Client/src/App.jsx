@@ -22,6 +22,13 @@ import AlcoholPage from './components/AlcoholPage'
 import EyeFitnessCertificate from './components/EyeFitness'
 import OphthalmicReport from './components/OpthalmicReport'
 import MedicalExaminationForm from './components/MedicalExamination'
+import AddStock from './components/Pharmacy/addstock'
+import CurrentStock from './components/Pharmacy/currentstock'
+import CurrentExpiry from './components/Pharmacy/currentexpiry'
+import ExpiryRegister from './components/Pharmacy/expiryregister'
+import DiscardedMedicines from './components/Pharmacy/discarddamaged'
+import WardConsumable from './components/Pharmacy/wardconsumable'
+import InstrumentCalibration from './components/instrumentcalibration'
 
 function App() {
   return (
@@ -49,6 +56,13 @@ function App() {
           <Route path = '/eye' element = {<EyeFitnessCertificate/>}/>
           <Route path = '/or' element = {<OphthalmicReport/>}/>
           <Route path = '/me' element = {<MedicalExaminationForm/>}/>
+          <Route path = '/addstock' element = {<AddStock/>}/>
+          <Route path = '/currentstock' element = {<CurrentStock/>}/>
+          <Route path = '/currentexpiry' element = {<CurrentExpiry/>}/>
+          <Route path = '/expiryregister' element = {<ExpiryRegister/>}/>
+          <Route path = '/discarddamaged' element = {<DiscardedMedicines/>}/>
+          <Route path = '/wardconsumable' element = {<WardConsumable/>}/>
+          <Route path = '/instrumentcalibration' element = {<InstrumentCalibration/>}/>
       </Route>
     </Routes>
     </div>

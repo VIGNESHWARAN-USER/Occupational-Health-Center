@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const Consultation = ({ data }) => {
+const Consultation = ({ data, type }) => {
   const [complaints, setComplaints] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [notifiableRemarks, setNotifiableRemarks] = useState('');
@@ -215,7 +215,7 @@ const Consultation = ({ data }) => {
             />
           </div>
         </div>
-
+        { type != 'Visitor' && (<div>
         <div className="mb-6">
           <label className="block text-gray-700 text-lg font-medium mb-2">
             Do you need a referral?
@@ -292,7 +292,7 @@ const Consultation = ({ data }) => {
             disabled={!isDoctor}
           />
         </div>
-
+        </div>)}
         <div className='mb-6 flex items-center gap-6'>
           <div className="mb-6 w-full">
             <label htmlFor="submittedByDoctor" className="block text-gray-700 text-lg font-medium mb-2">

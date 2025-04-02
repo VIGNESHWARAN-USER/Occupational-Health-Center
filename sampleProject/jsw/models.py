@@ -69,6 +69,7 @@ class employee_details(BaseModel):
     role = models.CharField(max_length=50, blank=True)  # Consider choices here too
     permanent_address = models.TextField(blank=True) # Remove max_length
     permanent_area = models.CharField(max_length=50, blank=True)
+    location = models.CharField(max_length=50, blank=True)
     permanent_nationality = models.CharField(max_length=50, blank=True)
     permanent_state = models.CharField(max_length=50, blank=True)
     residential_address = models.TextField(blank=True) # Remove max_length
@@ -168,6 +169,11 @@ class vitals(BaseModel):
     bmi = models.TextField(max_length=50)
     bmi_status = models.TextField(max_length=50, null=True, blank=True)
     bmi_comment = models.TextField(max_length=255, null=True, blank=True)
+
+    manual = models.FileField(upload_to= 'manual/', blank=True, null=True)
+    fc = models.FileField(upload_to= 'fc/', blank = True, null=True)
+    report = models.FileField(upload_to= 'report/', blank = True, null=True)
+    self_declared = models.FileField(upload_to= 'self_declared/', blank = True, null=True)
 
 
     def __str__(self):
@@ -982,34 +988,12 @@ class FitnessAssessment(BaseModel):
         return f"Fitness Assessment for {self.emp_no.emp_no} - {self.overall_fitness}"
 
 
-
-class Prescription(BaseModel):
-
-    tablets = models.JSONField(blank=True, null=True)
-    injections = models.JSONField(blank=True, null=True)
-    creams = models.JSONField(blank=True, null=True)
-    others = models.JSONField(blank=True, null=True)
-    submitted_by = models.CharField(max_length=50)
-    issued_by = models.CharField(max_length=50)
-    nurse_notes= models.TextField(blank=True, null=True)
-    emp_no = models.CharField(max_length=20, blank=True, null=True)  
-
-    def __str__(self):
-        return f"Prescription #{self.id} - {self.patient_id or 'No Patient ID'}"
-
-    class Meta:
-        verbose_name = "Prescription"
-        verbose_name_plural = "Prescriptions"
-
-
 class VaccinationRecord(BaseModel):
     emp_no = models.CharField(max_length=30)  # Employee number
     vaccination = models.JSONField(default=list)
 
     def __str__(self):
         return f"Vaccination Record for {self.emp_no}"
-
-
 
 
 class ReviewCategory(BaseModel):
@@ -1108,28 +1092,144 @@ class PharmacyStock(BaseModel):
         OTHER = "Other", "Other"
 
     medicine_form = models.CharField(max_length=20, choices=MedicineFormChoices.choices)
-    item_name = models.CharField(max_length=255)
+    brand_name = models.CharField(max_length=255)  # Updated from item_name
+    chemical_name = models.CharField(max_length=255)  # New field
     dose_volume = models.CharField(max_length=50)
-    quantity = models.PositiveIntegerField()
+    total_quantity = models.PositiveIntegerField()  #  New field: Initial total stock
+    quantity = models.PositiveIntegerField()  #  Existing field: Can be updated
     expiry_date = models.DateField()
-    removed_month = models.DateField(blank=True, null=True)  # Optional field
+
+    def save(self, *args, **kwargs):
+        #  Set total_quantity to initial quantity only when creating a new record
+        if not self.pk:  # Ensures it's only applied on first-time creation
+            self.total_quantity = self.quantity  
+        super().save(*args, **kwargs)
 
     def _str_(self):
-        return f"{self.item_name} - {self.medicine_form}"
+        return f"{self.brand_name} ({self.chemical_name})"
 
 
 class ExpiryRegister(BaseModel):
     medicine_form = models.CharField(max_length=20)
-    item_name = models.CharField(max_length=255)
+    brand_name = models.CharField(max_length=255)  # Updated from item_name
+    chemical_name = models.CharField(max_length=255)  # New field
     dose_volume = models.CharField(max_length=50)
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
-    removed_date = models.DateField(auto_now_add=True)  # Date when it was removed
+    removed_date = models.DateField(null=True, blank=True)  # Set to NULL by default, blank=True allows empty
 
     def _str_(self):
-        return f"{self.item_name} - {self.dose_volume} ({self.expiry_date})"
+        return f"{self.brand_name} - {self.dose_volume} ({self.expiry_date})"
+
+
+class DiscardedMedicine(BaseModel):
+    medicine_form = models.CharField(max_length=20)
+    brand_name = models.CharField(max_length=255)  # Medicine name given by the company
+    chemical_name = models.CharField(max_length=255)  # Active ingredient
+    dose_volume = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+    reason = models.TextField()  # Reason for discard/damage
+    discarded_date = models.DateField(auto_now_add=True)  # Date when medicine was discarded
+
+    def _str_(self):
+        return f"{self.brand_name} ({self.dose_volume}) - {self.discarded_date}"
     
+
+class WardConsumables(BaseModel):
+    medicine_form = models.CharField(max_length=20)
+    brand_name = models.CharField(max_length=255)  # Medicine name given by the company
+    chemical_name = models.CharField(max_length=255)  # Active ingredient
+    dose_volume = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+    consumed_date = models.DateField(auto_now_add=True)  # Date when medicine was discarded
+
+    def _str_(self):
+        return f"{self.brand_name} ({self.dose_volume}) - {self.discarded_date}"
+    
+class PharmacyMedicine(BaseModel):
+    MEDICINE_FORMS = [
+        ("Tablet", "Tablet"),
+        ("Syrup", "Syrup"),
+        ("Injection", "Injection"),
+        ("Creams", "Creams"),
+        ("Drops", "Drops"),
+        ("Fluids", "Fluids"),
+        ("Other", "Other"),
+    ]
+
+    medicine_form = models.CharField(max_length=20, choices=MEDICINE_FORMS)
+    brand_name = models.CharField(max_length=255)
+    chemical_name = models.CharField(max_length=255)
+    dose_volume = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = ("brand_name", "chemical_name", "dose_volume")  # Ensures unique brand_name & chemical_name only
+
+    def _str_(self):
+        return f"{self.brand_name} ({self.chemical_name})"
+
+
+class InstrumentCalibration(models.Model):
+    instrument_name = models.CharField(max_length=255)
+    numbers = models.IntegerField()
+    certificate_number = models.CharField(max_length=255, null=True, blank=True)  # Allow NULL
+    make = models.CharField(max_length=255, null=True, blank=True)  # Allow NULL
+    model_number = models.CharField(max_length=255, null=True, blank=True)  # Allow NULL
+    equipment_sl_no = models.CharField(max_length=255, null=True, blank=True)  # Allow NULL
+    calibration_date = models.DateField()
+    calibration_status = models.BooleanField(default=False)  # 0 = Pending, 1 = Calibrated
+
+    def save(self, *args, **kwargs):
+        # Check if the record is being updated (not created) and status changed to 'calibrated'
+        if self.pk and not InstrumentCalibration.objects.filter(pk=self.pk, calibration_status=True).exists():
+            if self.calibration_status:  # If status changed to calibrated
+                InstrumentCalibration.objects.create(
+                    instrument_name=self.instrument_name,
+                    numbers=self.numbers,
+                    certificate_number=self.certificate_number,
+                    make=self.make,
+                    model_number=self.model_number,
+                    equipment_sl_no=self.equipment_sl_no,
+                    calibration_date=self.calibration_date.replace(year=self.calibration_date.year + 1),
+                    calibration_status=False,
+                )
+        super().save(*args, **kwargs)
+
+    def _str_(self):
+        return f"{self.instrument_name} - {self.calibration_date}"
+
+class Prescription(models.Model):
+    tablets = models.JSONField(blank=True, null=True)
+    syrups = models.JSONField(blank=True, null=True)
+    injections = models.JSONField(blank=True, null=True)
+    creams = models.JSONField(blank=True, null=True)
+    drops = models.JSONField(blank=True, null=True)
+    fluids = models.JSONField(blank=True, null=True)
+    others = models.JSONField(blank=True, null=True)
+    submitted_by = models.CharField(max_length=50)
+    issued_by = models.CharField(max_length=50)
+    nurse_notes = models.TextField(blank=True, null=True)
+    emp_no = models.CharField(max_length=20, blank=True, null=True)
+    entry_date = models.DateField(auto_now_add=True)  # Added for creation date
+    issued_status = models.IntegerField(default=0)
+      # Added status field with default value 0
+      # Added status field with default value 0
+    # id = models.AutoField(primary_key=True)  #Explicitly define primary key if needed
+
+    def _str_(self):
+        return f"Prescription #{self.id} - {self.emp_no or 'No Employee No'}"
+
+class VaccinationRecord(BaseModel):
+    emp_no = models.CharField(max_length=30)  # Employee number
+    vaccination = models.JSONField(default=list)
+
+    def str(self):
+        return f"Vaccination Record for {self.emp_no}"
+        
 class Form17(models.Model):
+    emp_no = models.CharField(max_length=255, blank=True, null=True)  # Added emp_no
     dept = models.CharField(max_length=255, blank=True, null=True)
     worksNumber = models.CharField(max_length=255, blank=True, null=True)
     workerName = models.CharField(max_length=255, blank=True, null=True)
@@ -1150,11 +1250,12 @@ class Form17(models.Model):
     surgeonSignature = models.TextField(blank=True, null=True) # Store as text (base64 encoded)
     fmoSignature = models.TextField(blank=True, null=True)
 
-    def _str_(self):
+    def _str(self):  # Changed _str to _str_
         return f"Form 17 - {self.workerName}"
 
 
 class Form38(models.Model):
+    emp_no = models.CharField(max_length=255, blank=True, null=True)  # Added emp_no
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
     department = models.CharField(max_length=255, blank=True, null=True)
     workerName = models.CharField(max_length=255, blank=True, null=True)
@@ -1168,10 +1269,11 @@ class Form38(models.Model):
     fmoSignature = models.TextField(blank=True, null=True)
     remarks = models.CharField(max_length=255, blank=True, null=True)
 
-    def _str_(self):
+    def _str(self):  # Changed _str to _str_
         return f"Form 38 - {self.workerName}"
 
 class Form39(models.Model):
+    emp_no = models.CharField(max_length=255, blank=True, null=True)  # Added emp_no
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
     workerName = models.CharField(max_length=255, blank=True, null=True)
     sex = models.CharField(max_length=10, choices=[('male', 'Male'), ('female', 'Female'), ('other', 'Other')], default='male')
@@ -1185,10 +1287,11 @@ class Form39(models.Model):
     certifyingSurgeonSignature = models.TextField(blank=True, null=True)
     departmentSection = models.CharField(max_length=255, blank=True, null=True)
 
-    def _str_(self):
+    def _str(self):  # Changed _str to _str_
         return f"Form 39 - {self.workerName}"
 
 class Form40(models.Model):
+    emp_no = models.CharField(max_length=255, blank=True, null=True)  # Added emp_no
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
     dateOfEmployment = models.DateField(blank=True, null=True)
     workerName = models.CharField(max_length=255, blank=True, null=True)
@@ -1206,11 +1309,12 @@ class Form40(models.Model):
     signatureOfFMO = models.TextField(blank=True, null=True)
     remarks = models.CharField(max_length=255, blank=True, null=True)
 
-    def _str_(self):
+    def _str(self):  # Changed _str to _str_
         return f"Form 40 - {self.workerName}"
 
 
 class Form27(models.Model):
+    emp_no = models.CharField(max_length=255, blank=True, null=True)  # Added emp_no
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
     date = models.DateField(blank=True, null=True)
     department = models.CharField(max_length=255, blank=True, null=True)
@@ -1224,22 +1328,9 @@ class Form27(models.Model):
     descriptiveMarks = models.CharField(max_length=255, blank=True, null=True)
     signatureOfCertifyingSurgeon = models.TextField(blank=True, null=True)
 
-    def _str_(self):
+    def _str(self):  # Changed _str to _str_
         return f"Form 27 - {self.nameOfWorks}"
     
-
-from django.db import models
-# Assuming you have a BaseModel or just use models.Model
-# from .base import BaseModel # If you have a base model
-
-# If not using a custom BaseModel, inherit from models.Model
-class BaseModel(models.Model): # Example placeholder if you don't have one
-    entry_date = models.DateField(auto_now_add=True, null=True, blank=True) # Example common field
-    # Add other common fields like created_at, updated_at if needed
-    class Meta:
-        abstract = True # Important if this is just for inheritance
-
-
 class SignificantNotes(BaseModel):
     # Choices based on React component's options (can be refined)
     COMMUNICABLE_DISEASE_CHOICES = [

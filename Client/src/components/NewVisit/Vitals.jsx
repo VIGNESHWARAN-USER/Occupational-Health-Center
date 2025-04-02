@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaFileUpload } from 'react-icons/fa';
 
-const VitalsForm = ({data}) => {
+const VitalsForm = ({data, type}) => {
     const initialData = data[0] || {};
     const [formData, setFormData] = useState({});
     const [selectedFiles, setSelectedFiles] = useState({});
@@ -531,7 +531,29 @@ const VitalsForm = ({data}) => {
             <section className="mt-8 border-t pt-6">
                 <h3 className="text-lg font-semibold text-gray-700 mb-4 border-b pb-2">Upload Documents</h3>
                 <div className="grid grid-cols-4 gap-4">
-                    {['SelfDeclaration', 'FCExternal', 'Reports', 'Manual Forms'].map((type) => (
+                    {type != "Visitor" && ['SelfDeclaration', 'FC External', 'Reports', 'Manual Forms'].map((type) => (
+                        <motion.div
+                            key={type}
+                            className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer mb-4 h-28 bg-white shadow-md hover:shadow-lg transition duration-300"
+                            onClick={() => handleBrowseClick(type)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                        >
+                            <FaFileUpload className="text-4xl text-blue-500 mb-2" />
+                            <p className="text-gray-700 font-medium">Upload {type.replace(/([A-Z])/g, ' $1')}</p>
+                            <p className="text-xs text-gray-500">Click or drag file here</p>
+                            <input
+                                type="file"
+                                id={type}
+                                style={{ display: "none" }}
+                                onChange={(e) => handleFileChange(e, type)}
+                            />
+                            {selectedFiles[type] && (
+                                <p className="mt-2 text-sm text-gray-600">{selectedFiles[type].name}</p>
+                            )}
+                        </motion.div>
+                    ))}
+                    {type === "Visitor" && ['Reports', 'Manual Forms'].map((type) => (
                         <motion.div
                             key={type}
                             className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer mb-4 h-28 bg-white shadow-md hover:shadow-lg transition duration-300"

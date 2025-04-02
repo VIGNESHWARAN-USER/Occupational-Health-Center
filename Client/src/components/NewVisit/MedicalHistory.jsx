@@ -267,7 +267,6 @@ const MedicalHistory1 = ({ data }) => {
       setSurgicalHistory(medical?.surgical_history || surgicalHistory);
       setFamilyHistory(medical?.family_history || familyHistory);
       setHealthConditions(medical?.health_conditions || healthConditions);
-      setSubmissionDetails(medical?.submission_details || submissionDetails);
       setAllergyFields(medical?.allergy_fields || allergyFields);
       setAllergyComments(medical?.allergy_comments || allergyComments);
       setChildrenData(medical?.children_data || childrenData);

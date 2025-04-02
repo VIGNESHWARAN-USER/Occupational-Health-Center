@@ -179,6 +179,7 @@ const BookAppointment = () => {
       options: ["Pre employment",
         "Pre employment (Food Handler)",
         "Pre Placement",
+        "Pre Placement contract change",
         "Annual / Periodical",
         "Periodical (Food Handler)",
         "Camps (Mandatory)",
@@ -186,7 +187,7 @@ const BookAppointment = () => {
         "Special Work Fitness",
         "Special Work Fitness (Renewal)",
         "Fitness After Medical Leave",
-        "Fitness After Long Leave",
+        "Fitness After personal Long Leave",
         "Mock Drill",
         "BP Sugar Check  ( Normal Value)"
       ]
@@ -229,19 +230,9 @@ const BookAppointment = () => {
       label: "Enter the purpose:",
       name: "purpose",
       type: "select",
-      options: ["Pre employment",
-        "Pre employment (Food Handler)",
-        "Pre Placement",
-        "Annual / Periodical",
-        "Periodical (Food Handler)",
-        "Camps (Mandatory)",
-        "Camps (Optional)",
-        "Special Work Fitness",
-        "Special Work Fitness (Renewal)",
-        "Fitness After Medical Leave",
-        "Fitness After Long Leave",
-        "Mock Drill",
-        "BP Sugar Check  ( Normal Value)"
+      options: ["Visitors Outsider Fitness",
+        "Visitors Outsider Patient",
+        "Followup Visits",
       ]
     },
     {
