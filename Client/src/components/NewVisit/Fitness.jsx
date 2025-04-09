@@ -116,7 +116,8 @@ const generateFormPdf = (formData, formTitle, empNo, empName, fieldLabels) => {
 
 const FitnessPage = ({ data }) => {
     // Options (Keep as is)
-    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue"];
+    
+    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue", "Lone", "Fisher Man", "Snake Catcher"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
     const eyeExamResultOptions = ["", "Normal", "Defective", "Color Blindness"];
     const eyeExamFitStatusOptions = [
@@ -342,6 +343,7 @@ const FitnessPage = ({ data }) => {
             ...fitnessFormData, // tremors, romberg_test, acrophobia, trendelenberg_test
             job_nature: JSON.stringify(selectedOptions), // All access
             systematic_examination: systematicExamination, // All access
+            general_examination: generalExamination, // All access <<-- ADDED BACK -->>
             eye_exam_result: eyeExamResult, // All access
             eye_exam_fit_status: eyeExamFitStatus, // All access
             // Doctor only fields included below (backend should ideally ignore if not a doctor?)
@@ -354,18 +356,13 @@ const FitnessPage = ({ data }) => {
 
         console.log("Submitting Fitness Assessment:", payload);
 
-        const csrfToken = getCookie("csrftoken");
-        if (!csrfToken) {
-            alert("CSRF token not found. Cannot submit.");
-            return;
-        }
+        
 
         try {
             const response = await fetch(FITNESS_ASSESSMENT_URL, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "X-CSRFToken": csrfToken
                 },
                 body: JSON.stringify(payload),
             });

@@ -2104,57 +2104,120 @@ def fetch_vaccinations(request):
     logger.warning("fetch_vaccinations failed: Invalid request method. Only GET allowed.")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+# views.py (in your Django app)
+
+import json
+import logging
+from datetime import datetime, date # Ensure date is imported
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from . import models # Or wherever your models are defined
+from .models import FitnessAssessment # Import specific model
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def fitness_test(request, pk=None):
-    """Adds or updates fitness assessment data."""
+    """Adds or updates fitness assessment data for a specific date."""
     if request.method == "POST":
         try:
             data = json.loads(request.body)
             emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
+            entry_date = datetime.now().date() # Use today's date for the lookup/update
 
+            if not emp_no:
+                logger.warning("fitness_test failed: emp_no is missing from request data.")
+                return JsonResponse({"error": "Employee number (emp_no) is required"}, status=400)
+
+            # --- Safely parse JSON fields ---
+            job_nature = []
             try:
-                job_nature = json.loads(data.get("job_nature", "[]"))
-            except (TypeError, json.JSONDecodeError) as e:
-                logger.warning(f"fitness_test failed: Invalid job_nature JSON, defaulting to []. Error: {str(e)}")
+                # Frontend should send stringified JSON or already parsed array
+                raw_job_nature = data.get("job_nature", "[]")
+                if isinstance(raw_job_nature, str):
+                    job_nature = json.loads(raw_job_nature)
+                elif isinstance(raw_job_nature, list):
+                     job_nature = raw_job_nature # Already a list
+                if not isinstance(job_nature, list): # Validate type after parsing/assignment
+                    raise ValueError("Parsed job_nature is not a list")
+            except (TypeError, json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"fitness_test for emp_no {emp_no}: Invalid job_nature, defaulting to []. Error: {str(e)}")
                 job_nature = []
 
-            outcome = models.Dashboard.objects.filter(emp_no=emp_no, entry_date=entry_date).first()
-            print(outcome)
-            if outcome:
-                outcome.visitOutcome = data.get("overall_fitness", "Not Specified")
-                outcome.save()
+            conditional_fit_fields = [] # Note potential typo 'feilds' vs 'fields'
+            try:
+                # Frontend sends 'conditional_fit_feilds' based on React state
+                raw_conditional = data.get("conditional_fit_feilds", "[]") # Match key from frontend
+                if isinstance(raw_conditional, str):
+                    conditional_fit_fields = json.loads(raw_conditional)
+                elif isinstance(raw_conditional, list):
+                    conditional_fit_fields = raw_conditional
+                if not isinstance(conditional_fit_fields, list):
+                     raise ValueError("Parsed conditional_fit_feilds is not a list")
+            except (TypeError, json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"fitness_test for emp_no {emp_no}: Invalid conditional_fit_feilds, defaulting to []. Error: {str(e)}")
+                conditional_fit_fields = []
 
-            fitness_test, created = FitnessAssessment.objects.update_or_create(
+            # --- Update Dashboard (optional side effect) ---
+            try:
+                # Use filter().first() or get() with exception handling
+                outcome_entry = models.Dashboard.objects.filter(emp_no=emp_no, entry_date=entry_date).first()
+                if outcome_entry:
+                    overall_fitness_status = data.get("overall_fitness") # Get status before defaults
+                    if overall_fitness_status: # Only update if provided
+                        outcome_entry.visitOutcome = overall_fitness_status
+                        outcome_entry.save()
+                        logger.info(f"Dashboard visitOutcome updated for emp_no: {emp_no} on {entry_date}")
+                else:
+                     logger.info(f"No matching Dashboard entry found for emp_no: {emp_no} on {entry_date} to update outcome.")
+            except Exception as e:
+                 logger.error(f"Error updating Dashboard outcome for emp_no {emp_no}: {str(e)}")
+                 # Decide if this error should stop the fitness assessment save
+
+            # --- Create or Update Fitness Assessment ---
+            fitness_test_instance, created = FitnessAssessment.objects.update_or_create(
                 emp_no=emp_no,
-                entry_date=entry_date,
+                entry_date=entry_date, # Use today's date as the key
                 defaults={
-                    'tremors': data.get("tremors"),
+                    # Basic Tests
+                    'tremors': data.get("tremors"), # Assumes frontend sends keys matching model fields
                     'romberg_test': data.get("romberg_test"),
                     'acrophobia': data.get("acrophobia"),
                     'trendelenberg_test': data.get("trendelenberg_test"),
-                    'job_nature': job_nature,
-                    'overall_fitness': data.get("overall_fitness", ""),
-                    'conditional_fit_feilds' : data.get("conditional_fit_feilds", []),
-                    'validity' : data.get("validity"),
-                    'comments': data.get("comments", ""),
-                    'employer': data.get("employer", "")
+                    # Job & Fitness
+                    'job_nature': job_nature, # Use parsed list
+                    'overall_fitness': data.get("overall_fitness"), # Use get with None default if you want optional
+                    'conditional_fit_feilds': conditional_fit_fields, # Use parsed list, match model field name
+                    # Examinations (NEW)
+                    'general_examination': data.get("general_examination"),
+                    'systematic_examination': data.get("systematic_examination"),
+                    'eye_exam_result': data.get("eye_exam_result"),
+                    'eye_exam_fit_status': data.get("eye_exam_fit_status"),
+                    # Comments, Validity, Employer
+                    'validity': data.get("validity") or None, # Handle empty string -> None for DateField
+                    'comments': data.get("comments"),
+                    'employer': data.get("employer"),
+                    # Note: entry_date is NOT in defaults, it's a lookup key
+                    # Note: updated_at is handled automatically by auto_now=True
                 }
             )
 
             message = "Fitness test details added successfully" if created else "Fitness test details updated successfully"
-            logger.info(f"Fitness test saved successfully for emp_no: {emp_no}")
-            return JsonResponse({"message": message}, status=200)
+            logger.info(f"{message} for emp_no: {emp_no} on date: {entry_date}")
+            return JsonResponse({"message": message}, status=200 if created else 200) # 201 for created, 200 for updated is common
 
         except json.JSONDecodeError as e:
-            logger.error(f"fitness_test failed: Invalid JSON data. Error: {str(e)}")
+            logger.error(f"fitness_test failed: Invalid JSON data received. Error: {str(e)}")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            logger.exception("fitness_test failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
+            # Log the full traceback for unexpected errors
+            logger.exception(f"fitness_test failed for emp_no {data.get('emp_no', 'UNKNOWN')}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
 
-    logger.warning("fitness_test failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
+    logger.warning("fitness_test called with invalid request method: %s", request.method)
+    return JsonResponse({"error": "Invalid request method. Only POST allowed."}, status=405)
+
+
 
 def get_categories(request):
     """Retrieves review categories."""

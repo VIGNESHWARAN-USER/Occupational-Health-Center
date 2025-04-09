@@ -1485,14 +1485,14 @@ const NewVisit = () => {
                       <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
                       <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                         <option value="">Select</option>
-                        <option value="Height">Height</option>
-                        <option value="Gas Line">Gas Line</option>
-                        <option value="Confined Space">Confined Space</option>
-                        <option value="SCBA Rescue">SCBA Rescue</option>
-                        <option value="Fire Rescue">Fire Rescue</option>
-                        <option value="Lone">Lone</option>
-                        <option value="Fisher Man">Fisher Man</option>
-                        <option value="Snake Catcher">Snake Catcher</option>
+                        <option value="Height Work">Height</option>
+                        <option value="Gas Line Work">Gas Line</option>
+                        <option value="Confined Space Work">Confined Space</option>
+                        <option value="SCBA Rescue Work">SCBA Rescue</option>
+                        <option value="Fire Rescue Work">Fire Rescue</option>
+                        <option value="Lone Man Work">Lone Man</option>
+                        <option value="Fisher Man Work">Fisher Man</option>
+                        <option value="Snake Catcher Work">Snake Catcher</option>
                       </select>
                     </div>
                   </div>

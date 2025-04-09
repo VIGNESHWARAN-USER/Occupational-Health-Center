@@ -1106,11 +1106,6 @@ class FitnessAssessment(BaseModel): # Inherit from your base or models.Model
     comments = models.TextField(blank=True, null=True)
     validity = models.DateField(blank=True, null=True) # Auto-calculated in frontend
 
-    # Timestamps (Optional but recommended)
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
-
-
     def __str__(self):
         # Use f-string correctly
         return f"Fitness Assessment for {self.emp_no} - {self.get_overall_fitness_display() or 'Pending'}"
@@ -1118,7 +1113,6 @@ class FitnessAssessment(BaseModel): # Inherit from your base or models.Model
     class Meta:
         verbose_name = "Fitness Assessment"
         verbose_name_plural = "Fitness Assessments"
-        ordering = ['-updated_at', '-created_at'] # Example ordering
 
 
 # --- Vaccination Record Model --- (Corrected the second definition)
