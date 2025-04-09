@@ -208,7 +208,7 @@ function InvestigationForm({ data }) {
         alert(`No submission endpoint configured for "${selectedOption}".`);
         return;
     }
-    url = `https://occupational-health-center-1.onrender.com/${endpoint}`; // Construct full URL
+    url = `http://localhost:8000/${endpoint}`; // Construct full URL
 
     try {
       // Ensure emp_no is included in the data being sent

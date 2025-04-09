@@ -1488,9 +1488,9 @@ const NewVisit = () => {
                         <option value="Height Work">Height</option>
                         <option value="Gas Line Work">Gas Line</option>
                         <option value="Confined Space Work">Confined Space</option>
-                        <option value="SCBA Rescue Work">SCBA Rescue</option>
-                        <option value="Fire Rescue Work">Fire Rescue</option>
-                        <option value="Lone Man Work">Lone Man</option>
+                        <option value="SCBA Rescue Work">SCBA Rescuer</option>
+                        <option value="Fire Rescue Work">Fire Rescuer</option>
+                        <option value="Lone Man Work">Lone Worker</option>
                         <option value="Fisher Man Work">Fisher Man</option>
                         <option value="Snake Catcher Work">Snake Catcher</option>
                       </select>

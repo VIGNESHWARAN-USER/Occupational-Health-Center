@@ -72,17 +72,13 @@ const SignificantNotes = ({ data, type }) => {
   // --- Dropdown Options (replace with your actual options) ---
   const communicableDiseaseOptions = [
     { value: '', label: 'Select...' }, // Add a default empty option
-    { value: 'None', label: 'None' },
-    { value: 'Influenza', label: 'Influenza' },
-    { value: 'COVID-19', label: 'COVID-19' },
-    { value: 'Tuberculosis', label: 'Tuberculosis' },
-    { value: 'Chickenpox', label: 'Chickenpox' },
-    { value: 'Other', label: 'Other' },
-    { value: 'Unknown', label: 'Unknown' },
+    { value: 'CD1', label: 'CD1' },
+    { value: 'CD2', label: 'CD2' },
+    { value: 'CD1andCD2', label: 'CD1 and CD2' },
   ];
-  const incidentTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }];
-  const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }];
-  const illnessTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }];
+  const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' } ];
+  const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Injury', label: 'Occupational Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Communication Injury', label: 'Communication Injury'}, {value: 'Others', label: 'Others'} ];
+  const illnessTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Illness', label: 'Occupational Illness'}, {value: 'Occupational Disease', label: 'Occupational Disease'} ];
 
 
   // --- Extract employee number and check access level ---
@@ -294,7 +290,7 @@ const SignificantNotes = ({ data, type }) => {
             {/* History Column */}
             <div className=""> {/* Fixed height */}
                  <HistoryList
-                    title="Summary History"
+                    title="Health Summary History"
                     notes={historicalNotes}
                     fieldKey="healthsummary"
                     isLoading={isLoadingHistory}
@@ -322,7 +318,7 @@ const SignificantNotes = ({ data, type }) => {
              {/* History Column */}
             <div className=""> {/* Fixed height */}
                  <HistoryList
-                    title="Remarks History"
+                    title="Remarks / Defaults History"
                     notes={historicalNotes}
                     fieldKey="remarks"
                     isLoading={isLoadingHistory}
