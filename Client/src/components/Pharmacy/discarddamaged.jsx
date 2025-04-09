@@ -164,7 +164,11 @@ const DiscardedMedicines = () => {
     }
 
     try {
-      await axios.post("http://localhost:8000/add_discarded_medicine/", formData);
+      const dataToSend = {
+        ...formData,
+        expiry_date: `${formData.expiry_date}-01`, // Append day to make full date
+      };
+      await axios.post("http://localhost:8000/add_discarded_medicine/", dataToSend);
       setMessage("Discarded medicine added successfully!");
       setFormData({ medicine_form: "", chemical_name: "", brand_name: "", dose_volume: "", quantity: "", expiry_date: "", reason: "" });
       fetchDiscardedMedicines();
@@ -185,36 +189,38 @@ const DiscardedMedicines = () => {
               Add Discarded Medicine
             </button>
             <div className="bg-white shadow-md rounded-lg p-4">
-              <h2 className="text-2xl font-bold mb-4">Discarded Medicines</h2>
+              <h2 className="text-2xl font-bold mb-4 text-center">Discarded Medicines</h2>
               {loading ? (
                 <p>Loading...</p>
               ) : (
+                <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr>
-                      <th>Form</th>
-                      <th>Chemical</th>
-                      <th>Brand</th>
-                      <th>Dose</th>
-                      <th>Quantity</th>
-                      <th>Expiry Date</th>
-                      <th>Reason</th>
+                  <tr className="bg-blue-600 text-white">
+                      <th className="p-3 text-left">Form</th>
+                      <th className="p-3 text-left">Chemical</th>
+                      <th className="p-3 text-left">Brand</th>
+                      <th className="p-3 text-left">Dose</th>
+                      <th className="p-3 text-left">Quantity</th>
+                      <th className="p-3 text-left">Expiry Date</th>
+                      <th className="p-3 text-left">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
                     {discardedMedicines.map((item, index) => (
-                      <tr key={index}>
-                        <td>{item.medicine_form}</td>
-                        <td>{item.chemical_name}</td>
-                        <td>{item.brand_name}</td>
-                        <td>{item.dose_volume}</td>
-                        <td>{item.quantity}</td>
-                        <td>{item.expiry_date}</td>
-                        <td>{item.reason}</td>
+                      <tr key={index} className="border-b">
+                        <td className="p-3">{item.medicine_form}</td>
+                        <td className="p-3">{item.chemical_name}</td>
+                        <td className="p-3">{item.brand_name}</td>
+                        <td className="p-3">{item.dose_volume}</td>
+                        <td className="p-3 font-bold">{item.quantity}</td>
+                        <td className="p-3">{item.expiry_date}</td>
+                        <td className="p-3 text-red-600 font-semibold">{item.reason}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>
@@ -314,7 +320,7 @@ const DiscardedMedicines = () => {
               <div>
                 <label className="block font-medium">Expiry Date</label>
                 <input
-                  type="date"
+                  type="month"
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}

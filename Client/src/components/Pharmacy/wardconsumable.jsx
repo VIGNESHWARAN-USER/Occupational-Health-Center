@@ -233,7 +233,7 @@ const WardConsumables = () => {
   return (
     <div className="h-screen flex">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-auto bg-gray-100"> {/* Added bg color */}
+      <div className="flex-1 p-6 overflow-auto">
         {!showForm ? (
           <div>
             <button
@@ -243,23 +243,24 @@ const WardConsumables = () => {
               Add Ward Consumable {/* Changed button text */}
             </button>
             <div className="bg-white shadow-md rounded-lg p-4 overflow-x-auto"> {/* Added overflow-x-auto */}
-              <h2 className="text-2xl font-bold mb-4 text-gray-700">Ward Consumables</h2> {/* Changed title */}
+              <h2 className="text-2xl font-bold mb-4 text-gray-700 text-center">Ward Consumables</h2> {/* Changed title */}
               {loading ? (
                 <p className="text-center text-gray-500">Loading...</p>
               ) : wardConsumables.length === 0 ? (
                  <p className="text-center text-gray-500">No ward consumables recorded yet.</p>
               ) : (
-                <table className="w-full border-collapse table-auto">
+                <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                    <tr className="bg-blue-600 text-white">
                       {/* Updated table headers */}
-                      <th className="py-3 px-4 text-left border">Form</th>
-                      <th className="py-3 px-4 text-left border">Chemical</th>
-                      <th className="py-3 px-4 text-left border">Brand</th>
-                      <th className="py-3 px-4 text-left border">Dose</th>
-                      <th className="py-3 px-4 text-center border">Quantity</th>
-                      <th className="py-3 px-4 text-center border">Expiry Date</th>
-                      <th className="py-3 px-4 text-center border">Consumed Date</th>
+                      <th className="p-3 text-left">Form</th>
+                      <th className="p-3 text-left">Chemical</th>
+                      <th className="p-3 text-left">Brand</th>
+                      <th className="p-3 text-left">Dose</th>
+                      <th className="p-3 text-left">Quantity</th>
+                      <th className="p-3 text-left">Expiry Date</th>
+                      <th className="p-3 text-left">Consumed Date</th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-700 text-sm font-light">
@@ -267,17 +268,18 @@ const WardConsumables = () => {
                     {wardConsumables.map((item, index) => (
                       <tr key={index} className="border-b border-gray-200 hover:bg-gray-100">
                         {/* Updated table data cells */}
-                        <td className="py-3 px-4 text-left whitespace-nowrap border">{item.medicine_form}</td>
-                        <td className="py-3 px-4 text-left border">{item.chemical_name}</td>
-                        <td className="py-3 px-4 text-left border">{item.brand_name}</td>
-                        <td className="py-3 px-4 text-left border">{item.dose_volume}</td>
-                        <td className="py-3 px-4 text-center border">{item.quantity}</td>
-                        <td className="py-3 px-4 text-center border">{item.expiry_date || 'N/A'}</td> {/* Handle potentially null expiry */}
-                        <td className="py-3 px-4 text-center border">{item.consumed_date}</td>
+                        <td className="p-3">{item.medicine_form}</td>
+                        <td className="p-3">{item.chemical_name}</td>
+                        <td className="p-3">{item.brand_name}</td>
+                        <td className="p-3">{item.dose_volume}</td>
+                        <td className="p-3 font-bold">{item.quantity}</td>
+                        <td className="p-3">{item.expiry_date || 'N/A'}</td> {/* Handle potentially null expiry */}
+                        <td className="p-3 text-red-600 font-semibold">{item.consumed_date}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>
@@ -406,7 +408,7 @@ const WardConsumables = () => {
               <div>
                 <label className="block text-gray-700 font-medium mb-1">Expiry Date</label>
                 <input
-                  type="date"
+                  type="month"
                   name="expiry_date"
                   value={formData.expiry_date}
                   onChange={handleChange}

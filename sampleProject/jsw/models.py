@@ -1042,26 +1042,83 @@ class Appointment(BaseModel):
 
     def str(self):
         return f"{self.name} - {self.appointment_date}"
-# --- Fitness Assessment Model ---
-class FitnessAssessment(BaseModel):
-    # ... (keep all existing fields from FitnessAssessment as they were) ...
+
+class FitnessAssessment(BaseModel): # Inherit from your base or models.Model
+
+    # --- Choices ---
     class PositiveNegativeChoices(models.TextChoices):
-        POSITIVE = 'Positive', 'Positive'
-        NEGATIVE = 'Negative', 'Negative'
-    emp_no = models.CharField(max_length = 20)
-    tremors = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
-    romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
-    acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
-    trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices)
-    conditional_fit_feilds = models.JSONField(blank=True, null=True) # Changed to null=True
-    validity = models.DateField(blank=True, null=True)
-    job_nature = models.JSONField(blank=True, null=True)
-    overall_fitness = models.TextField()
-    comments = models.TextField(blank=True, null=True)
+        POSITIVE = 'positive', 'Positive' # Use lowercase for keys generally
+        NEGATIVE = 'negative', 'Negative'
+
+    class EyeExamResultChoices(models.TextChoices):
+        NORMAL = 'Normal', 'Normal'
+        DEFECTIVE = 'Defective', 'Defective'
+        COLOR_BLINDNESS = 'Color Blindness', 'Color Blindness'
+        # Add an empty choice if needed for the initial "-- Select Result --" state,
+        # though typically handled by allowing blank/null in the field.
+
+    class EyeExamFitStatusChoices(models.TextChoices):
+        FIT = 'Fit', 'Fit'
+        FIT_NEW_GLASS = 'Fit when newly prescribed glass', 'Fit when newly prescribed glass'
+        FIT_EXISTING_GLASS = 'Fit with existing glass', 'Fit with existing glass'
+        FIT_ADVICE_CHANGE_GLASS = 'Fit with an advice to change existing glass with newly prescribed glass', 'Fit with an advice to change existing glass with newly prescribed glass'
+        UNFIT = 'Unfit', 'Unfit'
+        # Add an empty choice if needed
+
+    class OverallFitnessChoices(models.TextChoices): # Optional: More constrained than TextField
+        FIT = 'fit', 'Fit'
+        UNFIT = 'unfit', 'Unfit'
+        CONDITIONAL = 'conditional', 'Conditional Fit'
+
+
+    # --- Fields ---
+    emp_no = models.CharField(max_length=50) # Increased length slightly just in case
     employer = models.TextField(blank=True, null=True)
 
+    # Basic Tests
+    tremors = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+
+    # Job & Fitness Status
+    job_nature = models.JSONField(blank=True, null=True) # Stores selected job nature list
+    overall_fitness = models.CharField(max_length=20, choices=OverallFitnessChoices.choices, blank=True, null=True) # Changed to CharField with choices
+    conditional_fit_feilds = models.JSONField(blank=True, null=True) # Stores list if overall_fitness is 'conditional'
+
+    # Examinations (New)
+    general_examination = models.TextField(blank=True, null=True)
+    systematic_examination = models.TextField(blank=True, null=True)
+    eye_exam_result = models.CharField(
+        max_length=20,
+        choices=EyeExamResultChoices.choices,
+        blank=True,
+        null=True
+    )
+    eye_exam_fit_status = models.CharField(
+        max_length=100, # Needs to be long enough for the longest option
+        choices=EyeExamFitStatusChoices.choices,
+        blank=True,
+        null=True
+    )
+
+    # Comments & Validity
+    comments = models.TextField(blank=True, null=True)
+    validity = models.DateField(blank=True, null=True) # Auto-calculated in frontend
+
+    # Timestamps (Optional but recommended)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+
     def __str__(self):
-        return f"Fitness Assessment for {self.emp_no} - {self.overall_fitness}"
+        # Use f-string correctly
+        return f"Fitness Assessment for {self.emp_no} - {self.get_overall_fitness_display() or 'Pending'}"
+
+    class Meta:
+        verbose_name = "Fitness Assessment"
+        verbose_name_plural = "Fitness Assessments"
+        ordering = ['-updated_at', '-created_at'] # Example ordering
 
 
 # --- Vaccination Record Model --- (Corrected the second definition)

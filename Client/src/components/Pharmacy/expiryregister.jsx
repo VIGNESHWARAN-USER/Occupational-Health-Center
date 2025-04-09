@@ -37,7 +37,7 @@ const ExpiryRegister = () => {
   };
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Expiry Register</h2>

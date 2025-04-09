@@ -10,7 +10,6 @@ const AddStock = () => {
     chemical_name: "",
     dose_volume: "",
     quantity: "",
-    
     expiry_date: "",
   });
 
@@ -266,7 +265,7 @@ const AddStock = () => {
 
             <div>
               <label className="block font-medium">Expiry Date</label>
-              <input type="date" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
+              <input type="month" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
             </div>
 
             <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">

@@ -22,7 +22,7 @@ const CurrentStock = () => {
   }, []);
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Pharmacy Current Stock</h2>
@@ -55,7 +55,7 @@ const CurrentStock = () => {
                       <td className="p-3 text-gray-600">{item.chemical_name}</td>
                       <td className="p-3">{item.dose_volume}</td>
                       <td className="p-3 font-bold">{item.total_quantity}</td>
-                      <td className="p-3">{item.quantity_expiry}</td>
+                      <td className="p-3 text-green-600 font-semibold">{item.quantity_expiry}</td>
                       <td className="p-3">{item.expiry_date}</td>
                     </tr>
                   ))

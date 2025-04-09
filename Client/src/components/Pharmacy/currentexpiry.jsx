@@ -45,7 +45,7 @@ const CurrentExpiry = () => {
   };
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Current Expiry Medicines</h2>
@@ -77,7 +77,7 @@ const CurrentExpiry = () => {
                       <td className="p-3 font-bold">{item.brand_name}</td>
                       <td className="p-3 text-gray-600">{item.chemical_name}</td>
                       <td className="p-3">{item.dose_volume}</td>
-                      <td className="p-3 font-bold">{item.total_quantity}</td>
+                      <td className="p-3 font-bold">{item.quantity}</td>
                       <td className="p-3">{item.expiry_date}</td>
                       <td className="p-3 text-center">
                         {item.removed_date ? (
