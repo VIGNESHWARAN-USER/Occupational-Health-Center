@@ -42,28 +42,40 @@ const Login = () => {
 
   const login = async (e) => {
     e.preventDefault();
+    setErr(""); // Clear previous errors
     if (name.length === 0) setErr("Enter username");
     else if (pass.length === 0) setErr("Enter password");
     else {
       try {
         setLoading(true);
-        const response = await axios.post(
-          "https://occupational-health-center-1.onrender.com/login",
-          { username: name, password: pass }
-        );
+        const response = await axios.post("http://localhost:8000/login", {
+          username: name,
+          password: pass,
+        });
+        console.log(response.data)
         if (response.status === 200) {
           localStorage.setItem("accessLevel", response.data.accessLevel);
-          
-          navigate(response.data.accessLevel === "admin" ? "../admindashboard" : "../dashboard");
-        } else setErr("Password incorrect");
+          localStorage.setItem("userData", response.data.username)
+          navigate(
+            response.data.accessLevel === "admin"
+              ? "../admindashboard"
+              : response.data.accessLevel === "pharmacy"
+              ? "../addstock"
+              : "../dashboard"
+          );
+        }
       } catch (error) {
-        setErr("Invalid details");
-      }finally{
+        if (error.response && error.response.data && error.response.data.message) {
+          setErr(error.response.data.message); // Use backend message
+        } else {
+          setErr("Something went wrong. Please try again.");
+        }
+      } finally {
         setLoading(false);
       }
     }
   };
-
+  
   return (
     <div className="flex flex-col md:flex-row h-screen">
       <div className="md:w-2/5 w-full h-1/3 md:h-full bg-center bg-cover" style={{ backgroundImage: `url(${leftlogin})` }}>

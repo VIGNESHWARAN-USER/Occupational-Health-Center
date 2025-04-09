@@ -110,22 +110,22 @@ const MedicalHistory1 = ({ data }) => {
   };
 
   const [medicalData, setMedicalData] = useState({
-    DM: { detail: "", comment: "" },
-    RS: { detail: "", comment: "" },
-    CNS: { detail: "", comment: "" },
-    CVS: { detail: "", comment: "" },
-    GIT: { detail: "", comment: "" },
-    KUB: { detail: "", comment: "" },
-    HTN: { detail: "", comment: "" },
-    Epileptic: { detail: "", comment: "" },
-    Hyper_Thyroid: { detail: "", comment: "" },
-    Hypo_Thyroid: { detail: "", comment: "" },
-    Asthma: { detail: "", comment: "" },
-    Cancer: { detail: "", comment: "" },
-    Defective_Colour_Vision: {detail: "", comment: ""},
-    Others: {detail: "", comment: ""},
-    Obstetric: {detail: "", comment: ""},
-    Gynaec: {detail: "", comment: ""}
+    DM: { detail: "", comment: "" , children: []},
+    RS: { detail: "", comment: "" , children: []},
+    CNS: { detail: "", comment: "" , children: []},
+    CVS: { detail: "", comment: "" , children: []},
+    GIT: { detail: "", comment: "" , children: []},
+    KUB: { detail: "", comment: "" , children: []},
+    HTN: { detail: "", comment: "" , children: []},
+    Epileptic: { detail: "", comment: "" , children: []},
+    Hyper_Thyroid: { detail: "", comment: "" , children: []},
+    Hypo_Thyroid: { detail: "", comment: "" , children: []},
+    Asthma: { detail: "", comment: "" , children: []},
+    Cancer: { detail: "", comment: "" , children: []},
+    Defective_Colour_Vision: {detail: "", comment: "", children: []},
+    Others: {detail: "", comment: "", children: []},
+    Obstetric: {detail: "", comment: "", children: []},
+    Gynaec: {detail: "", comment: "", children: []}
   });
 
   const [femaleWorker, setFemaleWorker] = useState({
@@ -146,22 +146,22 @@ const MedicalHistory1 = ({ data }) => {
     maternalGrandMother: { status: "", reason: "", remarks: "" },
     paternalGrandFather: { status: "", reason: "", remarks: "" },
     paternalGrandMother: { status: "", reason: "", remarks: "" },
-    DM: { detail: "", comment: "" },
-    RS: { detail: "", comment: "" },
-    CNS: { detail: "", comment: "" },
-    CVS: { detail: "", comment: "" },
-    GIT: { detail: "", comment: "" },
-    KUB: { detail: "", comment: "" },
-    HTN: { detail: "", comment: "" },
-    Epileptic: { detail: "", comment: "" },
-    Hyper_Thyroid: { detail: "", comment: "" },
-    Hypo_Thyroid: { detail: "", comment: "" },
-    Asthma: { detail: "", comment: "" },
-    Cancer: { detail: "", comment: "" },
-    Defective_Colour_Vision: {detail: "", comment: ""},
-    Others: {detail: "", comment: ""},
-    Obstetric: {detail: "", comment: ""},
-    Gynaec: {detail: "", comment: ""}
+    DM: { detail: "", comment: "" , children: []},
+    RS: { detail: "", comment: "" , children: []},
+    CNS: { detail: "", comment: "" , children: []},
+    CVS: { detail: "", comment: "" , children: []},
+    GIT: { detail: "", comment: "" , children: []},
+    KUB: { detail: "", comment: "" , children: []},
+    HTN: { detail: "", comment: "" , children: []},
+    Epileptic: { detail: "", comment: "" , children: []},
+    Hyper_Thyroid: { detail: "", comment: "" , children: []},
+    Hypo_Thyroid: { detail: "", comment: "" , children: []},
+    Asthma: { detail: "", comment: "" , children: []},
+    Cancer: { detail: "", comment: "" , children: []},
+    Defective_Colour_Vision: {detail: "", comment: "", children: []},
+    Others: {detail: "", comment: "", children: []},
+    Obstetric: {detail: "", comment: "", children: []},
+    Gynaec: {detail: "", comment: "", children: []},
   });
 
   const [healthConditions, setHealthConditions] = useState({});
@@ -391,6 +391,7 @@ const MedicalHistory1 = ({ data }) => {
         [field]: value,
       },
     }));
+    console.log(familyHistory)
   };
 
     // Family Medical Condition handler
@@ -407,12 +408,14 @@ const MedicalHistory1 = ({ data }) => {
 
   // Health Conditions handler
   const handleSelectionChange = (condition, selectedOptions) => {
+    console.log(selectedOptions);
       const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
 
       setConditions(prev => ({
           ...prev,
           [condition]: selectedValues
       }));
+      console.log(conditions);
   };
 
   const handleSubmissionDetailsChange = (e) => {
@@ -443,7 +446,7 @@ const MedicalHistory1 = ({ data }) => {
       comments: comment,
     }));
   };
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -454,7 +457,6 @@ const MedicalHistory1 = ({ data }) => {
       surgicalHistory,
       familyHistory,
       healthConditions,
-      submissionDetails,
       allergyFields,
       allergyComments,
       childrenData,
@@ -469,12 +471,104 @@ const MedicalHistory1 = ({ data }) => {
         formData["surgicalHistory"]["children"].push(formData["surgicalHistory"]["comments"]);
         formData["surgicalHistory"]["comments"] = "";
       }
-      console.log(formData)
+      if(formData["medicalData"]["CVS"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["CVS"]["children"])){
+          formData["medicalData"]["CVS"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["CVS"]["children"].push(formData["medicalData"]["CVS"]["detail"]);
+        formData["medicalData"]["CVS"]["detail"] = "";
+      }
+      if(formData["medicalData"]["DM"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["DM"]["children"])){
+          formData["medicalData"]["DM"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["DM"]["children"].push(formData["medicalData"]["DM"]["detail"]);
+        formData["medicalData"]["DM"]["detail"] = "";
+      }
+      if(formData["medicalData"]["CNS"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["CNS"]["children"])){
+          formData["medicalData"]["CNS"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["CNS"]["children"].push(formData["medicalData"]["CNS"]["detail"]);
+        formData["medicalData"]["CNS"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Epileptic"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Epileptic"]["children"])){
+          formData["medicalData"]["Epileptic"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Epileptic"]["children"].push(formData["medicalData"]["Epileptic"]["detail"]);
+        formData["medicalData"]["Epileptic"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Asthma"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Asthma"]["children"])){
+          formData["medicalData"]["Asthma"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Asthma"]["children"].push(formData["medicalData"]["Asthma"]["detail"]);
+        formData["medicalData"]["Asthma"]["detail"] = "";
+      }
+      if(formData["medicalData"]["CVS"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["CVS"]["children"])){
+          formData["medicalData"]["CVS"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["CVS"]["children"].push(formData["medicalData"]["CVS"]["detail"]);
+        formData["medicalData"]["CVS"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Gynaec"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Gynaec"]["children"])){  
+          formData["medicalData"]["Gynaec"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Gynaec"]["children"].push(formData["medicalData"]["Gynaec"]["detail"]);
+        formData["medicalData"]["Gynaec"]["detail"] = "";
+      }
+      if(formData["medicalData"]["GIT"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["GIT"]["children"])){
+          formData["medicalData"]["GIT"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["GIT"]["children"].push(formData["medicalData"]["GIT"]["detail"]);
+        formData["medicalData"]["GIT"]["detail"] = "";
+      }
+      if(formData["medicalData"]["DM"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["DM"]["children"])){
+          formData["medicalData"]["DM"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["DM"]["children"].push(formData["medicalData"]["DM"]["detail"]);
+        formData["medicalData"]["DM"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Cancer"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Cancer"]["children"])){
+          formData["medicalData"]["Cancer"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Cancer"]["children"].push(formData["medicalData"]["Cancer"]["detail"]);
+        formData["medicalData"]["Cancer"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Obstetric"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Obstetric"]["children"])){
+          formData["medicalData"]["Obstetric"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Obstetric"]["children"].push(formData["medicalData"]["Obstetric"]["detail"]);
+        formData["medicalData"]["Obstetric"]["detail"] = "";
+      }
+      if(formData["medicalData"]["Others"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["Others"]["children"])){
+          formData["medicalData"]["Others"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["Others"]["children"].push(formData["medicalData"]["Others"]["detail"]);
+        formData["medicalData"]["Others"]["detail"] = "";
+      }
+      if(formData["medicalData"]["HTN"]["detail"].length !== 0){
+        if(!Array.isArray(formData["medicalData"]["HTN"]["children"])){
+          formData["medicalData"]["HTN"]["children"] = []; // Initialize if not an array
+        }
+        formData["medicalData"]["HTN"]["children"].push(formData["medicalData"]["HTN"]["detail"]);
+        formData["medicalData"]["HTN"]["detail"] = "";
+      }
+      
+
+      
 
       const updatedFormdata = { ...formData, emp_no: emp_no };
       console.log(updatedFormdata)
-      console.log(updatedFormdata);
-      const response = await fetch("https://occupational-health-center-1.onrender.com/medical-history/", {
+      const response = await fetch("http://localhost:8000/medical-history/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -505,7 +599,6 @@ const MedicalHistory1 = ({ data }) => {
 
   return (
     <div className="p-6 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4">Medical History</h1>
     
      
       <div className="mb-6">
@@ -723,7 +816,7 @@ const MedicalHistory1 = ({ data }) => {
                   <tr style={tableHeaderStyle}>
                     <th style={cellStyle}>Condition</th>
                     <th style={cellStyle}>Detail</th>
-                    <th style={cellStyle}>Comments</th>
+                    <th style={cellStyle}>History</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -745,13 +838,13 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.HTN?.comment || ""}
+                        value={medicalData.HTN?.children || ""}
                         onChange={(e) =>
-                          handleMedicalInputChange("HTN", "comment", e.target.value)
+                          handleMedicalInputChange("HTN", "history", e.target.value)
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -774,13 +867,13 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.DM?.comment || ""}
+                        value={medicalData.DM?.children || ""}
                         onChange={(e) =>
-                          handleMedicalInputChange("DM", "comment", e.target.value)
+                          handleMedicalInputChange("DM", "history", e.target.value)
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -807,17 +900,17 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.Epileptic?.comment || ""}
+                        value={medicalData.Epileptic?.children || ""}
                         onChange={(e) =>
                           handleMedicalInputChange(
                             "Epileptic",
-                            "comment",
+                            "history",
                             e.target.value
                           )
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -844,17 +937,17 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData["Hyper_Thyroid"]?.comment || ""}
+                        value={medicalData["Hyper_Thyroid"]?.children || ""}
                         onChange={(e) =>
                           handleMedicalInputChange(
                             "Hyper_Thyroid",
-                            "comment",
+                            "history",
                             e.target.value
                           )
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -881,17 +974,17 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData["Hypo_Thyroid"]?.comment || ""}
+                        value={medicalData["Hypo_Thyroid"]?.children || ""}
                         onChange={(e) =>
                           handleMedicalInputChange(
                             "Hypo_Thyroid",
-                            "comment",
+                            "history",
                             e.target.value
                           )
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -914,13 +1007,13 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.Asthma?.comment || ""}
+                        value={medicalData.Asthma?.children || ""}
                         onChange={(e) =>
-                          handleMedicalInputChange("Asthma", "comment", e.target.value)
+                          handleMedicalInputChange("Asthma", "history", e.target.value)
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                   </tr>
@@ -943,14 +1036,13 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.CVS?.comment || ""}
+                        value={medicalData.CVS?.children || ""}
                         onChange={(e) =>
-                          handleMedicalInputChange("CVS", "comment", e.target.value)
+                          handleMedicalInputChange("CVS", "history", e.target.value)
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
-                      />
+                        placeholder="History"
+            disabled = {true}                      />
                     </td>
                   </tr>
 
@@ -972,13 +1064,13 @@ const MedicalHistory1 = ({ data }) => {
                     <td style={cellStyle}>
                       <input
                         type="text"
-                        value={medicalData.CNS?.comment || ""}
+                        value={medicalData.CNS?.children || ""}
                         onChange={(e) =>
-                          handleMedicalInputChange("CNS", "comment", e.target.value)
+                          handleMedicalInputChange("CNS", "history", e.target.value)
                         }
                         style={inputStyle}
-                        placeholder="Optional comments"
-                        disabled={!isEditMode}
+                        placeholder="History"
+                        disabled = {true}
                       />
                     </td>
                     </tr>
@@ -1001,13 +1093,13 @@ const MedicalHistory1 = ({ data }) => {
   <td style={cellStyle}>
     <input
       type="text"
-      value={medicalData.RS?.comment || ""}
+      value={medicalData.RS?.children || ""}
       onChange={(e) =>
-        handleMedicalInputChange("RS", "comment", e.target.value)
+        handleMedicalInputChange("RS", "history", e.target.value)
       }
       style={inputStyle}
-      placeholder="Optional comments"
-      disabled={!isEditMode}
+      placeholder="History"
+      disabled = {true}
     />
   </td>
 </tr>
@@ -1030,13 +1122,13 @@ const MedicalHistory1 = ({ data }) => {
     <td style={cellStyle}>
       <input
         type="text"
-        value={medicalData.GIT?.comment || ""}
+        value={medicalData.GIT?.children || ""}
         onChange={(e) =>
-          handleMedicalInputChange("GIT", "comment", e.target.value)
+          handleMedicalInputChange("GIT", "history", e.target.value)
         }
         style={inputStyle}
-        placeholder="Optional comments"
-        disabled={!isEditMode}
+        placeholder="History"
+        disabled = {true}
       />
     </td>
   </tr>
@@ -1059,13 +1151,13 @@ const MedicalHistory1 = ({ data }) => {
     <td style={cellStyle}>
       <input
         type="text"
-        value={medicalData.KUB?.comment || ""}
+        value={medicalData.KUB?.children || ""}
         onChange={(e) =>
-          handleMedicalInputChange("KUB", "comment", e.target.value)
+          handleMedicalInputChange("KUB", "history", e.target.value)
         }
         style={inputStyle}
-        placeholder="Optional comments"
-        disabled={!isEditMode}
+        placeholder="History"
+        disabled = {true}
       />
     </td>
   </tr>
@@ -1088,13 +1180,13 @@ const MedicalHistory1 = ({ data }) => {
     <td style={cellStyle}>
       <input
         type="text"
-        value={medicalData.Cancer?.comment || ""}
+        value={medicalData.Cancer?.children || ""}
         onChange={(e) =>
-          handleMedicalInputChange("Cancer", "comment", e.target.value)
+          handleMedicalInputChange("Cancer", "history", e.target.value)
         }
         style={inputStyle}
-        placeholder="Optional comments"
-        disabled={!isEditMode}
+        placeholder="History"
+        disabled = {true}
       />
     </td>
   </tr>
@@ -1114,11 +1206,11 @@ const MedicalHistory1 = ({ data }) => {
         <td style={cellStyle}>
             <input
                 type="text"
-                value={medicalData.Defective_Colour_Vision?.comment || ''}
-                onChange={(e) => handleMedicalInputChange("Defective_Colour_Vision", "comment", e.target.value)}
+                value={medicalData.Defective_Colour_Vision?.children || ''}
+                onChange={(e) => handleMedicalInputChange("Defective_Colour_Vision", "history", e.target.value)}
                 style={inputStyle}
-                placeholder="Optional comments"
-                disabled={!isEditMode}
+                placeholder="History"
+                disabled = {true}
             />
         </td>
     </tr>
@@ -1137,11 +1229,11 @@ const MedicalHistory1 = ({ data }) => {
         <td style={cellStyle}>
             <input
                 type="text"
-                value={medicalData.Others?.comment || ''}
-                onChange={(e) => handleMedicalInputChange("Others", "comment", e.target.value)}
+                value={medicalData.Others?.children || ''}
+                onChange={(e) => handleMedicalInputChange("Others", "history", e.target.value)}
                 style={inputStyle}
-                placeholder="Optional comments"
-                disabled={!isEditMode}
+                placeholder="History"
+                disabled = {true}
             />
         </td>
     </tr>
@@ -1181,8 +1273,8 @@ const MedicalHistory1 = ({ data }) => {
       <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
           <input
               type="text"
-              value={medicalData.Obstetric?.comment || ''}
-              onChange={(e) => handleMedicalInputChange("Obstetric", "comment", e.target.value)}
+              value={medicalData.Obstetric?.children || ''}
+              onChange={(e) => handleMedicalInputChange("Obstetric", "history", e.target.value)}
               style={{
                   width: '100%',
                   padding: '0.375rem 0.75rem',
@@ -1228,8 +1320,8 @@ const MedicalHistory1 = ({ data }) => {
       <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
           <input
               type="text"
-              value={medicalData.Gynaec?.comment || ''}
-              onChange={(e) => handleMedicalInputChange("Gynaec", "comment", e.target.value)}
+              value={medicalData.Gynaec?.children || ''}
+              onChange={(e) => handleMedicalInputChange("Gynaec", "history", e.target.value)}
               style={{
                   width: '100%',
                   padding: '0.375rem 0.75rem',
@@ -1250,7 +1342,803 @@ const MedicalHistory1 = ({ data }) => {
 </div>
 
 {/* Surgical History */}
+<h2 className="text-xl font-semibold mb-4">Surgical History</h2>
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+{/* historys Section */}
+<div>
+<label
+htmlFor="surgicalHistoryComments"
+className="block text-sm font-medium text-gray-700"
+>
+Enter Comments:
+</label>
+<textarea
+id="surgicalHistoryComments"
+placeholder="Comments"
+className="mt-1 px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+value={surgicalHistory.comments || ""}
+onChange={(e) => handleSurgicalHistoryCommentChange(e.target.value)}
+style={inputStyle}
+disabled={!isEditMode}
+/>
+</div>
+
+{/* Surgical History Input Section */}
+<div>
+<label
+htmlFor="surgicalHistory"
+className="block text-sm font-medium text-gray-700"
+>
+History:
+</label>
+
+{(surgicalHistory.children || []).map((child, index) => (
+<div key={index}>
+<input
+type="text"
+value={child}
+
+style={inputStyle}
+placeholder="Enter details"
+disabled={true}
+/>
+</div>
+))}
+</div>
+</div>
+
+
+
+
+{/* Allergy History */}
+
 <div className="mb-6">
+<h2 className="text-xl font-semibold mb-4">Allergy History</h2>
+<div className="grid grid-cols-4 gap-4 items-center">
+{/* Header Row - Added Padding and Alignment */}
+<div className="col-span-1 font-semibold text-gray-700 pl-2">
+Allergy Type
+</div>
+<div className="col-span-1 font-semibold text-gray-700 text-center">
+Response
+</div>
+<div className="col-span-2 font-semibold text-gray-700">Comments</div>
+
+{/* Drug Allergy Row - Refactored for Alignment and Spacing */}
+<div className="flex items-center">
+<label className="ml-2 text-gray-700">Drug Allergy</label>
+</div>
+<div className="flex items-center justify-center space-x-4">
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="drugAllergyResponse" // Grouping radio buttons
+value="yes"
+checked={allergyFields.drug?.yesNo === "yes"}
+onChange={() => handleAllergySelect("drug")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">Yes</span>
+</label>
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="drugAllergyResponse"
+value="no"
+checked={allergyFields.drug?.yesNo === "no"}
+onChange={() => handleAllergySelect("drug")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">No</span>
+</label>
+</div>
+
+<div className="col-span-2">
+<textarea
+placeholder="Comments on Drug Allergy"
+className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+value={allergyComments.drug || ""}
+onChange={(e) => handleAllergyCommentChange("drug", e.target.value)}
+disabled={!isEditMode}
+/>
+</div>
+
+{/* Food Allergy Row - Refactored for Alignment and Spacing */}
+<div className="flex items-center">
+<label className="ml-2 text-gray-700">Food Allergy</label>
+</div>
+<div className="flex items-center justify-center space-x-4">
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="foodAllergyResponse"
+value="yes"
+checked={allergyFields.food?.yesNo === "yes"}
+onChange={() => handleAllergySelect("food")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">Yes</span>
+</label>
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="foodAllergyResponse"
+value="no"
+checked={allergyFields.food?.yesNo === "no"}
+onChange={() => handleAllergySelect("food")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">No</span>
+</label>
+</div>
+
+<div className="col-span-2">
+<textarea
+placeholder="Comments on Food Allergy"
+className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+value={allergyComments.food || ""}
+onChange={(e) => handleAllergyCommentChange("food", e.target.value)}
+disabled={!isEditMode}
+/>
+</div>
+
+{/* Other Allergies Row - Refactored for Alignment and Spacing */}
+<div className="flex items-center">
+<label className="ml-2 text-gray-700">Other Allergies</label>
+</div>
+<div className="flex items-center justify-center space-x-4">
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="otherAllergyResponse"
+value="yes"
+checked={allergyFields.others?.yesNo === "yes"}
+onChange={() => handleAllergySelect("others")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">Yes</span>
+</label>
+<label className="inline-flex items-center">
+<input
+type="radio"
+className="form-radio h-6 w-6 text-blue-500"
+name="otherAllergyResponse"
+value="no"
+checked={allergyFields.others?.yesNo === "no"}
+onChange={() => handleAllergySelect("others")}
+disabled={!isEditMode}
+/>
+<span className="ml-1 text-gray-700 text-lg">No</span>
+</label>
+</div>
+
+<div className="col-span-2">
+<textarea
+placeholder="Comments on Other Allergies"
+className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+value={allergyComments.others || ""}
+onChange={(e) =>
+handleAllergyCommentChange("others", e.target.value)
+}
+disabled={!isEditMode}
+/>
+</div>
+</div>
+</div>
+
+{/* Family History - Collapsible Section */}
+<div style={cardStyle}>
+<div style={headerStyle} onClick={toggleFamilyVisibility}>
+<h2 style={titleStyle}>Family History</h2>
+
+<span>{showFamilyHistory ? "[-]" : "[+]"}</span>
+</div>
+
+{showFamilyHistory && (
+<div>
+{[
+{ label: "Father", relative: "father" },
+{ label: "Paternal Grand Father", relative: "paternalGrandFather" },
+{ label: "Paternal Grand Mother", relative: "paternalGrandMother" },
+{ label: "Mother", relative: "mother" },
+{ label: "Maternal Grand Father", relative: "maternalGrandFather" },
+{ label: "Maternal Grand Mother", relative: "maternalGrandMother" },
+].map(({ label, relative }) => (
+<div key={label} className="mb-6">
+<label className="block mb-2 font-medium text-gray-700">
+{label}
+</label>
+<div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
+{/* Status Select */}
+<select
+  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  style={selectStyle}
+  value={familyHistory[relative]?.status || ""}
+  onChange={(e) =>
+    handleFamilyHistoryChange(relative, "status", e.target.value)
+  }
+  disabled={!isEditMode}
+>
+  <option value="">Select Status</option>
+  <option value="Alive">Alive</option>
+  <option value="Expired">Expired</option>
+</select>
+
+<input
+  type="text"
+  placeholder="Reason (if expired)"
+  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  style={inputStyle}
+  value={familyHistory[relative]?.reason || ""}
+  onChange={(e) =>
+    handleFamilyHistoryChange(relative, "reason", e.target.value)
+  }
+  disabled={
+    familyHistory[relative]?.status !== "Expired" || !isEditMode
+  }
+/>
+<input
+  type="text"
+  placeholder="Remarks (Health Condition)"
+  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  style={inputStyle}
+  value={familyHistory[relative]?.remarks || ""}
+  onChange={(e) =>
+    handleFamilyHistoryChange(relative, "remarks", e.target.value)
+  }
+  disabled={!isEditMode}
+/>
+</div>
+
+</div>
+
+))}
+<div style={tableContainerStyle}>
+    <table style={tableStyle}>
+        <thead>
+            <tr style={tableHeaderStyle}>
+                <th style={cellStyle}>Condition</th>
+                <th style={cellStyle}>Releation Ship</th>
+                <th style={cellStyle}>Comments</th>
+            </tr>
+        </thead>
+        <tbody>
+            {/* HTN Row */}
+            <tr>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>HTN</td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <Select
+                      isMulti
+                      options={relationshipOptions1}
+                      value={conditions.HTN ? relationshipOptions1.filter(option => conditions.HTN.includes(option.value)) : []}
+                      onChange={(selectedOptions) => {
+                          handleSelectionChange("HTN", selectedOptions);
+                      }}
+                      styles={customStyles}
+                      placeholder="Select Options"
+                      disabled={!isEditMode}
+                  />
+              </td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+              <textarea
+                  value={familyHistory.HTN?.comment || ''}
+                  onChange={(e) => handleFamilyMedicalConditionChange("HTN", "comment", e.target.value)}
+                  style={{
+                  width: '100%',
+                  padding: '0.375rem 0.75rem',
+                  border: '1px solid #ced4da',
+                  borderRadius: '0.25rem',
+                  boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                  resize: 'vertical', // Important for allowing vertical resizing
+                  minHeight: '3rem', // Or whatever minimum height you prefer
+                  }}
+                  placeholder="History"
+                  disabled = {true}
+              />
+              </td>
+          </tr>
+          {/* DM Row */}
+            <tr>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>DM</td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <Select
+                      isMulti
+                      options={relationshipOptions1}
+                      value={conditions.DM ? relationshipOptions1.filter(option => conditions.DM.includes(option.value)) : []}
+                      onChange={(selectedOptions) => {
+                          handleSelectionChange("DM", selectedOptions);
+                      }}
+                      styles={customStyles}
+                      placeholder="Select Options"
+                      disabled={!isEditMode}
+                  />
+              </td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <input
+                      type="text"
+                      value={familyHistory.DM?.comment || ''}
+                      onChange={(e) => handleFamilyMedicalConditionChange("DM", "comment", e.target.value)}
+                      style={{
+                          width: '100%',
+                          padding: '0.375rem 0.75rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '0.25rem',
+                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                      }}
+                      placeholder="History"
+                      disabled = {!isEditMode}
+                  />
+              </td>
+          </tr>
+                {/* Epileptic Row */}
+            <tr>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Epileptic</td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <Select
+                      isMulti
+                      options={relationshipOptions1}
+                      value={conditions.Epileptic ? relationshipOptions1.filter(option => conditions.Epileptic.includes(option.value)) : []}
+                      onChange={(selectedOptions) => {
+                          handleSelectionChange("Epileptic", selectedOptions);
+                      }}
+                      styles={customStyles}
+                      placeholder="Select Options"
+                      disabled={!isEditMode}
+                  />
+              </td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <input
+                      type="text"
+                      value={familyHistory.Epileptic?.comment || ''}
+                      onChange={(e) => handleFamilyMedicalConditionChange("Epileptic", "comment", e.target.value)}
+                      style={{
+                          width: '100%',
+                          padding: '0.375rem 0.75rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '0.25rem',
+                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                      }}
+                      placeholder="History"
+                      disabled = {!isEditMode}
+                  />
+              </td>
+          </tr>
+
+            
+            {/* Hyper Thyroid Row */}
+
+          
+
+            <tr>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Hyper Thyroid</td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <Select
+                      isMulti
+                      options={relationshipOptions1}
+                      value={conditions.Hyper_Thyroid ? relationshipOptions1.filter(option => conditions.Hyper_Thyroid.includes(option.value)) : []}
+                      onChange={(selectedOptions) => {
+                          handleSelectionChange("Hyper_Thyroid", selectedOptions);
+                      }}
+                      styles={customStyles}
+                      placeholder="Select Options"
+                      disabled={!isEditMode}
+                  />
+              </td>
+              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                  <input
+                      type="text"
+                      value={familyHistory.Hyper_Thyroid?.comment || ''}
+                      onChange={(e) => handleFamilyMedicalConditionChange("Hyper_Thyroid", "comment", e.target.value)}
+                      style={{
+                          width: '100%',
+                          padding: '0.375rem 0.75rem',
+                          border: '1px solid #ced4da',
+                          borderRadius: '0.25rem',
+                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                      }}
+                      placeholder="History"
+                      disabled = {!isEditMode}
+                  />
+              </td>
+          </tr>
+
+
+            {/* Hypo Thyroid Row */}
+           
+            <tr>
+              <td style={{ padding: '0.5rem', borderBottom:'1px solid #dee2e6' }}>Hypo Thyroid</td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.Hypo_Thyroid ? relationshipOptions1.filter(option => conditions.Hypo_Thyroid.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("Hypo_Thyroid", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <input
+                                        type="text"
+                                        value={familyHistory.Hypo_Thyroid?.comment || ''}
+                                        onChange={(e) => handleFamilyMedicalConditionChange("Hypo_Thyroid", "comment", e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.375rem 0.75rem',
+                                            border: '1px solid #ced4da',
+                                            borderRadius: '0.25rem',
+                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                                        }}
+                                        placeholder="History"
+                                        disabled = {!isEditMode}
+                                    />
+                                </td>
+                            </tr>
+
+                                 {/* Asthma Row */}
+                                
+                              <tr>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Asthma</td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.Asthma ? relationshipOptions1.filter(option => conditions.Asthma.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("Asthma", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <input
+                                        type="text"
+                                        value={familyHistory.Asthma?.comment || ''}
+                                        onChange={(e) => handleFamilyMedicalConditionChange("Asthma", "comment", e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.375rem 0.75rem',
+                                            border: '1px solid #ced4da',
+                                            borderRadius: '0.25rem',
+                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                                        }}
+                                        placeholder="History"
+                                        disabled = {!isEditMode}
+                                    />
+                                </td>
+                            </tr>
+                              {/* CVS Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>CVS</td>
+                                  <td style={cellStyle}>
+                                      <Select
+                                          isMulti
+                                          options={relationshipOptions1}
+                                          value={conditions.CVS ? relationshipOptions1.filter(option => conditions.CVS.includes(option.value)) : []}
+                                          onChange={(selectedOptions) => {
+                                              handleSelectionChange("CVS", selectedOptions);
+                                          }}
+                                          styles={customStyles}
+                                          placeholder="Select Options"
+                                          disabled={!isEditMode}
+                                      />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.CVS?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("CVS", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+                              {/* CNS Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>CNS</td>
+                                  <td style={cellStyle}>
+                                      <Select
+                                          isMulti
+                                          options={relationshipOptions1}
+                                          value={conditions.CNS ? relationshipOptions1.filter(option => conditions.CNS.includes(option.value)) : []}
+                                          onChange={(selectedOptions) => {
+                                              handleSelectionChange("CNS", selectedOptions);
+                                          }}
+                                          styles={customStyles}
+                                          placeholder="Select Options"
+                                          disabled={!isEditMode}
+                                      />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.CNS?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("CNS", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+
+                              {/* RS Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>RS</td>
+                                  <td style={cellStyle}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.RS ? relationshipOptions1.filter(option => conditions.RS.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("RS", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.RS?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("RS", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+                              {/* GIT Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>GIT</td>
+                                  <td style={cellStyle}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.GIT ? relationshipOptions1.filter(option => conditions.GIT.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("GIT", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.GIT?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("GIT", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+                              {/* KUB Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>KUB</td>
+                                  <td style={cellStyle}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.KUB ? relationshipOptions1.filter(option => conditions.KUB.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("KUB", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.KUB?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("KUB", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+                              {/* Cancer Row */}
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>Cancer</td>
+                                  <td style={cellStyle}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions1}
+                                        value={conditions.Cancer ? relationshipOptions1.filter(option => conditions.Cancer.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            handleSelectionChange("Cancer", selectedOptions);
+                                        }}
+                                        styles={customStyles}
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.Cancer?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("Cancer", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>Defective Colour Vision</td>
+                                  <td style={cellStyle}>
+                                      <Select
+                                          isMulti
+                                          options={relationshipOptions1}
+                                          value={conditions.Defective_Colour_Vision ? relationshipOptions1.filter(option => conditions.Defective_Colour_Vision.includes(option.value)) : []}
+                                          onChange={(selectedOptions) => {
+                                              handleSelectionChange("Defective_Colour_Vision", selectedOptions);
+                                          }}
+                                          styles={customStyles}
+                                          placeholder="Select Options"
+                                          disabled={!isEditMode}
+                                      />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.Defective_Colour_Vision?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("Defective_Colour_Vision", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+                              <tr style={cellStyle}>
+                                  <td style={cellStyle}>Others</td>
+                                  <td style={cellStyle}>
+                                       <Select
+                                          isMulti
+                                          options={relationshipOptions1}
+                                          value={conditions.Others ? relationshipOptions1.filter(option => conditions.Others.includes(option.value)) : []}
+                                          onChange={(selectedOptions) => {
+                                              handleSelectionChange("Others", selectedOptions);
+                                          }}
+                                          styles={customStyles}
+                                          placeholder="Select Options"
+                                          disabled={!isEditMode}
+                                      />
+                                  </td>
+                                  <td style={cellStyle}>
+                                      <input
+                                          type="text"
+                                          value={familyHistory.Others?.comment || ''}
+                                          onChange={(e) => handleFamilyMedicalConditionChange("Others", "comment", e.target.value)}
+                                          style={inputStyle}
+                                          placeholder="History"
+                                          disabled = {!isEditMode}
+                                      />
+                                  </td>
+                              </tr>
+
+
+                             <tr>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Obstetric</td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions2}
+                                        value={medicalData.Obstetric?.detail ? relationshipOptions2.filter(option => medicalData.Obstetric.detail.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                                            handleMedicalInputChange("Obstetric", "detail", selectedValues);
+                                        }}
+                                        styles={{
+                                            ...customStyles, // Retain existing custom styles
+                                            menu: (provided, state) => ({
+                                                ...provided,
+                                                // This is the key addition for positioning the menu above.
+                                                marginTop: '-1px', // Adjust as needed to fine-tune position
+                                                marginBottom: 'auto', // Prevent overlapping content below.
+                                            }),
+                                            menuList: (provided, state) => ({
+                                            ...provided,
+                                            position: 'relative', // Added position relative for zIndex
+                                            zIndex: 2, //Ensure Menu List appears above all elements
+                                            })
+                                        }}
+                                        menuPlacement="top" //  Force the menu to always appear above
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <input
+                                        type="text"
+                                        value={medicalData.Obstetric?.comment || ''}
+                                        onChange={(e) => handleMedicalInputChange("Obstetric", "comment", e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.375rem 0.75rem',
+                                            border: '1px solid #ced4da',
+                                            borderRadius: '0.25rem',
+                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                                        }}
+                                        placeholder="G3 P1 L1 A1 ; P2 L1 A1"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                            </tr>
+                             <tr>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Gynaec</td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <Select
+                                        isMulti
+                                        options={relationshipOptions2}
+                                        value={medicalData.Gynaec?.detail ? relationshipOptions2.filter(option => medicalData.Gynaec.detail.includes(option.value)) : []}
+                                        onChange={(selectedOptions) => {
+                                            const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
+                                            handleMedicalInputChange("Gynaec", "detail", selectedValues);
+                                        }}
+                                        styles={{
+                                            ...customStyles, // Retain existing custom styles
+                                            menu: (provided, state) => ({
+                                                ...provided,
+                                                // This is the key addition for positioning the menu above.
+                                                marginTop: '-1px', // Adjust as needed to fine-tune position
+                                                marginBottom: 'auto', // Prevent overlapping content below.
+                                            }),
+                                            menuList: (provided, state) => ({
+                                            ...provided,
+                                            position: 'relative', // Added position relative for zIndex
+                                            zIndex: 2, //Ensure Menu List appears above all elements
+                                            })
+                                        }}
+                                        menuPlacement="top" //  Force the menu to always appear above
+                                        placeholder="Select Options"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
+                                    <input
+                                        type="text"
+                                        value={medicalData.Gynaec?.comment || ''}
+                                        onChange={(e) => handleMedicalInputChange("Gynaec", "comment", e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.375rem 0.75rem',
+                                            border: '1px solid #ced4da',
+                                            borderRadius: '0.25rem',
+                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
+                                        }}
+                                        placeholder="G3 P1 L1 A1 ; P2 L1 A1"
+                                        disabled={!isEditMode}
+                                    />
+                                </td>
+                            </tr>
+
+
+                          </tbody>
+                      </table>
+                  </div>
+                  <div className="mb-6">
 {/* Number of Children */}
 <div className="mt-4">
 <label className="block font-semibold mb-2">
@@ -1407,799 +2295,8 @@ Add Child
 </button>
 </div>
 <br />
-<h2 className="text-xl font-semibold mb-4">Surgical History</h2>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-{/* Comments Section */}
-<div>
-<label
-htmlFor="surgicalHistoryComments"
-className="block text-sm font-medium text-gray-700"
->
-Enter Comments:
-</label>
-<textarea
-id="surgicalHistoryComments"
-placeholder="Comments"
-className="mt-1 px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-value={surgicalHistory.comments || ""}
-onChange={(e) => handleSurgicalHistoryCommentChange(e.target.value)}
-style={inputStyle}
-disabled={!isEditMode}
-/>
-</div>
-
-{/* Surgical History Input Section */}
-<div>
-<label
-htmlFor="surgicalHistory"
-className="block text-sm font-medium text-gray-700"
->
-History:
-</label>
-
-{(surgicalHistory.children || []).map((child, index) => (
-<div key={index}>
-<input
-type="text"
-value={child}
-
-style={inputStyle}
-placeholder="Enter details"
-disabled={true}
-/>
-</div>
-))}
-</div>
-</div>
-</div>
-
-{/* Allergy History */}
-
-<div className="mb-6">
-<h2 className="text-xl font-semibold mb-4">Allergy History</h2>
-<div className="grid grid-cols-4 gap-4 items-center">
-{/* Header Row - Added Padding and Alignment */}
-<div className="col-span-1 font-semibold text-gray-700 pl-2">
-Allergy Type
-</div>
-<div className="col-span-1 font-semibold text-gray-700 text-center">
-Response
-</div>
-<div className="col-span-2 font-semibold text-gray-700">Comments</div>
-
-{/* Drug Allergy Row - Refactored for Alignment and Spacing */}
-<div className="flex items-center">
-<label className="ml-2 text-gray-700">Drug Allergy</label>
-</div>
-<div className="flex items-center justify-center space-x-4">
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="drugAllergyResponse" // Grouping radio buttons
-value="yes"
-checked={allergyFields.drug?.yesNo === "yes"}
-onChange={() => handleAllergySelect("drug")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">Yes</span>
-</label>
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="drugAllergyResponse"
-value="no"
-checked={allergyFields.drug?.yesNo === "no"}
-onChange={() => handleAllergySelect("drug")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">No</span>
-</label>
-</div>
-
-<div className="col-span-2">
-<textarea
-placeholder="Comments on Drug Allergy"
-className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-value={allergyComments.drug || ""}
-onChange={(e) => handleAllergyCommentChange("drug", e.target.value)}
-disabled={!isEditMode}
-/>
-</div>
-
-{/* Food Allergy Row - Refactored for Alignment and Spacing */}
-<div className="flex items-center">
-<label className="ml-2 text-gray-700">Food Allergy</label>
-</div>
-<div className="flex items-center justify-center space-x-4">
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="foodAllergyResponse"
-value="yes"
-checked={allergyFields.food?.yesNo === "yes"}
-onChange={() => handleAllergySelect("food")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">Yes</span>
-</label>
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="foodAllergyResponse"
-value="no"
-checked={allergyFields.food?.yesNo === "no"}
-onChange={() => handleAllergySelect("food")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">No</span>
-</label>
-</div>
-
-<div className="col-span-2">
-<textarea
-placeholder="Comments on Food Allergy"
-className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-value={allergyComments.food || ""}
-onChange={(e) => handleAllergyCommentChange("food", e.target.value)}
-disabled={!isEditMode}
-/>
-</div>
-
-{/* Other Allergies Row - Refactored for Alignment and Spacing */}
-<div className="flex items-center">
-<label className="ml-2 text-gray-700">Other Allergies</label>
-</div>
-<div className="flex items-center justify-center space-x-4">
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="otherAllergyResponse"
-value="yes"
-checked={allergyFields.others?.yesNo === "yes"}
-onChange={() => handleAllergySelect("others")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">Yes</span>
-</label>
-<label className="inline-flex items-center">
-<input
-type="radio"
-className="form-radio h-6 w-6 text-blue-500"
-name="otherAllergyResponse"
-value="no"
-checked={allergyFields.others?.yesNo === "no"}
-onChange={() => handleAllergySelect("others")}
-disabled={!isEditMode}
-/>
-<span className="ml-1 text-gray-700 text-lg">No</span>
-</label>
-</div>
-
-<div className="col-span-2">
-<textarea
-placeholder="Comments on Other Allergies"
-className="w-full px-4 py-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-value={allergyComments.others || ""}
-onChange={(e) =>
-handleAllergyCommentChange("others", e.target.value)
-}
-disabled={!isEditMode}
-/>
-</div>
-</div>
-</div>
-
-{/* Family History - Collapsible Section */}
-<div style={cardStyle}>
-<div style={headerStyle} onClick={toggleFamilyVisibility}>
-<h2 style={titleStyle}>Family History</h2>
-<span>{showFamilyHistory ? "[-]" : "[+]"}</span>
-</div>
-
-{showFamilyHistory && (
-<div>
-{[
-{ label: "Father", relative: "father" },
-{ label: "Paternal Grand Father", relative: "paternalGrandFather" },
-{ label: "Paternal Grand Mother", relative: "paternalGrandMother" },
-{ label: "Mother", relative: "mother" },
-{ label: "Maternal Grand Father", relative: "maternalGrandFather" },
-{ label: "Maternal Grand Mother", relative: "maternalGrandMother" },
-].map(({ label, relative }) => (
-<div key={label} className="mb-6">
-<label className="block mb-2 font-medium text-gray-700">
-{label}
-</label>
-<div className="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0">
-{/* Status Select */}
-<select
-  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-  style={selectStyle}
-  value={familyHistory[relative]?.status || ""}
-  onChange={(e) =>
-    handleFamilyHistoryChange(relative, "status", e.target.value)
-  }
-  disabled={!isEditMode}
->
-  <option value="">Select Status</option>
-  <option value="Alive">Alive</option>
-  <option value="Expired">Expired</option>
-</select>
-
-<input
-  type="text"
-  placeholder="Reason (if expired)"
-  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-  style={inputStyle}
-  value={familyHistory[relative]?.reason || ""}
-  onChange={(e) =>
-    handleFamilyHistoryChange(relative, "reason", e.target.value)
-  }
-  disabled={
-    familyHistory[relative]?.status !== "Expired" || !isEditMode
-  }
-/>
-<input
-  type="text"
-  placeholder="Remarks (Health Condition)"
-  className="flex-grow px-4 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-  style={inputStyle}
-  value={familyHistory[relative]?.remarks || ""}
-  onChange={(e) =>
-    handleFamilyHistoryChange(relative, "remarks", e.target.value)
-  }
-  disabled={!isEditMode}
-/>
-</div>
 
 </div>
-
-))}
-<div style={tableContainerStyle}>
-    <table style={tableStyle}>
-        <thead>
-            <tr style={tableHeaderStyle}>
-                <th style={cellStyle}>Condition</th>
-                <th style={cellStyle}>Releation Ship</th>
-                <th style={cellStyle}>Comments</th>
-            </tr>
-        </thead>
-        <tbody>
-            {/* HTN Row */}
-            <tr>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>HTN</td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <Select
-                      isMulti
-                      options={relationshipOptions1}
-                      value={conditions.HTN ? relationshipOptions1.filter(option => conditions.HTN.includes(option.value)) : []}
-                      onChange={(selectedOptions) => {
-                          handleSelectionChange("HTN", selectedOptions);
-                      }}
-                      styles={customStyles}
-                      placeholder="Select Options"
-                      disabled={!isEditMode}
-                  />
-              </td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-              <textarea
-                  value={familyHistory.HTN?.comment || ''}
-                  onChange={(e) => handleFamilyMedicalConditionChange("HTN", "comment", e.target.value)}
-                  style={{
-                  width: '100%',
-                  padding: '0.375rem 0.75rem',
-                  border: '1px solid #ced4da',
-                  borderRadius: '0.25rem',
-                  boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                  resize: 'vertical', // Important for allowing vertical resizing
-                  minHeight: '3rem', // Or whatever minimum height you prefer
-                  }}
-                  placeholder="Optional comments"
-                  disabled={!isEditMode}
-              />
-              </td>
-          </tr>
-          {/* DM Row */}
-            <tr>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>DM</td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <Select
-                      isMulti
-                      options={relationshipOptions1}
-                      value={conditions.DM ? relationshipOptions1.filter(option => conditions.DM.includes(option.value)) : []}
-                      onChange={(selectedOptions) => {
-                          handleSelectionChange("DM", selectedOptions);
-                      }}
-                      styles={customStyles}
-                      placeholder="Select Options"
-                      disabled={!isEditMode}
-                  />
-              </td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <input
-                      type="text"
-                      value={familyHistory.DM?.comment || ''}
-                      onChange={(e) => handleFamilyMedicalConditionChange("DM", "comment", e.target.value)}
-                      style={{
-                          width: '100%',
-                          padding: '0.375rem 0.75rem',
-                          border: '1px solid #ced4da',
-                          borderRadius: '0.25rem',
-                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                      }}
-                      placeholder="Optional comments"
-                      disabled={!isEditMode}
-                  />
-              </td>
-          </tr>
-                {/* Epileptic Row */}
-            <tr>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Epileptic</td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <Select
-                      isMulti
-                      options={relationshipOptions1}
-                      value={conditions.Epileptic ? relationshipOptions1.filter(option => conditions.Epileptic.includes(option.value)) : []}
-                      onChange={(selectedOptions) => {
-                          handleSelectionChange("Epileptic", selectedOptions);
-                      }}
-                      styles={customStyles}
-                      placeholder="Select Options"
-                      disabled={!isEditMode}
-                  />
-              </td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <input
-                      type="text"
-                      value={familyHistory.Epileptic?.comment || ''}
-                      onChange={(e) => handleFamilyMedicalConditionChange("Epileptic", "comment", e.target.value)}
-                      style={{
-                          width: '100%',
-                          padding: '0.375rem 0.75rem',
-                          border: '1px solid #ced4da',
-                          borderRadius: '0.25rem',
-                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                      }}
-                      placeholder="Optional comments"
-                      disabled={!isEditMode}
-                  />
-              </td>
-          </tr>
-
-            
-            {/* Hyper Thyroid Row */}
-
-          
-
-            <tr>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Hyper Thyroid</td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <Select
-                      isMulti
-                      options={relationshipOptions1}
-                      value={conditions.Hyper_Thyroid ? relationshipOptions1.filter(option => conditions.Hyper_Thyroid.includes(option.value)) : []}
-                      onChange={(selectedOptions) => {
-                          handleSelectionChange("Hyper_Thyroid", selectedOptions);
-                      }}
-                      styles={customStyles}
-                      placeholder="Select Options"
-                      disabled={!isEditMode}
-                  />
-              </td>
-              <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                  <input
-                      type="text"
-                      value={familyHistory.Hyper_Thyroid?.comment || ''}
-                      onChange={(e) => handleFamilyMedicalConditionChange("Hyper_Thyroid", "comment", e.target.value)}
-                      style={{
-                          width: '100%',
-                          padding: '0.375rem 0.75rem',
-                          border: '1px solid #ced4da',
-                          borderRadius: '0.25rem',
-                          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                      }}
-                      placeholder="Optional comments"
-                      disabled={!isEditMode}
-                  />
-              </td>
-          </tr>
-
-
-            {/* Hypo Thyroid Row */}
-           
-            <tr>
-              <td style={{ padding: '0.5rem', borderBottom:'1px solid #dee2e6' }}>Hypo Thyroid</td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.Hypo_Thyroid ? relationshipOptions1.filter(option => conditions.Hypo_Thyroid.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("Hypo_Thyroid", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <input
-                                        type="text"
-                                        value={familyHistory.Hypo_Thyroid?.comment || ''}
-                                        onChange={(e) => handleFamilyMedicalConditionChange("Hypo_Thyroid", "comment", e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.375rem 0.75rem',
-                                            border: '1px solid #ced4da',
-                                            borderRadius: '0.25rem',
-                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                                        }}
-                                        placeholder="Optional comments"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                            </tr>
-
-                                 {/* Asthma Row */}
-                                
-                              <tr>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Asthma</td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.Asthma ? relationshipOptions1.filter(option => conditions.Asthma.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("Asthma", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <input
-                                        type="text"
-                                        value={familyHistory.Asthma?.comment || ''}
-                                        onChange={(e) => handleFamilyMedicalConditionChange("Asthma", "comment", e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.375rem 0.75rem',
-                                            border: '1px solid #ced4da',
-                                            borderRadius: '0.25rem',
-                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                                        }}
-                                        placeholder="Optional comments"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                            </tr>
-                              {/* CVS Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>CVS</td>
-                                  <td style={cellStyle}>
-                                      <Select
-                                          isMulti
-                                          options={relationshipOptions1}
-                                          value={conditions.CVS ? relationshipOptions1.filter(option => conditions.CVS.includes(option.value)) : []}
-                                          onChange={(selectedOptions) => {
-                                              handleSelectionChange("CVS", selectedOptions);
-                                          }}
-                                          styles={customStyles}
-                                          placeholder="Select Options"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.CVS?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("CVS", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-                              {/* CNS Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>CNS</td>
-                                  <td style={cellStyle}>
-                                      <Select
-                                          isMulti
-                                          options={relationshipOptions1}
-                                          value={conditions.CNS ? relationshipOptions1.filter(option => conditions.CNS.includes(option.value)) : []}
-                                          onChange={(selectedOptions) => {
-                                              handleSelectionChange("CNS", selectedOptions);
-                                          }}
-                                          styles={customStyles}
-                                          placeholder="Select Options"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.CNS?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("CNS", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-
-                              {/* RS Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>RS</td>
-                                  <td style={cellStyle}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.RS ? relationshipOptions1.filter(option => conditions.RS.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("RS", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.RS?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("RS", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-                              {/* GIT Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>GIT</td>
-                                  <td style={cellStyle}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.GIT ? relationshipOptions1.filter(option => conditions.GIT.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("GIT", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.GIT?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("GIT", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-                              {/* KUB Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>KUB</td>
-                                  <td style={cellStyle}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.KUB ? relationshipOptions1.filter(option => conditions.KUB.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("KUB", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.KUB?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("KUB", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-                              {/* Cancer Row */}
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>Cancer</td>
-                                  <td style={cellStyle}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions1}
-                                        value={conditions.Cancer ? relationshipOptions1.filter(option => conditions.Cancer.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            handleSelectionChange("Cancer", selectedOptions);
-                                        }}
-                                        styles={customStyles}
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.Cancer?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("Cancer", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>Defective Colour Vision</td>
-                                  <td style={cellStyle}>
-                                      <Select
-                                          isMulti
-                                          options={relationshipOptions1}
-                                          value={conditions.Defective_Colour_Vision ? relationshipOptions1.filter(option => conditions.Defective_Colour_Vision.includes(option.value)) : []}
-                                          onChange={(selectedOptions) => {
-                                              handleSelectionChange("Defective_Colour_Vision", selectedOptions);
-                                          }}
-                                          styles={customStyles}
-                                          placeholder="Select Options"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.Defective_Colour_Vision?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("Defective_Colour_Vision", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-                              <tr style={cellStyle}>
-                                  <td style={cellStyle}>Others</td>
-                                  <td style={cellStyle}>
-                                       <Select
-                                          isMulti
-                                          options={relationshipOptions1}
-                                          value={conditions.Others ? relationshipOptions1.filter(option => conditions.Others.includes(option.value)) : []}
-                                          onChange={(selectedOptions) => {
-                                              handleSelectionChange("Others", selectedOptions);
-                                          }}
-                                          styles={customStyles}
-                                          placeholder="Select Options"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                                  <td style={cellStyle}>
-                                      <input
-                                          type="text"
-                                          value={familyHistory.Others?.comment || ''}
-                                          onChange={(e) => handleFamilyMedicalConditionChange("Others", "comment", e.target.value)}
-                                          style={inputStyle}
-                                          placeholder="Optional comments"
-                                          disabled={!isEditMode}
-                                      />
-                                  </td>
-                              </tr>
-
-
-                             <tr>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Obstetric</td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions2}
-                                        value={medicalData.Obstetric?.detail ? relationshipOptions2.filter(option => medicalData.Obstetric.detail.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
-                                            handleMedicalInputChange("Obstetric", "detail", selectedValues);
-                                        }}
-                                        styles={{
-                                            ...customStyles, // Retain existing custom styles
-                                            menu: (provided, state) => ({
-                                                ...provided,
-                                                // This is the key addition for positioning the menu above.
-                                                marginTop: '-1px', // Adjust as needed to fine-tune position
-                                                marginBottom: 'auto', // Prevent overlapping content below.
-                                            }),
-                                            menuList: (provided, state) => ({
-                                            ...provided,
-                                            position: 'relative', // Added position relative for zIndex
-                                            zIndex: 2, //Ensure Menu List appears above all elements
-                                            })
-                                        }}
-                                        menuPlacement="top" //  Force the menu to always appear above
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <input
-                                        type="text"
-                                        value={medicalData.Obstetric?.comment || ''}
-                                        onChange={(e) => handleMedicalInputChange("Obstetric", "comment", e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.375rem 0.75rem',
-                                            border: '1px solid #ced4da',
-                                            borderRadius: '0.25rem',
-                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                                        }}
-                                        placeholder="G3 P1 L1 A1 ; P2 L1 A1"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                            </tr>
-                             <tr>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>Gynaec</td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <Select
-                                        isMulti
-                                        options={relationshipOptions2}
-                                        value={medicalData.Gynaec?.detail ? relationshipOptions2.filter(option => medicalData.Gynaec.detail.includes(option.value)) : []}
-                                        onChange={(selectedOptions) => {
-                                            const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
-                                            handleMedicalInputChange("Gynaec", "detail", selectedValues);
-                                        }}
-                                        styles={{
-                                            ...customStyles, // Retain existing custom styles
-                                            menu: (provided, state) => ({
-                                                ...provided,
-                                                // This is the key addition for positioning the menu above.
-                                                marginTop: '-1px', // Adjust as needed to fine-tune position
-                                                marginBottom: 'auto', // Prevent overlapping content below.
-                                            }),
-                                            menuList: (provided, state) => ({
-                                            ...provided,
-                                            position: 'relative', // Added position relative for zIndex
-                                            zIndex: 2, //Ensure Menu List appears above all elements
-                                            })
-                                        }}
-                                        menuPlacement="top" //  Force the menu to always appear above
-                                        placeholder="Select Options"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                                <td style={{ padding: '0.5rem', borderBottom: '1px solid #dee2e6' }}>
-                                    <input
-                                        type="text"
-                                        value={medicalData.Gynaec?.comment || ''}
-                                        onChange={(e) => handleMedicalInputChange("Gynaec", "comment", e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '0.375rem 0.75rem',
-                                            border: '1px solid #ced4da',
-                                            borderRadius: '0.25rem',
-                                            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.075)',
-                                        }}
-                                        placeholder="G3 P1 L1 A1 ; P2 L1 A1"
-                                        disabled={!isEditMode}
-                                    />
-                                </td>
-                            </tr>
-
-
-                          </tbody>
-                      </table>
-                  </div>
           </div>
         )}
       </div>

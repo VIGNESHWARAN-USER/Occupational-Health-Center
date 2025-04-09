@@ -210,7 +210,7 @@ const MedicalHistory = ({ data }) => {
             </div>
 
             <div style={cardStyle}>
-              <h2 style={titleStyle}>Surgical History</h2>
+              
               <div>Number of Children: ({childrenData.length})</div>
               {childrenData.length > 0 && (
                   <div className="overflow-x-auto mt-4">
@@ -233,6 +233,7 @@ const MedicalHistory = ({ data }) => {
                       </table>
                   </div>
               )}
+              <h2 style={titleStyle} className='mt-8'>Surgical History</h2>
               <div className="mt-4">
                 <div>Comments: <span className="font-medium">{surgicalHistory?.comments || 'N/A'}</span></div>
                 <div>History: <span className="font-medium">{(surgicalHistory.children || []).join(', ') || 'N/A'}</span></div>

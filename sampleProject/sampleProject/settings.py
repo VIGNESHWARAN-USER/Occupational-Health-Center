@@ -41,6 +41,13 @@ CORS_ALLOW_METHODS = [
     "OPTIONS",
 ]
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = '2k22cse163@kiot.ac.in'          # Your Gmail
+EMAIL_HOST_PASSWORD = 'pdxm ybxs aang ybjq'        # App Password, not your actual Gmail password
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Application definition
 INSTALLED_APPS = [
     'corsheaders',
@@ -71,7 +78,7 @@ ROOT_URLCONF = 'sampleProject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

@@ -540,7 +540,7 @@ const App = () => {
                         className={`flex items-center bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'fitness' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
                         onClick={() => toggleAnalysis('fitness')}
                     >
-                        <FontAwesomeIcon icon={faHeartbeat} className="mr-2" />
+                        <GrRun className='text-xl me-2'/>
                         Fitness Analysis
                     </button>
                 </div>

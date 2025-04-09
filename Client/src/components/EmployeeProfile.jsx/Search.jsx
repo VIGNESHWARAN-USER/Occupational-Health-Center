@@ -19,7 +19,7 @@ const Search = () => {
     const fetchDetails = async () => {
       setLoading(true);
       try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         setEmployees(response.data.data);
         setFilteredEmployees(response.data.data);
         console.log(response.data.data);
@@ -82,7 +82,9 @@ const Search = () => {
             <table className="min-w-full bg-white rounded-lg shadow-lg">
               <thead className="bg-blue-500 text-white">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Employee ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">Profile</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">Worker ID</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium">Role</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Name</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Age</th>
                   <th className="px-6 py-3 text-left text-sm font-medium">Gender</th>
@@ -92,7 +94,7 @@ const Search = () => {
               <tbody className="divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="text-center py-4">
+                    <td colSpan="8" className="text-center py-4">
                       <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
                     </td>
                   </tr>
@@ -100,10 +102,14 @@ const Search = () => {
                   filteredEmployees.length > 0 ? (
                     filteredEmployees.map((emp) => (
                       <tr key={emp.id} className="hover:bg-gray-100 transition duration-200">
+                        <td className="px-6 py-4">
+                        {(emp.profilepic_url)?(<img src={emp.profilepic_url} alt="" className='w-12 h-12 rounded-full text-gray-500'/>) :(<FaUserCircle className="w-12 h-12 text-gray-500" />)}
+                        </td>
                         <td className="px-6 py-4">{emp.emp_no}</td>
+                        <td className="px-6 py-4">{emp.role}</td>
                         <td className="px-6 py-4 flex items-center space-x-2">
-                          <FaUserCircle className="w-5 h-5 text-gray-500" />
-                          <span>{emp.name}</span>
+                          
+                          {emp.name || '-'}
                         </td>
                         <td className="px-6 py-4">
                           {new Date().getFullYear() - new Date(emp.dob).getFullYear()}
@@ -120,7 +126,7 @@ const Search = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-4 text-gray-500">
+                      <td colSpan="7" className="text-center py-4 text-gray-500">
                         No employee found
                       </td>
                     </tr>

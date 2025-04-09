@@ -9,16 +9,17 @@ import MedicalHistory from './NewVisitProf/MedicalHistory'
 import Investigation from './NewVisitProf/Investigation'
 import Fitness from './NewVisitProf/Fitness'
 import Vaccination from './NewVisitProf/Vaccination'
+import ConsultationDisplay from './NewVisitProf/Consultation';
 
 const Summary = () => {
-    const {emp_no, date} = useLocation().state || "";
+    const {emp_no, date, visit} = useLocation().state || "";
     const [visitData, setVisitData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
     useEffect(()=>{
         const fetchUserData = async () => {
             try {
-                const response = await axios.get(`https://occupational-health-center-1.onrender.com/visitData/${emp_no}/${date}`);
+                const response = await axios.get(`http://localhost:8000/visitData/${emp_no}/${date}`);
                 console.log(response)
                 console.log(response.data.data)
                 const data = await response.data.data;
@@ -46,12 +47,32 @@ const Summary = () => {
                     transition={{ duration: 0.5 }}
                     
                 >
-                    <BasicDetails  data = {visitData.employee}/>
-                    <Vitals data = {visitData.vitals}/>
-                    <MedicalHistory data = {visitData}/>
-                    <Investigation data = {visitData}/>
-                    <Fitness data = {visitData.fitnessassessment}/>
-                    <Vaccination data = {visitData.vaccination}/>
+                    {
+                        (loading) ? (
+                            <div className="flex justify-center p-6 items-center">
+                                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                            </div>
+                        ):
+                        ((visit === "Curative") ?(
+                        <>
+                        <BasicDetails  data = {visitData.employee}/>
+                        <Vitals data = {visitData.vitals}/>
+                        <MedicalHistory data = {visitData}/>
+                        <Investigation data = {visitData}/>
+                        <Vaccination data = {visitData.vaccination}/>
+                        <ConsultationDisplay data = {visitData}/>
+                        </>
+                        ):(
+                        <> 
+                        <BasicDetails  data = {visitData.employee}/>
+                        <Vitals data = {visitData.vitals}/>
+                        <MedicalHistory data = {visitData}/>
+                        <Investigation data = {visitData}/>
+                        <Vaccination data = {visitData.vaccination}/>
+                        <Fitness data = {visitData.fitnessassessment}/>
+                        </>))
+                    }
+                    
                 </motion.div>
         </div>
         </div>

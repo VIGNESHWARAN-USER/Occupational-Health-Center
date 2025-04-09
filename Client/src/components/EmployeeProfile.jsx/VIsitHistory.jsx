@@ -18,9 +18,10 @@ const VisitHistory = ({ data }) => {
         const fetchVisitData = async () => {
             try {
                 const response = await axios.post(
-                    `https://occupational-health-center-1.onrender.com/visitData/${emp_no}`
+                    `http://localhost:8000/visitData/${emp_no}`
                 );
                 const data = await response.data.data;
+                console.log(data);
                 setVisitData(data);
                 setFilteredData(data);
                 setLoading(false);
@@ -125,6 +126,16 @@ const VisitHistory = ({ data }) => {
                             <option>Fitness After Medical Leave</option>
                             <option>Mock Drill</option>
                             <option>BP Sugar Check (Normal Value)</option>
+                            <option>Retirement Examination</option>
+                            <option>Illness</option>
+                            <option>Over Counter Illness</option>
+                            <option>Injury</option>
+                            <option>Over Counter Injury</option>
+                            <option>Follow-up Visits</option>
+                            <option>BP Sugar Chart</option>
+                            <option>Injury Outside the Premises</option>
+                            <option>Over Counter Injury Outside the Premises</option>
+                            <option>Alcohol Abuse</option>
                         </select>
                     </div>
 
@@ -148,6 +159,7 @@ const VisitHistory = ({ data }) => {
                             <th className="px-6 py-3 text-left text-sm font-medium">
                                 Visited Date
                             </th>
+                            <th className="px-6 py-3 text-left text-sm font-medium">Visit Outcome</th> 
                             <th className="px-6 py-3 text-left text-sm font-medium">Details</th>
                         </tr>
                     </thead>
@@ -167,11 +179,12 @@ const VisitHistory = ({ data }) => {
                                     <td className="px-6 py-4">{visit.mrdNo || "Null"}</td>
                                     <td className="px-6 py-4">{visit.register}</td>
                                     <td className="px-6 py-4">{visit.date}</td>
+                                    <td className="px-6 py-4">{visit.visitOutcome}</td>
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => {
                                                 navigate("../summary", {
-                                                    state: { emp_no: emp_no, date: visit.date },
+                                                    state: { emp_no: emp_no, date: visit.date, visit: visitData.type_of_visit },
                                                 });
                                             }}
                                             className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition duration-300"

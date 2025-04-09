@@ -1,4 +1,4 @@
-//UploadAppointmentPage
+// Upload
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
@@ -55,7 +55,7 @@ const UploadAppointmentPage = () => {
     setIsProcessing(true); // Start loading indicator
     setUploadStatus(null); // Reset status
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/uploadAppointment/", {
+      const response = await fetch("http://localhost:8000/uploadAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appointments: excelData }),

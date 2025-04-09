@@ -7,6 +7,7 @@ import Vitals from "./Vitals";
 import MedicalHistory from "./MedicalHistory";
 import Sidebar from "../../Sidebar";
 import VIsitHistory from "../VIsitHistory";
+import Consultation from "./Consultation";
 
 const NewVisit = ({data}) => {
   const [activeTab, setActiveTab] = useState("DocBasicDetails");
@@ -17,11 +18,12 @@ const NewVisit = ({data}) => {
     { id: "DocInvestigations", label: "Investigations" },
     { id: "DocVaccination", label: "Vaccination" },
     { id: "DocFitness", label: "Fitness" },
+    { id: "Consultation", label: "Consultation" },
     { id: "Visithistory", label: "Visit History" },
   ];
 
   return (
-    <div className="h-screen w-full flex bg-[#8fcadd]">
+    <div className="h-screen w-full flex ">
       
       <div className="w-full mt-4 overflow-auto"> {/* Adjusted width from w-4/5 to w-11/12 */}
         
@@ -43,12 +45,13 @@ const NewVisit = ({data}) => {
               ))}
             </nav>
             {activeTab === "DocBasicDetails" && <BasicDetails data={data}/>}
-            {activeTab === "DocFitness" && <Fitness data={data.fitnessassessment}/>}
+            {activeTab === "DocFitness" && <Fitness data={data}/>}
             {activeTab === "DocInvestigations" && <Investigation data={data}/>}
             {activeTab === "DocVaccination" && <Vaccination data={data.vaccination}/>}
             {activeTab === "DocVitals" && <Vitals data={data.vitals}/>}
             {activeTab === "DocMedicalHistory" && <MedicalHistory data={data}/>}
             {activeTab === "Visithistory" && <VIsitHistory data={data}/>}
+            {activeTab === "Consultation" && <Consultation data={data}/>}
           </div>
         </div>
       </div>
