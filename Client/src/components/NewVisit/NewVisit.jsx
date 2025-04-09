@@ -188,7 +188,7 @@ const NewVisit = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/addEntries", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
         formDataDashboard,
         emp_no: formData.emp_no,
         extraData,
@@ -221,7 +221,7 @@ const NewVisit = () => {
     try {
       const updatedformData = { ...formData, role: type }
       console.log(updatedformData)
-      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -392,7 +392,7 @@ const NewVisit = () => {
       try {
         setLoading(true);
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("http://localhost:8000/userData");
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
         console.log("API Response Data:", response.data.data);
         setEmployees(response.data.data);
         console.log(response.data.data);
@@ -1132,11 +1132,11 @@ const NewVisit = () => {
         const blob = dataURLtoBlob(profileImage);
         const formDataImg = new FormData();
         formDataImg.append('image', blob, `profile_${formData.emp_no}.jpg`);
-        const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage, formData });
+        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.emp_no}`, { profileImage: profileImage, formData });
         if (updateResponse.status === 200) {
           alert("Profile image updated successfully!");
           // Refresh employee list or update local state
-          const fetchResponse = await axios.post("http://localhost:8000/userData");
+          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
           setEmployees(fetchResponse.data.data);
           setFilteredEmployees(fetchResponse.data.data);
           console.log(fetchResponse.data.data);

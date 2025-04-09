@@ -73,7 +73,7 @@ const Vaccination = ({ data }) => {
     }
 
     try {
-      await axios.post("http://localhost:8000/vaccination/", {
+      await axios.post("https://occupational-health-center-1.onrender.com/vaccination/", {
         emp_no: emp_no,
         vaccination: vaccinationData, // Send the array directly
       });

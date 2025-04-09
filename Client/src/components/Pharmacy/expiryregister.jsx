@@ -10,7 +10,7 @@ const ExpiryRegister = () => {
   // Fetch expiry register data
   const fetchExpiryRegister = () => {
     axios
-      .get("http://localhost:8000/expiry_register/")
+      .get("https://occupational-health-center-1.onrender.com/expiry_register/")
       .then((response) => {
         setExpiryRegister(response.data.expiry_register);
         setLoading(false);

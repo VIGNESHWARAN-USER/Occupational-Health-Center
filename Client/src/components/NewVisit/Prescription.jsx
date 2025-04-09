@@ -314,7 +314,7 @@ const Prescription = ({ data, onPrescriptionUpdate }) => {
       }
       try {
         const response = await axios.get(
-          `http://localhost:8000/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
+          `https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
         );
         setBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
         setShowBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
@@ -353,7 +353,7 @@ const Prescription = ({ data, onPrescriptionUpdate }) => {
 
       try {
         const response = await axios.get(
-          `http://localhost:8000/get-dose-volume/?brand_name=${encodeURIComponent(brandName)}&chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
+          `https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${encodeURIComponent(brandName)}&chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
         );
         const suggestions = response.data.suggestions;
         setDoseSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: suggestions } }));
@@ -1116,7 +1116,7 @@ const Prescription = ({ data, onPrescriptionUpdate }) => {
 
     // Use POST for both create and update, let backend handle based on presence of 'id' or 'emp_no' uniqueness
     const method = 'POST';
-    const url = 'http://localhost:8000/prescriptions/'; // Unified endpoint
+    const url = 'https://occupational-health-center-1.onrender.com/prescriptions/'; // Unified endpoint
 
     console.log(`Sending ${method} request to ${url}`);
     console.log("Submitting Prescription Data:", JSON.stringify(prescriptionData, null, 2));
