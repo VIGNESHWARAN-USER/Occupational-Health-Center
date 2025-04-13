@@ -124,7 +124,7 @@ const Consultation = ({ data, type }) => {
 
     try {
       // Adjust endpoint if it's for update vs add
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationPayload);
+      const response = await axios.post("http://localhost:8000/consultations/add/", consultationPayload);
 
       if (response.status === 200 || response.status === 201) {
         alert("Consultation data submitted successfully!");
@@ -138,8 +138,8 @@ const Consultation = ({ data, type }) => {
             employeeId: emp_no,
              // Adjust organization logic as needed
             organization: (patientData?.type === 'Employee' || patientData?.type === 'Visitor') ? (patientData?.employer || patientData?.organization || 'N/A') : null,
-            aadharNo: patientData?.aadhar || null,
-            contractorName: patientData?.type === 'Contractor' ? (patientData?.employer || 'N/A') : null,
+            aadharNo: patientData?.aadhar || "Unknown",
+            contractorName: patientData?.type === 'Contractor' ? (patientData?.employer || 'N/A') : "Unknown",
             purpose: "Follow Up",
             appointmentDate: followUpDate,
             time: "10:00", // Consider making this configurable or dynamic
@@ -148,7 +148,7 @@ const Consultation = ({ data, type }) => {
           };
 
           try {
-            const apptResponse = await axios.post("https://occupational-health-center-1.onrender.com/bookAppointment/", appointmentPayload);
+            const apptResponse = await axios.post("http://localhost:8000/bookAppointment/", appointmentPayload);
             if (apptResponse.status === 200 || apptResponse.status === 201) {
               alert(`Follow-up appointment booked successfully! ${apptResponse.data.message || ''}`);
             } else {
@@ -354,10 +354,7 @@ const Consultation = ({ data, type }) => {
           </div>
         )}
 
-        {/* Significant Notes Component */}
-        <div className="border-t pt-6">
-             <SignificantNotes data={data} type={type} />
-        </div>
+        
 
         {/* Submit Button */}
         <div className="mt-8 flex justify-end">
@@ -370,6 +367,10 @@ const Consultation = ({ data, type }) => {
           </button>
         </div>
       </form>
+      {/* Significant Notes Component */}
+      <div className="border-t pt-6">
+             <SignificantNotes data={data} type={type} />
+        </div>
     </div>
   );
 };

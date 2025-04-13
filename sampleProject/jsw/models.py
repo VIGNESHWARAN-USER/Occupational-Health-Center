@@ -94,6 +94,7 @@ class employee_details(BaseModel):
     transfer_details = models.TextField(blank=True, null=True)
     other_reason_details = models.TextField(blank=True, null=True)
     mrdNo = models.CharField(max_length=255, blank=True)
+    guardian = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.emp_no if self.emp_no else f"Employee {self.id}" # Handle missing emp_no
@@ -107,6 +108,7 @@ class employee_details(BaseModel):
 # --- Dashboard Model ---
 class Dashboard(BaseModel):
     # ... (keep all existing fields from Dashboard as they were) ...
+    
     emp_no = models.TextField(max_length=200)
     type = models.TextField(max_length=255)
     type_of_visit = models.TextField(max_length=255)
@@ -1181,50 +1183,63 @@ class MedicalHistory(BaseModel):
 
 
 
+# models.py (or wherever your Consultation model is defined)
 
-class Consultation(BaseModel): # Or models.Model if not using BaseModel
-    emp_no = models.CharField(max_length=20, blank=True, null=True, db_index=True) # Added db_index
+from django.db import models
+from django.utils import timezone # Import timezone if using default=timezone.now
+
+# Assuming 'BaseModel' provides 'id' and 'entry_date'
+# If not, you need to add them explicitly:
+# from django.db import models
+# class BaseModel(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     entry_date = models.DateField(default=timezone.now) # Or auto_now_add=True if appropriate
+#     class Meta:
+#         abstract = True
+
+# Make sure your actual BaseModel definition is compatible or adjust below
+class Consultation(models.Model): # Or inherit from your actual BaseModel if it exists
+    # --- Identifiers ---
+    emp_no = models.CharField(max_length=50, blank=True, null=True, db_index=True) # Increased length slightly, added index
+    entry_date = models.DateField(default=timezone.now) # Assuming entry_date is needed here or comes from BaseModel
+
+    # --- Clinical Notes ---
     complaints = models.TextField(blank=True, null=True)
     examination = models.TextField(blank=True, null=True)           # General Examination
+    systematic = models.TextField(blank=True, null=True)            # NEW: Systemic Examination
     lexamination = models.TextField(blank=True, null=True)          # Local Examination
-    diagnosis = models.TextField(blank=True, null=True)             # Procedure Notes
-    obsnotes = models.TextField(blank=True, null=True)              # Observation Notes
-    investigation_details = models.TextField(blank=True, null=True) # Investigation
-    advice_details = models.TextField(blank=True, null=True)        # Advice (NEWLY ADDED)
+    diagnosis = models.TextField(blank=True, null=True)             # Diagnosis Notes (clarified meaning)
+    procedure_notes = models.TextField(blank=True, null=True)       # NEW: Procedure Notes
+    obsnotes = models.TextField(blank=True, null=True)              # Observation / Ward Notes
 
-    case_type = models.CharField(max_length=100, blank=True, null=True)
-    # Consider adding choices matching frontend if desired:
-    # CASE_TYPE_CHOICES = [
-    #     ('occupationalillness', 'Occupational Illness'),
-    #     ('occupationalinjury', 'Occupational Injury'),
-    #     ('occ-disease', 'Occ Disease'),
-    #     ('non-occupational', 'Non-Occupational'),
-    #     ('domestic', 'Domestic'),
-    #     ('commutation-injury', 'Commutation Injury'),
-    #     ('other', 'Other'),
-    # ]
-    # case_type = models.CharField(max_length=100, choices=CASE_TYPE_CHOICES, blank=True, null=True)
-    illness_or_injury = models.CharField(max_length=255, blank=True, null=True) # (NEWLY ADDED - Frontend needs input)
-    other_case_details = models.TextField(blank=True, null=True)    # Details if case_type is 'other'
-
-    referral = models.CharField(max_length=10, blank=True, null=True) # 'yes' or 'no'
-    hospital_name = models.CharField(max_length=255, blank=True, null=True)
-    speaciality = models.CharField(max_length=255, blank=True, null=True) # Corrected from model definition, frontend uses 'speaciality' key
-    doctor_name = models.CharField(max_length=255, blank=True, null=True) # Doctor Name at referred hospital/clinic
-
+    # --- Investigation, Advice, Follow-up ---
+    investigation_details = models.TextField(blank=True, null=True) # Investigation suggestions
+    advice = models.TextField(blank=True, null=True)                # Advice details (matches frontend key 'advice')
     follow_up_date = models.DateField(blank=True, null=True)        # Review Date
 
-    submitted_by_doctor = models.CharField(max_length=50, blank=True, null=True) # Name/ID of consulting doctor
-    submitted_by_nurse = models.CharField(max_length=50, blank=True, null=True)  # Name/ID of assisting/submitting nurse
+    # --- Case Details ---
+    case_type = models.CharField(max_length=100, blank=True, null=True)
+    illness_or_injury = models.CharField(max_length=255, blank=True, null=True) # (Matches frontend)
+    other_case_details = models.TextField(blank=True, null=True)    # Details if case_type is 'other'
+    notifiable_remarks = models.TextField(blank=True, null=True)    # Specific notifiable disease remarks
 
-    notifiable_remarks = models.TextField(blank=True, null=True)    # Any specific notifiable disease remarks
+    # --- Referral Details ---
+    referral = models.CharField(max_length=10, blank=True, null=True) # 'yes', 'no', or potentially null/empty string
+    hospital_name = models.CharField(max_length=255, blank=True, null=True)
+    speciality = models.CharField(max_length=255, blank=True, null=True) # CORRECTED SPELLING from 'speaciality'
+    doctor_name = models.CharField(max_length=255, blank=True, null=True) # Referred Doctor Name
 
-    # If entry_date is not in BaseModel, add it:
-    # entry_date = models.DateField(default=timezone.now)
+    # --- Submission Metadata ---
+    submitted_by_doctor = models.CharField(max_length=100, blank=True, null=True) # Name/ID of consulting doctor
+    submitted_by_nurse = models.CharField(max_length=100, blank=True, null=True)  # Name/ID of assisting/submitting nurse (if used)
+
+    class Meta:
+        # Optional: Ensure uniqueness for emp_no and entry_date if only one record per day per employee is allowed
+        unique_together = ('emp_no', 'entry_date')
+        ordering = ['-entry_date', '-id'] # Example ordering
 
     def __str__(self):
-        # Ensure entry_date is accessible, assuming it's from BaseModel or added here
-        entry_date_str = self.entry_date.strftime('%Y-%m-%d') if hasattr(self, 'entry_date') and self.entry_date else 'N/A'
+        entry_date_str = self.entry_date.strftime('%Y-%m-%d') if self.entry_date else 'N/A'
         return f"Consultation {self.id} - Emp: {self.emp_no or 'N/A'} on {entry_date_str}"
 
 # --- Pharmacy Stock Model ---
@@ -1483,3 +1498,16 @@ class SignificantNotes(BaseModel):
         verbose_name = "Significant Note"
         verbose_name_plural = "Significant Notes"
         ordering = ['-entry_date', 'emp_no']
+
+
+class PharmacyStockHistory(BaseModel):
+    
+    medicine_form = models.CharField(max_length=20)
+    brand_name = models.CharField(max_length=255)
+    chemical_name = models.CharField(max_length=255)
+    dose_volume = models.CharField(max_length=50)
+    total_quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+
+    def _str_(self):
+        return f"{self.brand_name} ({self.chemical_name}) - Archived"

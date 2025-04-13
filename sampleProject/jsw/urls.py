@@ -92,4 +92,5 @@ urlpatterns = [
     path('members/update/<int:member_id>/', views.update_member, name='update_member'), 
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
     path('update_employee_status/', views.update_employee_status, name='update_employee_status'),
+    path("archive_stock/", views.archive_zero_quantity_stock, name="archive_stock"),
 ]

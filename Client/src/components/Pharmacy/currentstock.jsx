@@ -10,7 +10,7 @@ const CurrentStock = () => {
   // Fetch stock data from backend
   useEffect(() => {
     axios
-      .get("https://occupational-health-center-1.onrender.com/current_stock/")
+      .get("http://localhost:8000/current_stock/")
       .then((response) => {
         setStockData(response.data.stock);
         setLoading(false);

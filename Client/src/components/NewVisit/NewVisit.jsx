@@ -31,7 +31,7 @@ const NewVisit = () => {
   const [formDataDashboard, setFormDataDashboard] = useState({
     typeofVisit: "Preventive",
     category: "Employee",
-    register: "Pre employement",
+    register: "Pre employment",
     purpose: "Medical Examination"
   });
   const [profileImage, setProfileImage] = useState(null); // State for profile image (data URL)
@@ -72,7 +72,8 @@ const NewVisit = () => {
         "Fitness After Long Leave": "Fitness After Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Retirement Examination": "Retirement Examination"
+        "Retirement Examination": "Retirement Examination",
+        "Other": "Other"
       },
       Curative: {
         "Illness": "Outpatient",
@@ -83,7 +84,8 @@ const NewVisit = () => {
         "BP Sugar ( Abnormal Value)": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
-        "Alcohol Abuse": "Alcohol Abuse"
+        "Alcohol Abuse": "Alcohol Abuse",
+        "Other": "Other"
       }
     },
     Contractor: {
@@ -101,7 +103,8 @@ const NewVisit = () => {
         "Fitness After Medical Leave": "Fitness After Medical Leave",
         "Fitness Long Medical Leave": "Fitness Long Medical Leave",
         "Mock Drill": "Mock Drill",
-        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Other": "Other"
       },
       Curative: {
         "Illness": "Outpatient",
@@ -109,16 +112,19 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Followup Visits": "Outpatient",
-        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)"
+        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)",
+        "Other": "Other"
       },
     },
     Visitor: {
       Preventive: {
-        "Visitors Outsider Fitness": "Visitors Outsider Fitness"
+        "Visitor Fitness": "Visitor Fitness",
+        "Other": "Other"
       },
       Curative: {
-        "Visitors Outsider Patient": "Visitors Outsider Patient",
-        "Followup Visits": "Followup Visits"
+        "Visitor Patient": "Visitor Patient",
+        "Followup Visits": "Followup Visits",
+        "Other": "Other"
       }
     }
   };
@@ -338,6 +344,7 @@ const NewVisit = () => {
               routinesugartests: {},
               serology: {},
               sex: "",
+              guardian: "",
               permanent_state: "",
               residential_state: "",
               thyroidfunctiontest: {},
@@ -530,6 +537,17 @@ const NewVisit = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 ">Father / Spouse Name</label>
+                <input
+                  name="guardian"
+                  value={formData.guardian || ''} // Ensure default value to avoid uncontrolled component warning
+                  onChange={handleChange}
+                  type="text"
+                  placeholder="Enter guardian name"
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 ">Date of Birth</label>
                 <input
                   name="dob"
@@ -645,6 +663,9 @@ const NewVisit = () => {
                     <option value="">Select</option>
                     <option>Single</option>
                     <option>Married</option>
+                    <option>Divorced</option>
+                    <option>Widowed</option>
+                    <option>Separated</option>
                     <option>Other</option>
                   </select>
                 </div>

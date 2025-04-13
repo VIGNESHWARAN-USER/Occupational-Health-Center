@@ -24,6 +24,36 @@ const AddStock = () => {
 
   const medicineOptions = ["Tablet", "Syrup", "Injection", "Creams", "Drops", "Fluids", "Other"];
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Assuming GET is correct for fetching data:
+        const resp1 = await axios.get("http://localhost:8000/archive_stock/");
+        const resp2 = await axios.get("http://localhost:8000/current_expiry/");
+        console.log("Archived Stock Response:", resp1.data);
+        console.log("Current Expiry Response:", resp2.data);
+  
+      } catch (error) {
+        console.error("Error fetching stock/expiry data:", error); // More accurate message
+        if (error.response) {
+          // Server responded with a status code outside the 2xx range
+          console.error("Error Status:", error.response.status);
+          console.error("Error Data:", error.response.data);
+          console.error("Error Headers:", error.response.headers);
+        } else if (error.request) {
+          // Request was made but no response received
+          console.error("No response received:", error.request);
+          alert("Could not connect to the backend server. Is it running?");
+        } else {
+          // Something else went wrong setting up the request
+          console.error("Error Message:", error.message);
+        }
+      }
+    };
+    fetchData();
+  }, []); // Empty array ensures this runs only once on mount
+  
+
   // Debounced functions
   const fetchBrandSuggestions = debounce(async (chemicalName, medicineForm) => {
     if (chemicalName.length < 3 || !medicineForm) {
@@ -33,7 +63,7 @@ const AddStock = () => {
     }
 
     try {
-      const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const response = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setBrandSuggestions(response.data.suggestions);
       setShowBrandSuggestions(true);
     } catch (error) {
@@ -49,7 +79,7 @@ const AddStock = () => {
     }
 
     try {
-      const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
+      const response = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
       setChemicalSuggestions(response.data.suggestions);
       setShowChemicalSuggestions(true);
     } catch (error) {
@@ -61,7 +91,7 @@ const AddStock = () => {
   if (!brandName || !chemicalName || !medicineForm) return;
 
   try {
-    const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+    const response = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
     setDoseSuggestions(response.data.suggestions);
     setShowDoseSuggestions(response.data.suggestions.length > 1);
     if (!doseManuallyEntered && response.data.suggestions.length === 1) {
@@ -148,7 +178,7 @@ const AddStock = () => {
     }
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/add-stock/", formData);
+      const response = await axios.post("http://localhost:8000/add-stock/", formData);
       setMessage(response.data.message);
 
       setFormData({

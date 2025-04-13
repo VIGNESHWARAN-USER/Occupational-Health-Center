@@ -18,7 +18,7 @@ const VisitHistory = ({ data }) => {
         const fetchVisitData = async () => {
             try {
                 const response = await axios.post(
-                    `https://occupational-health-center-1.onrender.com/visitData/${emp_no}`
+                    `http://localhost:8000/visitData/${emp_no}`
                 );
                 const data = await response.data.data;
                 console.log(data);
@@ -114,8 +114,8 @@ const VisitHistory = ({ data }) => {
                             className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                         >
                             <option value="">Select Reason</option>
-                            <option>Pre employement</option>
-                            <option>Pre employement (Food Handler)</option>
+                            <option>Pre employment</option>
+                            <option>Pre employment (Food Handler)</option>
                             <option>Pre Placement</option>
                             <option>Annual / Periodical</option>
                             <option>Periodical (Food Handler)</option>

@@ -31,7 +31,7 @@ const NewVisit = () => {
   const [formDataDashboard, setFormDataDashboard] = useState({
     typeofVisit: "Preventive",
     category: "Employee",
-    register: "Pre employement",
+    register: "Pre employment",
     purpose: "Medical Examination"
   });
 
@@ -140,7 +140,7 @@ const NewVisit = () => {
       }
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
+      const response = await axios.post("http://localhost:8000/addEntries", {
         formDataDashboard,
         emp_no: formData.emp_no,
         extraData // Send additional data
@@ -169,7 +169,7 @@ const NewVisit = () => {
     e.preventDefault();
     try {
       const updatedformData = {...formData, role: type}
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -245,7 +245,7 @@ const NewVisit = () => {
       try {
         setLoading(false);
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         setEmployees(response.data.data);                        
         setFilteredEmployees(response.data.data);
         console.log(response.data.data);

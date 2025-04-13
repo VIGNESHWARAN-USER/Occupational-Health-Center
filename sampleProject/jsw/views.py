@@ -8,7 +8,7 @@ import traceback
 from datetime import datetime
 from django.utils.timezone import make_aware
 import json
-from .models import DiscardedMedicine, InstrumentCalibration, PharmacyMedicine, Prescription, WardConsumables, user  # Replace with your actual model
+from .models import DiscardedMedicine, InstrumentCalibration, PharmacyMedicine, PharmacyStockHistory, Prescription, WardConsumables, user  # Replace with your actual model
 # from .models import Appointment  # Replace with your actual model
 from .models import mockdrills  # Replace with your actual model
 # from .models import eventsandcamps  # Replace with your actual model
@@ -914,6 +914,7 @@ def addEntries(request):
             'name': employee_data.get('name', ''),
             'dob': parse_date(employee_data.get('dob')),
             'sex': employee_data.get('sex', ''),
+            'guardian': employee_data.get('guardian', ''),
             'aadhar': employee_data.get('aadhar', ''),
             'bloodgrp': employee_data.get('bloodgrp', ''),
             'identification_marks1': employee_data.get('identification_marks1', ''),
@@ -1067,6 +1068,7 @@ def add_basic_details(request):
             'name': data.get('name'),
             'dob': parse_date(data.get('dob')),
             'sex': data.get('sex'),
+            'guardian': data.get('guardian'),
             'aadhar': data.get('aadhar'),
             'bloodgrp': data.get('bloodgrp'),
             'identification_marks1': data.get('identification_marks1'),
@@ -1733,19 +1735,19 @@ def BookAppointment(request):
             data = json.loads(request.body)
 
             # Extract data, providing defaults for optional fields
-            role = data.get("role", None)
-            name = data.get("name", None)
-            employee_id = data.get("employeeId", None)
-            organization_name = data.get("organization", None)
-            aadhar_no = data.get("aadharNo", None)
-            contractor_name = data.get("contractorName", None)
-            purpose = data.get("purpose", None)
-            appointment_date_str = data.get("appointmentDate", None)
-            time = data.get("time", None)
-            booked_by = data.get("bookedBy", None)
-            submitted_by_nurse = data.get("submitted_by_nurse", None)
-            submitted_Dr = data.get("submitted_Dr", None)
-            consulted_Dr = data.get("consultedDoctor", None)
+            role = data.get("role", "Unknown")
+            name = data.get("name", "Unknown")
+            employee_id = data.get("employeeId", "Unknown")
+            organization_name = data.get("organization", "Unknown")
+            aadhar_no = data.get("aadharNo", "Unknown")
+            contractor_name = data.get("contractorName", "Unknown")
+            purpose = data.get("purpose", "Unknown")
+            appointment_date_str = data.get("appointmentDate", "Unknown")
+            time = data.get("time", "Unknown")
+            booked_by = data.get("bookedBy", "Unknown")
+            submitted_by_nurse = data.get("submitted_by_nurse", "Unknown")
+            submitted_Dr = data.get("submitted_Dr", "Unknown")
+            consulted_Dr = data.get("consultedDoctor", "Unknown")
 
             if not appointment_date_str:
                 logger.warning("BookAppointment failed: Appointment date is required.")
@@ -2990,46 +2992,68 @@ def parse_date(date_str):
         logger.warning(f"Could not parse date: {date_str}")
         return None
 
+# views.py (or wherever your add_consultation view is defined)
+
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date # Good for parsing dates safely
+from . import models # Assuming models.py is in the same app
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def add_consultation(request):
-    """Adds or updates consultation data for a specific employee and date."""
+    """Adds or updates consultation data for a specific employee based on the entry date."""
     if request.method != 'POST':
         logger.warning("add_consultation failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405) # Use 405 for Method Not Allowed
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
-        logger.debug(f"Received data for add_consultation: {data}") # Log received data
+        logger.debug(f"Received data for add_consultation: {data}")
 
         emp_no = data.get('emp_no')
-        # Use current server date as the entry date for the consultation record
+        # Use current server date as the key for finding/creating the record for today
         entry_date = datetime.now().date()
 
         if not emp_no:
             logger.warning("add_consultation failed: Employee number (emp_no) is required")
             return JsonResponse({'status': 'error', 'message': 'Employee number (emp_no) is required'}, status=400)
 
-        # Prepare defaults dictionary, getting data safely using .get()
+        # Prepare defaults dictionary, matching frontend payload keys
         consultation_defaults = {
+            # Clinical Notes
             'complaints': data.get('complaints'),
-            'examination': data.get('examination'),
-            'lexamination': data.get('lexamination'),
-            'diagnosis': data.get('diagnosis'),
-            'obsnotes': data.get('obsnotes'),
+            'examination': data.get('examination'),           # General Exam
+            'systematic': data.get('systematic'),             # NEW: Systemic Exam
+            'lexamination': data.get('lexamination'),         # Local Exam
+            'diagnosis': data.get('diagnosis'),               # Diagnosis Notes
+            'procedure_notes': data.get('procedure_notes'),   # NEW: Procedure Notes
+            'obsnotes': data.get('obsnotes'),                 # Observation Notes
+
+            # Investigation, Advice, Follow-up
             'investigation_details': data.get('investigation_details'),
-            'advice_details': data.get('advice_details'), # Get the new field (frontend needs to send this!)
+            'advice': data.get('advice'),                     # Matches frontend key 'advice'
+            'follow_up_date': parse_date(data.get('follow_up_date')) if data.get('follow_up_date') else None, # Use parse_date
+
+            # Case Details
             'case_type': data.get('case_type'),
-            'illness_or_injury': data.get('illness_or_injury'), # Get the new field
+            'illness_or_injury': data.get('illness_or_injury'), # Matches frontend
             'other_case_details': data.get('other_case_details'),
-            'referral': data.get('referral'),
-            'hospital_name': data.get('hospital_name'),
-            'speaciality': data.get('speaciality'), # Match frontend key 'speaciality'
-            'doctor_name': data.get('doctor_name'),
-            'follow_up_date': parse_date(data.get('follow_up_date')), # Use parse_date
-            'submitted_by_doctor': data.get('submitted_by_doctor'),
-            'submitted_by_nurse': data.get('submitted_by_nurse'),
             'notifiable_remarks': data.get('notifiable_remarks'),
-            # emp_no and entry_date are used as identifiers, not defaults
+
+            # Referral Details
+            'referral': data.get('referral'), # Should be 'yes', 'no', or null/empty
+            'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else '', # Store only if referred
+            'speciality': data.get('speciality') if data.get('referral') == 'yes' else '',      # CORRECTED SPELLING, store only if referred
+            'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else '',    # Store only if referred
+
+            # Submission Metadata
+            'submitted_by_doctor': data.get('submitted_by_doctor'),
+            'submitted_by_nurse': data.get('submitted_by_nurse'), # Include if frontend might send it
         }
 
         # Filter out None values to avoid overwriting existing data with None
@@ -3037,9 +3061,11 @@ def add_consultation(request):
         # Keep empty strings '' if sent, as they might indicate clearing a field.
         filtered_defaults = {k: v for k, v in consultation_defaults.items() if v is not None}
 
+        # Use update_or_create to handle both adding new records and updating existing ones
+        # based on the composite key (emp_no, entry_date).
         consultation, created = models.Consultation.objects.update_or_create(
             emp_no=emp_no,
-            entry_date=entry_date, # Use entry_date from BaseModel or added field
+            entry_date=entry_date, # Use today's date as part of the key
             defaults=filtered_defaults
         )
 
@@ -3049,15 +3075,16 @@ def add_consultation(request):
             'status': 'success',
             'message': message,
             'consultation_id': consultation.id,
-            'created': created # Optionally indicate if it was created or updated
-            }, status=200) # Use 200 for successful update/create
+            'created': created
+            }, status=200 if not created else 201) # 201 for Created, 200 for OK (Updated)
 
     except json.JSONDecodeError as e:
         logger.error(f"add_consultation failed: Invalid JSON data. Error: {str(e)}")
         return JsonResponse({'status': 'error', 'message': f'Invalid JSON format: {str(e)}'}, status=400)
     except Exception as e:
-        logger.exception(f"add_consultation failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
-        # Avoid leaking detailed errors in production
+        # Log the full exception traceback for internal debugging
+        logger.exception(f"add_consultation failed for emp_no {data.get('emp_no', 'Unknown')}: An unexpected error occurred.")
+        # Return a generic error message to the client
         return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
 
     def get_mockdrills(request):
@@ -4515,3 +4542,42 @@ def delete_member(request, member_id):
             return JsonResponse({'success': False, 'message': 'No matching member found.'})
     else:
         return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
+    
+
+@csrf_exempt
+def archive_zero_quantity_stock(request):
+    """
+    Move zero-quantity PharmacyStock entries to PharmacyStockHistory safely.
+    Prevents duplicates by locking rows.
+    """
+    if request.method == "POST":
+        try:
+            with transaction.atomic():
+                # Lock zero-quantity records to prevent race condition
+                zero_stocks = (
+                    PharmacyStock.objects
+                    .select_for_update(skip_locked=True)  # 🔐 Locks rows and skips ones already locked
+                    .filter(quantity=0)
+                )
+
+                if not zero_stocks.exists():
+                    return JsonResponse({"message": "No zero quantity stock found.", "success": True})
+
+                for item in zero_stocks:
+                    PharmacyStockHistory.objects.create(
+                        entry_date=item.entry_date,
+                        medicine_form=item.medicine_form,
+                        brand_name=item.brand_name,
+                        chemical_name=item.chemical_name,
+                        dose_volume=item.dose_volume,
+                        total_quantity=item.total_quantity,
+                        expiry_date=item.expiry_date,
+                    )
+                    item.delete()  # Only delete after archiving
+
+            return JsonResponse({"message": "Zero quantity stock archived successfully.", "success": True})
+
+        except Exception as e:
+            return JsonResponse({"error": str(e), "success": False}, status=500)
+
+    return JsonResponse({"error": "Only POST method is allowed.", "success": False}, status=405)

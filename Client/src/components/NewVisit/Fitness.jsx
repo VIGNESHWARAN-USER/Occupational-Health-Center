@@ -4,12 +4,12 @@ import jsPDF from 'jspdf'; // Ensure jspdf is installed: npm install jspdf
 import SignificantNotes from "./SignificantNotes"; // Assuming this component exists
 
 // URLs (Keep as is)
-const FITNESS_ASSESSMENT_URL = "https://occupational-health-center-1.onrender.com/fitness-tests/";
-const FORM17_URL = "https://occupational-health-center-1.onrender.com/form17/";
-const FORM38_URL = "https://occupational-health-center-1.onrender.com/form38/";
-const FORM39_URL = "https://occupational-health-center-1.onrender.com/form39/";
-const FORM40_URL = "https://occupational-health-center-1.onrender.com/form40/";
-const FORM27_URL = "https://occupational-health-center-1.onrender.com/form27/";
+const FITNESS_ASSESSMENT_URL = "http://localhost:8000/fitness-tests/";
+const FORM17_URL = "http://localhost:8000/form17/";
+const FORM38_URL = "http://localhost:8000/form38/";
+const FORM39_URL = "http://localhost:8000/form39/";
+const FORM40_URL = "http://localhost:8000/form40/";
+const FORM27_URL = "http://localhost:8000/form27/";
 
 // --- Standard Input/Select Class ---
 const inputClass = "form-input block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";

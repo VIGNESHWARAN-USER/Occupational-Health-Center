@@ -568,7 +568,7 @@ const MedicalHistory1 = ({ data }) => {
 
       const updatedFormdata = { ...formData, emp_no: emp_no };
       console.log(updatedFormdata)
-      const response = await fetch("https://occupational-health-center-1.onrender.com/medical-history/", {
+      const response = await fetch("http://localhost:8000/medical-history/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -97,7 +97,7 @@ function AddMember() {
         setExternalFormData(initialExternalState);
 
         // --- Adjust API endpoint as needed ---
-        const searchUrl = `https://occupational-health-center-1.onrender.com/find_member_by_email/?email=${encodeURIComponent(searchEmail)}`;
+        const searchUrl = `http://localhost:8000/find_member_by_email/?email=${encodeURIComponent(searchEmail)}`;
 
         try {
             const response = await axios.get(searchUrl);
@@ -201,14 +201,14 @@ function AddMember() {
         // Determine API endpoint and method
         if (memberId) {
             // UPDATE mode
-            url = `https://occupational-health-center-1.onrender.com/members/update/${memberId}/`; // Adjust endpoint as needed
+            url = `http://localhost:8000/members/update/${memberId}/`; // Adjust endpoint as needed
             method = 'put';
             // Optionally remove fields not intended for update (like email, emp_no)
             // delete dataToSend.email;
             // delete dataToSend.employee_number;
         } else {
             // ADD mode
-            url = "https://occupational-health-center-1.onrender.com/members/add/"; // Adjust endpoint as needed
+            url = "http://localhost:8000/members/add/"; // Adjust endpoint as needed
             method = 'post';
         }
 
