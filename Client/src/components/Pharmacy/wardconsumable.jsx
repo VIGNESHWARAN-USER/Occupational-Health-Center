@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { debounce } from "lodash";
-import Sidebar from "../Sidebar"; // Assuming Sidebar path is correct
+import Sidebar from "../Sidebar";
+import * as XLSX from 'xlsx';
 
 const WardConsumables = () => {
-  const [showForm, setShowForm] = useState(false); // Controls table/form visibility
+  const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     medicine_form: "",
     chemical_name: "",
@@ -12,7 +13,7 @@ const WardConsumables = () => {
     dose_volume: "",
     quantity: "",
     expiry_date: "",
-    consumed_date: new Date().toISOString().split("T")[0], // Default to today
+    consumed_date: new Date().toISOString().split("T")[0],
   });
 
   const [message, setMessage] = useState("");
@@ -23,130 +24,120 @@ const WardConsumables = () => {
   const [showChemicalSuggestions, setShowChemicalSuggestions] = useState(false);
   const [showDoseSuggestions, setShowDoseSuggestions] = useState(false);
   const [doseManuallyEntered, setDoseManuallyEntered] = useState(false);
-  const [wardConsumables, setWardConsumables] = useState([]); // Changed state name
+  const [wardConsumables, setWardConsumables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const medicineOptions = ["Tablet", "Syrup", "Injection", "Creams", "Drops", "Fluids", "Other"];
 
-  useEffect(() => {
-    fetchWardConsumables(); // Changed function call
-  }, []);
+  const getTodayDate = () => new Date().toISOString().split("T")[0];
 
-  // Function to get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    return new Date().toISOString().split('T')[0];
-  };
-
-  const fetchWardConsumables = async () => { // Renamed function
+  const fetchWardConsumables = async () => {
     try {
-      // Updated API endpoint for getting consumables
-      const response = await axios.get("http://localhost:8000/get_ward_consumable/");
-      setWardConsumables(response.data.ward_consumables || response.data); // Adjust based on actual API response structure
+      let url = "http://localhost:8000/get_ward_consumable/";
+      const params = [];
+      if (fromDate) params.push(`from_date=${fromDate}`);
+      if (toDate) params.push(`to_date=${toDate}`);
+      if (params.length) url += `?${params.join("&")}`;
+
+      const response = await axios.get(url);
+      setWardConsumables(response.data.ward_consumables || response.data);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching ward consumables:", error);
-      setMessage("Error fetching ward consumables list."); // User-friendly message
+      setMessage("Error fetching ward consumables list.");
       setLoading(false);
     }
   };
 
-  // --- Suggestion fetching functions remain largely the same ---
-  // Debounced functions (assuming suggestion endpoints are reusable)
+  const handleClearFilters = () => {
+    setFromDate("");
+    setToDate("");
+    fetchWardConsumables();
+  };
+
+  const handleDownloadExcel = () => {
+    const formattedData = wardConsumables.map(item => ({
+      ...item,
+      consumed_date: new Date(item.consumed_date).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+    }));
+  
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "WardConsumables");
+    XLSX.writeFile(workbook, "WardConsumables.xlsx");
+  };
+  
+
+  useEffect(() => {
+    fetchWardConsumables();
+  }, []);
+
   const fetchBrandSuggestions = debounce(async (chemicalName, medicineForm) => {
-    if (chemicalName.length < 3 || !medicineForm) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
+    if (chemicalName.length < 3 || !medicineForm) return;
     try {
-      const response = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
-      setSuggestions(response.data.suggestions);
+      const res = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      setSuggestions(res.data.suggestions);
       setShowSuggestions(true);
-    } catch (error) {
-      console.error("Error fetching brand name suggestions:", error);
+    } catch (err) {
+      console.error("Error fetching brand name suggestions:", err);
     }
   }, 500);
 
   const fetchChemicalSuggestions = debounce(async (brandName, medicineForm) => {
-    if (brandName.length < 3 || !medicineForm) {
-      setChemicalSuggestions([]);
-      setShowChemicalSuggestions(false);
-      return;
-    }
+    if (brandName.length < 3 || !medicineForm) return;
     try {
-      const response = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
-      setChemicalSuggestions(response.data.suggestions);
+      const res = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
+      setChemicalSuggestions(res.data.suggestions);
       setShowChemicalSuggestions(true);
-    } catch (error) {
-      console.error("Error fetching chemical name suggestions:", error);
+    } catch (err) {
+      console.error("Error fetching chemical name suggestions:", err);
     }
   }, 500);
 
   const fetchDoseSuggestions = debounce(async (brandName, chemicalName, medicineForm) => {
     if (!brandName || !chemicalName || !medicineForm) return;
     try {
-      const response = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
-      setDoseSuggestions(response.data.suggestions);
-      setShowDoseSuggestions(response.data.suggestions.length > 1);
-      if (!doseManuallyEntered && response.data.suggestions.length === 1) {
-        setFormData((prevState) => ({
-          ...prevState,
-          dose_volume: response.data.suggestions[0],
-        }));
+      const res = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      setDoseSuggestions(res.data.suggestions);
+      setShowDoseSuggestions(res.data.suggestions.length > 1);
+      if (!doseManuallyEntered && res.data.suggestions.length === 1) {
+        setFormData((prev) => ({ ...prev, dose_volume: res.data.suggestions[0] }));
       }
-    } catch (error) {
-      console.error("Error fetching dose suggestions:", error);
+    } catch (err) {
+      console.error("Error fetching dose suggestions:", err);
     }
   }, 500);
-  // --- End of suggestion fetching functions ---
 
-
-  // --- Suggestion click handlers remain the same ---
   const handleDoseSuggestionClick = (suggestion) => {
     setDoseManuallyEntered(false);
-    setFormData((prevState) => ({
-      ...prevState,
-      dose_volume: suggestion,
-    }));
+    setFormData((prev) => ({ ...prev, dose_volume: suggestion }));
     setShowDoseSuggestions(false);
   };
 
   const handleChemicalSuggestionClick = (suggestion) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      chemical_name: suggestion,
-    }));
+    setFormData((prev) => ({ ...prev, chemical_name: suggestion }));
     setShowChemicalSuggestions(false);
     fetchBrandSuggestions(suggestion, formData.medicine_form);
     fetchDoseSuggestions(formData.brand_name, suggestion, formData.medicine_form);
   };
 
   const handleBrandSuggestionClick = (suggestion) => {
-    setFormData((prevState) => ({
-      ...prevState,
-      brand_name: suggestion,
-    }));
+    setFormData((prev) => ({ ...prev, brand_name: suggestion }));
     setShowSuggestions(false);
-    if (!formData.chemical_name) {
-      fetchChemicalSuggestions(suggestion, formData.medicine_form);
-    }
+    if (!formData.chemical_name) fetchChemicalSuggestions(suggestion, formData.medicine_form);
     fetchDoseSuggestions(suggestion, formData.chemical_name, formData.medicine_form);
   };
-  // --- End of suggestion click handlers ---
-
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Prevent changing consumed_date if needed, though readOnly attribute is better
-    // if (name === 'consumed_date') return;
-
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
-
-    // Trigger suggestion fetches based on changes
     if (name === "chemical_name") {
       fetchBrandSuggestions(value, formData.medicine_form);
     }
@@ -157,19 +148,17 @@ const WardConsumables = () => {
     }
 
     if (name === "medicine_form") {
-      // Reset suggestions if form changes
       setSuggestions([]);
       setChemicalSuggestions([]);
       setDoseSuggestions([]);
-      // Optionally trigger fetches if chemical/brand already exist
-       if (formData.chemical_name) fetchBrandSuggestions(formData.chemical_name, value);
-       if (formData.brand_name) fetchChemicalSuggestions(formData.brand_name, value);
-       if (formData.brand_name && formData.chemical_name) fetchDoseSuggestions(formData.brand_name, formData.chemical_name, value);
+      if (formData.chemical_name) fetchBrandSuggestions(formData.chemical_name, value);
+      if (formData.brand_name) fetchChemicalSuggestions(formData.brand_name, value);
+      if (formData.brand_name && formData.chemical_name) fetchDoseSuggestions(formData.brand_name, formData.chemical_name, value);
     }
 
     if (name === "dose_volume") {
-      setDoseManuallyEntered(true); // User is typing dose manually
-      setShowDoseSuggestions(false); // Hide suggestions when typing dose
+      setDoseManuallyEntered(true);
+      setShowDoseSuggestions(false);
     }
   };
 
@@ -177,23 +166,18 @@ const WardConsumables = () => {
     e.preventDefault();
     setMessage("");
 
-    // Updated validation check (removed reason, added consumed_date - though it has a default)
-    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.expiry_date || !formData.consumed_date) {
-      setMessage("All fields except expiry date (optional) are required."); // Adjust message as needed
+    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.consumed_date) {
+      setMessage("All required fields must be filled.");
       return;
     }
 
-     // Ensure consumed_date is today before submitting, although it's defaulted and readOnly
-     const submissionData = {
-        ...formData,
-        consumed_date: getTodayDate() // Force today's date on submission
-     };
-
     try {
-       // Updated API endpoint for adding consumable
-      await axios.post("http://localhost:8000/add_ward_consumable/", submissionData);
+      await axios.post("http://localhost:8000/add_ward_consumable/", {
+        ...formData,
+        consumed_date: getTodayDate()
+      });
+
       setMessage("Ward consumable added successfully!");
-      // Reset form, keeping consumed_date as today
       setFormData({
         medicine_form: "",
         chemical_name: "",
@@ -201,88 +185,126 @@ const WardConsumables = () => {
         dose_volume: "",
         quantity: "",
         expiry_date: "",
-        consumed_date: getTodayDate(), // Reset to today
-       });
-      fetchWardConsumables(); // Refresh the list
-      setShowForm(false); // Return to table view
-    } catch (error) {
-      console.error("Error adding ward consumable:", error);
-      // Provide more specific error feedback if possible (e.g., from error.response.data)
-      const errorMsg = error.response?.data?.detail || "Error adding ward consumable. Please try again.";
+        consumed_date: getTodayDate(),
+      });
+      fetchWardConsumables();
+      setShowForm(false);
+    } catch (err) {
+      console.error("Error adding consumable:", err);
+      const errorMsg = err.response?.data?.detail || "Error adding ward consumable.";
       setMessage(errorMsg);
     }
   };
 
-  // Handler to show form and reset consumed_date to today
   const handleShowForm = () => {
-    setFormData(prevState => ({
-        ...prevState, // Keep other potential form data if needed
-        medicine_form: "", // Clear specific fields on showing form
-        chemical_name: "",
-        brand_name: "",
-        dose_volume: "",
-        quantity: "",
-        expiry_date: "",
-        consumed_date: getTodayDate() // Ensure consumed_date is today when form is opened
-    }));
-    setMessage(""); // Clear previous messages
+    setFormData({
+      medicine_form: "",
+      chemical_name: "",
+      brand_name: "",
+      dose_volume: "",
+      quantity: "",
+      expiry_date: "",
+      consumed_date: getTodayDate(),
+    });
+    setMessage("");
     setShowForm(true);
   };
-
 
   return (
     <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
         {!showForm ? (
-          <div>
-            <button
-              className="mb-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow focus:outline-none focus:shadow-outline"
-              onClick={handleShowForm} // Use handler to set today's date
-            >
-              Add Ward Consumable {/* Changed button text */}
-            </button>
-            <div className="bg-white shadow-md rounded-lg p-4 overflow-x-auto"> {/* Added overflow-x-auto */}
-              <h2 className="text-2xl font-bold mb-4 text-gray-700 text-center">Ward Consumables</h2> {/* Changed title */}
+          <>
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+              {/* Left - Add Button */}
+              <button
+                onClick={handleShowForm}
+                className="bg-blue-600 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg"
+              >
+                Add Consumed Item
+              </button>
+
+              {/* Center - Date Filters */}
+              <div className="flex gap-2 items-center mx-auto">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1"
+                />
+                <span className="text-gray-700">to</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="border border-gray-300 rounded px-2 py-1"
+                />
+                <button
+                  onClick={fetchWardConsumables}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                >
+                  Filter
+                </button>
+                <button
+                  onClick={handleClearFilters}
+                  className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
+                >
+                  Clear
+                </button>
+              </div>
+
+              {/* Right - Download Button */}
+              <button
+                onClick={handleDownloadExcel}
+                className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
+              >
+                Download Excel
+              </button>
+            </div>
+
+            <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+              <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">Ward Consumables</h2>
               {loading ? (
                 <p className="text-center text-gray-500">Loading...</p>
               ) : wardConsumables.length === 0 ? (
-                 <p className="text-center text-gray-500">No ward consumables recorded yet.</p>
+                <p className="text-center text-gray-500">No consumables found.</p>
               ) : (
-                <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
                 <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-blue-600 text-white">
-                      {/* Updated table headers */}
+                  <thead className="bg-blue-600 text-white">
+                    <tr>
                       <th className="p-3 text-left">Form</th>
                       <th className="p-3 text-left">Chemical</th>
                       <th className="p-3 text-left">Brand</th>
                       <th className="p-3 text-left">Dose</th>
-                      <th className="p-3 text-left">Quantity</th>
-                      <th className="p-3 text-left">Expiry Date</th>
-                      <th className="p-3 text-left">Consumed Date</th>
+                      <th className="p-3 text-left">Qty</th>
+                      <th className="p-3 text-left">Expiry</th>
+                      <th className="p-3 text-left">Consumed</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-700 text-sm font-light">
-                    {/* Map over wardConsumables */}
+                  <tbody>
                     {wardConsumables.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-100">
-                        {/* Updated table data cells */}
-                        <td className="p-3">{item.medicine_form}</td>
-                        <td className="p-3">{item.chemical_name}</td>
-                        <td className="p-3">{item.brand_name}</td>
-                        <td className="p-3">{item.dose_volume}</td>
-                        <td className="p-3 font-bold">{item.quantity}</td>
-                        <td className="p-3">{item.expiry_date || 'N/A'}</td> {/* Handle potentially null expiry */}
-                        <td className="p-3 text-red-600 font-semibold">{item.consumed_date}</td>
+                      <tr key={index} className="border-b hover:bg-gray-100">
+                        <td className="p-2">{item.medicine_form}</td>
+                        <td className="p-2">{item.chemical_name}</td>
+                        <td className="p-2">{item.brand_name}</td>
+                        <td className="p-2">{item.dose_volume}</td>
+                        <td className="p-2">{item.quantity}</td>
+                        <td className="p-2">{item.expiry_date || "N/A"}</td>
+                        <td className="p-2 text-red-600 font-semibold">
+                          {new Date(item.consumed_date).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                </div>
               )}
             </div>
-          </div>
+          </>
         ) : (
           <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-xl"> {/* Enhanced styling */}
             <h2 className="text-2xl font-bold mb-6 text-gray-700">Add Ward Consumable</h2> {/* Changed title */}
@@ -446,6 +468,7 @@ const WardConsumables = () => {
               Back to Consumables List
             </button>
           </div>
+
         )}
       </div>
     </div>

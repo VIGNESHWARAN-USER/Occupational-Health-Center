@@ -1,380 +1,289 @@
+# -*- coding: utf-8 -*-
 import bcrypt
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 import json
-from . import models
 import logging
 import traceback
-from datetime import datetime
-from django.utils.timezone import make_aware
-import json
-from .models import DiscardedMedicine, InstrumentCalibration, PharmacyMedicine, PharmacyStockHistory, Prescription, WardConsumables, user  # Replace with your actual model
-# from .models import Appointment  # Replace with your actual model
-from .models import mockdrills  # Replace with your actual model
-# from .models import eventsandcamps  # Replace with your actual model
-from datetime import datetime, timedelta
-from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.db.models import Max
-import logging
-from django.db.models import Count
-from datetime import datetime, date
-from .models import Dashboard  
-from .models import FitnessAssessment 
-from django.shortcuts import get_object_or_404
-from django.conf import settings
-from django.core.files.base import ContentFile
+import random
 import base64
 import uuid
-from django.core.exceptions import ValidationError
+import os
+from datetime import datetime, date, timedelta
+
+# Django Core Imports
+from django.forms import BooleanField, CharField, DateField, DateTimeField, FloatField, IntegerField, JSONField
+from django.http import JsonResponse, HttpResponse, Http404, FileResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.core.cache import cache
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.forms.models import model_to_dict
 from django.utils import timezone
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models.fields.files import ImageFieldFile
-from django.db.models import CharField, TextField, IntegerField, FloatField, BooleanField, DateField, DateTimeField, JSONField, Sum
-from .models import Appointment, ReviewCategory, Review, Member, eventsandcamps, VaccinationRecord, PharmacyStock, ExpiryRegister
+from django.utils.timezone import make_aware, now
+from django.utils.dateparse import parse_date as django_parse_date
+from django.db.models import Max, Count, Sum, Q
+from django.db import transaction, IntegrityError
+from django.db.models.fields.files import ImageFieldFile, FieldFile
 from django.core.files.storage import default_storage
-import json
-import traceback  # Needed for logging tracebacks
-from datetime import datetime, date, timedelta # Add timedelta if needed later
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Sum
-from django.db import transaction # For atomic operations
-from django.utils import timezone # Crucial for timezone-aware datetimes like in add_ward_consumable
-import logging # For Prescription logging
 
-# --- Make sure your models are imported correctly ---
-# Replace 'yourapp' with the actual name of your Django app
-# Example: from yourapp.models import PharmacyMedicine, PharmacyStock, ExpiryRegister, DiscardedMedicine, WardConsumables, InstrumentCalibration, Prescription
-# Or if models.py is in the same directory:
-from .models import PharmacyMedicine, PharmacyStock, ExpiryRegister, DiscardedMedicine, WardConsumables, InstrumentCalibration, Prescription
-
-# Configure logger if not done elsewhere (e.g., in settings.py)
-logger = logging.getLogger(__name__)
-# Basic logging config for testing (better config usually in settings.py)
-# logging.basicConfig(level=logging.DEBUG)
-
-
-
-logger = logging.getLogger(__name__)
-
-# Configure logging (if not already configured)
-logging.basicConfig(level=logging.INFO,  # Set desired log level
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-import json
-import random
-import logging
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+# Django Auth Imports
 from django.contrib.auth.models import User
-from django.core.cache import cache
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth import authenticate
+from matplotlib.offsetbox import TextArea
 
+# App specific models
+from .models import (
+    AutoimmuneTest, CTReport, CultureSensitivityTest, Member, Dashboard, FitnessAssessment, OccupationalProfile, OthersTest, Prescription, Appointment,
+    DiscardedMedicine, InstrumentCalibration, PharmacyMedicine,
+    PharmacyStockHistory, WardConsumables, WomensPack, XRay, user, mockdrills,
+    ReviewCategory, Review, eventsandcamps, VaccinationRecord,
+    PharmacyStock, ExpiryRegister, employee_details, MedicalHistory,
+    vitals, heamatalogy, RoutineSugarTests, RenalFunctionTest, LipidProfile,
+    LiverFunctionTest, ThyroidFunctionTest, CoagulationTest, EnzymesCardiacProfile,
+    UrineRoutineTest, SerologyTest, MotionTest, MensPack, OphthalmicReport,
+    USGReport, MRIReport, Consultation, SignificantNotes, Form17, Form38,
+    Form39, Form40, Form27
+)
+
+# Configure logging (ensure this is set up in settings.py ideally)
 logger = logging.getLogger(__name__)
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from django.core.cache import cache
-from jsw.models import Member
-import json
-import random
-import logging
-import bcrypt
+# --- Helper Functions ---
 
-logger = logging.getLogger(__name__)
+def parse_date_internal(date_str):
+    """ Safely parse YYYY-MM-DD date strings """
+    if not date_str: return None
+    try: return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError): return None
 
+def parse_form_date(date_str): # Specific helper for forms if needed
+    return parse_date_internal(date_str)
 
-from django.core.mail import send_mail
+def parse_form_age(age_str):
+    try: return int(age_str) if age_str and age_str.isdigit() else None
+    except (ValueError, TypeError): return None
 
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+def get_media_url_prefix(request):
+    media_url = getattr(settings, 'MEDIA_URL', '/media/')
+    if media_url.startswith('http'): return media_url
+    else: return f"{request.scheme}://{request.get_host()}{media_url}"
+
+def serialize_model_instance(instance):
+    """ Converts model instance to dict, handles files/dates. """
+    if instance is None: return {}
+    data = model_to_dict(instance)
+    for field_name, value in list(data.items()):
+        if isinstance(value, FieldFile):
+            try: data[field_name] = value.url if value else None
+            except Exception: data[field_name] = None
+        elif isinstance(value, (datetime, date)):
+            data[field_name] = value.isoformat()
+        if field_name.startswith('_'): del data[field_name]
+    return data
+
+ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'pptx', 'ppt', 'mp4', 'mov', 'avi']
+
+# --- Authentication & Member Management ---
 
 def send_otp_via_email(email, otp):
     subject = "🔐 Password Reset OTP - JSW Health Portal"
-    from_email = "youremail@example.com"
+    from_email = settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@example.com'
     recipient_list = [email]
-
-    context = {
-        "otp": otp,
-        "email": email
-    }
-
+    context = {"otp": otp, "email": email}
     try:
-        # Render HTML and plain text content
         html_content = render_to_string("otp_email_template.html", context)
-        text_content = f"Your OTP is {otp}. This code is valid for 5 minutes."
-
+        text_content = f"Your OTP for JSW Health Portal password reset is {otp}. This code is valid for 5 minutes."
         msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
         msg.attach_alternative(html_content, "text/html")
         msg.send()
         logger.info(f"OTP {otp} sent successfully to {email}.")
         return True
     except Exception as e:
-        logger.error(f"Failed to send OTP to {email}. Error: {str(e)}")
+        logger.error(f"Failed to send OTP to {email}. Error: {str(e)}", exc_info=True)
         return False
-
 
 @csrf_exempt
 def forgot_password(request):
-    """Sends OTP to registered WhatsApp number based on employee_number."""
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username")
-
-            if not username:
-                return JsonResponse({"message": "Username is required"}, status=400)
-
-            try:
-                user = Member.objects.get(employee_number=username)
-            except Member.DoesNotExist:
-                return JsonResponse({"message": "User not found"}, status=404)
-
-            otp = random.randint(100000, 999999)
-            cache.set(f"otp_{username}", otp, timeout=300)  # Store OTP for 5 minutes
-
-            email = user.email # Make sure this field exists in your model
-
-            if send_otp_via_email(email, otp):
-                return JsonResponse({"message": "OTP sent successfully"}, status=200)
+            username = data.get("username") # Expects employee_number
+            if not username: return JsonResponse({"message": "Username (Employee Number) is required"}, status=400)
+            member = Member.objects.get(employee_number=username)
+            if not member.email: return JsonResponse({"message": "No email address found for this user."}, status=400)
+            otp = random.randint(100000, 999999); cache_key = f"otp_{username}"
+            cache.set(cache_key, otp, timeout=300)
+            if send_otp_via_email(member.email, otp):
+                return JsonResponse({"message": "OTP sent successfully to your registered email."}, status=200)
             else:
-                return JsonResponse({"message": "Failed to send OTP"}, status=500)
-
-        except json.JSONDecodeError:
-            return JsonResponse({"message": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("An error occurred in forgot_password.")
-            return JsonResponse({"message": "An unexpected error occurred."}, status=500)
-
-    return JsonResponse({"message": "Invalid request method"}, status=405)
-
+                cache.delete(cache_key)
+                return JsonResponse({"message": "Failed to send OTP."}, status=500)
+        except Member.DoesNotExist: return JsonResponse({"message": "User not found"}, status=404)
+        except json.JSONDecodeError: return JsonResponse({"message": "Invalid request format."}, status=400)
+        except Exception as e: logger.exception("Error in forgot_password."); return JsonResponse({"message": "Unexpected error."}, status=500)
+    return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
 
 @csrf_exempt
 def verify_otp(request):
-    """Verifies OTP against cache for a given user."""
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            username = data.get("username")
-            otp = data.get("otp")
-
-            if not username or not otp:
-                return JsonResponse({"message": "Username and OTP are required"}, status=400)
-
-            stored_otp = cache.get(f"otp_{username}")
-
-            if stored_otp and str(stored_otp) == str(otp):
-                cache.delete(f"otp_{username}")  # OTP used
+            data = json.loads(request.body); username = data.get("username"); otp_entered = data.get("otp")
+            if not username or not otp_entered: return JsonResponse({"message": "Username and OTP required"}, status=400)
+            cache_key = f"otp_{username}"; stored_otp = cache.get(cache_key)
+            if stored_otp and str(stored_otp) == str(otp_entered):
+                cache.delete(cache_key)
+                cache.set(f"otp_verified_{username}", True, timeout=600)
                 return JsonResponse({"message": "OTP verified successfully"}, status=200)
-            else:
-                return JsonResponse({"message": "Invalid or expired OTP"}, status=400)
-
-        except json.JSONDecodeError:
-            return JsonResponse({"message": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("An error occurred in verify_otp.")
-            return JsonResponse({"message": "An unexpected error occurred."}, status=500)
-
-    return JsonResponse({"message": "Invalid request method"}, status=405)
-
+            else: return JsonResponse({"message": "Invalid or expired OTP"}, status=400)
+        except json.JSONDecodeError: return JsonResponse({"message": "Invalid request format."}, status=400)
+        except Exception as e: logger.exception("Error in verify_otp."); return JsonResponse({"message": "Unexpected error."}, status=500)
+    return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
 
 @csrf_exempt
 def reset_password(request):
-    """Updates password using bcrypt after OTP verification."""
     if request.method == "POST":
+        username = None # Initialize for logging
         try:
-            data = json.loads(request.body)
-            username = data.get("username")
-            new_password = data.get("newPassword")
-
-            if not username or not new_password:
-                return JsonResponse({"message": "Username and new password are required"}, status=400)
-
-            try:
-                user = Member.objects.get(employee_number=username)
-                hashed_pw = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode('utf-8')
-                user.password = hashed_pw
-                user.save()
-
-                return JsonResponse({"message": "Password reset successful"}, status=200)
-
-            except Member.DoesNotExist:
-                return JsonResponse({"message": "User not found"}, status=404)
-
-        except json.JSONDecodeError:
-            return JsonResponse({"message": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("An error occurred in reset_password.")
-            return JsonResponse({"message": "An unexpected error occurred."}, status=500)
-
-    return JsonResponse({"message": "Invalid request method"}, status=405)
-
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-from jsw.models import Member
-import json
-import bcrypt
-import logging
-
-logger = logging.getLogger(__name__)
+            data = json.loads(request.body); username = data.get("username"); new_password = data.get("newPassword")
+            if not username or not new_password: return JsonResponse({"message": "Username and new password required"}, status=400)
+            if not cache.get(f"otp_verified_{username}"): return JsonResponse({"message": "OTP not verified or expired."}, status=403)
+            member = Member.objects.get(employee_number=username)
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            member.password = hashed_pw; member.save(update_fields=['password'])
+            cache.delete(f"otp_verified_{username}")
+            return JsonResponse({"message": "Password reset successful"}, status=200)
+        except Member.DoesNotExist: return JsonResponse({"message": "User not found"}, status=404)
+        except json.JSONDecodeError: return JsonResponse({"message": "Invalid request format."}, status=400)
+        except Exception as e: logger.exception("Error in reset_password."); cache.delete(f"otp_verified_{username}"); return JsonResponse({"message": "Unexpected error."}, status=500)
+    return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
 
 @csrf_exempt
 def login(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            username = data.get('username')  # Could be email or employee_number
-            password = data.get('password')
-
-            if not username or not password:
-                logger.warning("Login failed: Missing username or password.")
-                return JsonResponse({"message": "Username and password are required."}, status=400)
-
-            # Try to find the member by email or employee_number
-            try:
-                member = Member.objects.get(employee_number=username)  # You can switch to employee_number if needed
-            except Member.DoesNotExist:
-                logger.warning(f"Login failed: Member with email {username} not found.")
-                return JsonResponse({"message": "Invalid credentials"}, status=401)
-            print(password, member.password)
-            if bcrypt.checkpw(password.encode(), member.password.encode()):
-                logger.info(f"Member {username} logged in successfully.")
-                return JsonResponse({
-                    "username": member.name,
-                    "accessLevel": member.role,
-                    "message": "Login successful!"
-                }, status=200)
-            else:
-                logger.warning(f"Login failed: Incorrect password for {username}.")
-                return JsonResponse({"message": "Invalid credentials"}, status=401)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Login failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"message": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("Login failed: An unexpected error occurred.")
-            return JsonResponse({"message": "An unexpected error occurred."}, status=500)
-
-    logger.warning("Login failed: Invalid request method. Only POST allowed.")
+            data = json.loads(request.body); username = data.get('username'); password = data.get('password')
+            if not username or not password: return JsonResponse({"message": "Username and password required."}, status=400)
+            member = Member.objects.get(employee_number=username)
+            if bcrypt.checkpw(password.encode('utf-8'), member.password.encode('utf-8')):
+                return JsonResponse({"username": member.name, "accessLevel": member.role, "empNo": member.employee_number, "message": "Login successful!" }, status=200)
+            else: return JsonResponse({"message": "Invalid credentials"}, status=401)
+        except Member.DoesNotExist: return JsonResponse({"message": "Invalid credentials"}, status=401)
+        except json.JSONDecodeError: return JsonResponse({"message": "Invalid request format"}, status=400)
+        except Exception as e: logger.exception("Login failed."); return JsonResponse({"message": "Unexpected error."}, status=500)
     return JsonResponse({"message": "Invalid request method"}, status=405)
 
-def validate_date(date_str):
-    """Convert empty strings to None and validate date format"""
-    if not date_str:  
-        return None  # Handle empty string case
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()  # Ensure correct format
-    except ValueError:
-        return None  # Handle incorrect date formats gracefully
+@csrf_exempt
+def find_member_by_email(request):
+    if request.method == 'GET':
+        email = request.GET.get('email')
+        if not email: return JsonResponse({'found': False, 'message': 'Email required'}, status=400)
+        try:
+            member = Member.objects.filter(email__iexact=email).first()
+            if member:
+                member_type = 'ohc' if member.employee_number else 'external'
+                member_data = model_to_dict(member, exclude=['password', 'entry_date']) # Exclude sensitive/internal
+                member_data['role'] = member.role.split(',') if member.role else []
+                member_data['doj'] = member.doj.isoformat() if member.doj else None
+                member_data['date_exited'] = member.date_exited.isoformat() if member.date_exited else None
+                member_data['memberTypeDetermined'] = member_type
+                return JsonResponse({'found': True, 'member': member_data}, status=200)
+            else: return JsonResponse({'found': False, 'message': 'Member not found'}, status=200)
+        except Exception as e: logger.exception(f"Error finding member by email {email}."); return JsonResponse({'found': False, 'message': 'Search error'}, status=500)
+    return JsonResponse({'message': 'Only GET allowed'}, status=405)
 
 @csrf_exempt
-def uploadImage(request, emp_no):
-    """Handles uploading and updating employee profile images."""
+def add_member(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body); member_type = data.get('memberType')
+            required = ['name', 'designation', 'email', 'role', 'phone_number']
+            if member_type == 'ohc': required.extend(['employee_number', 'doj'])
+            elif member_type == 'external': required.extend(['hospital_name', 'aadhar'])
+            else: return JsonResponse({'message': 'Invalid memberType'}, status=400)
+            missing = [f for f in required if not data.get(f)]
+            if missing: return JsonResponse({'message': f"Missing fields: {', '.join(missing)}"}, status=400)
+            if Member.objects.filter(email__iexact=data['email']).exists(): return JsonResponse({'message': f"Email already exists."}, status=409)
+            if member_type == 'ohc' and Member.objects.filter(employee_number=data['employee_number']).exists(): return JsonResponse({'message': f"Employee number already exists."}, status=409)
+
+            raw_pw = data.get('password', data['role'][0] + "123" if data.get('role') else "DefaultPass123!")
+            hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+            member_data = {'name': data['name'], 'designation': data['designation'], 'email': data['email'], 'role': ','.join(data.get('role', [])), 'phone_number': data['phone_number'], 'job_nature': data.get('job_nature'), 'date_exited': django_parse_date(data.get('date_exited')), 'password': hashed_pw, 'entry_date': date.today() }
+            if member_type == 'ohc': member_data.update({'employee_number': data['employee_number'], 'doj': django_parse_date(data.get('doj'))})
+            elif member_type == 'external': member_data.update({'hospital_name': data['hospital_name'], 'aadhar': data['aadhar']}) # Add 'do_access': data.get('do_access', False) if needed
+
+            member = Member.objects.create(**member_data)
+            logger.info(f"Member added ID: {member.id}, Type: {member_type}")
+            return JsonResponse({'message': 'Member added successfully', 'memberId': member.id}, status=201)
+        except json.JSONDecodeError: return JsonResponse({'message': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: logger.exception("add_member failed."); return JsonResponse({'message': 'Internal error.'}, status=500)
+    return JsonResponse({'message': 'Only POST allowed'}, status=405)
+
+@csrf_exempt
+def update_member(request, member_id):
     if request.method == 'PUT':
         try:
-            data = json.loads(request.body.decode('utf-8'))
+            member = get_object_or_404(Member, pk=member_id)
+            data = json.loads(request.body); member_type = data.get('memberType')
+            if not member_type or (member_type == 'ohc' and not member.employee_number) or (member_type == 'external' and member.employee_number):
+                return JsonResponse({'message': 'Member type mismatch or change not allowed.'}, status=400)
+            required = ['name', 'designation', 'role', 'phone_number'];
+            if member_type == 'external' and not data.get('aadhar'): required.append('aadhar')
+            missing = [f for f in required if not data.get(f)];
+            if missing: return JsonResponse({'message': f"Missing fields: {', '.join(missing)}"}, status=400)
 
-            if 'profileImage' not in data:
-                logger.warning(f"Image upload failed for emp_no {emp_no}: No profileImage data found in the request body.")
-                return JsonResponse({'status': 'error', 'message': 'No profileImage data found in the request body.'}, status=400)
+            member.name = data.get('name', member.name); member.designation = data.get('designation', member.designation)
+            member.role = ','.join(data.get('role', [])) if data.get('role') is not None else member.role
+            member.phone_number = data.get('phone_number', member.phone_number); member.job_nature = data.get('job_nature', member.job_nature)
+            member.date_exited = django_parse_date(data.get('date_exited')) if data.get('date_exited') is not None else member.date_exited
+            if member_type == 'ohc': member.doj = django_parse_date(data.get('doj')) if data.get('doj') else member.doj
+            elif member_type == 'external': member.hospital_name = data.get('hospital_name', member.hospital_name); member.aadhar = data.get('aadhar', member.aadhar)
 
-            image_data = data['profileImage']
-            format, imgstr = image_data.split(';base64,')
-            ext = format.split('/')[-1]
+            member.full_clean(); member.save()
+            logger.info(f"Member updated ID: {member_id}")
+            return JsonResponse({'message': 'Member updated successfully'}, status=200)
+        except Http404: return JsonResponse({'message': 'Member not found'}, status=404)
+        except json.JSONDecodeError: return JsonResponse({'message': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: logger.exception(f"update_member failed ID: {member_id}."); return JsonResponse({'message': 'Internal error.'}, status=500)
+    return JsonResponse({'message': 'Only PUT allowed'}, status=405)
 
-            try:
-                image_data = base64.b64decode(imgstr)
-            except Exception as e:
-                logger.error(f"Image upload failed for emp_no {emp_no}: Base64 decoding error: {str(e)}")
-                return JsonResponse({'status': 'error', 'message': f'Base64 decoding error: {str(e)}'}, status=400)
+@csrf_exempt
+def delete_member(request, member_id):
+    if request.method == 'POST': # Consider DELETE method
+        try:
+            member = get_object_or_404(Member, pk=member_id)
+            member_name = member.name; member.delete()
+            logger.info(f"Member deleted ID: {member_id}, Name: {member_name}")
+            return JsonResponse({'success': True, 'message': 'Member deleted successfully.'})
+        except Http404: return JsonResponse({'success': False, 'message': 'Member not found.'}, status=404)
+        except Exception as e: logger.exception(f"delete_member failed ID: {member_id}."); return JsonResponse({'success': False, 'message': 'Deletion error.'}, status=500)
+    return JsonResponse({'error': 'Invalid method.'}, status=405)
 
-            file_name = f"{uuid.uuid4()}.{ext}"
-            image_file = ContentFile(image_data, name=file_name)
+@csrf_exempt
+def create_users(request):
+    if request.method == 'POST':
+        try:
+            default_users = [ {'username': 'nurse_user', 'password': 'DefaultPasswordN1!', 'email': 'nurse@example.com', 'first_name': 'Default', 'last_name': 'Nurse'}, {'username': 'doctor_user', 'password': 'DefaultPasswordD1!', 'email': 'doctor@example.com', 'first_name': 'Default', 'last_name': 'Doctor'}, {'username': 'admin_user', 'password': 'DefaultPasswordA1!', 'email': 'admin@example.com', 'first_name': 'Default', 'last_name': 'Admin', 'is_staff': True, 'is_superuser': True}, {'username': 'pharmacy_user', 'password': 'DefaultPasswordP1!', 'email': 'pharmacy@example.com', 'first_name': 'Default', 'last_name': 'Pharmacy'} ]
+            created, skipped = 0, 0
+            for user_data in default_users:
+                username = user_data['username']
+                if not User.objects.filter(username=username).exists():
+                    User.objects.create_user(username=username, password=user_data['password'], email=user_data.get('email', ''), first_name=user_data.get('first_name', ''), last_name=user_data.get('last_name', ''), is_staff=user_data.get('is_staff', False), is_superuser=user_data.get('is_superuser', False))
+                    created += 1
+                else: skipped += 1
+            return JsonResponse({"message": f"{created} users created. {skipped} skipped."}, status=201 if created > 0 else 200)
+        except Exception as e: logger.exception("create_users failed."); return JsonResponse({"error": "Error creating users.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use POST.'}, status=405)
 
-            try:
-                employee = models.employee_details.objects.filter(emp_no=emp_no).order_by('-id').first()
+# --- Core Data Fetching / Entry (Using Aadhar) ---
+# Includes fetchdata, addEntries, add_basic_details, uploadImage, fetchVisitdata, fetchVisitDataWithDate, update_employee_status
+# (These were already provided in the previous step as modified)
 
-                if employee:
-                    if employee.profilepic and employee.profilepic.name:
-                        storage = employee.profilepic.storage
-                        if storage.exists(employee.profilepic.name):
-                            try:
-                                storage.delete(employee.profilepic.name)
-                            except Exception as e:
-                                logger.error(f"Image upload failed for emp_no {emp_no}: Failed to delete old image: {str(e)}")
-                                return JsonResponse({'status': 'error', 'message': f'Failed to delete old image: {str(e)}'}, status=500)
-
-                    try:
-                        employee.profilepic.save(file_name, image_file, save=True)
-                        employee.save()
-                        logger.info(f"Successfully updated image for emp_no {emp_no}")
-                        return JsonResponse({'status': 'success', 'message': 'Image updated successfully'})
-                    except Exception as e:
-                        logger.error(f"Image upload failed for emp_no {emp_no}: Failed to save new image: {str(e)}")
-                        return JsonResponse({'status': 'error', 'message': f'Failed to save new image: {str(e)}'}, status=500)
-                else:
-                    logger.info(f"Creating new employee record for emp_no {emp_no}")
-                    employee = models.employee_details(
-                        type=data.get('type', ''),  
-                        type_of_visit=data.get('type_of_visit', ''),
-                        register=data.get('register', ''),
-                        purpose=data.get('purpose', ''),
-                        name=data.get('name', ''),
-                        dob = validate_date(data.get('dob')) or datetime.today().date(),
-                        sex=data.get('sex', ''),
-                        aadhar=data.get('aadhar', ''),
-                        bloodgrp=data.get('bloodgrp', ''),
-                        identification_marks1=data.get('identification_marks1', ''),
-                        identification_marks2=data.get('identification_marks2', ''),
-                        marital_status=data.get('marital_status', ''),
-                        emp_no=emp_no,
-                        employer=data.get('employer', ''),
-                        designation=data.get('designation', ''),
-                        department=data.get('department', ''),
-                        job_nature=data.get('job_nature', ''),
-                        doj = validate_date(data.get('doj')) or datetime.today().date(),
-                        moj = validate_date(data.get('moj')) or datetime.today().date(),
-                        phone_Personal=data.get('phone_Personal', ''),
-                        mail_id_Personal=data.get('mail_id_Personal', ''),
-                        emergency_contact_person=data.get('emergency_contact_person', ''),
-                        phone_Office=data.get('phone_Office', ''),
-                        mail_id_Office=data.get('mail_id_Office', ''),
-                        emergency_contact_relation=data.get('emergency_contact_relation', ''),
-                        mail_id_Emergency_Contact_Person=data.get('mail_id_Emergency_Contact_Person', ''),
-                        emergency_contact_phone=data.get('emergency_contact_phone', ''),
-                        address=data.get('address', ''),
-                        role=data.get('role', ''),
-                        area=data.get('area', ''),
-                        nationality=data.get('nationality', ''),
-                        state=data.get('state', ''),
-                    )
-                    try:
-                        employee.profilepic.save(file_name, image_file, save=True)
-                        employee.save()
-                        logger.info(f"Successfully created new employee record with image for emp_no {emp_no}")
-                        return JsonResponse({'status': 'success', 'message': 'New record added with image successfully'})
-                    except Exception as e:
-                        logger.error(f"Image upload failed for emp_no {emp_no}: Failed to save new employee record with image: {str(e)}")
-                        return JsonResponse({'status': 'error', 'message': f'Failed to save new employee record with image: {str(e)}'}, status=500)
-
-            except models.employee_details.DoesNotExist:
-                logger.warning(f"Image upload failed for emp_no {emp_no}: Employee not found.")
-                return JsonResponse({'status': 'error', 'message': 'Employee not found'}, status=404)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"Image upload failed for emp_no {emp_no}: Invalid JSON data in the request body. Error: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data in the request body'}, status=400)
-        except Exception as e:
-            logger.exception(f"Image upload failed for emp_no {emp_no}: An unexpected error occurred.")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-    logger.warning("Image upload failed: Invalid request method. Only PUT allowed.")
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 @csrf_exempt
 def fetchdata(request):
@@ -383,13 +292,13 @@ def fetchdata(request):
         try:
             # Fetch Latest Employee Records
             latest_employees = (
-                models.employee_details.objects
-                .values("emp_no")
+                employee_details.objects
+                .values("aadhar")
                 .annotate(latest_id=Max("id"))
             )
 
             latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
-            employees = list(models.employee_details.objects.filter(id__in=latest_employee_ids).values())
+            employees = list(employee_details.objects.filter(id__in=latest_employee_ids).values())
 
             media_url = settings.MEDIA_URL
 
@@ -402,11 +311,11 @@ def fetchdata(request):
             def get_latest_records(model):
                 try:
                     print(model._meta.db_table)
-                    records = list(model.objects.filter(emp_no__in=[emp["emp_no"] for emp in employees]).values())
+                    records = list(model.objects.filter(emp_no__in=[emp["aadhar"] for emp in employees]).values())
                     if records:
                         all_keys = records[0].keys()
                         default_structure = {key: "" for key in all_keys}
-                        return {record["emp_no"]: record for record in records}, default_structure
+                        return {record["aadhar"]: record for record in records}, default_structure
                     else:
                         try:
                             # Instantiate a model instance (not saved to the DB)
@@ -416,7 +325,7 @@ def fetchdata(request):
                             default_structure = {}
                             for field in fields:
                                 if field.concrete and not field.is_relation:
-                                    if isinstance(field, (CharField, TextField)):
+                                    if isinstance(field, (CharField, TextArea)):
                                         default_structure[field.name] = ""  # Empty string for text-based fields
                                     elif isinstance(field, (IntegerField, FloatField)):
                                         default_structure[field.name] = None  # Or 0, if that's more appropriate
@@ -452,41 +361,48 @@ def fetchdata(request):
                     return {}, {}
 
             
-            dashboard_dict, dashboard_default = get_latest_records(models.Dashboard)
-            vitals_dict, vitals_default = get_latest_records(models.vitals)
-            msphistory_dict, msphistory_default = get_latest_records(models.MedicalHistory)
-            haematology_dict, haematology_default = get_latest_records(models.heamatalogy)
-            routinesugartests_dict, routinesugartests_default = get_latest_records(models.RoutineSugarTests)
-            renalfunctiontests_dict, renalfunctiontests_default = get_latest_records(models.RenalFunctionTest)
-            lipidprofile_dict, lipidprofile_default = get_latest_records(models.LipidProfile)
-            liverfunctiontest_dict, liverfunctiontest_default = get_latest_records(models.LiverFunctionTest)
-            thyroidfunctiontest_dict, thyroidfunctiontest_default = get_latest_records(models.ThyroidFunctionTest)
-            coagulationtest_dict, coagulationtest_default = get_latest_records(models.CoagulationTest)
-            enzymesandcardiacprofile_dict, enzymesandcardiacprofile_default = get_latest_records(models.EnzymesCardiacProfile)
-            urineroutine_dict, urineroutine_default = get_latest_records(models.UrineRoutineTest)
-            serology_dict, serology_default = get_latest_records(models.SerologyTest)
-            motion_dict, motion_default = get_latest_records(models.MotionTest)
-            menspack_dict, menspack_default = get_latest_records(models.MensPack)
-            opthalamicreport_dict, opthalamicreport_default = get_latest_records(models.OphthalmicReport)
-            usg_dict, usg_default = get_latest_records(models.USGReport)
-            mri_dict, mri_default = get_latest_records(models.MRIReport)
-            fitnessassessment_dict, fitnessassessment_default = get_latest_records(models.FitnessAssessment)
-            vaccination_dict, vaccination_default = get_latest_records(models.VaccinationRecord)
-            consultation_dict, consultation_default = get_latest_records(models.Consultation)
-            prescription_dict, prescription_default = get_latest_records(models.Prescription)
-            significant_notes_dict, significant_notes_default = get_latest_records(models.SignificantNotes)
-            form17_dict, form17_default = get_latest_records(models.Form17)
-            form38_dict, form38_default = get_latest_records(models.Form38)
-            form39_dict, form39_default = get_latest_records(models.Form39)
-            form40_dict, form40_default = get_latest_records(models.Form40)
-            form27_dict, form27_default = get_latest_records(models.Form27)
+            dashboard_dict, dashboard_default = get_latest_records(Dashboard)
+            vitals_dict, vitals_default = get_latest_records(vitals)
+            msphistory_dict, msphistory_default = get_latest_records(MedicalHistory)
+            haematology_dict, haematology_default = get_latest_records(heamatalogy)
+            routinesugartests_dict, routinesugartests_default = get_latest_records(RoutineSugarTests)
+            renalfunctiontests_dict, renalfunctiontests_default = get_latest_records(RenalFunctionTest)
+            lipidprofile_dict, lipidprofile_default = get_latest_records(LipidProfile)
+            liverfunctiontest_dict, liverfunctiontest_default = get_latest_records(LiverFunctionTest)
+            thyroidfunctiontest_dict, thyroidfunctiontest_default = get_latest_records(ThyroidFunctionTest)
+            autoimmunetest_dict,autoimmunetest_default=get_latest_records(AutoimmuneTest)
+            coagulationtest_dict, coagulationtest_default = get_latest_records(CoagulationTest)
+            enzymesandcardiacprofile_dict, enzymesandcardiacprofile_default = get_latest_records(EnzymesCardiacProfile)
+            urineroutine_dict, urineroutine_default = get_latest_records(UrineRoutineTest)
+            serology_dict, serology_default = get_latest_records(SerologyTest)
+            motion_dict, motion_default = get_latest_records(MotionTest)
+            routinecultureandsensitive_dict, routinecultureandsensitive_default=get_latest_records(CultureSensitivityTest)
+            menspack_dict, menspack_default = get_latest_records(MensPack)
+            womenpack_dict,womenpack_default=get_latest_records(WomensPack)
+            occupationalprofile_dict,occupationalprofile_default=get_latest_records(OccupationalProfile)
+            otherstest_dict,otherstest_default=get_latest_records(OthersTest)
+            opthalamicreport_dict, opthalamicreport_default = get_latest_records(OphthalmicReport)
+            xray_dict,xray_default=get_latest_records(XRay)
+            usg_dict, usg_default = get_latest_records(USGReport)
+            ct_dict,ct_default=get_latest_records(CTReport)
+            mri_dict, mri_default = get_latest_records(MRIReport)
+            fitnessassessment_dict, fitnessassessment_default = get_latest_records(FitnessAssessment)
+            vaccination_dict, vaccination_default = get_latest_records(VaccinationRecord)
+            consultation_dict, consultation_default = get_latest_records(Consultation)
+            prescription_dict, prescription_default = get_latest_records(Prescription)
+            significant_notes_dict, significant_notes_default = get_latest_records(SignificantNotes)
+            form17_dict, form17_default = get_latest_records(Form17)
+            form38_dict, form38_default = get_latest_records(Form38)
+            form39_dict, form39_default = get_latest_records(Form39)
+            form40_dict, form40_default = get_latest_records(Form40)
+            form27_dict, form27_default = get_latest_records(Form27)
             if not employees:
                 logger.info("No employee records found.")
                 return JsonResponse({"data": []}, status=200)
 
             merged_data = []
             for emp in employees:
-                emp_no = emp["emp_no"]
+                emp_no = emp["aadhar"]
                 emp["dashboard"] = dashboard_dict.get(emp_no, dashboard_default or {})
                 emp["vitals"] = vitals_dict.get(emp_no, vitals_default or {})
                 emp["haematology"] = haematology_dict.get(emp_no, haematology_default or {})
@@ -496,14 +412,24 @@ def fetchdata(request):
                 emp["lipidprofile"] = lipidprofile_dict.get(emp_no, lipidprofile_default or {})
                 emp["liverfunctiontest"] = liverfunctiontest_dict.get(emp_no, liverfunctiontest_default or {})
                 emp["thyroidfunctiontest"] = thyroidfunctiontest_dict.get(emp_no, thyroidfunctiontest_default or {})
+                emp["autoimmunetest"]=autoimmunetest_dict.get(emp_no,autoimmunetest_default or {})
                 emp["coagulationtest"] = coagulationtest_dict.get(emp_no, coagulationtest_default or {})
                 emp["enzymesandcardiacprofile"] = enzymesandcardiacprofile_dict.get(emp_no, enzymesandcardiacprofile_default or {})
                 emp["urineroutine"] = urineroutine_dict.get(emp_no, urineroutine_default or {})
                 emp["serology"] = serology_dict.get(emp_no, serology_default or {})
                 emp["motion"] = motion_dict.get(emp_no, motion_default or {})
+                emp["routinecultureandsensitive"] = routinecultureandsensitive_dict.get(emp_no, routinecultureandsensitive_default or {})
                 emp["menspack"] = menspack_dict.get(emp_no, menspack_default or {})
+                emp["womenpack"] = womenpack_dict.get(emp_no, womenpack_default or {})
+                emp["occupationalprofile"] = occupationalprofile_dict.get(emp_no, occupationalprofile_default or {})
+                emp["otherstest"] =otherstest_dict.get(emp_no, otherstest_default or {})
+                
+                
+                
                 emp["opthalamicreport"] = opthalamicreport_dict.get(emp_no, opthalamicreport_default or {})
+                emp["xray"] = xray_dict.get(emp_no,xray_default or {})
                 emp["usg"] = usg_dict.get(emp_no, usg_default or {})
+                emp["ct"] = ct_dict.get(emp_no, ct_default or {})
                 emp["mri"] = mri_dict.get(emp_no, mri_default or {})
                 emp["fitnessassessment"] = fitnessassessment_dict.get(emp_no, fitnessassessment_default or {})
                 emp["vaccination"] = vaccination_dict.get(emp_no, vaccination_default or {})
@@ -526,406 +452,85 @@ def fetchdata(request):
     logger.warning("fetchdata failed: Invalid request method. Only POST allowed.")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
-import json
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from . import models  # Import your models
 
-logger = logging.getLogger(__name__)
-
-def parse_date(date_str):
-    """Converts date string to YYYY-MM-DD format if valid, else returns None."""
-    if not date_str:
-        print("date_str is None")
-        return date.today()
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date()  # Ensure correct format
-    except ValueError:
-        logger.warning(f"Invalid date format received: {date_str}")
-        return None  # Invalid format
-
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime
-# Import your models and the parse_date helper
-from . import models # Adjust the import path if needed
-# from .utils import parse_date # Or import from where you placed it
-import logging
-
-logger = logging.getLogger(__name__)
-
-# Make sure parse_date is defined as shown above or imported
-
-import json
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-# Assuming your models are imported like this:
-from . import models # Make sure models is imported correctly
-# Assuming parse_date is defined elsewhere or replace with actual parsing logic
-# from .utils import parse_date # Example import
-
-logger = logging.getLogger(__name__)
-
-# Dummy parse_date function for demonstration if not defined elsewhere
-def parse_date(date_str):
-    if not date_str:
-        return None
-    try:
-        # Adjust the format '%Y-%m-%d' if your incoming date strings are different
-        return datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        logger.warning(f"Could not parse date: {date_str}")
-        return None
-
-
-@csrf_exempt
-def dashboard_stats(request):
-    """Calculates and returns dashboard statistics based on filters."""
-    try:
-        from_date_str = request.GET.get("fromDate")
-        to_date_str = request.GET.get("toDate")
-        visit_type_filter = request.GET.get("visitType")
-        entity_filter = request.GET.get("entityType")
-
-        today = date.today()
-        from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else today
-        to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else today
-
-        queryset = models.Dashboard.objects.filter(date__range=[from_date, to_date])
-
-        if visit_type_filter in ["Preventive", "Curative"]:
-            queryset = queryset.filter(type_of_visit=visit_type_filter)
-
-        if entity_filter == "Total Footfalls":
-            type_counts = queryset.values("type").annotate(count=Count("type"))
-        else:
-            entity_mapping = {
-                "Employee": {"type": "Employee"},
-                "Contractor": {"type": "Contractor"},
-                "Visitor": {"type": "Visitor"},
-            }
-            if entity_filter in entity_mapping:
-                queryset = queryset.filter(**entity_mapping[entity_filter])
-
-            type_counts = queryset.values("type").annotate(count=Count("type"))
-
-        type_of_visit_counts = queryset.values("type_of_visit").annotate(count=Count("type_of_visit"))
-        register_counts = queryset.values("register").annotate(count=Count("register"))
-        purpose_counts = queryset.values("purpose").annotate(count=Count("purpose"))
-
-        data = {
-            "type_counts": list(type_counts),
-            "type_of_visit_counts": list(type_of_visit_counts),
-            "register_counts": list(register_counts),
-            "purpose_counts": list(purpose_counts),
-        }
-
-        return JsonResponse(data, safe=False)
-
-    except Exception as e:
-        logger.exception("Error in dashboard_stats view: An unexpected error occurred.")
-        return JsonResponse({"error": str(e)}, status=500)
-
-import json
-import logging
-import base64
-import uuid # For generating unique filenames
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.base import ContentFile # For handling image data
-from . import models # Assuming your models are in the same app's models.py
-
-logger = logging.getLogger(__name__)
-
-def parse_date(date_str):
-    """Safely parses date strings, returning None if invalid."""
-    if not date_str:
-        return None
-    try:
-        # Attempt common formats, add more if needed
-        return datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        try:
-            # Handle potential ISO format with time/timezone
-            return datetime.fromisoformat(date_str.replace('Z', '+00:00')).date()
-        except (ValueError, TypeError):
-             logger.warning(f"Could not parse date: {date_str}")
-             return None
-
-import json
-import base64
-import uuid
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.base import ContentFile
-# Assuming your models are in 'yourapp.models' and BaseModel/parse_date are available
-# from . import models # Or wherever your models are
-# from .utils import parse_date # Or wherever parse_date is
-# Mock models and parse_date for demonstration if needed
-from django.db import models as django_models # Using alias to avoid naming conflict
-class BaseModel(django_models.Model): # Mock BaseModel
-    entry_date = django_models.DateField(auto_now_add=True)
-    class Meta:
-        abstract = True
-
-# --- Mock parse_date function ---
-def parse_date(date_str):
-    if not date_str:
-        return None
-    try:
-        # Attempt common formats, add more as needed
-        return datetime.strptime(date_str, '%Y-%m-%d').date()
-    except ValueError:
-        try:
-            return datetime.strptime(date_str, '%d-%m-%Y').date()
-        except ValueError:
-             try: # Handle cases where it might already be a date object (less likely from JSON)
-                 if isinstance(date_str, datetime.date):
-                     return date_str
-             except:
-                 logger.warning(f"Could not parse date: {date_str}")
-                 return None
-
-# --- Mock Models ---
-class MockEmployeeDetailsManager(django_models.Manager):
-    def filter(self, *args, **kwargs): return self # Chainable mock
-    def exclude(self, *args, **kwargs): return self # Chainable mock
-    def order_by(self, *args): return self # Chainable mock
-    def last(self): return None # Mock last() result
-    def values(self, *args): return self # Chainable mock
-    def distinct(self): return self # Chainable mock
-    def count(self): return 0 # Mock count
-    def update_or_create(self, defaults=None, **kwargs): return (MockEmployeeDetails(**kwargs, **(defaults or {})), True) # Mock create
-    def get_or_create(self, defaults=None, **kwargs): return (MockEmployeeDetails(**kwargs, **(defaults or {})), True) # Mock create
-
-class MockImageField: # Mock ImageField enough for .save()
-    def save(self, name, content, save=True):
-        self.name = name # Store the name to simulate saving
-        pass # No actual file saving in mock
-
-class MockEmployeeDetails(BaseModel):
-    EMPLOYEE_TYPES = [('Employee', 'Employee'), ('Contractor', 'Contractor'), ('Visitor', 'Visitor')]
-    MARITAL_STATUS_CHOICES = [('Single', 'Single'), ('Married', 'Married'), ('Other', 'Other'), ('Divorced', 'Divorced'), ('Widowed', 'Widowed'), ('Separated', 'Separated')]
-    type = django_models.CharField(max_length=50, choices=EMPLOYEE_TYPES, default='Employee')
-    type_of_visit = django_models.CharField(max_length=255, blank=True, default='')
-    register = django_models.CharField(max_length=255, blank=True, default='')
-    purpose = django_models.CharField(max_length=255, blank=True, default='')
-    name = django_models.CharField(max_length=225, default='')
-    dob = django_models.DateField(null=True, blank=True)
-    sex = django_models.CharField(max_length=50, blank=True, default='')
-    aadhar = django_models.CharField(max_length=225, blank=True, default='')
-    bloodgrp = django_models.CharField(max_length=225, blank=True, default='')
-    identification_marks1 = django_models.CharField(max_length=225, blank=True, default='')
-    identification_marks2 = django_models.CharField(max_length=225, blank=True, default='')
-    marital_status = django_models.CharField(max_length=50, choices=MARITAL_STATUS_CHOICES, blank=True, default='')
-    emp_no = django_models.CharField(max_length=200, blank=True, unique=True, default='') # Made unique for simplicity here
-    employer = django_models.CharField(max_length=225, blank=True, default='')
-    designation = django_models.CharField(max_length=225, blank=True, default='')
-    department = django_models.CharField(max_length=225, blank=True, default='')
-    job_nature = django_models.CharField(max_length=225, blank=True, default='')
-    doj = django_models.DateField(null=True, blank=True)
-    moj = django_models.CharField(max_length=225, blank=True, default='')
-    phone_Personal = django_models.CharField(max_length=225, blank=True, default='')
-    mail_id_Personal = django_models.EmailField(max_length=225, blank=True, default='')
-    emergency_contact_person = django_models.CharField(max_length=225, blank=True, default='')
-    phone_Office = django_models.CharField(max_length=225, blank=True, default='')
-    mail_id_Office = django_models.EmailField(max_length=225, blank=True, default='')
-    emergency_contact_relation = django_models.CharField(max_length=225, blank=True, default='')
-    mail_id_Emergency_Contact_Person = django_models.EmailField(max_length=225, blank=True, default='')
-    emergency_contact_phone = django_models.CharField(max_length=225, blank=True, default='')
-    role = django_models.CharField(max_length=50, blank=True, default='')
-    permanent_address = django_models.TextField(blank=True, default='')
-    permanent_area = django_models.CharField(max_length=50, blank=True, default='')
-    location = django_models.CharField(max_length=50, blank=True, default='')
-    permanent_nationality = django_models.CharField(max_length=50, blank=True, default='')
-    permanent_state = django_models.CharField(max_length=50, blank=True, default='')
-    residential_address = django_models.TextField(blank=True, default='')
-    residential_area = django_models.CharField(max_length=50, blank=True, default='')
-    residential_nationality = django_models.CharField(max_length=50, blank=True, default='')
-    residential_state = django_models.CharField(max_length=50, blank=True, default='')
-    profilepic = MockImageField() # Mock field
-    profilepic_url = django_models.URLField(max_length=255, blank=True, default='')
-    country_id = django_models.CharField(max_length=255, blank=True, default='')
-    other_site_id = django_models.CharField(max_length=255, blank=True, default='')
-    organization = django_models.CharField(max_length=255, blank=True, default='')
-    addressOrganization = django_models.CharField(max_length=255, blank=True, default='')
-    visiting_department = django_models.CharField(max_length=255, blank=True, default='')
-    visiting_date_from = django_models.DateField(null=True, blank=True)
-    stay_in_guest_house = django_models.CharField(max_length=50, blank=True, default='')
-    visiting_purpose = django_models.CharField(max_length=255, blank=True, default='')
-    year = django_models.CharField(max_length=4, blank=True, default='')
-    batch = django_models.CharField(max_length=255, blank=True, default='')
-    hospitalName = django_models.CharField(max_length=255, blank=True, default='')
-    campName = django_models.CharField(max_length=255, blank=True, default='')
-    contractName = django_models.CharField(max_length=255, blank=True, default='')
-    prevcontractName = django_models.CharField(max_length=255, blank=True, default='')
-    old_emp_no = django_models.CharField(max_length=200, blank=True, default='')
-    reason = django_models.CharField(max_length=255, blank=True, default='')
-    status = django_models.CharField(max_length=255, blank=True, default='')
-    employee_status = django_models.CharField(max_length=255, blank=True, default='')
-    since_date = django_models.DateField(blank=True, null=True)
-    transfer_details = django_models.TextField(blank=True, null=True)
-    other_reason_details = django_models.TextField(blank=True, null=True)
-    mrdNo = django_models.CharField(max_length=255, blank=True, default='')
-    id = django_models.AutoField(primary_key=True) # Add explicitly for mock
-
-    # Add a constructor for easy mocking
-    def __init__(self, **kwargs):
-        self._state = django_models.base.ModelState() # Required for Django model instances
-        super().__init__()
-        for field, value in kwargs.items():
-            setattr(self, field, value)
-        # Set default values for fields not provided in kwargs
-        for field in self._meta.fields:
-            if field.name not in kwargs and hasattr(field, 'default') and field.default != django_models.fields.NOT_PROVIDED:
-                 setattr(self, field.name, field.default)
-        # Ensure profilepic is initialized as the mock object
-        self.profilepic = MockImageField()
-
-    objects = MockEmployeeDetailsManager() # Use the mock manager
-
-    def __str__(self):
-        return self.emp_no if self.emp_no else f"Employee {self.id}"
-
-    def save(self, *args, **kwargs):
-        # Mock save behaviour
-        if hasattr(self, 'profilepic') and not self.profilepic.name: # Check if name is set (simulates file not saved)
-            self.profilepic_url = ''
-        elif hasattr(self, 'profilepic') and self.profilepic.name:
-             # In a real scenario, you'd generate the URL here
-             self.profilepic_url = f'/media/profilepics/{self.profilepic.name}'
-        super().save(*args, **kwargs) # Call parent save if needed, though it does nothing in this mock
-
-
-class MockDashboardManager(django_models.Manager):
-     def update_or_create(self, defaults=None, **kwargs):
-        # Find existing or create new mock instance
-        # This is simplified; a real mock might need more logic
-        return (MockDashboard(**kwargs, **(defaults or {})), True)
-
-class MockDashboard(BaseModel):
-    emp_no = django_models.CharField(max_length=200)
-    date = django_models.DateField()
-    type = django_models.CharField(max_length=50, default='')
-    type_of_visit = django_models.CharField(max_length=255, blank=True, default='')
-    register = django_models.CharField(max_length=255, blank=True, default='')
-    purpose = django_models.CharField(max_length=255, blank=True, default='')
-    year = django_models.CharField(max_length=4, blank=True, default='')
-    batch = django_models.CharField(max_length=255, blank=True, default='')
-    hospitalName = django_models.CharField(max_length=255, blank=True, default='')
-    campName = django_models.CharField(max_length=255, blank=True, default='')
-    contractName = django_models.CharField(max_length=255, blank=True, default='')
-    prevcontractName = django_models.CharField(max_length=255, blank=True, default='')
-    old_emp_no = django_models.CharField(max_length=200, blank=True, default='')
-    reason = django_models.CharField(max_length=255, blank=True, default='')
-    status = django_models.CharField(max_length=255, blank=True, default='')
-    mrdNo = django_models.CharField(max_length=255, blank=True, default='')
-    id = django_models.AutoField(primary_key=True) # Add explicitly for mock
-
-    objects = MockDashboardManager()
-
-    # Add a constructor for easy mocking
-    def __init__(self, **kwargs):
-        self._state = django_models.base.ModelState() # Required for Django model instances
-        super().__init__()
-        for field, value in kwargs.items():
-            setattr(self, field, value)
-
-# Namespace the models for clarity
-class models:
-    employee_details = MockEmployeeDetails
-    Dashboard = MockDashboard
-
-# --- Logger Setup ---
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-# --- Views ---
 
 @csrf_exempt
 def addEntries(request):
     """
-    Adds or updates an employee_details record for a visit entry,
-    assigns a unique MRD number on the first entry for an employee,
-    and updates Dashboard records. Includes all fields from employee_details
-    where applicable for an initial entry.
+    Adds or updates an employee_details record based on AADHAR and today's date.
+    Assigns MRD number logic remains (needs careful review if MRD should be Aadhar-based).
+    Updates Dashboard record.
     """
     if request.method != "POST":
         logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    emp_no = None # Initialize emp_no for potential use in exception logging
+    aadhar = None # Initialize for logging
     try:
         data = json.loads(request.body.decode('utf-8'))
-        logger.debug(f"Received data for addEntries: {data}")
+        print(data['formData'])
+        logger.debug(f"Received data for addEntries: {json.dumps(data)[:500]}...") # Log truncated data
 
-        emp_no = data.get('emp_no')
-        if not emp_no:
-            logger.warning("addEntries failed: Employee number (emp_no) is required")
-            return JsonResponse({"error": "Employee number (emp_no) is required"}, status=400)
+        # *** KEY CHANGE: Expect 'aadhar' instead of 'emp_no' ***
+        aadhar = data['formData'].get('aadhar')
+        if not aadhar:
+            logger.warning("addEntries failed: Aadhar number (aadhar) is required in the payload.")
+            return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
 
-        entry_date = datetime.now().date()  # Use current date for the visit entry
+        # Get other data buckets
+        entry_date = date.today() # Use current date for the visit entry
         extra_data = data.get('extraData', {})
         dashboard_data = data.get('formDataDashboard', {})
-        employee_data = data.get('formData', {})  # Basic details payload
-        print(employee_data['profilepic'])
-        register = dashboard_data.get('register', '') # Get register value
+        employee_data = data.get('formData', {}) # Basic details payload
 
-        # --- MRD Number Logic ---
+        # --- MRD Number Logic (Keep as is for now, but consider if it should be Aadhar-based) ---
         determined_mrd_no = None
-        existing_entry_with_mrd = models.employee_details.objects.filter(
-            emp_no=emp_no,
+        # Find the latest entry *for this Aadhar* that has an MRD number
+        existing_entry_with_mrd = employee_details.objects.filter(
+            aadhar=aadhar,
             mrdNo__isnull=False
         ).exclude(
             mrdNo=''
-        ).order_by('-entry_date').first() # Get the absolute latest record with MRD
+        ).order_by('-entry_date', '-id').first() # Get latest entry by date, then ID
 
         if existing_entry_with_mrd:
             determined_mrd_no = existing_entry_with_mrd.mrdNo
-            logger.info(f"Found existing MRD number {determined_mrd_no} for emp_no: {emp_no}")
+            logger.info(f"Found existing MRD number {determined_mrd_no} for aadhar: {aadhar}")
         else:
-            logger.info(f"No existing MRD found for emp_no: {emp_no}. Generating new MRD number.")
-            # Count distinct employees who *already have* a valid MRD across all their entries
-            # Note: This count could be slightly off if MRD generation isn't atomic, but usually okay.
-            count_with_mrd = models.employee_details.objects.filter(
+            logger.info(f"No existing MRD found for aadhar: {aadhar}. Generating new MRD number.")
+            # Count distinct Aadhars that *already have* a valid MRD
+            # This might need adjustment depending on how unique MRDs should be
+            count_with_mrd = employee_details.objects.filter(
                 mrdNo__isnull=False
             ).exclude(
                 mrdNo=''
-            ).values('emp_no').distinct().count()
+            ).values('aadhar').distinct().count() # Count distinct Aadhars with MRD
             next_mrd_sequence = count_with_mrd + 1
             seq_part = f"{next_mrd_sequence:06d}" # Pad to 6 digits
             date_part = entry_date.strftime('%d%m%Y') # Use current entry date
             determined_mrd_no = f"{seq_part}{date_part}"
-            logger.info(f"Generated new MRD number {determined_mrd_no} for emp_no: {emp_no}")
+            logger.info(f"Generated new MRD number {determined_mrd_no} for aadhar: {aadhar}")
         # --- End MRD Number Logic ---
 
-        # Prepare defaults for the employee_details model for *this specific visit entry*
-        # Includes ALL fields, sourcing from appropriate data buckets.
+        # --- Prepare employee_details defaults ---
+        # Includes fields from various parts of the payload
         employee_defaults = {
-            # Basic Details (from employee_data)
+            # Basic Details (from employee_data) - Use .get() with defaults
             'name': employee_data.get('name', ''),
-            'dob': parse_date(employee_data.get('dob')),
+            'dob': parse_date_internal(employee_data.get('dob')),
             'sex': employee_data.get('sex', ''),
             'guardian': employee_data.get('guardian', ''),
-            'aadhar': employee_data.get('aadhar', ''),
             'bloodgrp': employee_data.get('bloodgrp', ''),
             'identification_marks1': employee_data.get('identification_marks1', ''),
             'identification_marks2': employee_data.get('identification_marks2', ''),
             'marital_status': employee_data.get('marital_status', ''),
+            'emp_no': employee_data.get('emp_no', ''), # Keep emp_no if it's still relevant/sent
             'employer': employee_data.get('employer', ''),
             'designation': employee_data.get('designation', ''),
             'department': employee_data.get('department', ''),
-            'job_nature': employee_data.get('job_nature', ''),
-            'doj': parse_date(employee_data.get('doj')),
-            'moj': employee_data.get('moj', ''), # Assuming moj is not a date
+            'job_nature': employee_data.get('job_nature', ''), # May need JSON parsing if array
+            'doj': parse_date_internal(employee_data.get('doj')),
+            'moj': employee_data.get('moj', ''), # Assuming moj is not a date string
             'phone_Personal': employee_data.get('phone_Personal', ''),
             'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
             'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
@@ -945,26 +550,24 @@ def addEntries(request):
             'residential_nationality': employee_data.get('residential_nationality', ''),
             'country_id': employee_data.get('country_id', ''),
             'role': employee_data.get('role', ''), # Employee role/category info
-            'profilepic': employee_data['profilepic'],
-            'profilepic_url': employee_data.get('profilepic_url', ''), # URL if provided separately
             'employee_status': employee_data.get('employee_status', ''), # Overall employee status
-            'since_date': parse_date(employee_data.get('since_date')), # Added
-            'transfer_details': employee_data.get('transfer_details', ''), # Added
-            'other_reason_details': employee_data.get('other_reason_details', ''), # Added
+            'since_date': parse_date_internal(employee_data.get('since_date')),
+            'transfer_details': employee_data.get('transfer_details', ''),
+            'other_reason_details': employee_data.get('other_reason_details', ''),
 
-            # Visitor Specific Details (from employee_data) - Set if provided
+            # Visitor Specific Details (from employee_data)
             'other_site_id': employee_data.get('other_site_id', ''),
             'organization': employee_data.get('organization', ''),
             'addressOrganization': employee_data.get('addressOrganization', ''),
             'visiting_department': employee_data.get('visiting_department', ''),
-            'visiting_date_from': parse_date(employee_data.get('visiting_date_from')),
+            'visiting_date_from': parse_date_internal(employee_data.get('visiting_date_from')),
             'stay_in_guest_house': employee_data.get('stay_in_guest_house', ''),
             'visiting_purpose': employee_data.get('visiting_purpose', ''), # Visitor form purpose
 
             # Visit Context Details (from dashboard_data)
             'type': dashboard_data.get('category', 'Employee'), # Maps to EMPLOYEE_TYPES
             'type_of_visit': dashboard_data.get('typeofVisit', ''),
-            'register': register,
+            'register': dashboard_data.get('register', ''),
             'purpose': dashboard_data.get('purpose', ''), # The actual visit purpose
 
             # Extra Context Details (from extra_data)
@@ -975,36 +578,34 @@ def addEntries(request):
             'contractName': extra_data.get('contractName', ''),
             'prevcontractName': extra_data.get('prevcontractName', ''),
             'old_emp_no': extra_data.get('old_emp_no', ''),
-            'reason': extra_data.get('reason', extra_data.get('purpose', '')), # Prefer 'reason', fallback to extraData's 'purpose'
+            'reason': extra_data.get('reason', extra_data.get('purpose', '')), # Prefer 'reason'
             'status': extra_data.get('status', ''),
 
             # Determined/System Fields
             'mrdNo': determined_mrd_no,
+            # 'aadhar' is the key, not in defaults
 
-            # NOTE: 'profilepic' (ImageField) is not typically set here, handled by add_basic_details or another upload mechanism.
+            # Profile pic handled separately by add_basic_details or uploadImage
         }
 
-        # Remove None values AND empty strings to avoid overwriting existing data unintentionally
-        # during an update scenario if the incoming payload omits fields.
-        # Keep if the field should explicitly be cleared by an empty string. For now, removing both.
-        employee_defaults_filtered = {k: v for k, v in employee_defaults.items() if v is not None and v != ''}
-        # If you NEED to allow setting fields to '', remove "and v != ''"
+        # Filter out None values to avoid overwriting with null unless intended
+        employee_defaults_filtered = {k: v for k, v in employee_defaults.items() if v is not None}
+        # If you need to clear fields with empty strings, remove "and v != ''" if added previously
 
-
-        # Update or create the employee_details entry for *this specific visit*
-        employee_entry, created = models.employee_details.objects.update_or_create(
-            emp_no=emp_no,
+        # --- Update or create the employee_details entry ---
+        # Key is (aadhar, entry_date)
+        employee_entry, created = employee_details.objects.update_or_create(
+            aadhar=aadhar,
             entry_date=entry_date,
-            defaults=employee_defaults_filtered # Use filtered defaults
+            defaults=employee_defaults_filtered
         )
 
-        # Prepare data for the Dashboard model for this visit using data from the saved employee_entry
+        # --- Prepare and save Dashboard data ---
         dashboard_defaults = {
             'type': employee_entry.type,
             'type_of_visit': employee_entry.type_of_visit,
             'register': employee_entry.register,
             'purpose': employee_entry.purpose, # Visit purpose
-            'date': entry_date, # Explicitly set date for dashboard key
             'year': employee_entry.year,
             'batch': employee_entry.batch,
             'hospitalName': employee_entry.hospitalName,
@@ -1015,70 +616,68 @@ def addEntries(request):
             'reason': employee_entry.reason,
             'status': employee_entry.status,
             'mrdNo': employee_entry.mrdNo,
+            'emp_no': employee_entry.emp_no # Keep emp_no if dashboard needs it
         }
 
-        # Update or create the dashboard entry for this specific visit date
-        dashboard_entry, dashboard_created = models.Dashboard.objects.update_or_create(
-            emp_no=emp_no,
+        # Key is (aadhar, date)
+        dashboard_entry, dashboard_created = Dashboard.objects.update_or_create(
+            aadhar=aadhar,
             date=entry_date, # Use date as part of the key
             defaults=dashboard_defaults
         )
 
         message = f"Visit Entry {'added' if created else 'updated'} (MRD: {employee_entry.mrdNo}) and Dashboard {'created' if dashboard_created else 'updated'} successfully"
 
-        logger.info(f"addEntries successful for emp_no: {emp_no} on {entry_date}. VisitCreated: {created}, DashboardCreated: {dashboard_created}, MRD: {employee_entry.mrdNo}")
-        return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo}, status=200)
+        logger.info(f"addEntries successful for aadhar: {aadhar} on {entry_date}. VisitCreated: {created}, DashboardCreated: {dashboard_created}, MRD: {employee_entry.mrdNo}")
+        return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": aadhar}, status=200)
 
-    except json.JSONDecodeError as e:
-        logger.error(f"addEntries failed: Invalid JSON data. Error: {str(e)}")
+    except json.JSONDecodeError:
+        logger.error("addEntries failed: Invalid JSON data.", exc_info=True)
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
-        logger.exception(f"addEntries failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
+        logger.exception(f"addEntries failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
         return JsonResponse({"error": "An internal server error occurred while processing the entry."}, status=500)
 
 
 @csrf_exempt
 def add_basic_details(request):
     """
-    Adds or updates basic employee details, targeting the record for the given
-    emp_no and *today's date*. Includes profile picture handling and all
-    relevant fields from employee_details model considered 'basic'.
+    Adds or updates basic employee details based on AADHAR and today's date.
+    Handles profile picture upload.
     """
     if request.method != "POST":
         logger.warning("add_basic_details failed: Invalid request method. Only POST allowed.")
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    emp_no = None # Initialize for logging
+    aadhar = None # Initialize for logging
     try:
-        # Assuming the request body contains the primary data dictionary
         data = json.loads(request.body.decode('utf-8'))
-        logger.debug(f"Received data for add_basic_details: {data}")
+        logger.debug(f"Received data for add_basic_details: {json.dumps(data)[:500]}...")
 
-        emp_no = data.get('emp_no')
-        if not emp_no:
-            logger.warning("add_basic_details failed: Employee number is required")
-            return JsonResponse({"error": "Employee number is required"}, status=400)
+        # *** KEY CHANGE: Expect 'aadhar' ***
+        aadhar = data.get('aadhar')
+        if not aadhar:
+            logger.warning("add_basic_details failed: Aadhar number is required")
+            return JsonResponse({"error": "Aadhar number is required"}, status=400)
 
-        # This view operates on TODAY's record.
-        # Consider if you need a different strategy (e.g., update latest, or have a separate 'profile' model).
-        entry_date = datetime.now().date()
+        entry_date = date.today() # Operates on today's record
 
-        # Prepare defaults dictionary with ALL relevant fields for basic details update
+        # Prepare defaults dictionary
         basic_defaults = {
             'name': data.get('name'),
-            'dob': parse_date(data.get('dob')),
+            'dob': parse_date_internal(data.get('dob')),
             'sex': data.get('sex'),
             'guardian': data.get('guardian'),
-            'aadhar': data.get('aadhar'),
             'bloodgrp': data.get('bloodgrp'),
             'identification_marks1': data.get('identification_marks1'),
             'identification_marks2': data.get('identification_marks2'),
             'marital_status': data.get('marital_status'),
+            'emp_no': data.get('emp_no'), # Keep emp_no if needed
             'employer': data.get('employer'),
             'designation': data.get('designation'),
             'department': data.get('department'),
-            'job_nature': data.get('job_nature'),
-            'doj': parse_date(data.get('doj')),
+            'job_nature': data.get('job_nature'), # May need JSON handling
+            'doj': parse_date_internal(data.get('doj')),
             'moj': data.get('moj'), # Assuming string
             'phone_Personal': data.get('phone_Personal'),
             'mail_id_Personal': data.get('mail_id_Personal'),
@@ -1099,2540 +698,3117 @@ def add_basic_details(request):
             'residential_nationality': data.get('residential_nationality'),
             'country_id': data.get('country_id'),
             'role': data.get('role'), # Employee/Contractor/Visitor role
-            'profilepic_url': data.get('profilepic_url'), # Added explicitly
             'employee_status': data.get('employee_status'),
-            'since_date': parse_date(data.get('since_date')),
+            'since_date': parse_date_internal(data.get('since_date')),
             'transfer_details': data.get('transfer_details'),
             'other_reason_details': data.get('other_reason_details'),
-            'mrdNo': data.get('mrdNo'), # Allow updating MRD if provided explicitly here
+            'mrdNo': data.get('mrdNo'), # Allow updating MRD if provided
 
-            # Visitor Fields (can be updated via basic details if needed)
+            # Visitor Fields
             'other_site_id': data.get('other_site_id'),
             'organization': data.get('organization'),
             'addressOrganization': data.get('addressOrganization'),
             'visiting_department': data.get('visiting_department'),
-            'visiting_date_from': parse_date(data.get('visiting_date_from')),
+            'visiting_date_from': parse_date_internal(data.get('visiting_date_from')),
             'stay_in_guest_house': data.get('stay_in_guest_house'),
-            'visiting_purpose': data.get('visiting_purpose'), # Purpose specific to visitor form
+            'visiting_purpose': data.get('visiting_purpose'),
 
-            # Set 'type' based on role, potentially overwriting if role changes
-            'type': data.get('role', 'Employee'), # Defaulting to Employee if role is missing
-
-            # Fields typically NOT set/updated via basic details:
-            # type_of_visit, register, purpose (visit purpose),
-            # year, batch, hospitalName, campName, contractName,
-            # prevcontractName, old_emp_no, reason, status
-            # These are generally context/visit specific.
+            # Set 'type' based on role, default if needed
+            'type': data.get('role', 'Employee'),
+            # NOTE: profilepic handled separately below
         }
 
-        # Remove None values from defaults to prevent accidental overwrites with null.
-        # Decide if empty strings should also be removed or if they signify clearing a field.
-        # Current implementation keeps empty strings, allowing fields to be cleared.
+        # Filter out None values
         basic_defaults_filtered = {k: v for k, v in basic_defaults.items() if v is not None}
 
-        # Get or create the record for today using filtered defaults for creation
-        employee, created = models.employee_details.objects.get_or_create(
-            emp_no=emp_no,
+        # --- Get or Create based on AADHAR and DATE ---
+        employee, created = employee_details.objects.get_or_create(
+            aadhar=aadhar,
             entry_date=entry_date,
             defaults=basic_defaults_filtered # Set defaults only if created
         )
 
-        # If the record already existed, update it with the new filtered defaults
+        # If updating an existing record for today
+        update_fields_list = []
         if not created:
-            update_fields_list = []
             for key, value in basic_defaults_filtered.items():
-                if getattr(employee, key) != value: # Only update if value changed
+                if getattr(employee, key) != value:
                    setattr(employee, key, value)
                    update_fields_list.append(key)
-            # Note: Image is handled separately below, then final save happens.
 
-        # --- Handle Profile Picture Update ---
-        profile_image_b64 = data.get('profilepic') # Renamed key for clarity
+        # --- Handle Profile Picture ---
+        profile_image_b64 = data.get('profilepic') # Key from payload
         image_updated = False
-        if profile_image_b64:
-            try:
-                if ';base64,' in profile_image_b64:
-                    header, encoded = profile_image_b64.split(';base64,', 1)
-                    file_ext = header.split('/')[-1].split('+')[0] if header.startswith('data:image/') else 'jpg' # Handle image/svg+xml etc.
-                else:
-                    encoded = profile_image_b64
-                    file_ext = 'jpg' # Assume jpg if no header
+        image_field_updated = False # Track if the profilepic field itself needs saving
 
-                # Basic validation of base64 data
-                if not encoded or len(encoded) % 4 != 0:
-                    raise ValueError("Invalid base64 string")
+        if profile_image_b64 and isinstance(profile_image_b64, str) and ';base64,' in profile_image_b64:
+            try:
+                header, encoded = profile_image_b64.split(';base64,', 1)
+                # Extract extension robustly
+                file_ext = header.split('/')[-1].split(';')[0].split('+')[0] if header.startswith('data:image/') else 'jpg'
+                if not file_ext: file_ext = 'jpg' # Default extension
 
                 image_data = base64.b64decode(encoded)
-                filename = f"profilepics/{emp_no}_{uuid.uuid4().hex[:8]}.{file_ext}"
+                # *** Use AADHAR in filename ***
+                filename = f"profilepics/{aadhar}_{uuid.uuid4().hex[:8]}.{file_ext}"
+
+                # Delete old file if it exists and is different
+                if employee.profilepic and employee.profilepic.name:
+                    # Basic check if name looks different (could be more robust)
+                    if employee.profilepic.name != filename.split('/')[-1]:
+                         try:
+                             if default_storage.exists(employee.profilepic.path):
+                                 default_storage.delete(employee.profilepic.path)
+                                 logger.info(f"Deleted old profile pic for aadhar {aadhar}: {employee.profilepic.name}")
+                         except Exception as del_err:
+                             logger.error(f"Error deleting old profile pic for aadhar {aadhar}: {del_err}")
+
+                # Save the new image file
                 employee.profilepic.save(filename, ContentFile(image_data), save=False) # save=False initially
                 image_updated = True
-                if not created: # Add profilepic to fields to be updated if updating
-                    update_fields_list.append('profilepic')
-                logger.info(f"Profile picture prepared for emp_no: {emp_no}")
+                image_field_updated = True # Mark field for saving
+                logger.info(f"Profile picture prepared for aadhar: {aadhar}")
 
             except (TypeError, ValueError, base64.binascii.Error) as img_err:
-                logger.error(f"Failed to decode or save profile picture for emp_no {emp_no}: {img_err}")
-                # Decide if this should be a fatal error or just logged
-                # return JsonResponse({"error": f"Invalid profile picture data: {img_err}"}, status=400) # Optional: return error
+                logger.error(f"Failed to decode or save profile picture for aadhar {aadhar}: {img_err}")
             except Exception as img_ex:
-                logger.exception(f"Unexpected error saving profile picture for emp_no {emp_no}")
-                # return JsonResponse({"error": "Error processing profile picture."}, status=500) # Optional: return error
+                logger.exception(f"Unexpected error processing profile picture for aadhar {aadhar}")
+
         elif 'profilepic' in data and data['profilepic'] is None:
-             # Explicitly clear the image if 'profilepic' is sent as null or empty
-             if employee.profilepic: # Check if there is an existing picture
-                 employee.profilepic.delete(save=False) # Delete the file
-                 image_updated = True
-                 if not created:
-                     update_fields_list.append('profilepic')
-                 logger.info(f"Profile picture cleared for emp_no: {emp_no}")
+             # Clear the image if 'profilepic' is sent as null
+             if employee.profilepic:
+                 try:
+                     employee.profilepic.delete(save=False) # Delete the file, don't save model yet
+                     image_updated = True # Indicates a change occurred
+                     image_field_updated = True # Mark field for saving
+                     logger.info(f"Profile picture cleared for aadhar: {aadhar}")
+                 except Exception as del_err:
+                      logger.error(f"Error clearing profile pic file for aadhar {aadhar}: {del_err}")
 
 
-        # Final save to commit all changes
-        if not created:
-            # Only save if there were updates or image changes
-            if update_fields_list or image_updated:
-                 # The model's save() method should handle updating profilepic_url based on profilepic field
-                 employee.save(update_fields=update_fields_list if update_fields_list else None) # Pass specific fields for efficiency
-                 logger.info(f"Updated fields for emp_no {emp_no}: {update_fields_list}")
-            else:
-                 logger.info(f"No changes detected for emp_no {emp_no}. Skipping save.")
+        # --- Final Save ---
+        fields_to_save = update_fields_list
+        if image_field_updated:
+             # Ensure 'profilepic' is in the list if the image was changed or cleared
+             if 'profilepic' not in fields_to_save:
+                 fields_to_save.append('profilepic')
+             # Also update profilepic_url if your model logic doesn't do it automatically on save
+             if hasattr(employee, 'profilepic_url'):
+                 # The model's save method *should* handle this if properly set up
+                 # If not, manually set: employee.profilepic_url = employee.profilepic.url if employee.profilepic else ''
+                 if 'profilepic_url' not in fields_to_save:
+                      fields_to_save.append('profilepic_url')
+
+
+        if created or fields_to_save:
+             # The model's save() method should handle updating profilepic_url
+             # If saving specific fields, ensure profilepic_url is included if it changed
+             if not created and fields_to_save:
+                 employee.save(update_fields=fields_to_save)
+                 logger.info(f"Updated fields for aadhar {aadhar}: {fields_to_save}")
+             else: # Created or saving all fields
+                 employee.save()
+                 logger.info(f"Saved basic details for aadhar {aadhar} (Created: {created})")
         else:
-            # For newly created records, save everything (including potential image set above)
-            employee.save()
+             logger.info(f"No changes detected for aadhar {aadhar} on {entry_date}. Skipping save.")
 
 
         message = "Basic Details added successfully" if created else "Basic Details updated successfully"
         return JsonResponse({
             "message": message,
-            "emp_no": emp_no,
+            "aadhar": aadhar,
             "entry_date": entry_date.isoformat(),
-            "profilepic_url": employee.profilepic_url # Return current URL
-            }, status=200)
+            "profilepic_url": employee.profilepic.url if employee.profilepic else None # Return current URL
+            }, status=201 if created else 200) # Use 201 for created
 
-    except json.JSONDecodeError as e:
-        logger.error(f"add_basic_details failed: Invalid JSON data. Error: {str(e)}")
+    except json.JSONDecodeError:
+        logger.error("add_basic_details failed: Invalid JSON data.", exc_info=True)
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
-    except KeyError as e:
-        # This might occur if data.get() expects a key that MUST exist, though .get() prevents this.
-        # More likely if accessing nested dicts directly e.g., data['address']['street']
-        logger.error(f"add_basic_details failed: Missing key in data structure - {str(e)}")
-        return JsonResponse({"error": f"Missing expected data field: {str(e)}"}, status=400)
     except Exception as e:
-        logger.exception(f"add_basic_details failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
+        logger.exception(f"add_basic_details failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
         return JsonResponse({"error": "An internal server error occurred while processing basic details."}, status=500)
 
 
 @csrf_exempt
-def add_vital_details(request):
-    """Adds or updates vital details."""
-    if request.method == "POST":
+def uploadImage(request, aadhar): # CHANGED: emp_no -> aadhar
+    """Handles uploading/updating profile images based on AADHAR."""
+    # This view seems redundant if add_basic_details handles image upload.
+    # However, if it's meant as a standalone image update endpoint:
+    if request.method == 'PUT':
         try:
+            # Assuming image is sent as base64 in the body, similar to add_basic_details
             data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')  # Crucial: Get emp_no from the data
-            entry_date = datetime.now().date()
-
-            if not emp_no:
-                logger.warning("add_vital_details failed: Employee number is required")
-                return JsonResponse({"error": "Employee number is required"}, status=400)
-
-            # Filter out unexpected fields (as before)
-            allowed_fields = {field.name for field in models.vitals._meta.fields}
-            allowed_fields.remove('id')
-            allowed_fields.remove('entry_date')# remove entrydate from allowed fields for updating it
-            filtered_data = {key: value for key, value in data.items() if key in allowed_fields}
-            
-
-            vitals, created = models.vitals.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date = entry_date,
-                defaults=filtered_data
-            )
-
-            message = "Vital Details added successfully" if created else "Vital Details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_vital_details failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_vital_details failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_vital_details failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_motion_test(request):
-    """Adds or updates motion test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            motion_test, created = models.MotionTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Motion Test details added successfully" if created else "Motion Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_motion_test failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_motion_test failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_motion_test failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_culture_sensitivity_test(request):
-    """Adds or updates culture sensitivity test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            culture_sensitivity_test, created = models.CultureSensitivityTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Culture Sensitivity Test details added successfully" if created else "Culture Sensitivity Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_culture_sensitivity_test failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_culture_sensitivity_test failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_culture_sensitivity_test failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_mens_pack(request):
-    """Adds or updates Mens Pack details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            mens_pack, created = models.MensPack.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Mens Pack details added successfully" if created else "Mens Pack details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_mens_pack failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_mens_pack failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_mens_pack failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_opthalmic_report(request):
-    """Adds or updates ophthalmic report details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            opthalmic_report, created = models.OphthalmicReport.objects.update_or_create(
-                emp_no=emp_no,                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Ophthalmic Report details added successfully" if created else "Ophthalmic Report details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_opthalmic_report failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_opthalmic_report failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_opthalmic_report failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_usg_report(request):
-    """Adds or updates USG report details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            usg_report, created = models.USGReport.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "USG Report details added successfully" if created else "USG Report details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_usg_report failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_usg_report failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_usg_report failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_mri_report(request):
-    """Adds or updates MRI report details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            mri_report, created = models.MRIReport.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "MRI Report details added successfully" if created else "MRI Report details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_mri_report failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_mri_report failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_mri_report failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def insert_vaccination(request):
-    """Inserts or updates vaccination record."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            emp_no = data.get("emp_no")
-            vaccination = data.get("vaccination")
-
-            if not emp_no or not vaccination:
-                logger.warning("insert_vaccination failed: emp_no and vaccination fields are required")
-                return JsonResponse({"error": "emp_no and vaccination fields are required"}, status=400)
-
-            entry_date = datetime.now().date()
-
-            vaccination_record, created = VaccinationRecord.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults={'vaccination': vaccination}
-            )
-
-            if created:
-                message = "Vaccination record saved successfully"
-            else:
-                message = "Vaccination record updated successfully"
-
-            return JsonResponse({
-                "message": message,
-                "created": {
-                    "id": vaccination_record.id,
-                    "emp_no": vaccination_record.emp_no,
-                    "vaccination": vaccination_record.vaccination,
-                    "entry_date": vaccination_record.entry_date.strftime("%Y-%m-%d %H:%M:%S")
-                }
-            }, status=200 if not created else 201)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"insert_vaccination failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON format"}, status=400)
-        except Exception as e:
-            logger.exception("insert_vaccination failed: An unexpected error occurred.")
-            return JsonResponse({"error": "An error occurred: " + str(e)}, status=500)
-
-    logger.warning("insert_vaccination failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def add_haem_report(request):
-    """Adds or updates haematology report details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            haematology, created = models.heamatalogy.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Haematology details added successfully" if created else "Haematology details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_haem_report failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_haem_report failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_haem_report failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_routine_sugar(request):
-    """Adds or updates routine sugar test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            routine_sugar, created = models.RoutineSugarTests.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Routine Sugar Test details added successfully" if created else "Routine Sugar Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_routine_sugar failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_routine_sugar failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_routine_sugar failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_renel_function(request):
-    """Adds or updates renal function test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            renal_function, created = models.RenalFunctionTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Renal Function Test details added successfully" if created else "Renal Function Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_renel_function failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_renel_function failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_renel_function failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_lipid_profile(request):
-    """Adds or updates lipid profile details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            lipid_profile, created = models.LipidProfile.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Lipid Profile details added successfully" if created else "Lipid Profile details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_lipid_profile failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_lipid_profile failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_lipid_profile failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_liver_function(request):
-    """Adds or updates liver function test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            liver_function, created = models.LiverFunctionTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Liver Function Test details added successfully" if created else "Liver Function Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_liver_function failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_liver_function failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_liver_function failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_thyroid_function(request):
-    """Adds or updates thyroid function test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            thyroid_function, created = models.ThyroidFunctionTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Thyroid Function Test details added successfully" if created else "Thyroid Function Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_thyroid_function failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_thyroid_function failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_thyroid_function failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_enzymes_cardiac(request):
-    """Adds or updates enzymes cardiac profile details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            enzymes_cardiac, created = models.EnzymesCardiacProfile.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Enzymes Cardiac Profile details added successfully" if created else "Enzymes Cardiac Profile details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_enzymes_cardiac failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_enzymes_cardiac failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_enzymes_cardiac failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_urine_routine(request):
-    """Adds or updates urine routine test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            urine_routine, created = models.UrineRoutineTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Urine Routine Test details added successfully" if created else "Urine Routine Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_urine_routine failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_urine_routine failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_urine_routine failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-@csrf_exempt
-def add_serology(request):
-    """Adds or updates serology test details."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date()
-
-            serology, created = models.SerologyTest.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults=data
-            )
-
-            message = "Serology Test details added successfully" if created else "Serology Test details updated successfully"
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_serology failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_serology failed: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error:" + str(e)}, status=500)
-
-    logger.warning("add_serology failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Request method is wrong"}, status=405)
-
-
-@csrf_exempt
-def BookAppointment(request):
-    """Books a new appointment."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-
-            # Extract data, providing defaults for optional fields
-            role = data.get("role", "Unknown")
-            name = data.get("name", "Unknown")
-            employee_id = data.get("employeeId", "Unknown")
-            organization_name = data.get("organization", "Unknown")
-            aadhar_no = data.get("aadharNo", "Unknown")
-            contractor_name = data.get("contractorName", "Unknown")
-            purpose = data.get("purpose", "Unknown")
-            appointment_date_str = data.get("appointmentDate", "Unknown")
-            time = data.get("time", "Unknown")
-            booked_by = data.get("bookedBy", "Unknown")
-            submitted_by_nurse = data.get("submitted_by_nurse", "Unknown")
-            submitted_Dr = data.get("submitted_Dr", "Unknown")
-            consulted_Dr = data.get("consultedDoctor", "Unknown")
-
-            if not appointment_date_str:
-                logger.warning("BookAppointment failed: Appointment date is required.")
-                return JsonResponse({"error": "Appointment date is required"}, status=400)
-
+            image_b64 = data.get('profileImage') # Or whatever key is used
+
+            if not image_b64 or not isinstance(image_b64, str) or ';base64,' not in image_b64:
+                logger.warning(f"Image upload failed for aadhar {aadhar}: Invalid or missing image data.")
+                return JsonResponse({'status': 'error', 'message': 'Invalid or missing profileImage data (must be base64 string).'}, status=400)
+
+            # --- Get the LATEST employee record for this aadhar ---
+            # Or should it update a specific day's record? Using latest for profile pic makes more sense.
+            employee = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
+
+            if not employee:
+                # Option 1: Return error if no employee record exists
+                logger.warning(f"Image upload failed: No employee record found for aadhar {aadhar}.")
+                return JsonResponse({'status': 'error', 'message': 'Employee record not found for this Aadhar.'}, status=404)
+                # Option 2: Create a new record (less likely for just an image update)
+                # ... logic to create a minimal employee_details record ...
+
+            # --- Process and Save Image ---
             try:
-                appointment_date = datetime.strptime(appointment_date_str, "%Y-%m-%d").date()
-            except ValueError as e:
-                logger.error(f"BookAppointment failed: Invalid appointment date format. Error: {str(e)}")
-                return JsonResponse({"error": "Invalid appointment date format. Use YYYY-MM-DD."}, status=400)
+                header, encoded = image_b64.split(';base64,', 1)
+                file_ext = header.split('/')[-1].split(';')[0].split('+')[0] if header.startswith('data:image/') else 'jpg'
+                if not file_ext: file_ext = 'jpg'
 
-            existing_appointments = Appointment.objects.filter(date=appointment_date).count()
-            next_appointment_number = existing_appointments + 1
-            appointment_no = f"{next_appointment_number:04d}{appointment_date.strftime('%d%m%Y')}"
+                image_data = base64.b64decode(encoded)
+                filename = f"profilepics/{aadhar}_{uuid.uuid4().hex[:8]}.{file_ext}"
 
-            # Create an Appointment instance
-            appointment = Appointment.objects.create(
-                appointment_no=appointment_no,
-                booked_date=datetime.now().strftime("%Y-%m-%d"),
-                role=role,
-                emp_no=employee_id,
-                aadhar_no=aadhar_no,
-                name=name,
-                organization_name=organization_name,
-                contractor_name=contractor_name,
-                purpose=purpose,
-                date=appointment_date,
-                time=time,
-                booked_by=booked_by,
-                submitted_by_nurse=submitted_by_nurse,
-                submitted_Dr=submitted_Dr,
-                consultated_Dr=consulted_Dr,
-                employer=organization_name if role == "Employee" else contractor_name,
-            )
+                # Delete old file
+                if employee.profilepic and employee.profilepic.name:
+                     try:
+                         if default_storage.exists(employee.profilepic.path):
+                             default_storage.delete(employee.profilepic.path)
+                             logger.info(f"Deleted old profile pic for aadhar {aadhar} during uploadImage: {employee.profilepic.name}")
+                     except Exception as del_err:
+                         logger.error(f"Error deleting old profile pic for aadhar {aadhar} during uploadImage: {del_err}")
 
-            logger.info(f"Appointment booked successfully for {appointment.name} on {appointment.date}. Appointment No: {appointment.appointment_no}")
-            return JsonResponse({"message": f"Appointment booked successfully for {appointment.name} on {appointment.date}. Appointment No: {appointment.appointment_no}"})
+                # Save new file
+                employee.profilepic.save(filename, ContentFile(image_data), save=True) # save=True here updates the model instance
+                # employee.save(update_fields=['profilepic', 'profilepic_url']) # Explicit save if needed
 
-        except json.JSONDecodeError as e:
-            logger.error(f"BookAppointment failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+                logger.info(f"Successfully updated profile image for aadhar {aadhar}")
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Image updated successfully',
+                    'profilepic_url': employee.profilepic.url if employee.profilepic else None
+                })
+
+            except (TypeError, ValueError, base64.binascii.Error) as img_err:
+                logger.error(f"Image upload processing error for aadhar {aadhar}: {img_err}")
+                return JsonResponse({'status': 'error', 'message': f'Image processing error: {img_err}'}, status=400)
+            except Exception as save_err:
+                 logger.exception(f"Error saving profile image for aadhar {aadhar}")
+                 return JsonResponse({'status': 'error', 'message': f'Failed to save new image: {save_err}'}, status=500)
+
+        except json.JSONDecodeError:
+            logger.error(f"Image upload failed for aadhar {aadhar}: Invalid JSON.", exc_info=True)
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data in request body.'}, status=400)
         except Exception as e:
-            logger.exception("BookAppointment failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
+            logger.exception(f"Image upload failed for aadhar {aadhar}: An unexpected error occurred.")
+            return JsonResponse({'status': 'error', 'message': 'An unexpected server error occurred.'}, status=500)
 
-    logger.warning("BookAppointment failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    logger.warning(f"Image upload failed for aadhar {aadhar}: Invalid request method. Only PUT allowed.")
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use PUT.'}, status=405)
+
 
 @csrf_exempt
-def get_appointments(request):
-    """Retrieves appointments based on provided filters."""
-    if request.method == "GET":
-        from_date_str = request.GET.get('fromDate')
-        to_date_str = request.GET.get('toDate')
-        today = datetime.today().date()
-
+def fetchVisitdata(request, aadhar): # CHANGED: emp_no -> aadhar
+    """Fetches all Dashboard visit records for a specific employee Aadhar."""
+    # Original code used POST, ideally should be GET
+    if request.method == "POST" or request.method == "GET": # Allow GET as well
         try:
-            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date() if from_date_str else None
-            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date() if to_date_str else None
-        except ValueError as e:
-            logger.error(f"get_appointments failed: Invalid date format. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+            # Fetch all dashboard entries for the given aadhar, ordered by date
+            visit_data = list(Dashboard.objects.filter(aadhar=aadhar).order_by('-date').values())
 
-        if from_date and to_date:
-            appointments = Appointment.objects.filter(
-                date__gte=from_date,
-                date__lte=to_date
-            ).order_by('date', 'time')
-        elif from_date:
-            appointments = Appointment.objects.filter(
-                date__gte=from_date
-            ).order_by('date', 'time')
-        elif to_date:
-            appointments = Appointment.objects.filter(
-                date__lte=to_date
-            ).order_by('date', 'time')
-        else:
-            appointments = Appointment.objects.filter(date=today).order_by('date', 'time')
+            # Convert dates to ISO format string
+            for visit in visit_data:
+                 if isinstance(visit.get('date'), date):
+                     visit['date'] = visit['date'].isoformat()
+                 # Convert other date fields if necessary
 
-        appointment_list = list(appointments.values())
-        return JsonResponse({"appointments": appointment_list, "message": "Appointments fetched successfully."}, safe=False)
-
-    logger.warning("get_appointments failed: Invalid request method. Only GET allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-@csrf_exempt
-def update_appointment_status(request):
-    """Updates the status of an appointment."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            appointment_id = data.get("id")
-
-            try:
-                appointment = Appointment.objects.get(id=appointment_id)
-            except Appointment.DoesNotExist:
-                logger.warning(f"update_appointment_status failed: Appointment with ID {appointment_id} not found.")
-                return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
-
-            if appointment.status == Appointment.StatusChoices.INITIATE:
-                appointment.status = Appointment.StatusChoices.IN_PROGRESS
-            elif appointment.status == Appointment.StatusChoices.IN_PROGRESS:
-                appointment.status = Appointment.StatusChoices.COMPLETED
-            else:
-                logger.warning(f"update_appointment_status failed: Cannot update status further for appointment ID {appointment_id}.")
-                return JsonResponse({"success": False, "message": "Cannot update status further."})
-
-            appointment.save()
-            logger.info(f"Appointment status updated successfully for appointment ID {appointment_id}. New status: {appointment.status}")
-            return JsonResponse({"success": True, "message": "Status updated", "status": appointment.status})
-
-        except json.JSONDecodeError as e:
-            logger.error(f"update_appointment_status failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"success": False, "message": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("update_appointment_status failed: An unexpected error occurred.")
-            return JsonResponse({"success": False, "message": str(e)}, status=500)
-
-    logger.warning("update_appointment_status failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-@csrf_exempt
-def uploadAppointment(request):
-    """Uploads appointments from a JSON payload."""
-    if request.method != "POST":
-        logger.warning("uploadAppointment failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=400)
-
-    try:
-        data = json.loads(request.body)
-        appointments_data = data.get("appointments", [])
-        print("appointment",appointments_data)
-
-        if not appointments_data:
-            logger.warning("uploadAppointment failed: No appointment data provided.")
-            return JsonResponse({"error": "No appointment data provided."}, status=400)
-
-        successful_appointments = 0
-
-        for i, appointment_data in enumerate(appointments_data):
-            if i == 0:  # Skip header row
-                continue
-
-            if len(appointment_data) < 7:
-                logger.warning(f"uploadAppointment skipping appointment due to insufficient fields: {appointment_data}")
-                continue
-
-            try:
-                role = str(appointment_data[1]).strip().lower()
-                print(role)
-                emp_no = str(appointment_data[3]).strip() if len(appointment_data) > 3 else None
-                aadhar_no = str(appointment_data[5]).strip() if len(appointment_data) > 5 else None
-
-                def parse_date(value):
-                    if isinstance(value, int):  # Excel serial date handling
-                        return (datetime(1899, 12, 30) + timedelta(days=value)).date()
-                    try:
-                        return datetime.strptime(str(value).strip(), "%Y-%m-%d").date()
-                    except ValueError:
-                         try:
-                            return datetime.strptime(str(value).strip(), "%m/%d/%Y").date()
-                         except ValueError:
-                             raise ValueError(f"Invalid date format: {value}.  Use YYYY-MM-DD or MM/DD/YYYY")
-
-                date = parse_date(appointment_data[8])
-                time = str(appointment_data[9]).strip()
-
-                booked_by = str(appointment_data[10]).strip() if len(appointment_data) > 10 else ""
-                submitted_by_nurse = str(appointment_data[11]).strip() if len(appointment_data) > 13 else ""
-                submitted_Dr = str(appointment_data[12]).strip() if len(appointment_data) > 10 else ""
-                consulted_Dr = str(appointment_data[13]).strip() if len(appointment_data) > 13 else ""
-                purpose = str(appointment_data[7]).strip()
-                
-                name = str(appointment_data[2]).strip() if len(appointment_data) > 2 else ""
-                organization = str(appointment_data[4]).strip() if len(appointment_data) > 4 else ""
-                contractor_name = "-"
-                # organization = None
-
-                if role == "contractor":
-                    contractor_name = str(appointment_data[6]).strip() if len(appointment_data) > 6 else None
-                # elif role == "visitor" or role =="employee":
-                #     organization = str(appointment_data[6]).strip() if len(appointment_data) > 6 else None
-
-                formatted_date = date.strftime("%d%m%Y")
-                appointment_count = Appointment.objects.filter(date=date).count() + 1
-                appointment_no = f"{appointment_count:04d}{formatted_date}"
-
-                print(f"Role: {role}, Generated Appointment No: {appointment_no}")
-            except (IndexError, ValueError) as e:
-                logger.error(f"uploadAppointment error processing appointment data: {appointment_data}, Error: {str(e)}")
-                return JsonResponse({"error": f"Error processing appointment data: {str(e)}"}, status=400)
-
-            try:
-                if role in ["contractor", "employee", "visitor"]:
-                  Appointment.objects.create(
-                      appointment_no=appointment_no,
-                      booked_date = datetime.now().strftime("%Y-%m-%d"),
-                      role=role,
-                      emp_no=emp_no,
-                      aadhar_no=aadhar_no,
-                      name = name,
-                      organization_name = organization,
-                      contractor_name=contractor_name,
-                      purpose=purpose,
-                      date=date,
-                      time=time,
-                      booked_by=booked_by,
-                      submitted_by_nurse=submitted_by_nurse,
-                      submitted_Dr=submitted_Dr,
-                      consultated_Dr=consulted_Dr,
-                  )
-                  successful_appointments += 1
-                else:
-                    logger.warning(f"uploadAppointment skipping appointment due to unknown role: {role}")
-
-            except ValidationError as e:
-                logger.error(f"uploadAppointment validation Error creating appointment: {str(e)}")
-                return JsonResponse({"error": f"Data Validation Error: {str(e)}"}, status=400)
-
-        if successful_appointments > 0:
-            logger.info(f"{successful_appointments} appointments uploaded successfully.")
-            return JsonResponse({"message": f"{successful_appointments} appointments uploaded successfully."})
-        else:
-            logger.info("No appointments were uploaded.  Check data for valid roles and formats.")
-            return JsonResponse({"message": "No appointments were uploaded.  Check data for valid roles and formats."}, status=200)
-
-    except json.JSONDecodeError as e:
-        logger.error(f"uploadAppointment JSON Decode Error: {str(e)}")
-        return JsonResponse({"error": "Invalid JSON format."}, status=400)
-    except Exception as e:
-        logger.exception("uploadAppointment Unexpected error during appointment upload")
-        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
-
-
-
-@csrf_exempt
-def create_users(request):
-    """Creates default users (nurse, doctor, admin, pharmacy)."""
-    try:
-        users = [
-            {'username': 'nurse', 'password': 'nurse123'},
-            {'username': 'doctor', 'password': 'doctor123'},
-            {'username': 'admin', 'password': 'admin123'},
-            {'username': 'pharmacy', 'password': 'pharmacy123'}
-        ]
-        for user_data in users:
-            User.objects.create_user(username=user_data['username'], password=user_data['password'])
-
-        logger.info("Default users created successfully.")
-        return JsonResponse({"message": "Default users created successfully!"}, status=201)
-    except Exception as e:
-        logger.exception("create_users failed: An unexpected error occurred.")
-        return JsonResponse({"error": str(e)}, status=500)
-
-@csrf_exempt
-def save_mockdrills(request):
-    """Saves mock drill data."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            mock_drill = mockdrills.objects.create(
-                date=data.get("date"),
-                time=data.get("time"),
-                department=data.get("department"),
-                location=data.get("location"),
-                scenario=data.get("scenario"),
-                ambulance_timing=data.get("ambulance_timing"),
-                departure_from_OHC=data.get("departure_from_OHC"),
-                return_to_OHC=data.get("return_to_OHC"),
-                emp_no=data.get("emp_no"),
-                victim_department=data.get("victim_department"),
-                victim_name=data.get("victim_name"),
-                nature_of_job=data.get("nature_of_job"),
-                age=data.get("age"),
-                mobile_no=data.get("mobile_no"),
-                gender=data.get("gender"),
-                vitals=data.get("vitals"),
-                complaints=data.get("complaints"),
-                treatment=data.get("treatment"),
-                referal=data.get("referal"),
-                ambulance_driver=data.get("ambulance_driver"),
-                staff_name=data.get("staff_name"),
-                OHC_doctor=data.get("OHC_doctor"),
-                staff_nurse=data.get("staff_nurse"),
-                action_completion=data.get("Action_Completion"),
-                responsible=data.get("Responsible"),
-            )
-            logger.info(f"Mock drill saved successfully with ID: {mock_drill.id}")
-            return JsonResponse({"message": f"Mock drill saved successfully with ID: {mock_drill.id}"}, status=201)
-        except json.JSONDecodeError as e:
-            logger.error(f"save_mockdrills failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("save_mockdrills failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("save_mockdrills failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def insert_vaccination(request):
-    """Inserts vaccination data (duplicate of the previous one - consider removing one)."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            emp_no = data.get("emp_no")
-            vaccination = data.get("vaccination")
-
-            if not emp_no or not vaccination:
-                logger.warning("insert_vaccination failed: emp_no and vaccination fields are required")
-                return JsonResponse({"error": "emp_no and vaccination fields are required"}, status=400)
-
-            created_record = VaccinationRecord.objects.create(
-                emp_no=emp_no,
-                vaccination=vaccination
-            )
-
-            logger.info(f"Vaccination record saved successfully for emp_no: {created_record.emp_no}")
-            return JsonResponse({
-                "message": "Vaccination record saved successfully",
-                "created": {
-                    "id": created_record.id,
-                    "emp_no": created_record.emp_no,
-                    "vaccination": created_record.vaccination,
-                    "entry_date": created_record.entry_date.strftime("%Y-%m-%d %H:%M:%S")
-                }
-            }, status=201)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"insert_vaccination failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON format"}, status=400)
-        except Exception as e:
-            logger.exception("insert_vaccination failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("insert_vaccination failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-def fetch_vaccinations(request):
-    """Fetches vaccination records."""
-    if request.method == "GET":
-        emp_no = request.GET.get("emp_no")  # Optional filter by emp_no
-
-        try:
-            if emp_no:
-                records = VaccinationRecord.objects.filter(emp_no=emp_no).values()
-            else:
-                records = VaccinationRecord.objects.all().values()
-
-            return JsonResponse(list(records), safe=False)
+            logger.info(f"Fetched {len(visit_data)} visit records for aadhar: {aadhar}")
+            return JsonResponse({"message": "Visit data fetched successfully", "data": visit_data}, status=200)
 
         except Exception as e:
-            logger.exception("fetch_vaccinations failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("fetch_vaccinations failed: Invalid request method. Only GET allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-# views.py (in your Django app)
-
-import json
-import logging
-from datetime import datetime, date # Ensure date is imported
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from . import models # Or wherever your models are defined
-from .models import FitnessAssessment # Import specific model
-
-logger = logging.getLogger(__name__)
-
-@csrf_exempt
-def fitness_test(request, pk=None):
-    """Adds or updates fitness assessment data for a specific date."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            emp_no = data.get('emp_no')
-            entry_date = datetime.now().date() # Use today's date for the lookup/update
-
-            if not emp_no:
-                logger.warning("fitness_test failed: emp_no is missing from request data.")
-                return JsonResponse({"error": "Employee number (emp_no) is required"}, status=400)
-
-            # --- Safely parse JSON fields ---
-            job_nature = []
-            try:
-                # Frontend should send stringified JSON or already parsed array
-                raw_job_nature = data.get("job_nature", "[]")
-                if isinstance(raw_job_nature, str):
-                    job_nature = json.loads(raw_job_nature)
-                elif isinstance(raw_job_nature, list):
-                     job_nature = raw_job_nature # Already a list
-                if not isinstance(job_nature, list): # Validate type after parsing/assignment
-                    raise ValueError("Parsed job_nature is not a list")
-            except (TypeError, json.JSONDecodeError, ValueError) as e:
-                logger.warning(f"fitness_test for emp_no {emp_no}: Invalid job_nature, defaulting to []. Error: {str(e)}")
-                job_nature = []
-
-            conditional_fit_fields = [] # Note potential typo 'feilds' vs 'fields'
-            try:
-                # Frontend sends 'conditional_fit_feilds' based on React state
-                raw_conditional = data.get("conditional_fit_feilds", "[]") # Match key from frontend
-                if isinstance(raw_conditional, str):
-                    conditional_fit_fields = json.loads(raw_conditional)
-                elif isinstance(raw_conditional, list):
-                    conditional_fit_fields = raw_conditional
-                if not isinstance(conditional_fit_fields, list):
-                     raise ValueError("Parsed conditional_fit_feilds is not a list")
-            except (TypeError, json.JSONDecodeError, ValueError) as e:
-                logger.warning(f"fitness_test for emp_no {emp_no}: Invalid conditional_fit_feilds, defaulting to []. Error: {str(e)}")
-                conditional_fit_fields = []
-
-            # --- Update Dashboard (optional side effect) ---
-            try:
-                # Use filter().first() or get() with exception handling
-                outcome_entry = models.Dashboard.objects.filter(emp_no=emp_no, entry_date=entry_date).first()
-                if outcome_entry:
-                    overall_fitness_status = data.get("overall_fitness") # Get status before defaults
-                    if overall_fitness_status: # Only update if provided
-                        outcome_entry.visitOutcome = overall_fitness_status
-                        outcome_entry.save()
-                        logger.info(f"Dashboard visitOutcome updated for emp_no: {emp_no} on {entry_date}")
-                else:
-                     logger.info(f"No matching Dashboard entry found for emp_no: {emp_no} on {entry_date} to update outcome.")
-            except Exception as e:
-                 logger.error(f"Error updating Dashboard outcome for emp_no {emp_no}: {str(e)}")
-                 # Decide if this error should stop the fitness assessment save
-
-            # --- Create or Update Fitness Assessment ---
-            fitness_test_instance, created = FitnessAssessment.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date, # Use today's date as the key
-                defaults={
-                    # Basic Tests
-                    'tremors': data.get("tremors"), # Assumes frontend sends keys matching model fields
-                    'romberg_test': data.get("romberg_test"),
-                    'acrophobia': data.get("acrophobia"),
-                    'trendelenberg_test': data.get("trendelenberg_test"),
-                    # Job & Fitness
-                    'job_nature': job_nature, # Use parsed list
-                    'overall_fitness': data.get("overall_fitness"), # Use get with None default if you want optional
-                    'conditional_fit_feilds': conditional_fit_fields, # Use parsed list, match model field name
-                    # Examinations (NEW)
-                    'general_examination': data.get("general_examination"),
-                    'systematic_examination': data.get("systematic_examination"),
-                    'eye_exam_result': data.get("eye_exam_result"),
-                    'eye_exam_fit_status': data.get("eye_exam_fit_status"),
-                    # Comments, Validity, Employer
-                    'validity': data.get("validity") or None, # Handle empty string -> None for DateField
-                    'comments': data.get("comments"),
-                    'employer': data.get("employer"),
-                    # Note: entry_date is NOT in defaults, it's a lookup key
-                    # Note: updated_at is handled automatically by auto_now=True
-                }
-            )
-
-            message = "Fitness test details added successfully" if created else "Fitness test details updated successfully"
-            logger.info(f"{message} for emp_no: {emp_no} on date: {entry_date}")
-            return JsonResponse({"message": message}, status=200 if created else 200) # 201 for created, 200 for updated is common
-
-        except json.JSONDecodeError as e:
-            logger.error(f"fitness_test failed: Invalid JSON data received. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            # Log the full traceback for unexpected errors
-            logger.exception(f"fitness_test failed for emp_no {data.get('emp_no', 'UNKNOWN')}: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error: " + str(e)}, status=500)
-
-    logger.warning("fitness_test called with invalid request method: %s", request.method)
-    return JsonResponse({"error": "Invalid request method. Only POST allowed."}, status=405)
-
-
-
-def get_categories(request):
-    """Retrieves review categories."""
-    try:
-        categories = list(ReviewCategory.objects.values("id", "name"))
-        return JsonResponse({"categories": categories}, safe=False)
-    except Exception as e:
-        logger.exception("get_categories failed: An unexpected error occurred.")
-        return JsonResponse({"error": str(e)}, status=500)
-
-def get_reviews(request, status):
-    """Retrieves reviews based on status."""
-    try:
-        reviews = list(Review.objects.filter(status=status).values("id", "pid", "name", "gender", "appointment_date", "category__name"))
-        return JsonResponse({"reviews": reviews}, safe=False)
-    except Exception as e:
-        logger.exception("get_reviews failed: An unexpected error occurred.")
-        return JsonResponse({"error": str(e)}, status=500)
-
-@csrf_exempt
-def add_review(request):
-    """Adds a new review."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-            category, created = ReviewCategory.objects.get_or_create(name=data["category"])
-            review = Review.objects.create(
-                category=category,
-                pid=data["pid"],
-                name=data["name"],
-                gender=data["gender"],
-                appointment_date=datetime.strptime(data["appointment_date"], "%Y-%m-%d").date(),
-                status=data["status"]
-            )
-            logger.info(f"Review saved successfully with ID: {review.id}")
-            return JsonResponse({"message": "Review added successfully", "id": review.id}, status=201)
-        except json.JSONDecodeError as e:
-            logger.error(f"add_review failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_review failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-    logger.warning("add_review failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
-
-# views.py (Django)
-import json
-from django.http import JsonResponse, Http404
-from django.views.decorators.csrf import csrf_exempt
-from .models import Member # Make sure to import your Member model
-import logging
-import bcrypt # Keep for add_member password generation
-from datetime import datetime # Keep for add_member entry_date
-
-logger = logging.getLogger(__name__)
-
-# --- find_member_by_email (No changes needed) ---
-@csrf_exempt
-def find_member_by_email(request):
-    if request.method == 'GET':
-        email = request.GET.get('email')
-        if not email:
-            return JsonResponse({'found': False, 'message': 'Email parameter is required'}, status=400)
-        try:
-            member = Member.objects.filter(email__iexact=email).first()
-            if member:
-                member_type = 'ohc' if member.employee_number else 'external'
-                member_data = {
-                    'id': member.id, # Important: Send the ID back!
-                    'employee_number': member.employee_number,
-                    'name': member.name,
-                    'designation': member.designation,
-                    'email': member.email,
-                    'role': member.role.split(',') if member.role else [],
-                    'doj': member.doj,
-                    'date_exited': member.date_exited,
-                    'job_nature': member.job_nature,
-                    'phone_number': member.phone_number,
-                    'hospital_name': member.hospital_name,
-                    'aadhar': member.aadhar,
-                    # Add 'do_access' if it exists in your model
-                    # 'do_access': member.do_access,
-                    'memberTypeDetermined': member_type
-                }
-                logger.info(f"Member found for email: {email} with ID: {member.id}")
-                return JsonResponse({'found': True, 'member': member_data}, status=200)
-            else:
-                logger.info(f"Member not found for email: {email}")
-                return JsonResponse({'found': False, 'message': 'Member not found'}, status=200)
-        except Exception as e:
-            logger.exception(f"Error finding member by email ({email}): {str(e)}")
-            return JsonResponse({'found': False, 'message': 'An error occurred during search'}, status=500)
+            logger.exception(f"fetchVisitdata failed for aadhar {aadhar}: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
-        return JsonResponse({'found': False, 'message': 'Only GET method is allowed'}, status=405)
+        logger.warning(f"fetchVisitdata failed for aadhar {aadhar}: Invalid request method.")
+        return JsonResponse({"error": "Invalid request method (use GET or POST)"}, status=405)
 
-
-# --- add_member (Minor adjustment maybe for logging) ---
-@csrf_exempt
-def add_member(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            member_type = data.get('memberType')
-
-            # Basic validation: Check if required fields exist for the type
-            required_fields = ['name', 'designation', 'email', 'role']
-            if member_type == 'ohc':
-                required_fields.extend(['employee_number', 'doj', 'phone_number'])
-            elif member_type == 'external':
-                 required_fields.extend(['hospital_name', 'aadhar', 'phone_number'])
-            else:
-                logger.warning("add_member failed: Invalid memberType received")
-                return JsonResponse({'message': 'Invalid memberType'}, status=400)
-
-            if not all(field in data and data[field] for field in required_fields):
-                 logger.warning(f"add_member failed: Missing required fields for type {member_type}. Received: {data.keys()}")
-                 return JsonResponse({'message': 'Missing required fields for the selected member type'}, status=400)
-
-            # Check if email already exists before creating
-            if Member.objects.filter(email__iexact=data.get('email')).exists():
-                 logger.warning(f"add_member failed: Email '{data.get('email')}' already exists.")
-                 return JsonResponse({'message': f"A member with email '{data.get('email')}' already exists."}, status=400)
-
-            # Password generation (only for new members)
-            password = "DefaultPassword123" # Default or generate securely
-            if data.get('role'): # Use first role if available
-                 password = data['role'][0] + "123"
-            hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode('utf-8')
-
-            role_str = ','.join(data.get('role', [])) # Ensure roles are joined correctly
-
-            if member_type == 'ohc':
-                member = Member.objects.create(
-                    employee_number=data.get('employee_number'),
-                    name=data.get('name'),
-                    designation=data.get('designation'),
-                    email=data.get('email'),
-                    role=role_str,
-                    doj=data.get('doj', None), # Handle potential null/empty dates
-                    date_exited=data.get('date_exited') if data.get('date_exited') else None,
-                    job_nature=data.get('job_nature'),
-                    phone_number=data.get('phone_number'),
-                    password=hashed_password,
-                    entry_date=datetime.now().date()
-                )
-            elif member_type == 'external':
-                member = Member.objects.create(
-                    name=data.get('name'),
-                    designation=data.get('designation'),
-                    email=data.get('email'),
-                    role=role_str,
-                    hospital_name=data.get('hospital_name'),
-                    aadhar=data.get('aadhar'),
-                    phone_number=data.get('phone_number'),
-                    date_exited=data.get('date_exited') if data.get('date_exited') else None,
-                    job_nature=data.get('job_nature'),
-                    # do_access=data.get('do_access') if data.get('do_access') else None, # Add if field exists
-                    password=hashed_password,
-                    entry_date=datetime.now().date()
-                )
-
-            logger.info(f"Member added successfully with ID: {member.id} and Type: {member_type}")
-            return JsonResponse({'message': 'Member added successfully', 'memberId': member.id}, status=201)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_member failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({'message': 'Invalid JSON format'}, status=400)
-        except Exception as e:
-            logger.exception("add_member failed: An unexpected error occurred.")
-            # Provide a more generic error message to the frontend for unexpected errors
-            return JsonResponse({'message': 'An internal server error occurred.'}, status=500)
-    else:
-        logger.warning("add_member failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({'message': 'Only POST method is allowed'}, status=405)
-
-
-# --- NEW: update_member View ---
-@csrf_exempt
-def update_member(request, member_id):
-    if request.method == 'PUT': # Or PATCH if you allow partial updates
-        try:
-            member = Member.objects.get(pk=member_id)
-        except Member.DoesNotExist:
-            logger.warning(f"update_member failed: Member with ID {member_id} not found.")
-            # raise Http404("Member not found") # Or return JsonResponse
-            return JsonResponse({'message': 'Member not found'}, status=404)
-
-        try:
-            data = json.loads(request.body)
-            member_type = data.get('memberType') # Get type from request data
-
-            # Basic validation (similar to add, but maybe less strict if patching)
-            required_fields = ['name', 'designation', 'role'] # Email usually not updated
-            if member_type == 'ohc':
-                required_fields.extend(['employee_number', 'doj', 'phone_number'])
-            elif member_type == 'external':
-                 required_fields.extend(['hospital_name', 'aadhar', 'phone_number'])
-            else:
-                logger.warning(f"update_member failed (ID: {member_id}): Invalid memberType received")
-                return JsonResponse({'message': 'Invalid memberType'}, status=400)
-
-            # Note: Email is usually NOT updated. If you need to update email,
-            # add extra checks (e.g., ensure the new email isn't already taken by another user).
-            # For simplicity, we'll skip updating email here. If you update it, remove readOnly from frontend.
-            # member.email = data.get('email', member.email) # Example if updating email
-
-            # Update fields based on type
-            member.name = data.get('name', member.name)
-            member.designation = data.get('designation', member.designation)
-            member.role = ','.join(data.get('role', [])) # Update roles
-            member.date_exited = data.get('date_exited') if data.get('date_exited') else None
-            member.job_nature = data.get('job_nature', member.job_nature)
-            member.phone_number = data.get('phone_number', member.phone_number)
-
-
-            if member_type == 'ohc':
-                # Ensure we are updating an OHC member (check existing type if necessary)
-                if not member.employee_number:
-                    logger.warning(f"update_member failed (ID: {member_id}): Type mismatch. Trying to update non-OHC as OHC.")
-                    return JsonResponse({'message': 'Cannot change member type during update.'}, status=400)
-                member.employee_number = data.get('employee_number', member.employee_number) # Usually not updated
-                member.doj = data.get('doj', member.doj) # Maybe update DOJ? Depends on rules.
-            elif member_type == 'external':
-                 # Ensure we are updating an External member
-                if member.employee_number:
-                    logger.warning(f"update_member failed (ID: {member_id}): Type mismatch. Trying to update OHC as External.")
-                    return JsonResponse({'message': 'Cannot change member type during update.'}, status=400)
-                member.hospital_name = data.get('hospital_name', member.hospital_name)
-                member.aadhar = data.get('aadhar', member.aadhar)
-                # member.do_access = data.get('do_access') if data.get('do_access') else None # Update if exists
-
-
-            # DO NOT UPDATE PASSWORD HERE without specific logic/request
-            # Password updates should ideally be a separate process.
-
-            member.save() # Save the changes to the database
-
-            logger.info(f"Member updated successfully: ID {member_id}")
-            return JsonResponse({'message': 'Member updated successfully'}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"update_member failed (ID: {member_id}): Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({'message': 'Invalid JSON format'}, status=400)
-        except Exception as e:
-            logger.exception(f"update_member failed (ID: {member_id}): An unexpected error occurred.")
-            return JsonResponse({'message': 'An internal server error occurred during update.'}, status=500)
-    else:
-        logger.warning(f"update_member failed (ID: {member_id}): Invalid request method. Only PUT allowed.")
-        return JsonResponse({'message': 'Only PUT method is allowed for updates'}, status=405)
-
-
-# urls.py (Django)
-# Make sure to add a path for this view
-# from django.urls import path
-# from . import views
-#
-# urlpatterns = [
-#     # ... other urls
-#     path('find_member_by_email/', views.find_member_by_email, name='find_member_by_email'),
-#     path('members/add/', views.add_member, name='add_member'),
-# ]
-
-import os
-
-ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'pptx', 'ppt']
-
-@csrf_exempt
-def add_camp(request):
-    """Adds a new event or camp."""
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body)
-
-            start_date_str = data.get("start_date")
-            end_date_str = data.get("end_date")
-
-            try:
-                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
-            except ValueError as e:
-                logger.error(f"add_camp failed: Invalid date format. Error: {str(e)}")
-                return JsonResponse({"error": f"Invalid date format: {e}"}, status=400)
-
-            camp = eventsandcamps.objects.create(
-                camp_name=data.get("camp_name"),
-                hospital_name=data.get("hospital_name"),
-                start_date=start_date,
-                end_date=end_date,
-                camp_details=data.get("camp_details"),
-            )
-            logger.info(f"Camp saved successfully with ID: {camp.id}")
-            return JsonResponse({"message": "Camp added successfully!", "id": camp.id}, status=201)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_camp failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except Exception as e:
-            logger.exception("add_camp failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("add_camp failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-def get_camps(request):
-    """Retrieves events and camps based on filters."""
-    if request.method == "GET":
-        try:
-            search_term = request.GET.get("searchTerm", "")
-            filter_status = request.GET.get("filterStatus", "")
-            date_from_str = request.GET.get("dateFrom", None)
-            date_to_str = request.GET.get("dateTo", None)
-            today = date.today()
-
-            camps = eventsandcamps.objects.all()
-
-            if search_term:
-                camps = camps.filter(camp_name__icontains=search_term)
-
-            if filter_status == "Live":
-                camps = camps.filter(
-                    start_date__lte=today,
-                    end_date__gte=today
-                )
-            elif filter_status:
-                try:
-                    camps = camps.filter(camp_type=filter_status)
-                except ValueError as e:
-                    logger.warning(f"get_camps failed: Invalid camp_type. Error: {str(e)}")
-                    return JsonResponse({"error": "Invalid camp_type value"}, status=400)
-
-            if date_from_str:
-                try:
-                    date_from = datetime.strptime(date_from_str, "%Y-%m-%d").date()
-                    camps = camps.filter(start_date__gte=date_from)
-                except ValueError as e:
-                    logger.warning(f"get_camps failed: Invalid dateFrom format. Error: {str(e)}")
-                    return JsonResponse({"error": "Invalid dateFrom format"}, status=400)
-
-            if date_to_str:
-                try:
-                    date_to = datetime.strptime(date_to_str, "%Y-%m-%d").date()
-                    camps = camps.filter(end_date__lte=date_to)
-                except ValueError as e:
-                    logger.warning(f"get_camps failed: Invalid dateTo format. Error: {str(e)}")
-                    return JsonResponse({"error": "Invalid dateTo format"}, status=400)
-
-            data = []
-            for camp in camps:
-                camp_data = {
-                    'id': camp.id,
-                    'camp_name': camp.camp_name,
-                    'hospital_name': camp.hospital_name,
-                    'start_date': str(camp.start_date),
-                    'end_date': str(camp.end_date),
-                    'camp_details': camp.camp_details,
-                    'camp_type': camp.camp_type,
-                    'report1': camp.report1.url if camp.report1 else None,
-                    'report2': camp.report2.url if camp.report2 else None,
-                    'photos': camp.photos.url if camp.photos else None,
-                    'ppt': camp.ppt.url if camp.ppt else None,
-                }
-                data.append(camp_data)
-
-            return JsonResponse(data, safe=False)
-
-        except Exception as e:
-            logger.exception("get_camps failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("get_camps failed: Invalid request method. Only GET allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-@csrf_exempt
-def upload_files(request):
-    """Uploads files associated with an event or camp."""
-    if request.method == 'POST':
-        try:
-            camp_id = request.POST.get('campId')
-            file_type = request.POST.get('fileType')
-
-            try:
-                camp = eventsandcamps.objects.get(pk=camp_id)
-            except eventsandcamps.DoesNotExist as e:
-                logger.warning(f"upload_files failed: Camp with ID {camp_id} not found. Error: {str(e)}")
-                return JsonResponse({'error': 'Camp not found'}, status=404)
-
-            file = request.FILES.get('files')
-
-            if not file:
-                logger.warning("upload_files failed: No file uploaded.")
-                return JsonResponse({'error': 'No file uploaded'}, status=400)
-
-            file_extension = file.name.split('.')[-1].lower()
-            if file_extension not in ALLOWED_FILE_TYPES:
-                logger.warning(f"upload_files failed: Invalid file type: {file_extension}")
-                return JsonResponse({'error': 'Invalid file type'}, status=400)
-
-            old_file = None
-            file_url = None
-
-            if file_type == 'report1':
-                old_file = camp.report1
-                camp.report1 = file
-            elif file_type == 'report2':
-                old_file = camp.report2
-                camp.report2 = file
-            elif file_type == 'photos':
-                old_file = camp.photos
-                camp.photos = file
-            elif file_type == 'ppt':
-                old_file = camp.ppt
-                camp.ppt = file
-            else:
-                logger.warning("upload_files failed: Invalid file type.")
-                return JsonResponse({'error': 'Invalid file type'}, status=400)
-
-            camp.save()
-
-            file_field = getattr(camp, file_type, None)
-            if file_field:
-                file_url = file_field.url
-            else:
-                file_url = None
-
-            if old_file:
-                try:
-                    if default_storage.exists(old_file.name):
-                        default_storage.delete(old_file.name)
-                except Exception as e:
-                    logger.error(f"upload_files failed: Error deleting old file: {str(e)}")
-
-            logger.info(f"File uploaded successfully for camp ID: {camp_id}, file_type: {file_type}")
-            return JsonResponse({'message': 'File uploaded successfully', 'file_url': file_url}, status=200)
-
-        except Exception as e:
-            logger.exception("upload_files failed: An unexpected error occurred.")
-
-            if file and hasattr(file, 'name'):
-                try:
-                     if default_storage.exists(file.name):
-                         default_storage.delete(file.name)
-                except Exception as delete_error:
-                     logger.error(f"upload_files failed: Error deleting problematic new file: {str(delete_error)}")
-
-            return JsonResponse({'error': str(e)}, status=500)
-
-    else:
-        logger.warning("upload_files failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=400)
-
-def download_file(request):
-    """Downloads a file associated with an event or camp."""
-    if request.method == "GET":
-        try:
-            camp_id = request.GET.get('campId')
-            file_type = request.GET.get('fileType')
-
-            camp = get_object_or_404(eventsandcamps, pk=camp_id)
-
-            file_field = None
-            if file_type == 'report1':
-                file_field = camp.report1
-            elif file_type == 'report2':
-                file_field = camp.report2
-            elif file_type == 'photos':
-                file_field = camp.photos
-            elif file_type == 'ppt':
-                file_field = camp.ppt
-            else:
-                logger.warning("download_file failed: Invalid file type.")
-                return JsonResponse({"error": "Invalid file type"}, status=400)
-
-            if not file_field:
-                logger.warning("download_file failed: File not found.")
-                return JsonResponse({"error": "File not found"}, status=404)
-
-            try:
-                with open(file_field.path, 'rb') as f:
-                    response = HttpResponse(f.read(), content_type="application/force-download")
-                    response['Content-Disposition'] = 'attachment; filename="{}"'.format(file_field.name)
-                    return response
-
-            except FileNotFoundError:
-                logger.warning("download_file failed: File not found on server.")
-                return JsonResponse({"error": "File not found on server"}, status=404)
-            except Exception as e:
-                logger.exception("download_file failed: An unexpected error occurred.")
-                return JsonResponse({"error": "Error during download"}, status=500)
-
-        except Exception as e:
-            logger.exception("download_file failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-
-    logger.warning("download_file failed: Invalid request method. Only GET allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-@csrf_exempt
-def delete_file(request):
-    """Deletes a file associated with an event or camp."""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            camp_id = data.get('campId')
-            file_type = data.get('fileType')
-
-            camp = eventsandcamps.objects.get(pk=camp_id)
-
-            file_field = None
-            if file_type == 'report1':
-                file_field = camp.report1
-                camp.report1 = None
-            elif file_type == 'report2':
-                file_field = camp.report2
-                camp.report2 = None
-            elif file_type == 'photos':
-                file_field = camp.photos
-                camp.photos = None
-            elif file_type == 'ppt':
-                file_field = camp.ppt
-                camp.ppt = None
-            else:
-                logger.warning("delete_file failed: Invalid file type.")
-                return JsonResponse({'error': 'Invalid file type'}, status=400)
-
-            if file_field:
-                try:
-                    default_storage.delete(file_field.name)
-                except Exception as e:
-                    logger.error(f"delete_file failed: Error deleting file from storage: {str(e)}")
-
-            camp.save()
-            logger.info(f"File deleted successfully for camp ID: {camp_id}, file_type: {file_type}")
-            return JsonResponse({'message': 'File deleted successfully'}, status=200)
-
-        except eventsandcamps.DoesNotExist as e:
-            logger.warning(f"delete_file failed: Camp with ID {camp_id} not found. Error: {str(e)}")
-            return JsonResponse({'error': 'Camp not found'}, status=404)
-        except json.JSONDecodeError as e:
-            logger.error(f"delete_file failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-        except Exception as e:
-            logger.exception("delete_file failed: An unexpected error occurred.")
-            return JsonResponse({'error': str(e)}, status=500)
-
-    logger.warning("delete_file failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-def get_mockdrills(request):
-    """Retrieves all mock drill records."""
-    if request.method == "GET":
-        try:
-            mock_drills = list(mockdrills.objects.values())
-            return JsonResponse(mock_drills, safe=False)
-        except Exception as e:
-            logger.exception("get_mockdrills failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        logger.warning("get_mockdrills failed: Invalid request method. Only GET allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def create_medical_history(request):
-    """Creates or updates a medical history record."""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-
-            required_fields = ['emp_no',  'personalHistory', 'medicalData', 'femaleWorker',
-                              'surgicalHistory', 'familyHistory', 'healthConditions', 
-                              'allergyFields', 'allergyComments', 'childrenData', 'conditions']
-            for field in required_fields:
-                if field not in data:
-                    logger.warning(f"create_medical_history failed: Missing required field: {field}")
-                    return JsonResponse({"error": f"Missing required field: {field}"}, status=400)
-
-            emp_no = data['emp_no']
-            entry_date = datetime.now().date()
-
-            medical_history, created = models.MedicalHistory.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date,
-                defaults={
-                    'personal_history': data['personalHistory'],
-                    'medical_data': data['medicalData'],
-                    'female_worker': data['femaleWorker'],
-                    'surgical_history': data['surgicalHistory'],
-                    'family_history': data['familyHistory'],
-                    'health_conditions': data['healthConditions'],
-                    'allergy_fields': data['allergyFields'],
-                    'allergy_comments': data['allergyComments'],
-                    'children_data': data['childrenData'],
-                    'conditions': data['conditions']
-                }
-            )
-
-            message = "Medical history created successfully" if created else "Medical history updated successfully"
-
-            logger.info(f"Medical history created/updated successfully for emp_no: {data['emp_no']}")
-            return JsonResponse({"message": message}, status=200)
-
-        except json.JSONDecodeError as e:
-            logger.error(f"create_medical_history failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        except ValidationError as e:
-            logger.error(f"create_medical_history failed: Validation error: {str(e)}")
-            return JsonResponse({"error": str(e)}, status=400)
-        except Exception as e:
-            logger.exception("create_medical_history failed: An unexpected error occurred.")
-            return JsonResponse({"error": "An internal server error occurred"}, status=500)
-    else:
-        logger.warning("create_medical_history failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
-
-@csrf_exempt
-def fetchVisitdata(request, emp_no):
-    """Fetches visit data for a specific employee."""
-    if request.method == "POST":
-        try:
-            data = list(models.Dashboard.objects.filter(emp_no=emp_no).values())
-            return JsonResponse({"message": "Visit data fetched successfully", "data":data}, status=200)
-        except Exception as e:
-            logger.exception(f"fetchVisitdata failed for emp_no {emp_no}: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        logger.warning("fetchVisitdata failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def fetchVisitdataAll(request):
-    """Fetches all visit data."""
-    if request.method == "POST":
-        try:
-            data = list(models.Dashboard.objects.values())
-            return JsonResponse({"message": "Visit data fetched successfully", "data":data}, status=200)
-        except Exception as e:
-            logger.exception("fetchVisitdataAll failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        logger.warning("fetchVisitdataAll failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=405)
-
-@csrf_exempt
-def fetchFitnessData(request):
-    """Fetches all fitness assessment data."""
-    if request.method == "POST":
-        try:
-            data = list(models.FitnessAssessment.objects.values())
-            return JsonResponse({"message": "Fitness data fetched successfully", "data":data}, status=200)
-        except Exception as e:
-            logger.exception("fetchFitnessData failed: An unexpected error occurred.")
-            return JsonResponse({"error": str(e)}, status=500)
-    else:
-        logger.warning("fetchFitnessData failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=405)
-
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.forms.models import model_to_dict
-from django.utils.timezone import make_aware
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models.fields.files import FieldFile # Import FieldFile
-from . import models # Assuming your models are in models.py
-
-logger = logging.getLogger(__name__) # Use Django's logging
-
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.forms.models import model_to_dict
-# from django.utils.timezone import make_aware # Not needed if comparing dates only
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models.fields.files import FieldFile # Import FieldFile
-from . import models # Assuming your models are in models.py
-
-logger = logging.getLogger(__name__)
-
-# Helper function to serialize model instances, handling file/image fields
+# Helper function to serialize model instances, handling file/image fields and dates
 def serialize_model_instance(instance):
     """
     Converts a model instance to a dictionary, replacing FileField/ImageField
-    objects with their URLs. Returns an empty dict if instance is None.
+    objects with their URLs and formatting dates/datetimes. Returns an empty dict if instance is None.
     """
     if instance is None:
         return {}
 
     data = model_to_dict(instance)
-    for field_name, value in data.items():
-        if isinstance(value, FieldFile):
+    for field_name, value in list(data.items()): # Use list to allow modification during iteration
+        if isinstance(value, FieldFile): # Handles ImageField and FileField
             try:
                 data[field_name] = value.url if value else None
             except Exception as e:
-                 logger.error(f"Error getting URL for field {field_name}: {e}")
+                 logger.error(f"Error getting URL for field {field_name} in instance {instance.pk}: {e}")
                  data[field_name] = None
-        # Add handling for other non-serializable types if necessary
-        # elif isinstance(value, (datetime.date, datetime.datetime)):
-        #     data[field_name] = value.isoformat()
+        elif isinstance(value, (datetime, date)):
+             data[field_name] = value.isoformat()
+        # Remove internal fields like _state if model_to_dict includes them
+        if field_name.startswith('_'):
+             del data[field_name]
 
     return data
 
 @csrf_exempt
-def fetchVisitDataWithDate(request, emp_no, date):
-    """Fetches visit data for a specific employee on a specific date."""
+def fetchVisitDataWithDate(request, aadhar, date_str): # CHANGED: emp_no -> aadhar, date -> date_str
+    """Fetches the LATEST record ON OR BEFORE a specific date for an Aadhar across multiple models."""
     if request.method == "GET":
         try:
             try:
-                # Parse the date string into a date object
-                target_date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-            except ValueError as e:
-                logger.warning(f"fetchVisitDataWithDate failed: Invalid date format. Error: {str(e)}")
+                # Parse the date string from the URL into a date object
+                target_date_obj = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except ValueError:
+                logger.warning(f"fetchVisitDataWithDate failed for aadhar {aadhar}: Invalid date format '{date_str}'. Use YYYY-MM-DD.")
                 return JsonResponse({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
 
-            # --- CORRECTED FILTERS: Removed '__date' lookup ---
-            employee_data = {
-                "employee": serialize_model_instance(models.employee_details.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "dashboard": serialize_model_instance(models.Dashboard.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "vitals": serialize_model_instance(models.vitals.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "msphistory": serialize_model_instance(models.MedicalHistory.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "haematology": serialize_model_instance(models.heamatalogy.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "routinesugartests": serialize_model_instance(models.RoutineSugarTests.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "renalfunctiontests": serialize_model_instance(models.RenalFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "lipidprofile": serialize_model_instance(models.LipidProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "liverfunctiontest": serialize_model_instance(models.LiverFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "thyroidfunctiontest": serialize_model_instance(models.ThyroidFunctionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "coagulationtest": serialize_model_instance(models.CoagulationTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "enzymesandcardiacprofile": serialize_model_instance(models.EnzymesCardiacProfile.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "urineroutine": serialize_model_instance(models.UrineRoutineTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "serology": serialize_model_instance(models.SerologyTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "motion": serialize_model_instance(models.MotionTest.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "menspack": serialize_model_instance(models.MensPack.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "opthalamicreport": serialize_model_instance(models.OphthalmicReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "usg": serialize_model_instance(models.USGReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "mri": serialize_model_instance(models.MRIReport.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "fitnessassessment": serialize_model_instance(models.FitnessAssessment.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "vaccination": serialize_model_instance(models.VaccinationRecord.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "significant_notes": serialize_model_instance(models.SignificantNotes.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "consultation": serialize_model_instance(models.Consultation.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                "prescription": serialize_model_instance(models.Prescription.objects.filter(emp_no=emp_no, entry_date__lte=target_date_obj).last()),
-                # Add any other models here following the same pattern
+            # List of models to query
+            models_to_query = {
+                "employee": employee_details, # Use the main employee details model
+                "dashboard": Dashboard,
+                "vitals": vitals,
+                "msphistory": MedicalHistory,
+                "haematology": heamatalogy,
+                "routinesugartests": RoutineSugarTests,
+                "renalfunctiontests": RenalFunctionTest, # Name mismatch with URL key? Using model name
+                "lipidprofile": LipidProfile,
+                "liverfunctiontest": LiverFunctionTest,
+                "thyroidfunctiontest": ThyroidFunctionTest,
+                "coagulationtest": CoagulationTest,
+                "enzymesandcardiacprofile": EnzymesCardiacProfile,
+                "urineroutine": UrineRoutineTest,
+                "serology": SerologyTest,
+                "motion": MotionTest,
+                "menspack": MensPack,
+                "opthalamicreport": OphthalmicReport,
+                "usg": USGReport,
+                "mri": MRIReport,
+                "fitnessassessment": FitnessAssessment,
+                "vaccination": VaccinationRecord,
+                "significant_notes": SignificantNotes,
+                "consultation": Consultation,
+                "prescription": Prescription,
+                "form17": Form17,
+                "form38": Form38,
+                "form39": Form39,
+                "form40": Form40,
+                "form27": Form27,
             }
 
+            employee_data = {}
+
+            # Fetch the latest record ON OR BEFORE the target date for each model
+            for key, model_class in models_to_query.items():
+                instance = model_class.objects.filter(
+                    aadhar=aadhar,
+                    entry_date__lte=target_date_obj # Filter by Aadhar and date <= target
+                ).order_by('-entry_date', '-id').first() # Get the most recent one
+
+                employee_data[key] = serialize_model_instance(instance)
+
+            logger.info(f"Fetched latest data on/before {date_str} for aadhar: {aadhar}")
             return JsonResponse({"data": employee_data}, safe=False, status=200)
 
         except Exception as e:
-            logger.exception("fetchVisitDataWithDate failed: An unexpected error occurred.")
-            return JsonResponse({"error": "An internal server error occurred."}, status=500)
+            logger.exception(f"fetchVisitDataWithDate failed for aadhar {aadhar}, date {date_str}: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
 
-    logger.warning("fetchVisitDataWithDate failed: Invalid request method. Only GET allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+    logger.warning(f"fetchVisitDataWithDate failed for aadhar {aadhar}: Invalid request method. Only GET allowed.")
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
 
-# views.py (or wherever your add_consultation view is defined)
-import json
-import logging
-from datetime import datetime
+@csrf_exempt
+def update_employee_status(request):
+    """Updates the employee status fields based on AADHAR."""
+    if request.method == 'POST':
+        aadhar = None # Initialize for logging
+        try:
+            data = json.loads(request.body)
+            logger.debug(f"Received data for update_employee_status: {data}")
+
+            # *** KEY CHANGE: Expect 'aadhar' ***
+            aadhar = data.get('aadhar')
+            employee_status_val = data.get('employee_status')
+            date_since_str = data.get('date_since')
+            transfer_details_val = data.get('transfer_details', '') # Optional
+            other_reason_details_val = data.get('other_reason_details', '') # Optional
+
+            if not aadhar or not employee_status_val or not date_since_str:
+                logger.warning("update_employee_status failed: Missing aadhar, employee_status, or date_since.")
+                return JsonResponse({'success': False, 'message': 'Please provide aadhar, employee_status and date_since.'}, status=400)
+
+            date_since_obj = parse_date_internal(date_since_str)
+            if not date_since_obj:
+                logger.warning(f"update_employee_status failed for aadhar {aadhar}: Invalid date_since format.")
+                return JsonResponse({'success': False, 'message': 'Invalid date_since format. Use YYYY-MM-DD.'}, status=400)
+
+
+            # Option 1: Update the LATEST record for the employee
+            # latest_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
+            # if latest_entry:
+            #     latest_entry.employee_status = employee_status_val
+            #     latest_entry.since_date = date_since_obj
+            #     latest_entry.transfer_details = transfer_details_val
+            #     latest_entry.other_reason_details = other_reason_details_val
+            #     latest_entry.save(update_fields=['employee_status', 'since_date', 'transfer_details', 'other_reason_details'])
+            #     logger.info(f"Updated status for latest entry of aadhar {aadhar}.")
+            #     return JsonResponse({'success': True, 'message': 'Latest status entry updated successfully.'})
+            # else:
+            #     logger.warning(f"update_employee_status failed: No existing record found for aadhar {aadhar}.")
+            #     return JsonResponse({'success': False, 'message': 'No matching employee found to update.'}, status=404)
+
+            # Option 2: Create a NEW record for TODAY with the updated status (as per original logic)
+            # This seems less intuitive for just updating status fields, but matches original code.
+            last_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
+            if last_entry:
+                # Create a new entry based on the last one, but update status fields
+                # Note: This duplicates most data from the last entry. Consider if this is desired.
+                new_entry_data = model_to_dict(last_entry, exclude=['id', 'pk']) # Exclude primary key
+                new_entry_data['entry_date'] = date.today() # Set to today
+                new_entry_data['employee_status'] = employee_status_val
+                new_entry_data['since_date'] = date_since_obj
+                new_entry_data['transfer_details'] = transfer_details_val
+                new_entry_data['other_reason_details'] = other_reason_details_val
+
+                # Handle potential FileFields/ImageFields if they exist and need copying
+                # (model_to_dict doesn't copy files) - profilepic might be relevant
+                new_entry_data['profilepic'] = last_entry.profilepic # Reassign file field
+
+                new_entry = employee_details.objects.create(**new_entry_data)
+                logger.info(f"Created new status entry (ID: {new_entry.id}) for aadhar {aadhar} based on last entry (ID: {last_entry.id}).")
+                return JsonResponse({'success': True, 'message': 'New status entry created successfully for today.'})
+            else:
+                logger.warning(f"update_employee_status failed: Cannot create new entry as no previous record found for aadhar {aadhar}.")
+                return JsonResponse({'success': False, 'message': 'No previous employee record found to base the new status entry on.'}, status=404)
+
+
+        except json.JSONDecodeError:
+             logger.error("update_employee_status failed: Invalid JSON.", exc_info=True)
+             return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
+        except Exception as e:
+            logger.exception(f"update_employee_status failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({'success': False, 'message': 'An internal server error occurred.'}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
+
+
+# --- Vitals & Investigations (Using Aadhar from payload) ---
+# Includes add_vital_details, add_haem_report, add_routine_sugar, add_renel_function, add_lipid_profile, add_liver_function, add_thyroid_function, add_enzymes_cardiac, add_urine_routine, add_serology, add_motion_test
+# (These were already provided in the previous step as modified)
+
+
+
+
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from . import models # Make sure this points to your models file
+import json
+from datetime import date
+import logging
+# Import your model
+from .models import vitals
 
 logger = logging.getLogger(__name__)
 
-# Utility function (can be placed elsewhere and imported)
-def parse_date(date_str):
-    """Safely parses date strings (YYYY-MM-DD), returning None if invalid."""
-    if not date_str:
-        return None
-    try:
-        return datetime.strptime(date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        logger.warning(f"Could not parse date: {date_str}")
-        return None
+@csrf_exempt
+def add_vital_details(request):
+    """Adds or updates vital details AND files based on AADHAR and today's date."""
+    model_class = vitals
+    log_prefix = "add_vital_details_multipart" # Updated log prefix
+    success_noun = "Vital Details and Files"
 
-# views.py (or wherever your add_consultation view is defined)
+    if request.method == "POST":
+        aadhar = None
+        try:
+            # *** Read non-file data from request.POST ***
+            post_data = request.POST
+            print(f"{log_prefix}: Received POST data: {post_data}")
+            print(f"{log_prefix}: Received FILES data: {request.FILES}")
 
-import json
-import logging
-from datetime import datetime
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.dateparse import parse_date # Good for parsing dates safely
-from . import models # Assuming models.py is in the same app
+            aadhar = post_data.get('aadhar')
+            entry_date = date.today()
 
-logger = logging.getLogger(__name__)
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar number is required in POST data")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            # Filter POST data for allowed model fields (excluding pk, aadhar, entry_date, and file fields)
+            allowed_fields = {
+                field.name for field in model_class._meta.get_fields()
+                if field.concrete and not field.primary_key and not field.is_relation and field.editable
+                   and field.name not in ['aadhar', 'entry_date', 'manual', 'fc', 'report', 'self_declared'] # Exclude files here
+            }
+            # Prepare defaults from POST data, handling empty strings if model allows null/blank
+            filtered_data = {}
+            for key in allowed_fields:
+                value = post_data.get(key)
+                # Handle potential empty strings -> None conversion if field allows null
+                field_instance = model_class._meta.get_field(key)
+                if value == '' and (field_instance.null or field_instance.blank):
+                     filtered_data[key] = None # Or keep empty string if preferred/model allows
+                elif value is not None:
+                    filtered_data[key] = value
+                # If value is None (key not present), it won't be added to filtered_data
+
+
+            print(f"{log_prefix}: Filtered data for update_or_create defaults: {filtered_data}")
+
+            # Perform update_or_create based on aadhar and date using filtered non-file data
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar,
+                entry_date=entry_date,
+                defaults=filtered_data
+            )
+
+            # *** Handle File Uploads AFTER getting the instance ***
+            files_updated = False
+            file_fields = ['manual', 'fc', 'report', 'self_declared']
+            for field_name in file_fields:
+                if field_name in request.FILES:
+                    setattr(instance, field_name, request.FILES[field_name])
+                    files_updated = True
+                    print(f"{log_prefix}: Updating file field '{field_name}' for aadhar {aadhar}")
+
+            # Save the instance again if files were updated
+            if files_updated:
+                instance.save()
+                print(f"{log_prefix}: Saved instance after file updates for aadhar {aadhar}")
+
+
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. Files updated: {files_updated}.")
+            return JsonResponse({"message": message, "created": created, "files_updated": files_updated}, status=201 if created else 200)
+
+        # Remove JSONDecodeError handling as we are not decoding JSON body anymore
+        # except json.JSONDecodeError:
+        #     logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+        #     return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            # Provide more specific error details if possible
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+
+    logger.warning(f"{log_prefix} failed: Invalid request method. Only POST allowed.")
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+# --- Apply the above pattern to ALL these views ---
+
+@csrf_exempt
+def add_haem_report(request):
+    model_class = heamatalogy
+    log_prefix = "add_haem_report"
+    success_noun = "Haematology details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_routine_sugar(request):
+    model_class = RoutineSugarTests
+    log_prefix = "add_routine_sugar"
+    success_noun = "Routine Sugar Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_renel_function(request): # Typo in name: should be add_renal_function
+    model_class = RenalFunctionTest
+    log_prefix = "add_renal_function" # Corrected log prefix
+    success_noun = "Renal Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_lipid_profile(request):
+    model_class = LipidProfile
+    log_prefix = "add_lipid_profile"
+    success_noun = "Lipid Profile details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_liver_function(request):
+    model_class = LiverFunctionTest
+    log_prefix = "add_liver_function"
+    success_noun = "Liver Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_thyroid_function(request):
+    model_class = ThyroidFunctionTest
+    log_prefix = "add_thyroid_function"
+    success_noun = "Thyroid Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_autoimmune_function(request):
+    model_class = AutoimmuneTest
+    log_prefix = "add_autoimmune_function"
+    success_noun = "Autoimmune Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_coagulation_function(request):
+    model_class = CoagulationTest
+    log_prefix = "add_coagulation_function"
+    success_noun = "Coagulation Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_enzymes_cardiac(request):
+    model_class = EnzymesCardiacProfile
+    log_prefix = "add_enzymes_cardiac"
+    success_noun = "Enzymes Cardiac Profile details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_urine_routine(request):
+    model_class = UrineRoutineTest
+    log_prefix = "add_urine_routine"
+    success_noun = "Urine Routine Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_serology(request):
+    model_class = SerologyTest
+    log_prefix = "add_serology"
+    success_noun = "Serology Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_motion_test(request):
+    model_class = MotionTest
+    log_prefix = "add_motion_test"
+    success_noun = "Motion Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def add_culturalsensitivity_function(request):
+    model_class = CultureSensitivityTest
+    log_prefix = "add_culturalsensitivity_function"
+    success_noun = "Routine cultural sensitivity Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def create_medical_history(request):
+    model_class = MedicalHistory
+    log_prefix = "create_medical_history"
+    success_noun = "Medical history"
+    # This view had slightly different logic, adapting the pattern
+    if request.method == 'POST':
+        aadhar = None
+        try:
+            data = json.loads(request.body)
+            logger.debug(f"Received data for {log_prefix}: {json.dumps(data)[:500]}...")
+
+            # *** KEY CHANGE: Expect 'aadhar' ***
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar number is required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            # Map payload keys to model fields (ensure these match your model)
+            # Handle JSON fields carefully - assume frontend sends correct JSON structure/string
+            defaults = {
+                'personal_history': data.get('personalHistory'),
+                'medical_data': data.get('medicalData'),
+                'female_worker': data.get('femaleWorker'),
+                'surgical_history': data.get('surgicalHistory'),
+                'family_history': data.get('familyHistory'),
+                'health_conditions': data.get('healthConditions'),
+                'allergy_fields': data.get('allergyFields'),
+                'allergy_comments': data.get('allergyComments'),
+                'children_data': data.get('children_data'),
+                'spouse_data': data.get('spouse_data'),
+                'conditions': data.get('conditions')
+            }
+            # Filter None values
+            filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
+
+
+            # *** KEY CHANGE: Use aadhar in update_or_create ***
+            medical_history, created = model_class.objects.update_or_create(
+                aadhar=aadhar,
+                entry_date=entry_date,
+                defaults=filtered_defaults
+            )
+
+            message = f"{success_noun} {'created' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar: {aadhar}. Created: {created}")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+
+        except json.JSONDecodeError:
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except ValidationError as e: # Catch potential model validation errors
+            logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Validation error: {e.message_dict}", exc_info=True)
+            return JsonResponse({"error": "Validation Error", 'details': e.message_dict}, status=400)
+        except Exception as e:
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred"}, status=500)
+    else:
+        logger.warning(f"{log_prefix} failed: Invalid request method. Only POST allowed.")
+        return JsonResponse({"error": "Only POST requests are allowed"}, status=405)
+
+
+@csrf_exempt
+def add_mens_pack(request):
+    model_class = MensPack
+    log_prefix = "add_mens_pack"
+    success_noun = "Mens Pack details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_womens_function(request):
+    model_class = WomensPack
+    log_prefix = "add_womens_function"
+    success_noun = "Women's pack Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_occupationalprofile_function(request):
+    model_class = OccupationalProfile
+    log_prefix = "add_occupationalprofile_function"
+    success_noun = "Occupational Profile Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_otherstest_function(request):
+    model_class = OthersTest
+    log_prefix = "add_otherstest_function"
+    success_noun = "Others test Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+
+
+@csrf_exempt
+def add_opthalmic_report(request): # Typo: Ophthalmic
+    model_class = OphthalmicReport
+    log_prefix = "add_opthalmic_report" # Typo
+    success_noun = "Ophthalmic Report details" # Typo
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_usg_report(request):
+    model_class = USGReport
+    log_prefix = "add_usg_report"
+    success_noun = "USG Report details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_mri_report(request):
+    model_class = MRIReport
+    log_prefix = "add_mri_report"
+    success_noun = "MRI Report details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_xray_function(request):
+    model_class = XRay
+    log_prefix = "add_xray_function"
+    success_noun = "XRay Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+@csrf_exempt
+def add_ct_function(request):
+    model_class = CTReport
+    log_prefix = "add_ct_function"
+    success_noun = "CT Function Test details"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in ['aadhar', 'entry_date']}
+            filtered_data = {k: v for k, v in data.items() if k in allowed_fields and v is not None}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+@csrf_exempt
+def insert_vaccination(request):
+    """Inserts or updates vaccination record based on AADHAR and today's date."""
+    # Note: Original code had duplicate insert_vaccination functions. Keeping one.
+    model_class = VaccinationRecord
+    log_prefix = "insert_vaccination"
+    success_noun = "Vaccination record"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar') # Expect aadhar
+            vaccination_data = data.get("vaccination") # Expect the JSON/dict data here
+            entry_date = date.today()
+
+            if not aadhar or not vaccination_data:
+                logger.warning(f"{log_prefix} failed: aadhar and vaccination fields are required")
+                return JsonResponse({"error": "Aadhar (aadhar) and vaccination data are required"}, status=400)
+
+            # Assuming 'vaccination' field in model is JSONField or TextField storing JSON
+            filtered_data = {'vaccination': vaccination_data}
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
+            )
+            message = f"{success_noun} {'saved' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            # Return the created/updated object data for confirmation
+            response_data = model_to_dict(instance)
+            response_data['entry_date'] = instance.entry_date.isoformat() # Format date
+            return JsonResponse({
+                "message": message,
+                "created": created,
+                "record": response_data
+            }, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
+
+def fetch_vaccinations(request):
+    """Fetches vaccination records, optionally filtered by AADHAR."""
+    # Should be GET method
+    if request.method == "GET":
+        aadhar_filter = request.GET.get("aadhar") # Optional filter by aadhar
+
+        try:
+            queryset = VaccinationRecord.objects.all()
+            if aadhar_filter:
+                queryset = queryset.filter(aadhar=aadhar_filter)
+
+            # Order by date descending?
+            records = list(queryset.order_by('-entry_date', '-id').values())
+
+            # Format dates
+            for record in records:
+                if isinstance(record.get('entry_date'), date):
+                    record['entry_date'] = record['entry_date'].isoformat()
+
+            logger.info(f"Fetched {len(records)} vaccination records." + (f" Filtered by aadhar: {aadhar_filter}" if aadhar_filter else ""))
+            return JsonResponse({"vaccinations": records}, safe=False)
+
+        except Exception as e:
+            logger.exception("fetch_vaccinations failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+
+    logger.warning("fetch_vaccinations failed: Invalid request method. Only GET allowed.")
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
+
+
+@csrf_exempt
+def fitness_test(request): # Removed pk argument, assumes aadhar in payload
+    """Adds or updates fitness assessment data based on AADHAR and today's date."""
+    model_class = FitnessAssessment
+    log_prefix = "fitness_test"
+    success_noun = "Fitness test details"
+    # ... copy & adapt the logic from add_vital_details, including JSON field handling ...
+    
+    if request.method == "POST":
+        # print("Aadhar :", data['formData'].get('aadhar')) # Expect aadhar
+        aadhar = None # Expect aadhar
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            print("Data : ",data,"Aathar1 : ",aadhar) # Expect aadhar
+            entry_date = date.today()
+
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+
+            # --- Safely parse JSON fields ---
+            def parse_json_field(field_data):
+                if isinstance(field_data, list): return field_data # Already a list
+                if isinstance(field_data, str):
+                    try: return json.loads(field_data)
+                    except json.JSONDecodeError: return [] # Default to empty list on parse error
+                return [] # Default for other types
+
+            job_nature_list = parse_json_field(data.get("job_nature"))
+            conditional_fit_fields_list = parse_json_field(data.get("conditional_fit_feilds")) # Match frontend key 'feilds'
+
+            # Prepare defaults, mapping payload keys to model fields
+            defaults = {
+                'tremors': data.get("tremors"),
+                'romberg_test': data.get("romberg_test"),
+                'acrophobia': data.get("acrophobia"),
+                'trendelenberg_test': data.get("trendelenberg_test"),
+                #special cases
+                'special_cases': data.get('special_cases'), # Get value from payload
+                'job_nature': job_nature_list, # Use parsed list
+                'overall_fitness': data.get("overall_fitness"),
+                'conditional_fit_feilds': conditional_fit_fields_list, # Use parsed list
+                'general_examination': data.get("general_examination"),
+                'systematic_examination': data.get("systematic_examination"),
+                'eye_exam_result': data.get("eye_exam_result"),
+                'eye_exam_fit_status': data.get("eye_exam_fit_status"),
+                'validity': parse_date_internal(data.get("validity")), # Parse date
+                'comments': data.get("comments"),
+                'employer': data.get("employer"),
+                # Assuming 'emp_no' field still exists in FitnessAssessment, populate it if sent
+                'emp_no': data.get("emp_no")
+            }
+            filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
+
+            # --- Update Dashboard visitOutcome (Side effect) ---
+            overall_fitness_status = data.get("overall_fitness")
+            if overall_fitness_status:
+                try:
+                    dashboard_entry = Dashboard.objects.filter(aadhar=aadhar, date=entry_date).first()
+                    if dashboard_entry:
+                        dashboard_entry.visitOutcome = overall_fitness_status
+                        dashboard_entry.save(update_fields=['visitOutcome'])
+                        logger.info(f"Dashboard visitOutcome updated for aadhar: {aadhar} on {entry_date}")
+                    else:
+                         logger.info(f"No Dashboard entry for aadhar: {aadhar} on {entry_date} to update outcome.")
+                except Exception as db_e:
+                     logger.error(f"Error updating Dashboard outcome for aadhar {aadhar}: {db_e}", exc_info=True)
+
+            # --- Update or Create Fitness Assessment ---
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_defaults
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({"message": message}, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Request method must be POST"}, status=405)
+
 
 @csrf_exempt
 def add_consultation(request):
-    """Adds or updates consultation data for a specific employee based on the entry date."""
-    if request.method != 'POST':
-        logger.warning("add_consultation failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        logger.debug(f"Received data for add_consultation: {data}")
-
-        emp_no = data.get('emp_no')
-        # Use current server date as the key for finding/creating the record for today
-        entry_date = datetime.now().date()
-
-        if not emp_no:
-            logger.warning("add_consultation failed: Employee number (emp_no) is required")
-            return JsonResponse({'status': 'error', 'message': 'Employee number (emp_no) is required'}, status=400)
-
-        # Prepare defaults dictionary, matching frontend payload keys
-        consultation_defaults = {
-            # Clinical Notes
-            'complaints': data.get('complaints'),
-            'examination': data.get('examination'),           # General Exam
-            'systematic': data.get('systematic'),             # NEW: Systemic Exam
-            'lexamination': data.get('lexamination'),         # Local Exam
-            'diagnosis': data.get('diagnosis'),               # Diagnosis Notes
-            'procedure_notes': data.get('procedure_notes'),   # NEW: Procedure Notes
-            'obsnotes': data.get('obsnotes'),                 # Observation Notes
-
-            # Investigation, Advice, Follow-up
-            'investigation_details': data.get('investigation_details'),
-            'advice': data.get('advice'),                     # Matches frontend key 'advice'
-            'follow_up_date': parse_date(data.get('follow_up_date')) if data.get('follow_up_date') else None, # Use parse_date
-
-            # Case Details
-            'case_type': data.get('case_type'),
-            'illness_or_injury': data.get('illness_or_injury'), # Matches frontend
-            'other_case_details': data.get('other_case_details'),
-            'notifiable_remarks': data.get('notifiable_remarks'),
-
-            # Referral Details
-            'referral': data.get('referral'), # Should be 'yes', 'no', or null/empty
-            'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else '', # Store only if referred
-            'speciality': data.get('speciality') if data.get('referral') == 'yes' else '',      # CORRECTED SPELLING, store only if referred
-            'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else '',    # Store only if referred
-
-            # Submission Metadata
-            'submitted_by_doctor': data.get('submitted_by_doctor'),
-            'submitted_by_nurse': data.get('submitted_by_nurse'), # Include if frontend might send it
-        }
-
-        # Filter out None values to avoid overwriting existing data with None
-        # if a field is not sent in a particular update request.
-        # Keep empty strings '' if sent, as they might indicate clearing a field.
-        filtered_defaults = {k: v for k, v in consultation_defaults.items() if v is not None}
-
-        # Use update_or_create to handle both adding new records and updating existing ones
-        # based on the composite key (emp_no, entry_date).
-        consultation, created = models.Consultation.objects.update_or_create(
-            emp_no=emp_no,
-            entry_date=entry_date, # Use today's date as part of the key
-            defaults=filtered_defaults
-        )
-
-        message = "Consultation added successfully" if created else "Consultation updated successfully"
-        logger.info(f"{message} for emp_no: {emp_no} on {entry_date}. ID: {consultation.id}")
-        return JsonResponse({
-            'status': 'success',
-            'message': message,
-            'consultation_id': consultation.id,
-            'created': created
-            }, status=200 if not created else 201) # 201 for Created, 200 for OK (Updated)
-
-    except json.JSONDecodeError as e:
-        logger.error(f"add_consultation failed: Invalid JSON data. Error: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': f'Invalid JSON format: {str(e)}'}, status=400)
-    except Exception as e:
-        # Log the full exception traceback for internal debugging
-        logger.exception(f"add_consultation failed for emp_no {data.get('emp_no', 'Unknown')}: An unexpected error occurred.")
-        # Return a generic error message to the client
-        return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
-
-    def get_mockdrills(request):
-        """Retrieves all mock drill records."""
-        if request.method == "GET":
-            try:
-                mock_drills = list(mockdrills.objects.values())
-                return JsonResponse(mock_drills, safe=False)
-            except Exception as e:
-                logger.exception("get_mockdrills failed: An unexpected error occurred.")
-                return JsonResponse({"error": str(e)}, status=500)
-        else:
-            logger.warning("get_mockdrills failed: Invalid request method. Only GET allowed.")
-            return JsonResponse({"error": "Invalid request method"}, status=405)
-
-
-import json
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import datetime
-from . import models # Adjust import path as necessary
-import logging
-
-logger = logging.getLogger(__name__)
-
-@csrf_exempt
-def add_significant_notes(request):
-    """Adds or updates significant notes for an employee on a specific date."""
-    if request.method == 'POST':
+    """Adds or updates consultation data based on AADHAR and today's date."""
+    model_class = Consultation
+    log_prefix = "add_consultation"
+    success_noun = "Consultation"
+    # ... copy & adapt the logic from add_vital_details, parsing date fields ...
+    if request.method == "POST":
+        aadhar = None
         try:
             data = json.loads(request.body.decode('utf-8'))
-            logger.debug(f"Received data for add_significant_notes: {data}")
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
 
-            emp_no = data.get('emp_no')
-            # Determine entry_date - Use today's date as the default
-            entry_date = datetime.now().date()
-            # Optionally allow overriding date from payload if needed:
-            # entry_date_str = data.get('entry_date')
-            # if entry_date_str:
-            #    try:
-            #        entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
-            #    except (ValueError, TypeError):
-            #        logger.warning(f"Invalid entry_date format received: {entry_date_str}. Using today's date.")
-            #        entry_date = datetime.now().date()
-
-
-            if not emp_no:
-                logger.warning("add_significant_notes failed: Employee number is required")
-                return JsonResponse({'status': 'error', 'message': 'Employee number is required'}, status=400)
-
-            # Extract data using snake_case keys expected from the React component's handleSubmit
-            healthsummary = data.get('healthsummary') # Note: key name matches payload
-            remarks = data.get('remarks')
-            communicable_disease = data.get('communicable_disease')
-            incident_type = data.get('incident_type')
-            incident = data.get('incident')
-            illness_type = data.get('illness_type')
-            visit_outcome = data.get('visit_outcome')
-
-            outcome = models.Dashboard.objects.filter(emp_no=emp_no, entry_date=entry_date).first()
-            if outcome:
-                outcome.visitOutcome = healthsummary
-                outcome.save()
-
-            # Prepare defaults dictionary mapping payload keys to model field names
-            note_defaults = {
-                'healthsummary': healthsummary,           # model field: variable from payload
-                'remarks': remarks,
-                'communicable_disease': communicable_disease,
-                'incident_type': incident_type,
-                'incident': incident,
-                'illness_type': illness_type,
-                # Add any other fields like 'submitted_by' if needed
-                # 'submitted_by': data.get('submitted_by'),
+            # Prepare defaults, mapping payload keys to model fields
+            defaults = {
+                'complaints': data.get('complaints'),
+                'examination': data.get('examination'),
+                'systematic': data.get('systematic'),
+                'lexamination': data.get('lexamination'),
+                'diagnosis': data.get('diagnosis'),
+                'procedure_notes': data.get('procedure_notes'),
+                'obsnotes': data.get('obsnotes'),
+                'investigation_details': data.get('investigation_details'),
+                'advice': data.get('advice'),
+                'follow_up_date': parse_date_internal(data.get('follow_up_date')), # Parse date
+                'case_type': data.get('case_type'),
+                'illness_or_injury': data.get('illness_or_injury'),
+                'other_case_details': data.get('other_case_details'),
+                'notifiable_remarks': data.get('notifiable_remarks'),
+                'referral': data.get('referral'),
+                'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else '',
+                'speciality': data.get('speciality') if data.get('referral') == 'yes' else '', # Corrected spelling
+                'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else '',
+                'submitted_by_doctor': data.get('submitted_by_doctor'),
+                'submitted_by_nurse': data.get('submitted_by_nurse'),
+                # Special cases
+            'special_cases': data.get('special_cases'), # Get 'special_cases' value from payload
+                 # Assuming 'emp_no' field still exists in Consultation model
+                'emp_no': data.get('emp_no')
             }
+            filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
-            # Use update_or_create to either create a new note or update an existing one
-            # for the same employee on the same date.
-            significant_note, created = models.SignificantNotes.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=entry_date, # Assumes notes are per-day per-employee
-                healthsummary=healthsummary,
-                defaults=note_defaults
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_defaults
             )
-
-            message = "Significant Notes added successfully" if created else "Significant Notes updated successfully"
-            logger.info(f"SignificantNotes saved for emp_no {emp_no} on {entry_date}. Created: {created}. ID: {significant_note.id}")
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
             return JsonResponse({
                 'status': 'success',
                 'message': message,
-                'significant_note_id': significant_note.id # Return the ID
-            }, status=200 if not created else 201) # Use 201 for Created
-
-        except json.JSONDecodeError as e:
-            logger.error(f"add_significant_notes failed: Invalid JSON data. Error: {str(e)}")
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON format: ' + str(e)}, status=400)
-        except Exception as e:
-            # Catch any other unexpected errors during processing or DB interaction
-            logger.exception(f"add_significant_notes failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
-            # Provide a generic error message to the client
+                'consultation_id': instance.id,
+                'created': created
+            }, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
             return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
+
+
+@csrf_exempt
+def add_significant_notes(request):
+    """Adds or updates significant notes based on AADHAR and today's date."""
+    model_class = SignificantNotes
+    log_prefix = "add_significant_notes"
+    success_noun = "Significant Notes"
+    # ... copy & adapt the logic from add_vital_details ...
+    if request.method == "POST":
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar required")
+                return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
+
+            # Map payload keys to model fields
+            defaults = {
+                'healthsummary': data.get('healthsummary'),
+                'remarks': data.get('remarks'),
+                'communicable_disease': data.get('communicable_disease'),
+                'incident_type': data.get('incident_type'),
+                'incident': data.get('incident'),
+                'illness_type': data.get('illness_type'),
+                # Assuming 'emp_no' field still exists
+                'emp_no': data.get('emp_no')
+                # Add submitted_by if needed: 'submitted_by': data.get('submitted_by'),
+            }
+            filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
+
+            # --- Update Dashboard visitOutcome (Side effect) ---
+            healthsummary_val = data.get('healthsummary')
+            if healthsummary_val:
+                 try:
+                     outcome_entry = Dashboard.objects.filter(aadhar=aadhar, date=entry_date).first()
+                     if outcome_entry:
+                         outcome_entry.visitOutcome = healthsummary_val
+                         outcome_entry.save(update_fields=['visitOutcome'])
+                         logger.info(f"Dashboard visitOutcome updated via Significant Notes for aadhar: {aadhar} on {entry_date}")
+                 except Exception as db_e:
+                      logger.error(f"Error updating Dashboard outcome from Sig. Notes for aadhar {aadhar}: {db_e}", exc_info=True)
+
+
+            instance, created = model_class.objects.update_or_create(
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_defaults
+                # If healthsummary should be part of the unique key:
+                # aadhar=aadhar, entry_date=entry_date, healthsummary=healthsummary_val, defaults=filtered_defaults
+            )
+            message = f"{success_noun} {'added' if created else 'updated'} successfully"
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            return JsonResponse({
+                'status': 'success',
+                'message': message,
+                'significant_note_id': instance.id
+            }, status=201 if created else 200)
+        except json.JSONDecodeError: # ... error handling ...
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON format'}, status=400)
+        except Exception as e: # ... error handling ...
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
+
+
+@csrf_exempt
+def get_notes(request, aadhar): # CHANGED: emp_no -> aadhar
+    """Fetches significant notes and employee status based on AADHAR."""
+    # Original used POST, should be GET
+    if request.method == 'POST' or request.method == 'GET': # Allow GET
+        try:
+            # Fetch notes for the specific aadhar
+            notes = list(SignificantNotes.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').values())
+
+            # Fetch the *latest* status details for that aadhar
+            latest_employee_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
+
+            emp_status_data = {}
+            if latest_employee_entry:
+                 emp_status_data = {
+                     'employee_status': latest_employee_entry.employee_status,
+                     'since_date': latest_employee_entry.since_date.isoformat() if latest_employee_entry.since_date else None,
+                     'transfer_details': latest_employee_entry.transfer_details,
+                     'other_reason_details': latest_employee_entry.other_reason_details
+                 }
+
+            # Format dates in notes
+            for note in notes:
+                if isinstance(note.get('entry_date'), date):
+                    note['entry_date'] = note['entry_date'].isoformat()
+
+            logger.info(f"Fetched {len(notes)} notes and status for aadhar {aadhar}.")
+            # Return notes list and single status object
+            return JsonResponse({'notes': notes, 'status': emp_status_data})
+        except Exception as e:
+            logger.exception(f"get_notes failed for aadhar {aadhar}: An unexpected error occurred.")
+            return JsonResponse({'error': "An internal server error occurred.", "detail": str(e)}, status=500)
 
     else:
-        # Handle incorrect HTTP methods (e.g., GET, PUT)
-        logger.warning(f"add_significant_notes failed: Invalid request method ({request.method}). Only POST allowed.")
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method. Only POST is allowed.'}, status=405) # 405 Method Not Allowed
+        logger.warning(f"get_notes failed for aadhar {aadhar}: Invalid request method.")
+        return JsonResponse({'error': 'Invalid request method. Use GET or POST.'}, status=405)
 
 
+@csrf_exempt
+def get_notes_all(request):
+    """Fetches ALL significant notes and consultations."""
+    # Original used POST, should be GET
+    if request.method == 'POST' or request.method == 'GET': # Allow GET
+        try:
+            # Fetch all notes and consultations, order by date descending
+            notes = list(SignificantNotes.objects.all().order_by('-entry_date', '-id').values())
+            consultations = list(Consultation.objects.all().order_by('-entry_date', '-id').values())
 
-        
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, JsonResponse
-from .models import Form17, Form38, Form39, Form40, Form27
-from django.core.exceptions import ValidationError
-import json
-from django.views.decorators.csrf import csrf_exempt # only for testing purposes
-
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.exceptions import ValidationError
-import json
-from datetime import datetime
-from .models import Form17  # Ensure your model import is correct
-
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-    except ValueError:
-        return None
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.exceptions import ValidationError
-import json
-from datetime import datetime
-from .models import Form17, Form38, Form39, Form40, Form27  # Ensure correct model imports
-
-# Utility function for date parsing
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-    except ValueError:
-        return None
-
-# Utility function to convert age safely
-def parse_age(age_str):
-    return int(age_str) if age_str and age_str.isdigit() else None
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.exceptions import ValidationError
-import json
-from datetime import datetime
-from .models import Form17, Form38, Form39, Form40, Form27  # Ensure correct model imports
-
-# Utility function for date parsing
-def parse_date(date_str):
-    try:
-        return datetime.strptime(date_str, "%Y-%m-%d").date() if date_str else None
-    except ValueError:
-        return None
-
-# Utility function to safely convert age
-def parse_age(age_str):
-    return int(age_str) if age_str and age_str.isdigit() else None
+            # Format dates
+            for record in notes + consultations:
+                 if isinstance(record.get('entry_date'), date):
+                    record['entry_date'] = record['entry_date'].isoformat()
+                 # Format other date fields like follow_up_date if needed
+                 if isinstance(record.get('follow_up_date'), date):
+                     record['follow_up_date'] = record['follow_up_date'].isoformat()
 
 
-### 🔹 Form 17 View
-@csrf_exempt  # Only for testing; remove in production
+            logger.info(f"Fetched all notes ({len(notes)}) and consultations ({len(consultations)}).")
+            return JsonResponse({'notes': notes, 'consultation': consultations})
+        except Exception as e:
+            logger.exception("get_notes_all failed: An unexpected error occurred.")
+            return JsonResponse({'error': "An internal server error occurred.", "detail": str(e)}, status=500)
+    else:
+        logger.warning("get_notes_all failed: Invalid request method.")
+        return JsonResponse({'error': 'Invalid request method. Use GET or POST.'}, status=405)
+
+
+# --- Forms (Using Aadhar from payload) ---
+# Includes create_form17, create_form38, create_form39, create_form40, create_form27
+# (These were already provided in the previous step as modified)
+
+
+def parse_form_date(date_str):
+    if not date_str: return None
+    try: return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except (ValueError, TypeError): return None
+
+# Utility function for form age parsing
+def parse_form_age(age_str):
+    try: return int(age_str) if age_str else None
+    except (ValueError, TypeError): return None
+
+@csrf_exempt
 def create_form17(request):
+    model_class = Form17
+    log_prefix = "create_form17"
+    form_name = "Form 17"
+
     if request.method == 'POST':
+        aadhar = None
         try:
             data = json.loads(request.body)
-            print("Received Form 17 Data:", data)
-            entry_date = datetime.now().date()
-            form = Form17(
-                emp_no=data.get('emp_no'),
-                dept=data.get('dept', ''),
-                entry_date=entry_date,
-                worksNumber=data.get('worksNumber', ''),
-                workerName=data.get('workerName', ''),
-                sex=data.get('sex', 'male'),
-                dob=parse_date(data.get('dob')),
-                age=parse_age(data.get('age')),
-                employmentDate=parse_date(data.get('employmentDate')),
-                leavingDate=parse_date(data.get('leavingDate')),
-                reason=data.get('reason', ''),
-                transferredTo=data.get('transferredTo', ''),
-                jobNature=data.get('jobNature', ''),
-                rawMaterial=data.get('rawMaterial', ''),
-                medicalExamDate=parse_date(data.get('medicalExamDate')),
-                medicalExamResult=data.get('medicalExamResult', ''),
-                suspensionDetails=data.get('suspensionDetails', ''),
-                recertifiedDate=parse_date(data.get('recertifiedDate')),
-                unfitnessCertificate=data.get('unfitnessCertificate', ''),
-                surgeonSignature=data.get('surgeonSignature', ''),
-                fmoSignature=data.get('fmoSignature', '')
-            )
+            logger.debug(f"Received {form_name} Data: {json.dumps(data)[:500]}...")
 
-            form.full_clean()  
+            # *** KEY CHANGE: Expect 'aadhar' ***
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+
+            if not aadhar:
+                logger.warning(f"{log_prefix} failed: Aadhar number is required.")
+                return JsonResponse({'error': 'Aadhar number (aadhar) is required'}, status=400)
+
+            # Prepare form data, parsing dates/ages
+            form_data = {
+                'aadhar': aadhar, # Add aadhar
+                'entry_date': entry_date,
+                'dept': data.get('dept', ''),
+                'worksNumber': data.get('worksNumber', ''), # This might be emp_no? Clarify if needed.
+                'workerName': data.get('workerName', ''),
+                'sex': data.get('sex', 'male'),
+                'dob': parse_form_date(data.get('dob')),
+                'age': parse_form_age(data.get('age')),
+                'employmentDate': parse_form_date(data.get('employmentDate')),
+                'leavingDate': parse_form_date(data.get('leavingDate')),
+                'reason': data.get('reason', ''),
+                'transferredTo': data.get('transferredTo', ''),
+                'jobNature': data.get('jobNature', ''),
+                'rawMaterial': data.get('rawMaterial', ''),
+                'medicalExamDate': parse_form_date(data.get('medicalExamDate')),
+                'medicalExamResult': data.get('medicalExamResult', ''),
+                'suspensionDetails': data.get('suspensionDetails', ''),
+                'recertifiedDate': parse_form_date(data.get('recertifiedDate')),
+                'unfitnessCertificate': data.get('unfitnessCertificate', ''),
+                'surgeonSignature': data.get('surgeonSignature', ''),
+                'fmoSignature': data.get('fmoSignature', ''),
+                # Assuming 'emp_no' field still exists in Form17 model
+                'emp_no': data.get('emp_no')
+            }
+
+            # Create a new form instance - Forms are usually not updated this way, create new.
+            form = model_class(**form_data)
+            form.full_clean() # Validate model fields
             form.save()
-            return JsonResponse({'message': 'Form 17 created successfully'}, status=201)
+
+            logger.info(f"{form_name} created successfully for aadhar {aadhar}. ID: {form.pk}")
+            return JsonResponse({'message': f'{form_name} created successfully'}, status=201)
 
         except json.JSONDecodeError:
+            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except ValidationError as e:
+            logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Validation Error: {e.message_dict}", exc_info=True)
             return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({'error': "An internal server error occurred.", 'detail': str(e)}, status=500)
 
     return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
 
 
-### 🔹 Form 38 View
+# --- Apply the create_form17 pattern to create_form38, create_form39, create_form40, create_form27 ---
+# Remember to change model_class, log_prefix, form_name, and the specific fields being extracted and saved.
+
 @csrf_exempt
 def create_form38(request):
+    model_class = Form38
+    log_prefix = "create_form38"
+    form_name = "Form 38"
+    # ... copy & adapt logic from create_form17 ...
     if request.method == 'POST':
+        aadhar = None
         try:
             data = json.loads(request.body)
-            print("Received Form 38 Data:", data)
-            entry_date = datetime.now().date()
-            form = Form38(
-                emp_no=data.get('emp_no'),
-                entry_date=entry_date,
-                serialNumber=data.get('serialNumber', ''),
-                department=data.get('department', ''),
-                workerName=data.get('workerName', ''),
-                sex=data.get('sex', 'male'),
-                age=parse_age(data.get('age')),
-                jobNature=data.get('jobNature', ''),
-                employmentDate=parse_date(data.get('employmentDate')),
-                eyeExamDate=parse_date(data.get('eyeExamDate')),
-                result=data.get('result', ''),
-                opthamologistSignature=data.get('opthamologistSignature', ''),
-                fmoSignature=data.get('fmoSignature', ''),
-                remarks=data.get('remarks', '')
-            )
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar: return JsonResponse({'error': 'Aadhar required'}, status=400)
 
+            form_data = {
+                'aadhar': aadhar, 'entry_date': entry_date,
+                'serialNumber': data.get('serialNumber', ''),
+                'department': data.get('department', ''),
+                'workerName': data.get('workerName', ''),
+                'sex': data.get('sex', 'male'),
+                'age': parse_form_age(data.get('age')),
+                'jobNature': data.get('jobNature', ''),
+                'employmentDate': parse_form_date(data.get('employmentDate')),
+                'eyeExamDate': parse_form_date(data.get('eyeExamDate')),
+                'result': data.get('result', ''),
+                'opthamologistSignature': data.get('opthamologistSignature', ''), # Typo: Ophthalmologist
+                'fmoSignature': data.get('fmoSignature', ''),
+                'remarks': data.get('remarks', ''),
+                'emp_no': data.get('emp_no') # Assuming exists
+            }
+            form = model_class(**form_data)
             form.full_clean()
             form.save()
-            return JsonResponse({'message': 'Form 38 created successfully'}, status=201)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
+            logger.info(f"{form_name} created for aadhar {aadhar}. ID: {form.pk}")
+            return JsonResponse({'message': f'{form_name} created successfully'}, status=201)
+        # ... error handling ...
+        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
 
-### 🔹 Form 39 View
 @csrf_exempt
 def create_form39(request):
+    model_class = Form39
+    log_prefix = "create_form39"
+    form_name = "Form 39"
+    # ... copy & adapt logic from create_form17 ...
     if request.method == 'POST':
+        aadhar = None
         try:
             data = json.loads(request.body)
-            print("Received Form 39 Data:", data)   
-            entry_date = datetime.now().date()
-            form = Form39(
-                emp_no=data.get('emp_no'),
-                serialNumber=data.get('serialNumber', ''),
-                entry_date=entry_date,
-                workerName=data.get('workerName', ''),
-                sex=data.get('sex', 'male'),
-                age=parse_age(data.get('age')),
-                proposedEmploymentDate=parse_date(data.get('proposedEmploymentDate')),
-                jobOccupation=data.get('jobOccupation', ''),
-                rawMaterialHandled=data.get('rawMaterialHandled', ''),
-                medicalExamDate=parse_date(data.get('medicalExamDate')),
-                medicalExamResult=data.get('medicalExamResult', ''),
-                certifiedFit=data.get('certifiedFit', ''),
-                certifyingSurgeonSignature=data.get('certifyingSurgeonSignature', ''),
-                departmentSection=data.get('departmentSection', '')
-            )
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar: return JsonResponse({'error': 'Aadhar required'}, status=400)
 
+            form_data = {
+                'aadhar': aadhar, 'entry_date': entry_date,
+                'serialNumber': data.get('serialNumber', ''),
+                'workerName': data.get('workerName', ''),
+                'sex': data.get('sex', 'male'),
+                'age': parse_form_age(data.get('age')),
+                'proposedEmploymentDate': parse_form_date(data.get('proposedEmploymentDate')),
+                'jobOccupation': data.get('jobOccupation', ''),
+                'rawMaterialHandled': data.get('rawMaterialHandled', ''),
+                'medicalExamDate': parse_form_date(data.get('medicalExamDate')),
+                'medicalExamResult': data.get('medicalExamResult', ''),
+                'certifiedFit': data.get('certifiedFit', ''),
+                'certifyingSurgeonSignature': data.get('certifyingSurgeonSignature', ''),
+                'departmentSection': data.get('departmentSection', ''),
+                'emp_no': data.get('emp_no') # Assuming exists
+            }
+            form = model_class(**form_data)
             form.full_clean()
             form.save()
-            return JsonResponse({'message': 'Form 39 created successfully'}, status=201)
+            logger.info(f"{form_name} created for aadhar {aadhar}. ID: {form.pk}")
+            return JsonResponse({'message': f'{form_name} created successfully'}, status=201)
+        # ... error handling ...
+        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
-
-
-### 🔹 Form 40 View
 @csrf_exempt
 def create_form40(request):
+    model_class = Form40
+    log_prefix = "create_form40"
+    form_name = "Form 40"
+    # ... copy & adapt logic from create_form17 ...
     if request.method == 'POST':
+        aadhar = None
         try:
             data = json.loads(request.body)
-            print("Received Form 40 Data:", data)
-            entry_date = datetime.now().date()
-            form = Form40(
-                emp_no=data.get('emp_no'),
-                serialNumber=data.get('serialNumber', ''),
-                entry_date=entry_date,
-                dateOfEmployment=parse_date(data.get('dateOfEmployment')),
-                workerName=data.get('workerName', ''),
-                sex=data.get('sex', 'male'),
-                age=parse_age(data.get('age')),
-                sonWifeDaughterOf=data.get('sonWifeDaughterOf', ''),
-                natureOfJob=data.get('natureOfJob', ''),
-                urineResult=data.get('urineResult', ''),
-                bloodResult=data.get('bloodResult', ''),
-                fecesResult=data.get('fecesResult', ''),
-                xrayResult=data.get('xrayResult', ''),
-                otherExamResult=data.get('otherExamResult', ''),
-                deworming=data.get('deworming', ''),
-                typhoidVaccinationDate=parse_date(data.get('typhoidVaccinationDate')),
-                signatureOfFMO=data.get('signatureOfFMO', ''),
-                remarks=data.get('remarks', '')
-            )
+            aadhar = data.get('aadhar')
+            entry_date = date.today()
+            if not aadhar: return JsonResponse({'error': 'Aadhar required'}, status=400)
 
+            form_data = {
+                'aadhar': aadhar, 'entry_date': entry_date,
+                'serialNumber': data.get('serialNumber', ''),
+                'dateOfEmployment': parse_form_date(data.get('dateOfEmployment')),
+                'workerName': data.get('workerName', ''),
+                'sex': data.get('sex', 'male'),
+                'age': parse_form_age(data.get('age')),
+                'sonWifeDaughterOf': data.get('sonWifeDaughterOf', ''),
+                'natureOfJob': data.get('natureOfJob', ''),
+                'urineResult': data.get('urineResult', ''),
+                'bloodResult': data.get('bloodResult', ''),
+                'fecesResult': data.get('fecesResult', ''),
+                'xrayResult': data.get('xrayResult', ''),
+                'otherExamResult': data.get('otherExamResult', ''),
+                'deworming': data.get('deworming', ''),
+                'typhoidVaccinationDate': parse_form_date(data.get('typhoidVaccinationDate')),
+                'signatureOfFMO': data.get('signatureOfFMO', ''),
+                'remarks': data.get('remarks', ''),
+                'emp_no': data.get('emp_no') # Assuming exists
+            }
+            form = model_class(**form_data)
             form.full_clean()
             form.save()
-            return JsonResponse({'message': 'Form 40 created successfully'}, status=201)
+            logger.info(f"{form_name} created for aadhar {aadhar}. ID: {form.pk}")
+            return JsonResponse({'message': f'{form_name} created successfully'}, status=201)
+        # ... error handling ...
+        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
 
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-
-    return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
-
-
-### 🔹 Form 27 View
 @csrf_exempt
 def create_form27(request):
+    model_class = Form27
+    log_prefix = "create_form27"
+    form_name = "Form 27"
+    # ... copy & adapt logic from create_form17 ...
     if request.method == 'POST':
+        aadhar = None
         try:
             data = json.loads(request.body)
-            print("Received Form 27 Data:", data)
-            entry_date = datetime.now().date()
-            form = Form27(
-                emp_no=data.get('emp_no'),
-                serialNumber=data.get('serialNumber', ''),
-                entry_date=entry_date,
-                date=parse_date(data.get('date')),
-                department=data.get('department', ''),
-                nameOfWorks=data.get('nameOfWorks', ''),
-                sex=data.get('sex', 'male'),
-                dateOfBirth=parse_date(data.get('dateOfBirth')),
-                age=parse_age(data.get('age')),
-                nameOfTheFather=data.get('nameOfTheFather', ''),
-                natureOfJobOrOccupation=data.get('natureOfJobOrOccupation', ''),
-                signatureOfFMO=data.get('signatureOfFMO', ''),
-                descriptiveMarks=data.get('descriptiveMarks', ''),
-                signatureOfCertifyingSurgeon=data.get('signatureOfCertifyingSurgeon', '')
-            )
+            aadhar = data.get('aadhar')
+            entry_date = date.today() # Use today as entry date for the record
+            form_date = parse_form_date(data.get('date')) # The date field on the form itself
 
+            if not aadhar: return JsonResponse({'error': 'Aadhar required'}, status=400)
+
+            form_data = {
+                'aadhar': aadhar, 'entry_date': entry_date,
+                'serialNumber': data.get('serialNumber', ''),
+                'date': form_date, # Use parsed form date
+                'department': data.get('department', ''),
+                'nameOfWorks': data.get('nameOfWorks', ''),
+                'sex': data.get('sex', 'male'),
+                'dateOfBirth': parse_form_date(data.get('dateOfBirth')),
+                'age': parse_form_age(data.get('age')),
+                'nameOfTheFather': data.get('nameOfTheFather', ''),
+                'natureOfJobOrOccupation': data.get('natureOfJobOrOccupation', ''),
+                'signatureOfFMO': data.get('signatureOfFMO', ''),
+                'descriptiveMarks': data.get('descriptiveMarks', ''),
+                'signatureOfCertifyingSurgeon': data.get('signatureOfCertifyingSurgeon', ''),
+                'emp_no': data.get('emp_no') # Assuming exists
+            }
+            form = model_class(**form_data)
             form.full_clean()
             form.save()
-            return JsonResponse({'message': 'Form 27 created successfully'}, status=201)
+            logger.info(f"{form_name} created for aadhar {aadhar}. ID: {form.pk}")
+            return JsonResponse({'message': f'{form_name} created successfully'}, status=201)
+        # ... error handling ...
+        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except ValidationError as e: return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+        except Exception as e: return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+
+# --- Appointments (Using AadharNo / ID) ---
+# Includes BookAppointment, uploadAppointment, get_appointments, update_appointment_status
+# (These were already provided in the previous step as modified)
+
+
+@csrf_exempt
+def BookAppointment(request): # Renamed in urls.py from bookAppointment
+    """Books a new appointment, linking via AADHAR."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            # *** KEY CHANGE: Prioritize aadharNo from payload ***
+            aadhar_no = data.get("aadharNo") # Expect Aadhar from frontend
+            employee_id = data.get("employeeId") # Still accept emp_no if sent
+
+            # Basic validation
+            if not aadhar_no:
+                 logger.warning("BookAppointment failed: Aadhar Number (aadharNo) is required.")
+                 return JsonResponse({"error": "Aadhar Number (aadharNo) is required"}, status=400)
+
+            appointment_date_str = data.get("appointmentDate")
+            if not appointment_date_str:
+                logger.warning("BookAppointment failed: Appointment date is required.")
+                return JsonResponse({"error": "Appointment date is required"}, status=400)
+
+            try:
+                appointment_date_obj = datetime.strptime(appointment_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                logger.error(f"BookAppointment failed: Invalid appointment date format: {appointment_date_str}. Use YYYY-MM-DD.")
+                return JsonResponse({"error": "Invalid appointment date format. Use YYYY-MM-DD."}, status=400)
+
+            # Generate Appointment Number (logic seems okay)
+            existing_appointments = Appointment.objects.filter(date=appointment_date_obj).count()
+            next_appointment_number = existing_appointments + 1
+            appointment_no_gen = f"{next_appointment_number:04d}{appointment_date_obj.strftime('%d%m%Y')}"
+
+            # Create Appointment instance
+            appointment_data = {
+                'appointment_no': appointment_no_gen,
+                'booked_date': date.today(), # Use today's date for booking
+                'role': data.get("role", "Unknown"),
+                'aadhar_no': aadhar_no, # *** Use aadhar_no ***
+                'emp_no': employee_id, # Store emp_no if provided
+                'name': data.get("name", "Unknown"),
+                'organization_name': data.get("organization", ""), # Use empty string default
+                'contractor_name': data.get("contractorName", ""), # Use empty string default
+                'purpose': data.get("purpose", "Unknown"),
+                'date': appointment_date_obj,
+                'time': data.get("time", ""), # Use empty string default
+                'booked_by': data.get("bookedBy", "System"), # Default booked_by
+                'submitted_by_nurse': data.get("submitted_by_nurse", ""),
+                'submitted_Dr': data.get("submitted_Dr", ""), # Typo in original? Dr
+                'consultated_Dr': data.get("consultedDoctor", ""), # Changed key to match payload?
+                'employer': data.get("employer", ""), # Capture employer explicitly
+                # Add other fields like 'status' if needed with a default
+                'status': Appointment.StatusChoices.INITIATE # Default status
+            }
+
+            appointment = Appointment.objects.create(**appointment_data)
+
+            logger.info(f"Appointment {appointment.appointment_no} booked successfully for Aadhar {appointment.aadhar_no} on {appointment.date}.")
+            return JsonResponse({
+                "message": f"Appointment booked successfully for {appointment.name} on {appointment.date}.",
+                "appointment_no": appointment.appointment_no,
+                "id": appointment.id
+            }, status=201)
 
         except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e:
-            return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+            logger.error("BookAppointment failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            logger.exception("BookAppointment failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
 
-    return JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
+    logger.warning("BookAppointment failed: Invalid request method. Only POST allowed.")
+    return JsonResponse({"error": "Invalid request. Use POST."}, status=405)
 
 
+@csrf_exempt # Should be GET
+def get_appointments(request):
+    """Retrieves appointments based on optional filters (date range, aadharNo)."""
+    if request.method == "GET":
+        try:
+            from_date_str = request.GET.get('fromDate')
+            to_date_str = request.GET.get('toDate')
+            aadhar_filter = request.GET.get('aadharNo') # Filter by Aadhar
+            status_filter = request.GET.get('status') # Filter by status
+
+            queryset = Appointment.objects.all()
+
+            # Apply date filters
+            if from_date_str:
+                from_date = parse_date_internal(from_date_str)
+                if from_date:
+                    queryset = queryset.filter(date__gte=from_date)
+                else: return JsonResponse({"error": "Invalid fromDate format. Use YYYY-MM-DD."}, status=400)
+            if to_date_str:
+                to_date_obj = parse_date_internal(to_date_str)
+                if to_date_obj:
+                    queryset = queryset.filter(date__lte=to_date_obj)
+                else: return JsonResponse({"error": "Invalid toDate format. Use YYYY-MM-DD."}, status=400)
+
+            # Apply Aadhar filter
+            if aadhar_filter:
+                queryset = queryset.filter(aadhar_no=aadhar_filter)
+
+            # Apply Status filter
+            if status_filter:
+                 # Validate status_filter against choices if possible
+                 valid_statuses = [choice[0] for choice in Appointment.StatusChoices.choices]
+                 if status_filter in valid_statuses:
+                      queryset = queryset.filter(status=status_filter)
+                 else:
+                      logger.warning(f"Invalid status filter received: {status_filter}")
+                      # Optionally return error or ignore invalid filter
+
+            # Order results
+            appointments = queryset.order_by('date', 'time')
+
+            # Serialize data
+            appointment_list = []
+            for app in appointments:
+                 app_data = model_to_dict(app)
+                 # Format dates
+                 app_data['date'] = app.date.isoformat() if app.date else None
+                 app_data['booked_date'] = app.booked_date.isoformat() if app.booked_date else None
+                 appointment_list.append(app_data)
+
+            logger.info(f"Fetched {len(appointment_list)} appointments.")
+            return JsonResponse({"appointments": appointment_list, "message": "Appointments fetched successfully."}, safe=False)
+
+        except Exception as e:
+             logger.exception("get_appointments failed: An unexpected error occurred.")
+             return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+
+    logger.warning("get_appointments failed: Invalid request method. Only GET allowed.")
+    return JsonResponse({"error": "Invalid request. Use GET."}, status=405)
+
+@csrf_exempt
+def update_appointment_status(request):
+    """Updates the status of an appointment based on its ID."""
+    # Operates on appointment ID, no aadhar change needed.
+    if request.method == "POST": # Should ideally be PUT or PATCH
+        try:
+            data = json.loads(request.body)
+            appointment_id = data.get("id")
+            new_status = data.get("status") # Optionally allow setting specific status
+
+            if not appointment_id:
+                 return JsonResponse({"success": False, "message": "Appointment ID is required."}, status=400)
+
+            appointment = get_object_or_404(Appointment, id=appointment_id)
+
+            current_status = appointment.status
+
+            # Option 1: Cycle through statuses (as per original logic)
+            if new_status is None:
+                if current_status == Appointment.StatusChoices.INITIATE:
+                    next_status = Appointment.StatusChoices.IN_PROGRESS
+                elif current_status == Appointment.StatusChoices.IN_PROGRESS:
+                    next_status = Appointment.StatusChoices.COMPLETED
+                else: # Already completed or other status
+                    logger.warning(f"Cannot cycle status further for appointment ID {appointment_id}. Current status: {current_status}")
+                    return JsonResponse({"success": False, "message": "Cannot update status further from current state."}, status=400)
+                appointment.status = next_status
+            # Option 2: Set specific status from payload
+            else:
+                 valid_statuses = [choice[0] for choice in Appointment.StatusChoices.choices]
+                 if new_status in valid_statuses:
+                      # Add logic here to prevent invalid transitions if needed
+                      # e.g., if current_status == 'COMPLETED' and new_status == 'INITIATE': return error
+                      appointment.status = new_status
+                 else:
+                      logger.warning(f"Invalid status value '{new_status}' provided for appointment ID {appointment_id}.")
+                      return JsonResponse({"success": False, "message": "Invalid status value provided."}, status=400)
+
+
+            appointment.save(update_fields=['status'])
+            logger.info(f"Appointment status updated successfully for ID {appointment_id}. New status: {appointment.status}")
+            return JsonResponse({"success": True, "message": "Status updated", "status": appointment.status})
+
+        except Http404:
+            logger.warning(f"update_appointment_status failed: Appointment with ID {appointment_id} not found.")
+            return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
+        except json.JSONDecodeError:
+            logger.error("update_appointment_status failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"success": False, "message": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            logger.exception(f"update_appointment_status failed for ID {appointment_id or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"success": False, "message": "An unexpected server error occurred.", "detail": str(e)}, status=500)
+
+    logger.warning("update_appointment_status failed: Invalid request method.")
+    return JsonResponse({"error": "Invalid request method (use POST/PUT/PATCH)."}, status=405)
+
+
+@csrf_exempt
+def uploadAppointment(request):
+    """Uploads appointments from a JSON payload, using AADHAR."""
+    if request.method != "POST":
+        logger.warning("uploadAppointment failed: Invalid request method. Only POST allowed.")
+        return JsonResponse({"error": "Invalid request method"}, status=400) # 405 recommended
+
+    try:
+        data = json.loads(request.body)
+        appointments_data = data.get("appointments", []) # Expecting a list of lists/rows
+
+        if not appointments_data or len(appointments_data) <= 1: # Check for header row
+            logger.warning("uploadAppointment failed: No appointment data provided or only header row found.")
+            return JsonResponse({"error": "No valid appointment data provided."}, status=400)
+
+        successful_uploads = 0
+        failed_uploads = []
+        processed_count = 0
+
+        # Helper to safely get data from row, handling index errors
+        def get_cell(row, index, default=''):
+            try: return str(row[index]).strip() if row[index] is not None else default
+            except IndexError: return default
+
+        # --- Excel date parsing ---
+        def parse_excel_date(value):
+            if isinstance(value, (int, float)): # Excel serial date
+                try: return (datetime(1899, 12, 30) + timedelta(days=value)).date()
+                except OverflowError: return None # Handle very large numbers
+            if isinstance(value, str):
+                value = value.strip()
+                for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%d/%m/%Y"): # Add more formats if needed
+                    try: return datetime.strptime(value, fmt).date()
+                    except ValueError: continue
+            if isinstance(value, datetime): return value.date()
+            if isinstance(value, date): return value
+            return None # Cannot parse
+
+        # Process rows (skip header - index 0)
+        for i, row_data in enumerate(appointments_data):
+            if i == 0: continue # Skip header
+            processed_count += 1
+
+            try:
+                # Extract data using safe helper
+                role = get_cell(row_data, 1).lower()
+                name = get_cell(row_data, 2)
+                emp_no_val = get_cell(row_data, 3)
+                organization = get_cell(row_data, 4)
+                # *** KEY CHANGE: Get Aadhar from expected column (index 5) ***
+                aadhar_no_val = get_cell(row_data, 5)
+                contractor_name_val = get_cell(row_data, 6)
+                purpose_val = get_cell(row_data, 7)
+                date_val = parse_excel_date(row_data[8] if len(row_data) > 8 else None)
+                time_val = get_cell(row_data, 9)
+                booked_by_val = get_cell(row_data, 10)
+                submitted_by_nurse_val = get_cell(row_data, 11) # Indices seem off in original, adjusting
+                submitted_dr_val = get_cell(row_data, 12)
+                consulted_dr_val = get_cell(row_data, 13)
+
+                # --- Validation ---
+                if not aadhar_no_val:
+                    raise ValueError(f"Row {i+1}: Missing Aadhar Number (Column F/Index 5)")
+                if not date_val:
+                    raise ValueError(f"Row {i+1}: Invalid or missing Appointment Date (Column I/Index 8)")
+                if role not in ["contractor", "employee", "visitor"]:
+                     raise ValueError(f"Row {i+1}: Invalid Role '{role}' (Column B/Index 1). Must be contractor, employee, or visitor.")
+
+                # Determine employer/org based on role
+                employer_val = organization if role == "employee" else contractor_name_val if role == "contractor" else organization
+
+                # Generate appointment number
+                formatted_date = date_val.strftime("%d%m%Y")
+                # This count needs to be accurate for the *specific date* being processed
+                # Consider locking or more robust sequence generation if high concurrency expected
+                with transaction.atomic(): # Basic concurrency protection
+                    appointment_count_today = Appointment.objects.filter(date=date_val).count()
+                    appointment_no_gen = f"{(appointment_count_today + 1):04d}{formatted_date}"
+
+                # Create Appointment
+                Appointment.objects.create(
+                    appointment_no=appointment_no_gen,
+                    booked_date=date.today(),
+                    role=role,
+                    emp_no=emp_no_val,
+                    aadhar_no=aadhar_no_val, # Use Aadhar
+                    name=name,
+                    organization_name=organization,
+                    contractor_name=contractor_name_val,
+                    purpose=purpose_val,
+                    date=date_val,
+                    time=time_val,
+                    booked_by=booked_by_val or "Bulk Upload",
+                    submitted_by_nurse=submitted_by_nurse_val,
+                    submitted_Dr=submitted_dr_val,
+                    consultated_Dr=consulted_dr_val,
+                    employer=employer_val,
+                    status = Appointment.StatusChoices.INITIATE # Default status
+                )
+                successful_uploads += 1
+
+            except (IndexError, ValueError, ValidationError, TypeError) as e:
+                error_msg = f"Row {i+1}: Error processing - {str(e)}. Data: {row_data}"
+                logger.error(f"uploadAppointment error: {error_msg}")
+                failed_uploads.append(error_msg)
+            except Exception as e:
+                 error_msg = f"Row {i+1}: Unexpected error - {str(e)}. Data: {row_data}"
+                 logger.exception(f"uploadAppointment unexpected error: {error_msg}")
+                 failed_uploads.append(error_msg)
+
+
+        # --- Report Results ---
+        total_rows = processed_count
+        message = f"Processed {total_rows} rows. {successful_uploads} appointments uploaded successfully."
+        status_code = 200 # OK, even if some failed
+
+        response_data = {"message": message, "successful_uploads": successful_uploads}
+        if failed_uploads:
+            response_data["failed_uploads"] = len(failed_uploads)
+            response_data["errors"] = failed_uploads[:10] # Return details for first few errors
+            message += f" {len(failed_uploads)} rows failed to upload."
+            response_data["message"] = message # Update message
+            if successful_uploads == 0:
+                 status_code = 400 # Bad request if nothing succeeded
+
+        logger.info(f"uploadAppointment result: {message}")
+        return JsonResponse(response_data, status=status_code)
+
+    except json.JSONDecodeError:
+        logger.error("uploadAppointment failed: Invalid JSON format.", exc_info=True)
+        return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        logger.exception("uploadAppointment failed: An unexpected error occurred during bulk upload.")
+        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+
+# --- Prescriptions (Using Aadhar / ID) ---
+# Includes add_prescription, view_prescriptions, view_prescriptions_emp, view_prescription_by_id
+# Note: update_prescription was removed as redundant
+# (These were already provided in the previous step as modified)
+
+
+@csrf_exempt
+def add_prescription(request):
+    """Adds or updates prescription data based on AADHAR and current date."""
+    if request.method == "POST":
+        data = None
+        aadhar = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            logger.debug(f"Received data for add_prescription: {json.dumps(data)[:500]}...")
+
+            # *** KEY CHANGE: Expect 'aadhar' ***
+            aadhar = data.get('aadhar')
+            name = data.get('name') # Employee name
+
+            # Validations
+            if not aadhar:
+                logger.warning("add_prescription failed: aadhar is required")
+                return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
+            if not name:
+                logger.warning("add_prescription failed: name is required")
+                return JsonResponse({"error": "Employee name (name) is required"}, status=400)
+            submitted_by = data.get('submitted_by')
+            issued_by = data.get('issued_by') # Might be empty initially
+            if not submitted_by: # Issued_by might only be set when status changes
+                logger.warning("add_prescription failed: submitted_by is required")
+                return JsonResponse({"error": "submitted_by is required"}, status=400)
+
+            # Extract prescription details (JSON fields)
+            prescription_details = {
+                'tablets': data.get('tablets', []),
+                'syrups': data.get('syrups', []),
+                'injections': data.get('injections', []),
+                'creams': data.get('creams', []),
+                'drops': data.get('drops', []),
+                'fluids': data.get('fluids', []),
+                'lotions': data.get('lotions', []),
+                'respules': data.get('respules', []),
+                'suture_procedure': data.get('suture_procedure', []),
+                'dressing': data.get('dressing', []),
+                'powder': data.get('powder', []),
+                'others': data.get('others', []),
+            }
+
+            # Get other fields
+            nurse_notes = data.get('nurse_notes')
+            # Default status to PENDING (0) if not provided
+            issued_status = data.get('issued_status', 0)
+
+            # Use today's date for the entry
+            current_entry_date = date.today()
+
+            # Prepare defaults for update_or_create
+            defaults = {
+                'name': name,
+                'submitted_by': submitted_by,
+                'issued_by': issued_by or '', # Store empty string if not provided yet
+                'nurse_notes': nurse_notes or '', # Store empty string if None
+                'issued_status': issued_status,
+                # Assuming 'emp_no' field still exists in Prescription model
+                'emp_no': data.get('emp_no'),
+                **prescription_details # Unpack the details dictionary
+            }
+
+            # *** KEY CHANGE: Use aadhar in update_or_create ***
+            prescription, created = Prescription.objects.update_or_create(
+                aadhar=aadhar,
+                entry_date=current_entry_date,  # Use DATE object for matching today's prescription
+                defaults=defaults
+            )
+
+            message = "Prescription details added successfully" if created else "Prescription details updated successfully"
+            logger.info(f"{message} for aadhar {aadhar} on {current_entry_date}. ID: {prescription.id}, Status: {prescription.issued_status}")
+            return JsonResponse({
+                "message": message,
+                "prescription_id": prescription.id,
+                "id": prescription.id, # Keep 'id' for potential frontend use
+                "created": created,
+                "issued_status": prescription.issued_status # Return current status
+            }, status=201 if created else 200)
+
+        except json.JSONDecodeError:
+            logger.error("add_prescription failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data in request body"}, status=400)
+        except Exception as e:
+            aadhar_for_log = aadhar or (data.get('aadhar') if data else 'N/A')
+            logger.exception(f"add_prescription failed for aadhar '{aadhar_for_log}': An unexpected error occurred.")
+            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+    else:
+        logger.warning("add_prescription failed: Invalid request method. Only POST allowed.")
+        response = JsonResponse({"error": "Request method must be POST"}, status=405)
+        response['Allow'] = 'POST'
+        return response
+
+@csrf_exempt # Should be GET
+def view_prescriptions(request):
+    """Views all prescriptions."""
+    if request.method == 'GET':
+        try:
+            # Fetch all prescriptions, maybe order by date
+            prescriptions = Prescription.objects.all().order_by('-entry_date', '-id')
+            data = []
+            for p in prescriptions:
+                # Serialize the data more cleanly
+                p_data = model_to_dict(p)
+                p_data['entry_date'] = p.entry_date.isoformat() if p.entry_date else None
+                # Include concatenated name if needed by frontend, but better handled there
+                # p_data['submitted_issued_by'] = f"{p.submitted_by} / {p.issued_by}"
+                data.append(p_data)
+
+            logger.info(f"Fetched {len(data)} prescriptions.")
+            return JsonResponse({'prescriptions': data})
+        except Exception as e:
+            logger.exception("view_prescriptions failed: An unexpected error occurred.")
+            return JsonResponse({'error': "An internal server error occurred.", 'detail': str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method. Only GET allowed.'}, status=405)
+
+
+@csrf_exempt
+def view_prescriptions_emp(request, aadhar): # CHANGED: emp_no -> aadhar
+    """Handles GET (view) and PUT (update/issue) for prescriptions by AADHAR."""
+
+    if request.method == 'GET':
+        # --- View prescriptions for a specific Aadhar ---
+        try:
+            prescriptions = Prescription.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id')
+            data = []
+            for p in prescriptions:
+                 p_data = model_to_dict(p)
+                 p_data['entry_date'] = p.entry_date.isoformat() if p.entry_date else None
+                 data.append(p_data)
+
+            logger.info(f"Fetched {len(data)} prescriptions for aadhar {aadhar}.")
+            return JsonResponse({'prescriptions': data})
+        except Exception as e:
+            logger.exception(f"Error viewing prescriptions for aadhar {aadhar} (GET): {e}")
+            return JsonResponse({'error': 'An unexpected error occurred.', 'detail': str(e)}, status=500)
+
+    elif request.method == 'PUT':
+        # --- Update/Issue a specific prescription for this Aadhar ---
+        prescription_id = None
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            prescription_id = data.get('id') or data.get('prescription_id') # Get ID from payload
+
+            if not prescription_id:
+                 logger.warning(f"Update prescription failed for aadhar {aadhar}: Missing prescription ID in PUT request data")
+                 return JsonResponse({'error': 'Missing prescription ID in PUT request data'}, status=400)
+
+            # Fetch the specific prescription, ensuring it belongs to the correct Aadhar
+            prescription = get_object_or_404(Prescription, pk=prescription_id, aadhar=aadhar)
+
+            # --- Update fields from payload ---
+            # Only update fields relevant to issuing/pharmacist update
+            prescription.issued_by = data.get('issued_by', prescription.issued_by)
+            prescription.nurse_notes = data.get('nurse_notes', prescription.nurse_notes) # Allow updating notes
+
+            # Update prescription items if they are sent (e.g., quantity dispensed adjustments?)
+            # Be careful here - only update what's necessary for the issuing process
+            prescription.tablets = data.get('tablets', prescription.tablets)
+            prescription.syrups = data.get('syrups', prescription.syrups)
+            # ... update other item types if needed ...
+
+            # Mark as issued (status = 1)
+            new_status = data.get('issued_status', 1) # Default to issuing (1)
+            if new_status not in [0, 1]: # Basic validation
+                 logger.warning(f"Invalid issued_status '{new_status}' received for prescription {prescription_id}.")
+                 return JsonResponse({'error': 'Invalid issued_status value (must be 0 or 1).'}, status=400)
+            prescription.issued_status = new_status
+
+            # Prepare list of fields to update
+            update_fields = ['issued_by', 'nurse_notes', 'issued_status', 'tablets', 'syrups'] # Add other item types if updated
+
+            prescription.save(update_fields=update_fields)
+            logger.info(f"Successfully updated Prescription ID: {prescription.id} for aadhar {aadhar}. Status set to {prescription.issued_status}")
+
+            return JsonResponse({
+                'message': f'Prescription {prescription.id} updated successfully.',
+                'issued_status': prescription.issued_status
+            })
+
+        except Http404:
+             logger.warning(f"Prescription not found for ID: {prescription_id} and Aadhar: {aadhar}")
+             return JsonResponse({'error': 'Prescription not found for this ID and Aadhar.'}, status=404)
+        except json.JSONDecodeError:
+            logger.error(f"Invalid JSON received updating prescription for aadhar {aadhar}", exc_info=True)
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.exception(f"Error updating prescription for aadhar {aadhar} (PUT, ID: {prescription_id}): {e}")
+            return JsonResponse({'error': 'An unexpected error occurred.', 'detail': str(e)}, status=500)
+    else:
+        # Method not allowed
+        response = JsonResponse({'error': 'Invalid request method. Only GET or PUT allowed.'}, status=405)
+        response['Allow'] = 'GET, PUT'
+        return response
+
+@csrf_exempt
+def view_prescription_by_id(request, prescription_id):
+    """Retrieves a single prescription by its ID."""
+    # Operates on ID, no aadhar change needed.
+    if request.method == 'GET':
+        try:
+            prescription = get_object_or_404(Prescription, pk=prescription_id)
+
+            # Serialize the single object
+            p_data = model_to_dict(prescription)
+            p_data['entry_date'] = prescription.entry_date.isoformat() if prescription.entry_date else None
+
+            logger.info(f"Fetched prescription by ID: {prescription_id}")
+            return JsonResponse(p_data)
+
+        except Http404:
+            logger.warning(f"view_prescription_by_id failed: Prescription with ID {prescription_id} not found.")
+            return JsonResponse({'error': 'Prescription not found'}, status=404)
+        except Exception as e:
+            logger.exception(f"view_prescription_by_id failed for ID {prescription_id}: An unexpected error occurred.")
+            return JsonResponse({'error': 'Internal Server Error', 'detail': str(e)}, status=500)
+    else:
+        logger.warning(f"view_prescription_by_id failed for ID {prescription_id}: Invalid request method.")
+        response = JsonResponse({'error': 'Invalid request method. Only GET allowed.'}, status=405)
+        response['Allow'] = 'GET'
+        return response
+
+
+# --- Mock Drills / Camps / Reviews (Unaffected or uses Aadhar as needed) ---
+# Includes save_mockdrills, get_mockdrills, add_camp, get_camps, upload_files, download_file, delete_file, get_categories, get_reviews, add_review
+# (Already provided in the previous step)
+
+
+# --- Mock Drills ---
+@csrf_exempt
+def save_mockdrills(request):
+    """Saves mock drill data, potentially linking to AADHAR."""
+    if request.method == "POST":
+        aadhar = None # Initialize
+        try:
+            data = json.loads(request.body)
+            logger.debug(f"Received data for save_mockdrills: {json.dumps(data)[:500]}...")
+
+            # *** KEY CHANGE: Expect 'aadhar' if victim is employee/contractor ***
+            # 'emp_no' might still be relevant if it's a separate identifier
+            aadhar = data.get('aadhar') # Get Aadhar if provided
+            emp_no_val = data.get('emp_no') # Get emp_no if provided
+
+            # Parse dates
+            drill_date = parse_date_internal(data.get("date"))
+            # Parse time if needed (e.g., using datetime.strptime(data.get("time"), "%H:%M:%S").time())
+
+            mock_drill_data = {
+                'date': drill_date,
+                'time': data.get("time"), # Assuming time is stored as string or TimeField
+                'department': data.get("department"),
+                'location': data.get("location"),
+                'scenario': data.get("scenario"),
+                'ambulance_timing': data.get("ambulance_timing"),
+                'departure_from_OHC': data.get("departure_from_OHC"),
+                'return_to_OHC': data.get("return_to_OHC"),
+                'aadhar': aadhar, # *** Store aadhar ***
+                'emp_no': emp_no_val, # Store emp_no if model has it
+                'victim_department': data.get("victim_department"),
+                'victim_name': data.get("victim_name"),
+                'nature_of_job': data.get("nature_of_job"),
+                'age': parse_form_age(data.get("age")), # Use safe age parsing
+                'mobile_no': data.get("mobile_no"),
+                'gender': data.get("gender"),
+                'vitals': data.get("vitals"), # Assuming text/json field
+                'complaints': data.get("complaints"),
+                'treatment': data.get("treatment"),
+                'referal': data.get("referal"), # Typo: referral
+                'ambulance_driver': data.get("ambulance_driver"),
+                'staff_name': data.get("staff_name"),
+                'OHC_doctor': data.get("OHC_doctor"),
+                'staff_nurse': data.get("staff_nurse"),
+                # Field names need to match model exactly:
+                'Action_Completion': data.get("Action_Completion"), # Check model field name
+                'Responsible': data.get("Responsible"),             # Check model field name
+            }
+            # Remove None values if model fields don't allow null
+            # filtered_data = {k: v for k, v in mock_drill_data.items() if v is not None}
+
+            mock_drill = mockdrills.objects.create(**mock_drill_data)
+
+            logger.info(f"Mock drill saved successfully with ID: {mock_drill.id}" + (f" for Aadhar: {aadhar}" if aadhar else ""))
+            return JsonResponse({"message": f"Mock drill saved successfully with ID: {mock_drill.id}"}, status=201)
+
+        except json.JSONDecodeError:
+            logger.error("save_mockdrills failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            logger.exception(f"save_mockdrills failed (Aadhar: {aadhar or 'N/A'}): An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+
+    logger.warning("save_mockdrills failed: Invalid request method. Only POST allowed.")
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+def get_mockdrills(request):
+    # No change needed
+    if request.method == "GET":
+        try:
+            mock_drills_qs = mockdrills.objects.all().order_by('-date', '-time') # Order by date/time
+            mock_drills_list = []
+            for drill in mock_drills_qs:
+                 drill_data = model_to_dict(drill)
+                 # Format dates/times if needed
+                 drill_data['date'] = drill.date.isoformat() if drill.date else None
+                 # Format time if it's a TimeField: drill_data['time'] = drill.time.strftime('%H:%M:%S') if drill.time else None
+                 mock_drills_list.append(drill_data)
+
+            return JsonResponse(mock_drills_list, safe=False)
+        except Exception as e:
+            logger.exception("get_mockdrills failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    else:
+        logger.warning("get_mockdrills failed: Invalid request method. Only GET allowed.")
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+@csrf_exempt
+def add_camp(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            start_date_obj = parse_date_internal(data.get("start_date"))
+            end_date_obj = parse_date_internal(data.get("end_date"))
+            if not start_date_obj or not end_date_obj: return JsonResponse({"error": "Invalid date format."}, status=400)
+            if start_date_obj > end_date_obj: return JsonResponse({"error": "Start date after end date."}, status=400)
+            camp_name = data.get("camp_name")
+            if not camp_name: return JsonResponse({"error": "Camp name required."}, status=400)
+
+            camp = eventsandcamps.objects.create(
+                camp_name=camp_name, hospital_name=data.get("hospital_name"),
+                start_date=start_date_obj, end_date=end_date_obj,
+                camp_details=data.get("camp_details"), camp_type=data.get("camp_type", "Camp"),
+            )
+            logger.info(f"Camp '{camp.camp_name}' saved ID: {camp.id}")
+            return JsonResponse({"message": "Camp added.", "id": camp.id}, status=201)
+        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON."}, status=400)
+        except Exception as e:
+            logger.exception("add_camp failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+def get_camps(request):
+    if request.method == "GET":
+        try:
+            search_term = request.GET.get("searchTerm", "")
+            filter_status = request.GET.get("filterStatus", "")
+            date_from_str = request.GET.get("dateFrom")
+            date_to_str = request.GET.get("dateTo")
+            today = date.today()
+
+            camps_qs = eventsandcamps.objects.all()
+            if search_term: camps_qs = camps_qs.filter(Q(camp_name__icontains=search_term) | Q(camp_details__icontains=search_term))
+            if filter_status == "Live": camps_qs = camps_qs.filter(start_date__lte=today, end_date__gte=today)
+            elif filter_status: camps_qs = camps_qs.filter(camp_type=filter_status)
+
+            date_from = parse_date_internal(date_from_str); date_to = parse_date_internal(date_to_str)
+            if date_from: camps_qs = camps_qs.filter(start_date__gte=date_from)
+            if date_to: camps_qs = camps_qs.filter(end_date__lte=date_to)
+
+            camps_qs = camps_qs.order_by('-start_date', 'camp_name')
+            data = []
+            media_prefix = get_media_url_prefix(request)
+            for camp in camps_qs:
+                 data.append({
+                     'id': camp.id, 'camp_name': camp.camp_name, 'hospital_name': camp.hospital_name,
+                     'start_date': camp.start_date.isoformat() if camp.start_date else None,
+                     'end_date': camp.end_date.isoformat() if camp.end_date else None,
+                     'camp_details': camp.camp_details, 'camp_type': camp.camp_type,
+                     'report1_url': f"{media_prefix}{camp.report1.name}" if camp.report1 else None,
+                     'report2_url': f"{media_prefix}{camp.report2.name}" if camp.report2 else None,
+                     'photos_url': f"{media_prefix}{camp.photos.name}" if camp.photos else None,
+                     'ppt_url': f"{media_prefix}{camp.ppt.name}" if camp.ppt else None,
+                 })
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            logger.exception("get_camps failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method. Use GET."}, status=405)
+
+@csrf_exempt
+def upload_files(request):
+    if request.method == 'POST':
+        camp_id_str = request.POST.get('campId'); file_type = request.POST.get('fileType')
+        if not camp_id_str or not file_type: return JsonResponse({'error': 'campId and fileType required.'}, status=400)
+        try: camp_id = int(camp_id_str)
+        except ValueError: return JsonResponse({'error': 'Invalid campId.'}, status=400)
+
+        valid_file_types = ['report1', 'report2', 'photos', 'ppt']
+        if file_type not in valid_file_types: return JsonResponse({'error': f"Invalid file type."}, status=400)
+
+        camp = get_object_or_404(eventsandcamps, pk=camp_id)
+        uploaded_file = request.FILES.get('file') or request.FILES.get(file_type)
+        if not uploaded_file: return JsonResponse({'error': 'No file uploaded.'}, status=400)
+
+        file_extension = os.path.splitext(uploaded_file.name)[1].lower().strip('.')
+        if file_extension not in ALLOWED_FILE_TYPES: return JsonResponse({'error': f"Invalid file type '{file_extension}'."}, status=400)
+
+        old_file_field = getattr(camp, file_type, None)
+        if old_file_field and old_file_field.name:
+            try:
+                if default_storage.exists(old_file_field.path): default_storage.delete(old_file_field.path)
+            except Exception as e: logger.error(f"Error deleting old {file_type} for camp {camp_id}: {e}")
+
+        setattr(camp, file_type, uploaded_file)
+        camp.save(update_fields=[file_type])
+        new_file_field = getattr(camp, file_type)
+        file_url = f"{get_media_url_prefix(request)}{new_file_field.name}" if new_file_field else None
+        logger.info(f"File uploaded for camp {camp_id}, type {file_type}: {uploaded_file.name}")
+        return JsonResponse({'message': 'File uploaded.', 'file_url': file_url}, status=200)
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+def download_file(request):
+    try:
+        camp_id = request.GET.get('campId'); file_type = request.GET.get('fileType')
+        if not camp_id or not file_type: raise Http404("Missing params.")
+        try: camp_id = int(camp_id)
+        except ValueError: raise Http404("Invalid campId.")
+        valid_types = ['report1', 'report2', 'photos', 'ppt']
+        if file_type not in valid_types: raise Http404("Invalid file type.")
+
+        camp = get_object_or_404(eventsandcamps, pk=camp_id)
+        file_field = getattr(camp, file_type, None)
+        if not file_field or not file_field.name: raise Http404(f"{file_type} not found.")
+        if not default_storage.exists(file_field.path): raise Http404("File not found on server.")
+
+        from django.http import FileResponse # Local import
+        response = FileResponse(default_storage.open(file_field.path, 'rb'), as_attachment=True)
+        return response
+    except Http404 as e:
+        logger.warning(f"download_file failed: {e}")
+        return HttpResponse(str(e), status=404)
+    except Exception as e:
+        logger.exception("download_file failed.")
+        return HttpResponse("Server error.", status=500)
+
+@csrf_exempt # Should be POST or DELETE
+def delete_file(request):
+    if request.method == 'POST':
+        camp_id_str = None # Initialize
+        try:
+            data = json.loads(request.body); camp_id_str = data.get('campId'); file_type = data.get('fileType')
+            if not camp_id_str or not file_type: return JsonResponse({'error': 'campId/fileType required.'}, status=400)
+            try: camp_id = int(camp_id_str)
+            except ValueError: return JsonResponse({'error': 'Invalid campId.'}, status=400)
+            valid_types = ['report1', 'report2', 'photos', 'ppt']
+            if file_type not in valid_types: return JsonResponse({'error': f"Invalid file type."}, status=400)
+
+            camp = get_object_or_404(eventsandcamps, pk=camp_id)
+            file_field = getattr(camp, file_type, None)
+
+            if file_field and file_field.name:
+                 file_path = file_field.path; file_name = file_field.name
+                 setattr(camp, file_type, None)
+                 camp.save(update_fields=[file_type])
+                 try:
+                     if default_storage.exists(file_path): default_storage.delete(file_path)
+                     logger.info(f"File '{file_name}' deleted for camp {camp_id}, type {file_type}")
+                     return JsonResponse({'message': 'File deleted.'}, status=200)
+                 except Exception as e:
+                     logger.error(f"Error deleting file from storage camp {camp_id}, type {file_type}: {e}")
+                     return JsonResponse({'message': 'File reference removed, error deleting storage.', 'error_detail': str(e)}, status=500)
+            else:
+                 return JsonResponse({'message': 'No file to delete.'}, status=200)
+        except Http404: return JsonResponse({'error': 'Camp not found'}, status=404)
+        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON.'}, status=400)
+        except Exception as e:
+            logger.exception(f"delete_file failed for camp {camp_id_str or 'Unknown'}.")
+            return JsonResponse({'error': "Server error.", 'detail': str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method."}, status=405)
+
+def get_categories(request):
+    # No change needed
+    if request.method == 'GET':
+        try:
+            categories = list(ReviewCategory.objects.values("id", "name"))
+            return JsonResponse({"categories": categories}, safe=False)
+        except Exception as e:
+            logger.exception("get_categories failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
+
+def get_reviews(request, status):
+    # No change needed (uses status and Review model fields)
+    if request.method == 'GET':
+        try:
+            # Assuming Review model has fields id, pid, name, gender, appointment_date, category (FK)
+            # Validate status if needed
+            reviews = list(Review.objects.filter(status=status).select_related('category')
+                           .values("id", "pid", "name", "gender", "appointment_date", "category__name"))
+
+            # Format dates
+            for review in reviews:
+                if isinstance(review.get('appointment_date'), date):
+                    review['appointment_date'] = review['appointment_date'].isoformat()
+
+            return JsonResponse({"reviews": reviews}, safe=False)
+        except Exception as e:
+            logger.exception(f"get_reviews failed for status '{status}': An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
+
+@csrf_exempt
+def add_review(request):
+    # No change needed (uses Review model fields)
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+
+            # Validation (ensure required fields are present)
+            required = ['category', 'pid', 'name', 'gender', 'appointment_date', 'status']
+            if not all(field in data for field in required):
+                return JsonResponse({"error": "Missing required fields for review."}, status=400)
+
+            # Get or create category
+            category, _ = ReviewCategory.objects.get_or_create(name=data["category"])
+
+            appointment_date_obj = parse_date_internal(data["appointment_date"])
+            if not appointment_date_obj:
+                 return JsonResponse({"error": "Invalid appointment_date format. Use YYYY-MM-DD."}, status=400)
+
+            review = Review.objects.create(
+                category=category,
+                pid=data["pid"],
+                name=data["name"],
+                gender=data["gender"],
+                appointment_date=appointment_date_obj,
+                status=data["status"]
+            )
+            logger.info(f"Review saved successfully with ID: {review.id}")
+            return JsonResponse({"message": "Review added successfully", "id": review.id}, status=201)
+        except json.JSONDecodeError:
+            logger.error("add_review failed: Invalid JSON data.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        except Exception as e:
+            logger.exception("add_review failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    logger.warning("add_review failed: Invalid request method. Only POST allowed.")
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+
+# --- Dashboard Stats / General Fetch (Unaffected by primary key change) ---
+# dashboard_stats, fetchVisitdataAll, fetchFitnessData seem unaffected as they
+# fetch aggregate or all data, not based on a single emp_no/aadhar key.
+
+@csrf_exempt
+def dashboard_stats(request):
+    # No change needed based on aadhar requirement
+    if request.method == 'GET': # Should be GET
+        try:
+            from_date_str = request.GET.get("fromDate")
+            to_date_str = request.GET.get("toDate")
+            visit_type_filter = request.GET.get("visitType") # e.g., Preventive, Curative
+            entity_filter = request.GET.get("entityType") # e.g., Employee, Contractor, Visitor, Total Footfalls
+
+            today = date.today()
+            # Use helper for safe date parsing
+            from_date_obj = parse_date_internal(from_date_str) if from_date_str else today
+            to_date_obj = parse_date_internal(to_date_str) if to_date_str else today
+
+            if not from_date_obj or not to_date_obj:
+                return JsonResponse({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+
+            # Ensure from_date is not after to_date
+            if from_date_obj > to_date_obj:
+                 from_date_obj, to_date_obj = to_date_obj, from_date_obj # Swap if needed
+
+            # Base queryset for the date range
+            queryset = Dashboard.objects.filter(date__range=[from_date_obj, to_date_obj])
+
+            # Apply visit type filter
+            if visit_type_filter in ["Preventive", "Curative"]:
+                queryset = queryset.filter(type_of_visit=visit_type_filter)
+
+            # Apply entity type filter
+            entity_mapping = { # Map filter value to model 'type' field value
+                "Employee": "Employee",
+                "Contractor": "Contractor",
+                "Visitor": "Visitor",
+            }
+            if entity_filter in entity_mapping:
+                 queryset = queryset.filter(type=entity_mapping[entity_filter])
+            # If entity_filter is "Total Footfalls" or invalid, we don't filter by type
+
+            # Calculate counts
+            type_counts = queryset.values("type").annotate(count=Count("id")).order_by("-count")
+            type_of_visit_counts = queryset.values("type_of_visit").annotate(count=Count("id")).order_by("-count")
+            register_counts = queryset.values("register").annotate(count=Count("id")).order_by("-count")
+            purpose_counts = queryset.values("purpose").annotate(count=Count("id")).order_by("-count")
+
+            # Prepare response data
+            data = {
+                "type_counts": list(type_counts),
+                "type_of_visit_counts": list(type_of_visit_counts),
+                "register_counts": list(register_counts),
+                "purpose_counts": list(purpose_counts),
+                # Add total count if needed
+                "total_count": queryset.count()
+            }
+
+            return JsonResponse(data, safe=False)
+
+        except Exception as e:
+            logger.exception("Error in dashboard_stats view: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    else:
+        return JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
+
+@csrf_exempt # Should be GET
+def fetchVisitdataAll(request):
+    """Fetches all visit data (Dashboard records)."""
+    if request.method == "POST" or request.method == "GET": # Allow GET
+        try:
+            # Fetch all dashboard entries, order by date descending
+            all_visits = list(Dashboard.objects.all().order_by('-date', '-id').values())
+
+            # Format dates
+            for visit in all_visits:
+                 if isinstance(visit.get('date'), date):
+                     visit['date'] = visit['date'].isoformat()
+
+            logger.info(f"Fetched all {len(all_visits)} visit records.")
+            return JsonResponse({"message": "All visit data fetched successfully", "data": all_visits}, status=200)
+        except Exception as e:
+            logger.exception("fetchVisitdataAll failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    else:
+        logger.warning("fetchVisitdataAll failed: Invalid request method.")
+        return JsonResponse({"error": "Invalid request method (use GET or POST)."}, status=405)
+
+@csrf_exempt # Should be GET
+def fetchFitnessData(request):
+    """Fetches all fitness assessment data."""
+    if request.method == "POST" or request.method == "GET": # Allow GET
+        try:
+            # Fetch all fitness records, order by date descending
+            all_fitness = list(FitnessAssessment.objects.all().order_by('-entry_date', '-id').values())
+
+             # Format dates and JSON fields
+            for record in all_fitness:
+                if isinstance(record.get('entry_date'), date):
+                    record['entry_date'] = record['entry_date'].isoformat()
+                if isinstance(record.get('validity'), date):
+                     record['validity'] = record['validity'].isoformat()
+                # JSON fields are likely already handled correctly by Django ORM -> JSON conversion
+
+            logger.info(f"Fetched all {len(all_fitness)} fitness records.")
+            return JsonResponse({"message": "All fitness data fetched successfully", "data": all_fitness}, status=200)
+        except Exception as e:
+            logger.exception("fetchFitnessData failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    else:
+        logger.warning("fetchFitnessData failed: Invalid request method.")
+        return JsonResponse({"error": "Invalid request method (use GET or POST)."}, status=405)
+
+
+def get_media_url_prefix(request):
+    media_url = getattr(settings, 'MEDIA_URL', '/media/')
+    if media_url.startswith('http'): return media_url
+    else: return f"{request.scheme}://{request.get_host()}{media_url}"
+
+ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'gif', 'pptx', 'ppt', 'mp4', 'mov', 'avi']
+
+
+# --- Pharmacy / Inventory / Calibration ---
 
 @csrf_exempt
 def add_stock(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            print("Received Data:", data)
+            logger.debug(f"Received Stock Data: {data}")
 
             medicine_form = data.get("medicine_form")
             brand_name = data.get("brand_name")
             chemical_name = data.get("chemical_name")
             dose_volume = data.get("dose_volume")
-            quantity = data.get("quantity")
-            expiry_date = data.get("expiry_date")
+            quantity_str = data.get("quantity")
+            expiry_date_str = data.get("expiry_date") # Expect YYYY-MM format
 
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity, expiry_date]):
-                return JsonResponse({"error": "All fields are required"}, status=400)
+            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str]):
+                return JsonResponse({"error": "All fields (medicine_form, brand_name, chemical_name, dose_volume, quantity, expiry_date) are required"}, status=400)
 
-            expiry_date = datetime.strptime(expiry_date + "-01", "%Y-%m-%d").date()
+            try:
+                quantity = int(quantity_str)
+                if quantity <= 0:
+                    return JsonResponse({"error": "Quantity must be a positive number."}, status=400)
+            except ValueError:
+                return JsonResponse({"error": "Invalid quantity format. Must be a number."}, status=400)
+
+            try:
+                # Parse YYYY-MM, default to the 1st of the month for storage
+                expiry_date_obj = datetime.strptime(expiry_date_str, "%Y-%m").date().replace(day=1)
+            except ValueError:
+                return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM."}, status=400)
+
             entry_date = date.today()
 
-            # Check if brand_name and chemical_name exist in PharmacyMedicine
-            medicine_entry = PharmacyMedicine.objects.filter(
-                brand_name=brand_name,
-                chemical_name=chemical_name,
-                medicine_form=medicine_form
-            ).first()
-
-            if medicine_entry:
-                # Check if the dose_volume exists for the same brand_name and chemical_name
-                existing_dose = PharmacyMedicine.objects.filter(
+            with transaction.atomic():
+                # Ensure the medicine definition exists in PharmacyMedicine
+                medicine_entry, created = PharmacyMedicine.objects.get_or_create(
                     brand_name=brand_name,
                     chemical_name=chemical_name,
                     medicine_form=medicine_form,
-                    dose_volume=dose_volume
-                ).exists()
-
-                if not existing_dose:
-                    # Add new entry with the different dose_volume
-                    PharmacyMedicine.objects.create(
-                        entry_date=entry_date,
-                        medicine_form=medicine_form,
-                        brand_name=brand_name,
-                        chemical_name=chemical_name,
-                        dose_volume=dose_volume
-                    )
-                    print(f"New dose entry added to PharmacyMedicine: {brand_name} - {chemical_name} - {dose_volume}")
-            else:
-                # If brand_name and chemical_name do not exist together, create a new entry
-                PharmacyMedicine.objects.create(
-                    entry_date=entry_date,
-                    medicine_form=medicine_form,
-                    brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume
+                    dose_volume=dose_volume,
+                    defaults={'entry_date': entry_date} # Set entry_date only if created
                 )
-                print(f"New entry added to PharmacyMedicine: {brand_name} - {chemical_name} - {dose_volume}")
+                if created:
+                    logger.info(f"New definition added to PharmacyMedicine: {brand_name} - {chemical_name} - {dose_volume}")
 
-            # Add to PharmacyStock
-            PharmacyStock.objects.create(
-                entry_date=entry_date,
-                medicine_form=medicine_form,
-                brand_name=brand_name,
-                chemical_name=chemical_name,
-                dose_volume=dose_volume,
-                quantity=quantity,
-                expiry_date=expiry_date,
-                total_quantity=quantity,  # Assuming this should be initialized with quantity
-            )
+                # Add or update PharmacyStock
+                # Find existing stock for this specific batch (same medicine, same expiry)
+                stock_entry, stock_created = PharmacyStock.objects.get_or_create(
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    chemical_name=chemical_name,
+                    dose_volume=dose_volume,
+                    expiry_date=expiry_date_obj,
+                    defaults={
+                        'entry_date': entry_date,
+                        'quantity': quantity,
+                        'total_quantity': quantity, # Initial total quantity
+                    }
+                )
+
+                # If the stock entry already existed, update the quantity
+                if not stock_created:
+                    stock_entry.quantity += quantity
+                    stock_entry.total_quantity += quantity # Increment total added quantity as well
+                    stock_entry.entry_date = entry_date # Update entry date to reflect last addition
+                    stock_entry.save()
+                    logger.info(f"Updated stock for {brand_name} (Expiry: {expiry_date_obj}): Added {quantity}, New Qty: {stock_entry.quantity}")
+                else:
+                     logger.info(f"New stock entry added for {brand_name} (Expiry: {expiry_date_obj}): Qty: {quantity}")
+
 
             return JsonResponse({"message": "Stock added successfully"}, status=201)
 
+        except json.JSONDecodeError:
+            logger.error("add_stock failed: Invalid JSON.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
         except Exception as e:
-            print("Error Traceback:", traceback.format_exc())
-            return JsonResponse({"error": str(e)}, status=500)
+            logger.exception("add_stock failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
 
-    return JsonResponse({"error": "Invalid request method"}, status=400)
+    return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)
 
-
-@csrf_exempt
+@csrf_exempt # Should be GET
 def get_brand_names(request):
-    try:
-        chemical_name = request.GET.get("chemical_name", "").strip()
-        medicine_form = request.GET.get("medicine_form", "").strip()
+    if request.method == 'GET':
+        try:
+            chemical_name = request.GET.get("chemical_name", "").strip()
+            medicine_form = request.GET.get("medicine_form", "").strip()
 
-        if not chemical_name or not medicine_form:
-            return JsonResponse({"suggestions": []})
+            if not chemical_name or not medicine_form:
+                return JsonResponse({"suggestions": []})
 
-        suggestions = (
-            PharmacyMedicine.objects.filter(chemical_name__iexact=chemical_name, medicine_form__iexact=medicine_form)
-            .values_list("brand_name", flat=True)
-            .distinct()
-        )
-
-        print(f"Brand Found for {chemical_name}, {medicine_form}: {suggestions}")
-        return JsonResponse({"suggestions": list(suggestions)})
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-@csrf_exempt
-def get_dose_volume(request):
-    try:
-        brand_name = request.GET.get("brand_name", "").strip()
-        chemical_name = request.GET.get("chemical_name", "").strip()
-        medicine_form = request.GET.get("medicine_form", "").strip()
-
-        if not brand_name or not chemical_name or not medicine_form:
-            return JsonResponse({"suggestions": []})
-
-        # Fetch dose volumes based on the given brand name, chemical name, and medicine form
-        dose_suggestions = list(
-            PharmacyMedicine.objects.filter(
-                brand_name__iexact=brand_name, 
-                chemical_name__iexact=chemical_name, 
-                medicine_form__iexact=medicine_form
+            suggestions = (
+                PharmacyMedicine.objects.filter(
+                    chemical_name__iexact=chemical_name,
+                    medicine_form__iexact=medicine_form
+                )
+                .values_list("brand_name", flat=True)
+                .distinct()
+                .order_by("brand_name")
             )
-            .values_list("dose_volume", flat=True)
-            .distinct()
-        )
 
-        # Debugging: Print found doses
-        print(f"Dose Volumes Found for {brand_name}, {chemical_name}, {medicine_form}: {dose_suggestions}")
+            logger.debug(f"Brand suggestions for {chemical_name}, {medicine_form}: {list(suggestions)}")
+            return JsonResponse({"suggestions": list(suggestions)})
 
-        return JsonResponse({"suggestions": dose_suggestions})
+        except Exception as e:
+            logger.exception("get_brand_names failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+@csrf_exempt # Should be GET
+def get_dose_volume(request):
+    if request.method == 'GET':
+        try:
+            brand_name = request.GET.get("brand_name", "").strip()
+            chemical_name = request.GET.get("chemical_name", "").strip()
+            medicine_form = request.GET.get("medicine_form", "").strip()
 
+            if not brand_name or not chemical_name or not medicine_form:
+                return JsonResponse({"suggestions": []})
 
-@csrf_exempt
+            dose_suggestions = list(
+                PharmacyMedicine.objects.filter(
+                    brand_name__iexact=brand_name,
+                    chemical_name__iexact=chemical_name,
+                    medicine_form__iexact=medicine_form
+                )
+                .values_list("dose_volume", flat=True)
+                .distinct()
+                .order_by("dose_volume")
+            )
+
+            logger.debug(f"Dose Volumes for {brand_name}, {chemical_name}, {medicine_form}: {dose_suggestions}")
+            return JsonResponse({"suggestions": dose_suggestions})
+
+        except Exception as e:
+            logger.exception("get_dose_volume failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
+
+@csrf_exempt # Should be GET
 def get_chemical_name_by_brand(request):
-    try:
-        brand_name = request.GET.get("brand_name", "").strip()
-        medicine_form = request.GET.get("medicine_form", "").strip()
+    if request.method == 'GET':
+        try:
+            brand_name = request.GET.get("brand_name", "").strip()
+            medicine_form = request.GET.get("medicine_form", "").strip()
 
-        if not brand_name or not medicine_form:
-            return JsonResponse({"suggestions": []})
+            if not brand_name or not medicine_form:
+                return JsonResponse({"suggestions": []})
 
-        # Get the chemical name associated with the brand and medicine form
-        suggestions = (
-            PharmacyMedicine.objects.filter(brand_name__iexact=brand_name, medicine_form__iexact=medicine_form)
-            .values_list("chemical_name", flat=True)
-            .distinct()
-        )
+            suggestions = (
+                PharmacyMedicine.objects.filter(
+                    brand_name__iexact=brand_name,
+                    medicine_form__iexact=medicine_form
+                )
+                .values_list("chemical_name", flat=True)
+                .distinct()
+                .order_by("chemical_name")
+            )
 
-        return JsonResponse({"suggestions": list(suggestions)})
+            logger.debug(f"Chemical names for {brand_name}, {medicine_form}: {list(suggestions)}")
+            return JsonResponse({"suggestions": list(suggestions)})
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        except Exception as e:
+            logger.exception("get_chemical_name_by_brand failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
-@csrf_exempt
+@csrf_exempt # Should be GET
 def get_chemical_name(request):
-    try:
-        brand_name = request.GET.get("brand_name", "").strip()
-        if not brand_name:
-            return JsonResponse({"chemical_name": None})
+    if request.method == 'GET':
+        try:
+            brand_name = request.GET.get("brand_name", "").strip()
+            if not brand_name:
+                return JsonResponse({"chemical_name": None})
 
-        chemical_name = (
-            PharmacyMedicine.objects.filter(brand_name__iexact=brand_name)
-            .values_list("chemical_name", flat=True)
-            .first()
-        )
+            # WARNING: This might return an incorrect chemical name if multiple forms/doses exist
+            chemical_name = (
+                PharmacyMedicine.objects.filter(brand_name__iexact=brand_name)
+                .values_list("chemical_name", flat=True)
+                .first()
+            )
 
-        return JsonResponse({"chemical_name": chemical_name if chemical_name else None})
+            logger.debug(f"Chemical name found for brand {brand_name}: {chemical_name}")
+            return JsonResponse({"chemical_name": chemical_name if chemical_name else None})
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-    
+        except Exception as e:
+            logger.exception("get_chemical_name failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
+#currentstock views code this will be already present in views
 
-from django.db.models import Sum
 
 @csrf_exempt
 def get_current_stock(request):
@@ -3643,7 +3819,7 @@ def get_current_stock(request):
     try:
         stock_data = (
             PharmacyStock.objects
-            .values("medicine_form", "brand_name", "chemical_name", "dose_volume", "expiry_date")
+            .values("entry_date", "medicine_form", "brand_name", "chemical_name", "dose_volume", "expiry_date")
             .annotate(
                 total_quantity_sum=Sum("total_quantity"),
                 quantity_sum=Sum("quantity")
@@ -3653,6 +3829,7 @@ def get_current_stock(request):
 
         data = [
             {
+                "entry_date" : entry["entry_date"],
                 "medicine_form": entry["medicine_form"],
                 "brand_name": entry["brand_name"],
                 "chemical_name": entry["chemical_name"],
@@ -3668,112 +3845,124 @@ def get_current_stock(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
-@csrf_exempt
+@csrf_exempt # Should be GET
 def get_current_expiry(request):
     """
-    Fetch medicines that will expire next month or are already expired.
-    Move them to ExpiryRegister if not already moved.
+    Identifies near-expiry/expired stock, moves it to ExpiryRegister if not already moved,
+    and returns items currently in ExpiryRegister that haven't been marked as removed.
     """
-    try:
-        today = datetime.today()
-        current_month = today.month
-        current_year = today.year
-        next_month = current_month + 1 if current_month < 12 else 1
-        next_year = current_year if current_month < 12 else current_year + 1
+    if request.method == 'GET':
+        try:
+            today = date.today()
+            # Define the threshold for "near expiry" (e.g., end of next month)
+            current_year = today.year
+            next_month = today.month + 1
+            next_year = current_year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            first_day_month_after_next = date(next_year, next_month, 1) + timedelta(days=32)
+            expiry_threshold_date = first_day_month_after_next.replace(day=1) - timedelta(days=1)
 
-        # Get medicines expiring this month or next month, only for the current year
-        expiry_medicines = PharmacyStock.objects.filter(
-            expiry_date__year__lte=current_year,  # Ensure only past/current year medicines are considered
-            expiry_date__month__lte=next_month  # Expiring this or next month
-        )
+            logger.info(f"Checking for stock expiring on or before: {expiry_threshold_date}")
 
-        for medicine in expiry_medicines:
-            # Move to ExpiryRegister if not already moved
-            if not ExpiryRegister.objects.filter(
-                brand_name=medicine.brand_name,
-                chemical_name=medicine.chemical_name,
-                dose_volume=medicine.dose_volume,
-                expiry_date=medicine.expiry_date
-            ).exists():
-                ExpiryRegister.objects.create(
-                    medicine_form=medicine.medicine_form,
-                    brand_name=medicine.brand_name,
-                    chemical_name=medicine.chemical_name,
-                    dose_volume=medicine.dose_volume,
-                    quantity=medicine.quantity,
-                    expiry_date=medicine.expiry_date
-                    # removed_date will automatically be set to NULL (null=True in model)
+            with transaction.atomic():
+                expiring_soon_stock = PharmacyStock.objects.filter(
+                    expiry_date__lte=expiry_threshold_date
                 )
 
-            # Remove from PharmacyStock
-            medicine.delete()
+                items_moved = 0
+                for item in expiring_soon_stock:
+                    expiry_reg_entry, created = ExpiryRegister.objects.get_or_create(
+                        medicine_form=item.medicine_form,
+                        brand_name=item.brand_name,
+                        chemical_name=item.chemical_name,
+                        dose_volume=item.dose_volume,
+                        expiry_date=item.expiry_date,
+                        defaults={'quantity': item.quantity}
+                    )
+                    if created:
+                         logger.info(f"Moved to ExpiryRegister: {item.brand_name} (Expiry: {item.expiry_date}), Qty: {item.quantity}")
+                         items_moved += 1
+                    item.delete()
 
-        # Fetch medicines from ExpiryRegister where removed_date is NULL (not removed)
-        expired_data = ExpiryRegister.objects.filter(
-            removed_date__isnull=True  # Only show items that haven't been removed yet
-        ).values(
-            "id", "medicine_form", "brand_name", "chemical_name", "dose_volume", "quantity", "expiry_date"
-        )
+            pending_removal_expiry = ExpiryRegister.objects.filter(
+                removed_date__isnull=True
+            ).order_by("expiry_date", "brand_name")
 
-        data = [
-            {
-                "id": entry["id"],
-                "medicine_form": entry["medicine_form"],
-                "brand_name": entry["brand_name"],
-                "chemical_name": entry["chemical_name"],
-                "dose_volume": entry["dose_volume"],
-                "quantity": entry["quantity"],
-                "expiry_date": entry["expiry_date"].strftime("%b-%y"),
-            }
-            for entry in expired_data
-        ]
+            data = []
+            for entry in pending_removal_expiry:
+                 data.append({
+                     "id": entry.id,
+                     "medicine_form": entry.medicine_form,
+                     "brand_name": entry.brand_name,
+                     "chemical_name": entry.chemical_name,
+                     "dose_volume": entry.dose_volume,
+                     "quantity": entry.quantity,
+                     "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else None,
+                     "expiry_date_iso": entry.expiry_date.isoformat() if entry.expiry_date else None,
+                 })
 
-        return JsonResponse({"expiry_stock": data}, safe=False)
+            return JsonResponse({"expiry_stock": data, "items_moved_count": items_moved}, safe=False)
 
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        except Exception as e:
+            logger.exception("get_current_expiry failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
-
-@csrf_exempt
+@csrf_exempt # Should be POST or PUT/PATCH
 def remove_expired_medicine(request):
-    """
-    Mark expired medicine as removed by setting removed_date.
-    """
+    """ Marks an item in the ExpiryRegister as removed by setting the removed_date. """
     if request.method == "POST":
+        medicine_id = None # Initialize for logging
         try:
             data = json.loads(request.body)
             medicine_id = data.get("id")
-            
-            medicine = ExpiryRegister.objects.get(id=medicine_id)
 
-            if medicine.removed_date is not None:
-                return JsonResponse({"error": "Medicine already removed"}, status=400)
+            if not medicine_id:
+                return JsonResponse({"error": "Medicine ID (id) is required.", "success": False}, status=400)
 
-            # Set removed_date to today's date when medicine is removed
-            medicine.removed_date = datetime.today()
-            medicine.save()
+            try: medicine_id = int(medicine_id)
+            except ValueError: return JsonResponse({"error": "Invalid Medicine ID format.", "success": False}, status=400)
 
-            return JsonResponse({"message": "Medicine removed successfully", "success": True})
+            medicine_to_remove = get_object_or_404(ExpiryRegister, id=medicine_id)
 
-        except ExpiryRegister.DoesNotExist:
-            return JsonResponse({"error": "Medicine not found"}, status=404)
+            if medicine_to_remove.removed_date is not None:
+                logger.warning(f"Attempted to remove already removed medicine (ExpiryRegister ID: {medicine_id})")
+                return JsonResponse({"error": "Medicine already marked as removed", "success": False}, status=400)
+
+            medicine_to_remove.removed_date = timezone.now()
+            medicine_to_remove.save(update_fields=['removed_date'])
+
+            logger.info(f"Marked expired medicine as removed (ExpiryRegister ID: {medicine_id})")
+            return JsonResponse({"message": "Medicine marked as removed successfully", "success": True})
+
+        except Http404:
+            return JsonResponse({"error": "Expired medicine entry not found", "success": False}, status=404)
+        except json.JSONDecodeError:
+            logger.error("remove_expired_medicine failed: Invalid JSON.", exc_info=True)
+            return JsonResponse({"error": "Invalid JSON format", "success": False}, status=400)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            logger.exception(f"remove_expired_medicine failed for ID {medicine_id or 'Unknown'}: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e), "success": False}, status=500)
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)
 
-
+ # Should be GET
 @csrf_exempt
 def get_expiry_register(request):
-    """
-    Fetch medicines from Expiry Register where removed_date is NOT NULL.
-    """
     try:
-        expired_medicines = ExpiryRegister.objects.filter(
-            removed_date__isnull=False  # Only show items that have been removed
-        ).values(
+        from_date = request.GET.get("from_date")
+        to_date = request.GET.get("to_date")
+
+        queryset = ExpiryRegister.objects.filter(removed_date__isnull=False)
+
+        if from_date:
+            queryset = queryset.filter(removed_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(removed_date__lte=to_date)
+
+        expired_medicines = queryset.values(
             "id", "medicine_form", "brand_name", "chemical_name", "dose_volume", "quantity", "expiry_date", "removed_date"
         )
 
@@ -3785,8 +3974,8 @@ def get_expiry_register(request):
                 "chemical_name": entry["chemical_name"],
                 "dose_volume": entry["dose_volume"],
                 "quantity": entry["quantity"],
-                "expiry_date": entry["expiry_date"].strftime("%b-%y"),
-                "removed_date": entry["removed_date"].strftime("%b-%y"),
+                "expiry_date": entry["expiry_date"].strftime("%m-%Y") if entry["expiry_date"] else "",
+                "removed_date": entry["removed_date"].strftime("%m-%Y") if entry["removed_date"] else "",
             }
             for entry in expired_medicines
         ]
@@ -3797,26 +3986,40 @@ def get_expiry_register(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
 @csrf_exempt
 def get_discarded_medicines(request):
     """
-    Fetch discarded/damaged medicines.
+    Fetch discarded/damaged medicines with optional date filtering.
     """
     try:
-        discarded_medicines = DiscardedMedicine.objects.all().values(
-            "id", "medicine_form", "brand_name", "chemical_name", "dose_volume", "quantity", "expiry_date", "reason", "discarded_date"
-        )
+        discarded_medicines = DiscardedMedicine.objects.all()
 
+        # Get 'from_date' and 'to_date' from query parameters
+        from_date_str = request.GET.get('from_date')
+        to_date_str = request.GET.get('to_date')
+
+        # Parse dates if provided
+        if from_date_str:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+            discarded_medicines = discarded_medicines.filter(entry_date__gte=from_date)
+
+        if to_date_str:
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+            discarded_medicines = discarded_medicines.filter(entry_date__lte=to_date)
+
+        # Serialize data
         data = [
             {
-                "id": entry["id"],
-                "medicine_form": entry["medicine_form"],
-                "brand_name": entry["brand_name"],
-                "chemical_name": entry["chemical_name"],
-                "dose_volume": entry["dose_volume"],
-                "quantity": entry["quantity"],
-                "expiry_date": entry["expiry_date"].strftime("%b-%y"),
-                "reason": entry["reason"],
+                "id": entry.id,
+                "medicine_form": entry.medicine_form,
+                "brand_name": entry.brand_name,
+                "chemical_name": entry.chemical_name,
+                "dose_volume": entry.dose_volume,
+                "quantity": entry.quantity,
+                "expiry_date": entry.expiry_date.strftime("%b-%y"),
+                "reason": entry.reason,
+                "entry_date": entry.entry_date.strftime("%d-%b-%Y"),
             }
             for entry in discarded_medicines
         ]
@@ -3826,82 +4029,88 @@ def get_discarded_medicines(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
 @csrf_exempt
 def add_discarded_medicine(request):
-    """
-    Add a new discarded/damaged medicine entry, and update PharmacyStock.
-    """
+    """ Records a discarded/damaged medicine entry and updates (decrements) PharmacyStock. """
     if request.method == "POST":
         try:
             data = json.loads(request.body)
 
-            # Check if a matching medicine exists in PharmacyStock
-            matching_medicine = PharmacyStock.objects.filter(
-                medicine_form=data.get("medicine_form"),
-                brand_name=data.get("brand_name"),
-                chemical_name=data.get("chemical_name"),
-                dose_volume=data.get("dose_volume"),
-                expiry_date=data.get("expiry_date")
-            ).first()
+            medicine_form = data.get("medicine_form")
+            brand_name = data.get("brand_name")
+            chemical_name = data.get("chemical_name")
+            dose_volume = data.get("dose_volume")
+            expiry_date_str = data.get("expiry_date")
+            quantity_str = data.get("quantity")
+            reason = data.get("reason")
 
-            if not matching_medicine:
-                return JsonResponse({"error": "Matching medicine not found in PharmacyStock."}, status=400)
+            required = [medicine_form, brand_name, chemical_name, dose_volume, expiry_date_str, quantity_str, reason]
+            if not all(required):
+                return JsonResponse({"error": "Missing required fields.", "success": False}, status=400)
 
-            # Check if sufficient quantity is available in PharmacyStock
-            if matching_medicine.quantity < int(data.get("quantity")):
-                return JsonResponse({"error": "Not enough quantity available in PharmacyStock."}, status=400)
+            try: quantity_to_discard = int(quantity_str); assert quantity_to_discard > 0
+            except (ValueError, AssertionError): return JsonResponse({"error": "Invalid quantity.", "success": False}, status=400)
 
-            # Reduce quantity in PharmacyStock
-            matching_medicine.quantity -= int(data.get("quantity"))
-            matching_medicine.save()
+            expiry_date_obj = parse_date_internal(expiry_date_str) # Assumes YYYY-MM-DD
+            if not expiry_date_obj: return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM-DD.", "success": False}, status=400)
 
-            # Add to DiscardedMedicine
-            DiscardedMedicine.objects.create(
-                medicine_form=data.get("medicine_form"),
-                brand_name=data.get("brand_name"),
-                chemical_name=data.get("chemical_name"),
-                dose_volume=data.get("dose_volume"),
-                quantity=data.get("quantity"),
-                expiry_date=datetime.strptime(data.get("expiry_date"), "%Y-%m-%d").date(),
-                reason=data.get("reason"),
-            )
 
-            return JsonResponse({"message": "Discarded medicine added successfully", "success": True})
+            with transaction.atomic():
+                stock_item = PharmacyStock.objects.select_for_update().filter(
+                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
+                    dose_volume=dose_volume, expiry_date=expiry_date_obj
+                ).first()
 
+                if not stock_item: return JsonResponse({"error": "Matching stock not found.", "success": False}, status=404)
+                if stock_item.quantity < quantity_to_discard:
+                    return JsonResponse({"error": f"Not enough stock. Available: {stock_item.quantity}.", "success": False}, status=400)
+
+                stock_item.quantity -= quantity_to_discard
+                if stock_item.quantity <= 0: stock_item.delete()
+                else: stock_item.save()
+
+                DiscardedMedicine.objects.create(
+                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
+                    dose_volume=dose_volume, quantity=quantity_to_discard, expiry_date=expiry_date_obj,
+                    reason=reason, discarded_date=timezone.now()
+                )
+
+            logger.info(f"Discarded {quantity_to_discard} of {brand_name} (Expiry: {expiry_date_obj}). Reason: {reason}")
+            return JsonResponse({"message": "Discarded medicine recorded successfully", "success": True})
+
+        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON.", "success": False}, status=400)
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            logger.exception("add_discarded_medicine failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e), "success": False}, status=500)
 
-    return JsonResponse({"error": "Invalid request"}, status=400)
-
-
-
-
-from django.db import transaction 
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
 
 @csrf_exempt
 def get_ward_consumables(request):
-    """
-    Fetch ward consumables.
-    (Modified slightly for consistency and better date handling)
-    """
     try:
-        # Order by entry_date descending to show recent ones first
-        ward_consumables = WardConsumables.objects.all().order_by('-entry_date').values(
+        ward_consumables_qs = WardConsumables.objects.all()
+
+        from_date = request.GET.get("from_date")
+        to_date = request.GET.get("to_date")
+
+        if from_date:
+            ward_consumables_qs = ward_consumables_qs.filter(consumed_date__gte=from_date)
+        if to_date:
+            ward_consumables_qs = ward_consumables_qs.filter(consumed_date__lte=to_date)
+
+        ward_consumables_qs = ward_consumables_qs.order_by("-entry_date").values(
             "id", "entry_date", "medicine_form", "brand_name", "chemical_name",
             "dose_volume", "quantity", "expiry_date", "consumed_date"
         )
 
         data = []
-        for entry in ward_consumables:
-            # Safely format dates, handling potential None values if fields allow null
+        for entry in ward_consumables_qs:
             expiry_date_str = entry["expiry_date"].strftime("%b-%y") if entry.get("expiry_date") else None
             consumed_date_str = entry["consumed_date"].strftime("%Y-%m-%d") if entry.get("consumed_date") else None
-            entry_date_str = entry["entry_date"].strftime("%Y-%m-%d %H:%M:%S") if entry.get("entry_date") else None # Or just date if preferred
+            entry_date_str = entry["entry_date"].strftime("%Y-%m-%d %H:%M:%S") if entry.get("entry_date") else None
 
             data.append({
                 "id": entry["id"],
-                # Decide if you want full datetime or just date for entry_date
                 "entry_date": entry_date_str,
                 "medicine_form": entry["medicine_form"],
                 "brand_name": entry["brand_name"],
@@ -3912,95 +4121,108 @@ def get_ward_consumables(request):
                 "consumed_date": consumed_date_str,
             })
 
-        # It's generally better practice to return the list under a key
         return JsonResponse({"ward_consumables": data}, safe=False)
 
     except Exception as e:
-        # Log the exception for debugging
         print(f"Error in get_ward_consumables: {e}")
-        return JsonResponse({"error": "An internal server error occurred while fetching consumables.", "detail": str(e)}, status=500)
-
+        return JsonResponse({
+            "error": "An internal server error occurred while fetching consumables.",
+            "detail": str(e)
+        }, status=500)
 @csrf_exempt
 def add_ward_consumable(request):
-    """
-    Add a new ward consumable entry, and update PharmacyStock.
-    Mirrors the logic of add_discarded_medicine.
-    """
+    """ Records a ward consumable usage and updates (decrements) PharmacyStock. """
     if request.method == "POST":
         try:
             data = json.loads(request.body)
+
             medicine_form = data.get("medicine_form")
             brand_name = data.get("brand_name")
             chemical_name = data.get("chemical_name")
             dose_volume = data.get("dose_volume")
-            expiry_date = data.get("expiry_date") # Expecting YYYY-MM-DD string
-            consumed_date = data.get("consumed_date") # Expecting YYYY-MM-DD string
-            try:
-                # Parse expiry_date as a month-year string
-                expiry_date_obj = datetime.strptime(expiry_date, "%Y-%m")
-                expiry_date = expiry_date_obj.replace(day=1).date()  # Set day to 1st
-            except ValueError:
-                return JsonResponse({"error": "Invalid expiry date format. Expected YYYY-MM.", "success": False}, status=400)
+            expiry_date_str = data.get("expiry_date")
+            consumed_date_str = data.get("consumed_date")
+            quantity_str = data.get("quantity")
+
+            required = [medicine_form, brand_name, chemical_name, dose_volume, expiry_date_str, consumed_date_str, quantity_str]
+            if not all(required): return JsonResponse({"error": "Missing required fields.", "success": False}, status=400)
+
+            try: quantity_to_consume = int(quantity_str); assert quantity_to_consume > 0
+            except (ValueError, AssertionError): return JsonResponse({"error": "Invalid quantity.", "success": False}, status=400)
+
+            expiry_date_obj = parse_date_internal(expiry_date_str)
+            if not expiry_date_obj: return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM-DD.", "success": False}, status=400)
+
+            consumed_date_obj = parse_date_internal(consumed_date_str)
+            if not consumed_date_obj: return JsonResponse({"error": "Invalid consumed date format. Use YYYY-MM-DD.", "success": False}, status=400)
 
 
-            try:
-                quantity_to_consume = int(data.get("quantity", 0))
-            except (ValueError, TypeError):
-                 return JsonResponse({"error": "Invalid quantity provided.", "success": False}, status=400)
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_to_consume > 0, consumed_date]):
-                 return JsonResponse({"error": "Missing required consumable information.", "success": False}, status=400)
-
-            
             with transaction.atomic():
-                matching_medicine = PharmacyStock.objects.filter(
-                    medicine_form=medicine_form,
-                    brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume,
-                    expiry_date=expiry_date # Match the exact expiry date
+                stock_item = PharmacyStock.objects.select_for_update().filter(
+                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
+                    dose_volume=dose_volume, expiry_date=expiry_date_obj
                 ).first()
 
-                if not matching_medicine:
-                    return JsonResponse({"error": "Matching medicine batch not found in PharmacyStock.", "success": False}, status=404) # 404 Not Found is appropriate
+                if not stock_item: return JsonResponse({"error": "Matching stock not found.", "success": False}, status=404)
+                if stock_item.quantity < quantity_to_consume:
+                    return JsonResponse({"error": f"Not enough stock. Available: {stock_item.quantity}.", "success": False}, status=400)
 
-                # Check if sufficient quantity is available in PharmacyStock
-                if matching_medicine.quantity < quantity_to_consume:
-                    return JsonResponse({
-                        "error": f"Not enough quantity available in PharmacyStock. Available: {matching_medicine.quantity}, Requested: {quantity_to_consume}.",
-                        "success": False
-                    }, status=400) # 400 Bad Request is appropriate
-
-                # Reduce quantity in PharmacyStock
-                matching_medicine.quantity -= quantity_to_consume
-                # Optional: Remove the stock record if quantity becomes zero
-                if matching_medicine.quantity <= 0:
-                    matching_medicine.delete()
-                else:
-                    matching_medicine.save()
+                stock_item.quantity -= quantity_to_consume
+                if stock_item.quantity <= 0: stock_item.delete()
+                else: stock_item.save()
 
                 WardConsumables.objects.create(
-                    entry_date=timezone.now(), # Set entry date to now
-                    medicine_form=medicine_form,
-                    brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume,
-                    quantity=quantity_to_consume,
-                    expiry_date=expiry_date,
-                    consumed_date=consumed_date, # Use date sent from frontend
+                    entry_date=timezone.now(), medicine_form=medicine_form, brand_name=brand_name,
+                    chemical_name=chemical_name, dose_volume=dose_volume, quantity=quantity_to_consume,
+                    expiry_date=expiry_date_obj, consumed_date=consumed_date_obj,
                 )
 
-            # If transaction completes without error
-            return JsonResponse({"message": "Ward consumable added and stock updated successfully", "success": True})
+            logger.info(f"Consumed {quantity_to_consume} of {brand_name} (Expiry: {expiry_date_obj}) on {consumed_date_obj}.")
+            return JsonResponse({"message": "Ward consumable recorded successfully", "success": True})
 
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON format.", "success": False}, status=400)
+        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON.", "success": False}, status=400)
         except Exception as e:
-            # Log the exception for debugging
-            print(f"Error in add_ward_consumable: {e}")
-            # Provide a more user-friendly generic error
-            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e), "success": False}, status=500)
+            logger.exception("add_ward_consumable failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e), "success": False}, status=500)
 
-    return JsonResponse({"error": "Invalid request method. Only POST is allowed.", "success": False}, status=405) # 405 Method Not Allowed
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+#other views functions altered they may be already present check for presence and replace them
+
+
+from dateutil.relativedelta import relativedelta
+
+def get_next_due_date(calibration_date_str, freq):
+    calibration_date = datetime.strptime(calibration_date_str, "%Y-%m-%d")
+    freq = freq.lower()
+
+    if freq == "yearly":
+        return calibration_date + relativedelta(years=1)
+    elif freq == "halfyearly":
+        return calibration_date + relativedelta(months=6)
+    elif freq == "quartearly":
+        return calibration_date + relativedelta(months=3)
+    elif freq == "monthly":
+        return calibration_date + relativedelta(months=1)
+    return None
+
+
+
+from dateutil.relativedelta import relativedelta
+
+def get_next_due_date(calibration_date_str, freq):
+    calibration_date = datetime.strptime(calibration_date_str, "%Y-%m-%d")
+    freq = freq.lower()
+
+    if freq == "yearly":
+        return calibration_date + relativedelta(years=1)
+    elif freq == "halfyearly":
+        return calibration_date + relativedelta(months=6)
+    elif freq == "quartearly":
+        return calibration_date + relativedelta(months=3)
+    elif freq == "monthly":
+        return calibration_date + relativedelta(months=1)
+    return None
 
 
 
@@ -4034,12 +4256,34 @@ def get_pending_calibrations(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 
+
+
 @csrf_exempt
 def get_calibration_history(request):
     try:
-        calibrated_instruments = InstrumentCalibration.objects.filter(
-            calibration_status=True
-        ).order_by("-calibration_date")
+        from_date_str = request.GET.get("from")
+        to_date_str = request.GET.get("to")
+
+        calibrated_instruments = InstrumentCalibration.objects.filter(calibration_status=True)
+
+        if from_date_str:
+            from_date = datetime.strptime(from_date_str, "%Y-%m-%d").date()
+        else:
+            from_date = None
+
+        if to_date_str:
+            to_date = datetime.strptime(to_date_str, "%Y-%m-%d").date()
+        else:
+            to_date = None
+
+        if from_date and to_date:
+            calibrated_instruments = calibrated_instruments.filter(calibration_date__range=(from_date, to_date))
+        elif from_date:
+            calibrated_instruments = calibrated_instruments.filter(calibration_date__gte=from_date)
+        elif to_date:
+            calibrated_instruments = calibrated_instruments.filter(calibration_date__lte=to_date)
+
+        calibrated_instruments = calibrated_instruments.order_by("-calibration_date")
 
         data = [
             {
@@ -4063,6 +4307,7 @@ def get_calibration_history(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
+
 @csrf_exempt
 def complete_calibration(request):
     if request.method == 'POST':
@@ -4070,7 +4315,8 @@ def complete_calibration(request):
             data = json.loads(request.body)
             instrument_id = data.get("id")
             freq = data.get("freq")
-            next_due_date = data.get("next_due_date")
+            next_due = get_next_due_date(str(today), freq)
+            next_due_date=next_due
 
             if not (instrument_id and freq and next_due_date):
                 return JsonResponse({"error": "Missing fields"}, status=400)
@@ -4109,7 +4355,7 @@ def complete_calibration(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
-   
+    
 
 
 @csrf_exempt
@@ -4135,6 +4381,8 @@ def add_instrument(request):
         ]
         if any(field not in data or not data[field] for field in required_fields):
             return JsonResponse({"error": "Missing required fields"}, status=400)
+        
+        next_due_date = get_next_due_date(data["calibration_date"], data["freq"])
 
         # Create the new instrument record
         InstrumentCalibration.objects.create(
@@ -4146,7 +4394,7 @@ def add_instrument(request):
             model_number=data.get("model_number"),
             freq=data.get("freq"),
             calibration_date=data["calibration_date"],
-            next_due_date=data["next_due_date"],
+            next_due_date=next_due_date.strftime("%Y-%m-%d"),
             calibration_status=bool(int(data["calibration_status"]))
         )
 
@@ -4156,407 +4404,41 @@ def add_instrument(request):
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
 
     except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)  
+    
+
+# For instrument calibration next month count
+@csrf_exempt
+def get_pending_next_month_count(request):
+    try:
+        today = datetime.today().date()
+        one_month_later = today + relativedelta(months=1)
+
+        # Count instruments that are either overdue or due within the next month
+        count = InstrumentCalibration.objects.filter(
+            calibration_status=False
+        ).filter(
+            Q(next_due_date__lte=one_month_later)  # Includes past and upcoming due dates
+        ).count()
+
+        return JsonResponse({"count": count})
+    except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@csrf_exempt
-def add_prescription(request):
-    """Adds or updates prescription data based on emp_no and current date.""" # Updated docstring
-    if request.method == "POST":
-        data = None # Initialize for broader scope in exception logging
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-
-            emp_no = data.get('emp_no')
-            name = data.get('name')
-
-            # --- Keep existing validations ---
-            if not emp_no:
-                logger.warning("add_prescription failed: emp_no is required")
-                return JsonResponse({"error": "Employee number (emp_no) is required"}, status=400)
-            if not name:
-                logger.warning("add_prescription failed: name is required")
-                return JsonResponse({"error": "Employee name (name) is required"}, status=400)
-            submitted_by = data.get('submitted_by')
-            issued_by = data.get('issued_by')
-            if not submitted_by or not issued_by:
-                logger.warning("add_prescription failed: submitted_by and issued_by are required fields")
-                return JsonResponse({"error": "submitted_by and issued_by are required fields"}, status=400)
-            # --- End Validations ---
-
-            # --- Extract other data ---
-            tablets = data.get('tablets', [])
-            syrups = data.get('syrups', [])
-            injections = data.get('injections', [])
-            creams = data.get('creams', [])
-            drops = data.get('drops', [])
-            fluids = data.get('fluids', [])
-            lotions = data.get('lotions', [])
-            respules = data.get('respules', [])
-            suture_procedure = data.get('suture_procedure', [])
-            dressing = data.get('dressing', [])
-            powder = data.get('powder', [])
-            others = data.get('others', [])
-            nurse_notes = data.get('nurse_notes')
-            # Get the issued_status from the request, default to 0 if not provided
-            # IMPORTANT: Make sure your frontend sends 'issued_status' when updating/issuing
-            issued_status = data.get('issued_status', 0)
-            # --- End Data Extraction ---
-
-            # --- *** CORRECTED DATE FOR LOOKUP *** ---
-            # Use only the DATE part for matching today's prescription
-            current_entry_date = timezone.now().date()
-            # --- *** END CORRECTION *** ---
-
-            # --- Use update_or_create for atomicity ---
-            prescription, created = Prescription.objects.update_or_create(
-                emp_no=emp_no,
-                entry_date=current_entry_date,  # Use DATE object for matching
-                defaults={
-                    'name': name,
-                    'tablets': tablets,
-                    'syrups': syrups,
-                    'injections': injections,
-                    'creams': creams,
-                    'drops': drops,
-                    'fluids': fluids,
-                    'lotions': lotions,
-                    'respules': respules,
-                    'suture_procedure': suture_procedure,
-                    'dressing': dressing,
-                    'powder': powder,
-                    'others': others,
-                    'submitted_by': submitted_by,
-                    'issued_by': issued_by, # This might be updated during the 'issue' step
-                    'nurse_notes': nurse_notes,
-                    'issued_status': issued_status # Use status from request payload
-                    # entry_date is handled by the lookup key, don't put it in defaults
-                }
-            )
-
-            # print("DROPS : ", prescription.drops) # Debugging
-
-            message = "Prescription details added successfully" if created else "Prescription details updated successfully"
-            logger.info(f"{message} for emp_no {emp_no} on {current_entry_date}. ID: {prescription.id}")
-            # Include 'created' status in response, useful for frontend logic
-            return JsonResponse({
-                "message": message,
-                "prescription_id": prescription.id,
-                "id": prescription.id,
-                "created": created # Send back whether it was created or updated
-            }, status=201 if created else 200)
-
-        except json.JSONDecodeError:
-            logger.error("add_prescription failed: Invalid JSON data.")
-            return JsonResponse({"error": "Invalid JSON data in request body"}, status=400)
-        except Exception as e:
-            emp_no_for_log = data.get('emp_no', 'N/A') if data else 'N/A (data parsing failed)'
-            logger.exception(f"add_prescription failed for emp_no '{emp_no_for_log}': An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
-    else:
-        logger.warning("add_prescription failed: Invalid request method. Only POST allowed.")
-        response = JsonResponse({"error": "Request method must be POST"}, status=405)
-        response['Allow'] = 'POST' # Good practice to include Allow header
-        return response
-
-@csrf_exempt
-def view_prescriptions(request):
-    
-    if request.method == 'GET':
-        prescriptions = Prescription.objects.all()
-        data = []
-        for prescription in prescriptions:
-            print(prescription.issued_status)
-            data.append({
-                'id': prescription.id,
-                'emp_no': prescription.emp_no,
-                'name': prescription.name,  # Concatenate names
-                'entry_date': prescription.entry_date.strftime('%Y-%m-%d'), # Format date,
-                'issued_status': prescription.issued_status,  # Replace the status for view
-                'prescription':{
-                    'id': prescription.id,
-                    'emp_no': prescription.emp_no,
-                    'name': f"{prescription.submitted_by} / {prescription.issued_by}",  # Concatenate names
-                    'tablets':  prescription.tablets,
-                    'syrups': prescription.syrups,
-                    'injections':  prescription.injections,
-                    'creams': prescription.creams,
-                    'drops':  prescription.drops,
-                    'fluids': prescription.fluids,
-                    'lotions':  prescription.lotions,
-                    'powder': prescription.powder,
-                    'respules':  prescription.respules,
-                    'suture_procedure': prescription.suture_procedure,
-                    'others': prescription.others,
-                    'dressing': prescription.dressing,
-                    'submitted_by':  prescription.submitted_by,
-                    'issued_by':  prescription.issued_by,
-                    'nurse_notes': prescription.nurse_notes,
-                    'entry_date': prescription.entry_date.strftime('%Y-%m-%d'), # Format date,
-
-                }
-            })
-
-        print(data)
-
-        return JsonResponse({'prescriptions': data})
-    else:
-        return JsonResponse({'error': 'Invalid request method. Only GET allowed.'}, status=405)
-
-
-# views.py
-
-from django.shortcuts import get_object_or_404 # Import this
-
-# ... other imports ...
-
-@csrf_exempt
-def view_prescriptions_emp(request, emp_no):
-    if request.method == 'GET':
-        # ... your existing GET logic ...
-        # (Consider simplifying the response as suggested before)
-        pass # Placeholder for GET logic
-
-    elif request.method == 'PUT':
-        print(f"PUT request received for emp_no: {emp_no}") # Log start
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-
-            # --- Fetch the SPECIFIC instance to update ---
-            # Option A: Update the LATEST PENDING prescription
-            # prescription_instance = Prescription.objects.filter(
-            #     emp_no=emp_no,
-            #     issued_status=0
-            # ).order_by('-entry_date', '-id').first() # Get latest by date then ID
-
-            # Option B: Update based on ID sent from frontend (requires frontend change)
-            prescription_id = data.get('id') or data.get('prescription_id')
-            if not prescription_id:
-                 return JsonResponse({'error': 'Missing prescription ID in PUT request data'}, status=400)
-            print(f"Attempting to update prescription with ID: {prescription_id}")
-            # Use get_object_or_404 for cleaner handling of not found
-            prescription_instance = get_object_or_404(Prescription, pk=prescription_id, emp_no=emp_no) # Ensure it matches emp_no too
-
-            # --- Now update the fetched instance ---
-            print(f"Found Prescription ID: {prescription_instance.id} for update.")
-
-            # Update fields using data.get()
-            prescription_instance.tablets = data.get('tablets', prescription_instance.tablets)
-            prescription_instance.syrups = data.get('syrups', prescription_instance.syrups)
-            prescription_instance.injections = data.get('injections', prescription_instance.injections)
-            prescription_instance.creams = data.get('creams', prescription_instance.creams)
-            prescription_instance.drops = data.get('drops', prescription_instance.drops)
-            prescription_instance.fluids = data.get('fluids', prescription_instance.fluids)
-            prescription_instance.lotions = data.get('lotions', prescription_instance.lotions)
-            prescription_instance.respules = data.get('respules', prescription_instance.respules)
-            prescription_instance.dressing = data.get('dressing', prescription_instance.dressing)
-            prescription_instance.powder = data.get('powder', prescription_instance.powder)
-            prescription_instance.suture_procedure = data.get('suture_procedure', prescription_instance.suture_procedure)
-            prescription_instance.others = data.get('others', prescription_instance.others)
-
-            # Update meta fields - BE CAREFUL what you allow to be updated here
-            # prescription_instance.name = data.get('name', prescription_instance.name) # Should name be updatable here?
-            # prescription_instance.submitted_by = data.get('submitted_by', prescription_instance.submitted_by) # Probably not updatable on issue
-            prescription_instance.issued_by = data.get('issued_by', prescription_instance.issued_by) # This makes sense to update
-            prescription_instance.nurse_notes = data.get('nurse_notes', prescription_instance.nurse_notes) # This makes sense to update
-
-            # Mark as issued
-            prescription_instance.issued_status = 1
-
-            # Save the single updated object
-            prescription_instance.save()
-            print(f"Successfully saved Prescription ID: {prescription_instance.id}")
-
-            return JsonResponse({'message': f'Prescription {prescription_instance.id} updated/issued successfully'})
-
-        except Prescription.DoesNotExist: # Caught by get_object_or_404 if using Option B
-             print(f"Prescription not found for ID: {prescription_id} or emp_no: {emp_no}")
-             return JsonResponse({'error': 'Prescription not found'}, status=404)
-        except json.JSONDecodeError:
-            print("Invalid JSON received in PUT request")
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            # Log the exception for better debugging
-            import logging
-            logger = logging.getLogger(_name_)
-            logger.exception(f"Error updating prescription for emp_no {emp_no} (PUT): {e}")
-            print(f"Unexpected error during PUT: {e}")
-            return JsonResponse({'error': 'An unexpected error occurred.', 'detail': str(e)}, status=500)
-    else:
-        response = JsonResponse({'error': 'Invalid request method. Only GET or PUT allowed.'}, status=405)
-        response['Allow'] = 'GET, PUT'
-        return response
-
-@csrf_exempt # Keep if necessary, but consider session/token auth
-def view_prescription_by_id(request, prescription_id):
-    """
-    Retrieves a single prescription by its specific ID.
-    """
-    if request.method != 'GET':
-        logger.warning(f"view_prescription_by_id failed for ID {prescription_id}: Invalid request method.")
-        response = JsonResponse({'error': 'Invalid request method. Only GET allowed.'}, status=405)
-        response['Allow'] = 'GET'
-        return response
-
-    try:
-        # Use get_object_or_404 for cleaner handling of DoesNotExist
-        prescription = get_object_or_404(Prescription, pk=prescription_id)
-
-        # Serialize the single object (flattened)
-        prescription_data = {
-            'id': prescription.id,
-            'emp_no': prescription.emp_no,
-            'name': prescription.name, # Employee who received it
-            'entry_date': prescription.entry_date.strftime('%Y-%m-%d %H:%M:%S'), # Or just date
-            'issued_status': prescription.issued_status,
-            'tablets': prescription.tablets,
-            'syrups': prescription.syrups,
-            'injections': prescription.injections,
-            'creams': prescription.creams,
-            'drops': prescription.drops,
-            'fluids': prescription.fluids,
-            'lotions': prescription.lotions,
-            'powder': prescription.powder,
-            'respules': prescription.respules,
-            'suture_procedure': prescription.suture_procedure,
-            'others': prescription.others,
-            'dressing': prescription.dressing,
-            'submitted_by': prescription.submitted_by, # Person who submitted request
-            'issued_by': prescription.issued_by,       # Person who marked as issued (Pharmacist/Nurse?)
-            'nurse_notes': prescription.nurse_notes,
-        }
-        return JsonResponse(prescription_data)
-
-    except Exception as e:
-        logger.exception(f"view_prescription_by_id failed for ID {prescription_id}: An unexpected error occurred.")
-        return JsonResponse({'error': 'Internal Server Error', 'detail': str(e)}, status=500)
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from .models import Prescription
-
-@csrf_exempt
-def update_prescription(request, prescription_id):  # Note the prescription_id argument
-    if request.method =='PUT':
-        try:
-            prescription = Prescription.objects.get(pk=prescription_id) # use it to find object!
-            data = json.loads(request.body)
-
-            # Update fields based on data
-            prescription.tablets = data.get('tablets', prescription.tablets)
-            prescription.syrups = data.get('syrups', prescription.syrups)
-            prescription.injections = data.get('injections', prescription.injections)
-            prescription.creams = data.get('creams', prescription.creams)
-            prescription.drops = data.get('drops', prescription.drops)
-            prescription.fluids = data.get('fluids', prescription.fluids)
-            prescription.others = data.get('others', prescription.others)
-            prescription.lotions = data.get('lotions', prescription.lotions)
-            prescription.respules = data.get('respules', prescription.respules)
-            prescription.dressing = data.get('dressing', prescription.dressing)
-            prescription.powder = data.get('powder', prescription.powder)
-            prescription.suture_procedure = data.get('suture_procedure', prescription.suture_procedure)
-            # ... other fields ...
-
-            prescription.save()
-            return JsonResponse({'message': 'Prescription updated successfully'})
-
-        except Prescription.DoesNotExist:
-            return JsonResponse({'error': 'Prescription not found'}, status=404)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    else:
-        return JsonResponse({'error': 'Only PUT requests are allowed'}, status=405)
-
-
-@csrf_exempt
-def get_notes(request, emp_no):
-    if request.method == 'POST':
-        notes = list(models.SignificantNotes.objects.filter(emp_no=emp_no).values())
-        emp_status = list(models.employee_details.objects.values('employee_status', 'since_date', 'transfer_details', 'other_reason_details').distinct())
-        print(notes)
-        return JsonResponse({'data': notes, 'status': emp_status})
-    else:
-        return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
-
-
-@csrf_exempt
-def get_notes_all(request):
-    if request.method == 'POST':
-        notes = list(models.SignificantNotes.objects.all().values())
-        consultation = list(models.Consultation.objects.all().values())
-        print(notes)
-        return JsonResponse({'data': notes, 'consultation': consultation})
-    else:
-        return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
-    
-
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse
-import json
-from . import models
-
-@csrf_exempt
-def update_employee_status(request):
-    if request.method == 'POST':
-        data = json.loads(request.body)
-        print(data)
-        employee_status = data.get('employee_status')
-        date_since = data.get('date_since')
-        emp_no = data.get('emp_no')
-        transfer_details = data.get('transfer_details' ,'')
-        other_reason_details = data.get('other_reason_details', '')
-
-        if employee_status and date_since and emp_no:
-            last_entry = models.employee_details.objects.filter(emp_no=emp_no).order_by('-entry_date').first()
-
-            if last_entry:
-                # Create a copy of the last entry and update fields
-                last_entry.pk = None  # This makes Django treat it as a new object
-                last_entry.employee_status = employee_status
-                last_entry.since_date = date_since
-                last_entry.transfer_details = transfer_details
-                last_entry.other_reason_details = other_reason_details
-                last_entry.save()
-
-                return JsonResponse({'success': True, 'message': 'New status entry created successfully.'})
-            else:
-                return JsonResponse({'success': False, 'message': 'No matching employee found.'})
-        else:
-            return JsonResponse({'success': False, 'message': 'Please provide emp_no, employee_status and date_since.'})
-    else:
-        return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
-
-
-
-@csrf_exempt
-def delete_member(request, member_id):
-    if request.method == 'POST':
-        member = models.member.objects.get(id=member_id)
-        if member:
-            member.delete()
-            return JsonResponse({'success': True, 'message': 'Member deleted successfully.'})
-        else:
-            return JsonResponse({'success': False, 'message': 'No matching member found.'})
-    else:
-        return JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
-    
 
 @csrf_exempt
 def archive_zero_quantity_stock(request):
     """
     Move zero-quantity PharmacyStock entries to PharmacyStockHistory safely.
-    Prevents duplicates by locking rows.
+    Preserves entry date and adds archive date.
     """
     if request.method == "POST":
         try:
             with transaction.atomic():
-                # Lock zero-quantity records to prevent race condition
                 zero_stocks = (
                     PharmacyStock.objects
-                    .select_for_update(skip_locked=True)  # 🔐 Locks rows and skips ones already locked
+                    .select_for_update(skip_locked=True)
                     .filter(quantity=0)
                 )
 
@@ -4565,15 +4447,16 @@ def archive_zero_quantity_stock(request):
 
                 for item in zero_stocks:
                     PharmacyStockHistory.objects.create(
-                        entry_date=item.entry_date,
+                        entry_date=item.entry_date,  # Keep original entry date
                         medicine_form=item.medicine_form,
                         brand_name=item.brand_name,
                         chemical_name=item.chemical_name,
                         dose_volume=item.dose_volume,
                         total_quantity=item.total_quantity,
                         expiry_date=item.expiry_date,
+                        # archive_date will auto-set on creation
                     )
-                    item.delete()  # Only delete after archiving
+                    item.delete()
 
             return JsonResponse({"message": "Zero quantity stock archived successfully.", "success": True})
 
@@ -4581,3 +4464,292 @@ def archive_zero_quantity_stock(request):
             return JsonResponse({"error": str(e), "success": False}, status=500)
 
     return JsonResponse({"error": "Only POST method is allowed.", "success": False}, status=405)
+    """ Moves zero-quantity PharmacyStock entries to PharmacyStockHistory. """
+    if request.method == "POST":
+        archived_count = 0
+        try:
+            with transaction.atomic():
+                zero_stocks = ( PharmacyStock.objects.select_for_update().filter(quantity__lte=0) )
+                if not zero_stocks.exists():
+                    return JsonResponse({"message": "No zero quantity stock found.", "success": True})
+
+                for item in zero_stocks:
+                    # Simple check to avoid duplicates in history based on key fields
+                    # Adjust fields if needed for uniqueness
+                    if not PharmacyStockHistory.objects.filter(
+                         medicine_form=item.medicine_form, brand_name=item.brand_name,
+                         chemical_name=item.chemical_name, dose_volume=item.dose_volume,
+                         expiry_date=item.expiry_date, total_quantity=item.total_quantity
+                    ).exists():
+                        PharmacyStockHistory.objects.create(
+                            entry_date=item.entry_date, medicine_form=item.medicine_form,
+                            brand_name=item.brand_name, chemical_name=item.chemical_name,
+                            dose_volume=item.dose_volume, total_quantity=item.total_quantity,
+                            expiry_date=item.expiry_date, archived_date=timezone.now()
+                        )
+                        archived_count += 1
+                    item.delete() # Delete from active stock
+
+            logger.info(f"{archived_count} zero quantity stock items archived.")
+            return JsonResponse({"message": f"{archived_count} items archived.", "success": True})
+
+        except Exception as e:
+            logger.exception("archive_zero_quantity_stock failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e), "success": False}, status=500)
+
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+# --- Reviews / Camps / File Handling ---
+
+def get_categories(request):
+    if request.method == 'GET':
+        try:
+            categories = list(ReviewCategory.objects.values("id", "name").order_by("name"))
+            return JsonResponse({"categories": categories}, safe=False)
+        except Exception as e:
+            logger.exception("get_categories failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use GET.'}, status=405)
+
+def get_reviews(request, status):
+    if request.method == 'GET':
+        try:
+            reviews = list(Review.objects.filter(status=status).select_related('category')
+                           .order_by('-appointment_date')
+                           .values("id", "pid", "name", "gender", "appointment_date", "category__name"))
+            for review in reviews:
+                if isinstance(review.get('appointment_date'), date):
+                    review['appointment_date'] = review['appointment_date'].isoformat()
+            return JsonResponse({"reviews": reviews}, safe=False)
+        except Exception as e:
+            logger.exception(f"get_reviews failed for status '{status}'.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use GET.'}, status=405)
+
+@csrf_exempt
+def add_review(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            required = ['category', 'pid', 'name', 'gender', 'appointment_date', 'status']
+            missing = [f for f in required if not data.get(f)]
+            if missing: return JsonResponse({"error": f"Missing fields: {', '.join(missing)}"}, status=400)
+
+            category, _ = ReviewCategory.objects.get_or_create(name=data["category"])
+            appointment_date_obj = parse_date_internal(data["appointment_date"])
+            if not appointment_date_obj: return JsonResponse({"error": "Invalid date format."}, status=400)
+
+            review = Review.objects.create(
+                category=category, pid=data["pid"], name=data["name"], gender=data["gender"],
+                appointment_date=appointment_date_obj, status=data["status"]
+            )
+            logger.info(f"Review saved ID: {review.id}")
+            return JsonResponse({"message": "Review added.", "id": review.id}, status=201)
+        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON."}, status=400)
+        except Exception as e:
+            logger.exception("add_review failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+
+
+# --- Aggregate/All Data Fetching ---
+@csrf_exempt # Should be GET
+def dashboard_stats(request):
+    if request.method == 'GET':
+        try:
+            from_date_str = request.GET.get("fromDate"); to_date_str = request.GET.get("toDate")
+            visit_type = request.GET.get("visitType"); entity_type = request.GET.get("entityType")
+            today = date.today()
+            from_dt = parse_date_internal(from_date_str) or today
+            to_dt = parse_date_internal(to_date_str) or today
+            if from_dt > to_dt: from_dt, to_dt = to_dt, from_dt
+
+            qs = Dashboard.objects.filter(date__range=[from_dt, to_dt])
+            if visit_type in ["Preventive", "Curative"]: qs = qs.filter(type_of_visit=visit_type)
+            entity_map = {"Employee": "Employee", "Contractor": "Contractor", "Visitor": "Visitor"}
+            if entity_type in entity_map: qs = qs.filter(type=entity_map[entity_type])
+
+            data = {
+                "type_counts": list(qs.values("type").annotate(count=Count("id")).order_by("-count")),
+                "type_of_visit_counts": list(qs.values("type_of_visit").annotate(count=Count("id")).order_by("-count")),
+                "register_counts": list(qs.values("register").annotate(count=Count("id")).order_by("-count")),
+                "purpose_counts": list(qs.values("purpose").annotate(count=Count("id")).order_by("-count")),
+                "total_count": qs.count()
+            }
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            logger.exception("dashboard_stats failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use GET.'}, status=405)
+
+@csrf_exempt # Should be GET
+def fetchVisitdataAll(request):
+    if request.method == "POST" or request.method == "GET":
+        try:
+            from django.forms.models import model_to_dict
+            visits_qs = Dashboard.objects.all().order_by('-date', '-id')
+            visits = []
+            for v in visits_qs:
+                 v_data = model_to_dict(v); v_data['date'] = v.date.isoformat() if v.date else None
+                 visits.append(v_data)
+            return JsonResponse({"message": "All visits fetched.", "data": visits}, status=200)
+        except Exception as e:
+            logger.exception("fetchVisitdataAll failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method."}, status=405)
+
+@csrf_exempt # Should be GET
+def fetchFitnessData(request):
+    if request.method == "POST" or request.method == "GET":
+        try:
+            from django.forms.models import model_to_dict
+            fitness_qs = FitnessAssessment.objects.all().order_by('-entry_date', '-id')
+            fitness_data = []
+            for r in fitness_qs:
+                 r_data = model_to_dict(r)
+                 r_data['entry_date'] = r.entry_date.isoformat() if r.entry_date else None
+                 r_data['validity'] = r.validity.isoformat() if r.validity else None
+                 fitness_data.append(r_data)
+            return JsonResponse({"message": "All fitness data fetched.", "data": fitness_data}, status=200)
+        except Exception as e:
+            logger.exception("fetchFitnessData failed.")
+            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method."}, status=405)
+
+@csrf_exempt # Should be GET
+def get_notes_all(request):
+    if request.method == 'POST' or request.method == 'GET':
+        try:
+            from django.forms.models import model_to_dict
+            notes_qs = SignificantNotes.objects.all().order_by('-entry_date', '-id')
+            consultations_qs = Consultation.objects.all().order_by('-entry_date', '-id')
+
+            notes = []
+            for n in notes_qs:
+                 n_data = model_to_dict(n); n_data['entry_date'] = n.entry_date.isoformat() if n.entry_date else None
+                 notes.append(n_data)
+            consultations = []
+            for c in consultations_qs:
+                 c_data = model_to_dict(c); c_data['entry_date'] = c.entry_date.isoformat() if c.entry_date else None
+                 c_data['follow_up_date'] = c.follow_up_date.isoformat() if c.follow_up_date else None
+                 consultations.append(c_data)
+
+            return JsonResponse({'notes': notes, 'consultation': consultations})
+        except Exception as e:
+            logger.exception("get_notes_all failed.")
+            return JsonResponse({'error': "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method.'}, status=405)
+
+@csrf_exempt # Should be GET
+def view_prescriptions(request):
+    if request.method == 'GET':
+        try:
+            from django.forms.models import model_to_dict
+            prescriptions_qs = Prescription.objects.all().order_by('-entry_date', '-id')
+            data = []
+            for p in prescriptions_qs:
+                p_data = model_to_dict(p)
+                p_data['entry_date'] = p.entry_date.isoformat() if p.entry_date else None
+                data.append(p_data)
+            return JsonResponse({'prescriptions': data})
+        except Exception as e:
+            logger.exception("view_prescriptions failed.")
+            return JsonResponse({'error': "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use GET.'}, status=405)
+
+# --- ID-Based Lookups ---
+@csrf_exempt # Should be GET
+def view_prescription_by_id(request, prescription_id):
+    if request.method == 'GET':
+        try:
+            from django.forms.models import model_to_dict
+            prescription = get_object_or_404(Prescription, pk=prescription_id)
+            p_data = model_to_dict(prescription)
+            p_data['entry_date'] = prescription.entry_date.isoformat() if prescription.entry_date else None
+            return JsonResponse(p_data)
+        except Http404: return JsonResponse({'error': 'Prescription not found'}, status=404)
+        except Exception as e:
+            logger.exception(f"view_prescription_by_id failed for ID {prescription_id}.")
+            return JsonResponse({'error': 'Server Error', 'detail': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid method. Use GET.'}, status=405)
+
+@csrf_exempt # Should be POST or PUT/PATCH
+def update_appointment_status(request):
+    if request.method == "POST":
+        appointment_id = None
+        try:
+            data = json.loads(request.body); appointment_id = data.get("id"); new_status = data.get("status")
+            if not appointment_id: return JsonResponse({"success": False, "message": "ID required."}, status=400)
+
+            appointment = get_object_or_404(Appointment, id=appointment_id)
+            current_status = appointment.status
+
+            if new_status is None: # Cycle logic
+                if current_status == Appointment.StatusChoices.INITIATE: next_status = Appointment.StatusChoices.IN_PROGRESS
+                elif current_status == Appointment.StatusChoices.IN_PROGRESS: next_status = Appointment.StatusChoices.COMPLETED
+                else: return JsonResponse({"success": False, "message": "Cannot update further."}, status=400)
+                appointment.status = next_status
+            else: # Set specific status
+                 valid = [c[0] for c in Appointment.StatusChoices.choices]
+                 if new_status in valid: appointment.status = new_status
+                 else: return JsonResponse({"success": False, "message": "Invalid status."}, status=400)
+
+            appointment.save(update_fields=['status'])
+            logger.info(f"Appointment {appointment_id} status updated to {appointment.status}")
+            return JsonResponse({"success": True, "message": "Status updated", "status": appointment.status})
+        except Http404: return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
+        except json.JSONDecodeError: return JsonResponse({"success": False, "message": "Invalid JSON."}, status=400)
+        except Exception as e:
+            logger.exception(f"update_appointment_status failed for ID {appointment_id or 'Unknown'}.")
+            return JsonResponse({"success": False, "message": "Server error.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid method."}, status=405)
+
+
+def get_current_expiry_count(request):
+    """
+    Returns the count of medicines in ExpiryRegister where removed_date is NULL.
+    """
+    try:
+        count = ExpiryRegister.objects.filter(removed_date__isnull=True).count()
+        return JsonResponse({"count": count})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+
+def normalize_frequency(freq):
+    freq = freq.lower().strip()
+    mapping = {
+        "half-yearly": 6,
+        "quarterly": 3,
+        "monthly": 1,
+        "once in 2 months": 2,
+        "once in 2 years": 24,
+        "yearly": 12
+    }
+    return mapping.get(freq, 12)  # default to 12 if unknown
+
+
+@csrf_exempt
+def get_red_status_count(request):
+    try:
+        today = datetime.today().date()
+        red_count = 0
+        instruments = InstrumentCalibration.objects.filter(calibration_status=False)
+        for instrument in instruments:
+            if not instrument.next_due_date or not instrument.freq:
+                continue
+
+            due_date = instrument.next_due_date
+            total_months = normalize_frequency(instrument.freq)
+            diff_in_days = (due_date - today).days
+            months_diff = diff_in_days / 30.44
+            fraction = months_diff / total_months
+            if fraction < 0.33:
+                red_count += 1
+
+        print(f"Final RED count: {red_count}")
+        return JsonResponse({"count": red_count})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

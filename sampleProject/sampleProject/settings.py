@@ -93,7 +93,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sampleProject.wsgi.application'
 
-# Database
+
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

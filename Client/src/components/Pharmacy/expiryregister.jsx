@@ -1,54 +1,124 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../Sidebar";
 import axios from "axios";
+import * as XLSX from "xlsx";
 
 const ExpiryRegister = () => {
   const [expiryRegister, setExpiryRegister] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Fetch expiry register data
-  const fetchExpiryRegister = () => {
-    axios
-      .get("http://localhost:8000/expiry_register/")
-      .then((response) => {
-        setExpiryRegister(response.data.expiry_register);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError("Failed to load expiry register.");
-        setLoading(false);
-      });
-  };
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   useEffect(() => {
     fetchExpiryRegister();
   }, []);
 
-  // Helper function to fix the removed_date format
-  const parseDate = (dateStr) => {
-    if (dateStr) {
-      const [month, year] = dateStr.split("-");
-      // Append the year explicitly (assuming it's for 20XX, for example)
-      const fullDate = `${month}-${year.length === 2 ? "20" + year : year}`;
-      return new Date(fullDate);
+  const fetchExpiryRegister = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (fromDate) params.from_date = fromDate;
+      if (toDate) params.to_date = toDate;
+
+      const res = await axios.get("http://localhost:8000/expiry_register/", { params });
+      setExpiryRegister(res.data.expiry_register);
+      setLoading(false);
+    } catch (err) {
+      setError("Failed to load expiry register.");
+      setLoading(false);
     }
-    return null; // In case the date is null or not provided
+  };
+
+  const handleClearFilters = () => {
+    setFromDate("");
+    setToDate("");
+    fetchExpiryRegister();
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Not Removed";
+    const fullDateStr = `01-${dateStr}`;
+    const date = new Date(fullDateStr);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const handleDownloadExcel = () => {
+    const dataToExport = expiryRegister.map((item) => ({
+      "Medicine Form": item.medicine_form,
+      "Brand Name": item.brand_name,
+      "Chemical Name": item.chemical_name,
+      "Dose/Volume": item.dose_volume,
+      Quantity: item.quantity,
+      "Expiry Date": formatDate(item.expiry_date),
+      "Removed Date": formatDate(item.removed_date),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "ExpiryRegister");
+    XLSX.writeFile(wb, "Filtered_Expiry_Register.xlsx");
   };
 
   return (
     <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Expiry Register</h2>
+      <div className="w-full flex flex-wrap items-center justify-between mb-4 gap-4">
+        {/* Centered Filters */}
+        <div className="flex flex-wrap justify-center gap-2 flex-1">
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="border rounded px-2 py-1"
+          />
+          <span className="text-gray-700">to</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="border rounded px-2 py-1"
+          />
+          <button
+            onClick={fetchExpiryRegister}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+          >
+            Filter
+          </button>
+          <button
+            onClick={handleClearFilters}
+            className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
+          >
+            Clear
+          </button>
+        </div>
 
-        {/* Loading & Error Handling */}
+        {/* Right-aligned Download */}
+        <div className="flex justify-end">
+          <button
+            onClick={handleDownloadExcel}
+            className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
+          >
+            Download Excel
+          </button>
+        </div>
+      </div>
+
+        {/* Table Section */}
+        
         {loading ? (
           <p className="text-gray-600">Loading...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
         ) : (
           <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">Expiry Register</h2>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-blue-600 text-white">
@@ -58,7 +128,7 @@ const ExpiryRegister = () => {
                   <th className="p-3 text-left">Dose/Volume</th>
                   <th className="p-3 text-left">Quantity</th>
                   <th className="p-3 text-left">Expiry Date</th>
-                  <th className="p-3 text-left">Removed Month</th>
+                  <th className="p-3 text-left">Removed Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -70,12 +140,9 @@ const ExpiryRegister = () => {
                       <td className="p-3 text-gray-600">{item.chemical_name}</td>
                       <td className="p-3">{item.dose_volume}</td>
                       <td className="p-3 font-bold">{item.quantity}</td>
-                      <td className="p-3">{item.expiry_date}</td>
-                      <td className="p-3 text-green-600 font-semibold">
-                        {/* Format the removed_date properly */}
-                        {item.removed_date
-                          ? parseDate(item.removed_date).toLocaleDateString("en-US", { year: 'numeric', month: 'short' })
-                          : "Not Removed"}
+                      <td className="p-3">{formatDate(item.expiry_date)}</td>
+                      <td className="p-3 text-green-700 font-semibold">
+                        {formatDate(item.removed_date)}
                       </td>
                     </tr>
                   ))

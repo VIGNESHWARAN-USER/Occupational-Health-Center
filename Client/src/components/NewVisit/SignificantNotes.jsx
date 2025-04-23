@@ -72,9 +72,10 @@ const SignificantNotes = ({ data, type }) => {
   // --- Dropdown Options (replace with your actual options) ---
   const communicableDiseaseOptions = [
     { value: '', label: 'Select...' }, // Add a default empty option
-    { value: 'CD1', label: 'CD1' },
-    { value: 'CD2', label: 'CD2' },
-    { value: 'CD1andCD2', label: 'CD1 and CD2' },
+    { value: 'Notification 0', label: 'Notifcation 0' },
+    { value: 'Notification 1', label: 'Notifcation 1' },
+    { value: 'Notification 2', label: 'Notifcation 2' },
+    { value: 'Notification 3', label: 'Notifcation 3' }
   ];
   const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' } ];
   const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Injury', label: 'Occupational Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Communication Injury', label: 'Communication Injury'}, {value: 'Others', label: 'Others'} ];
@@ -82,7 +83,7 @@ const SignificantNotes = ({ data, type }) => {
 
 
   // --- Extract employee number and check access level ---
-  const emp_no = data && data.length > 0 ? data[0]?.emp_no : null;
+  const emp_no = data && data.length > 0 ? data[0]?.aadhar : null;
   const accessLevel = typeof window !== 'undefined' ? localStorage.getItem('accessLevel') : null; // Check for window object
   const isDoctor = accessLevel === 'doctor' || accessLevel === 'nurse';
 
@@ -221,6 +222,7 @@ const SignificantNotes = ({ data, type }) => {
     setIsSubmitting(true);
     const significantNotesData = {
       emp_no: emp_no,
+      aadhar: data?.[0]?.aadhar || null, // Send null if empty
       healthsummary: healthsummary || null, // Send null if empty
       remarks: remarks || null,
       communicable_disease: communicableDisease || null,
@@ -277,7 +279,7 @@ const SignificantNotes = ({ data, type }) => {
             {/* Input Column */}
             <div className="flex flex-col"> {/* Fixed height for layout consistency */}
                 <label className="block text-gray-700 mb-1 text-sm font-medium" htmlFor="healthsummary">
-                    Health Summary
+                    Visit Summary
                 </label>
                 <textarea
                     id="healthsummary"
@@ -332,7 +334,7 @@ const SignificantNotes = ({ data, type }) => {
              {/* Input Column */}
              <div className="flex flex-col"> {/* Removed fixed height for dropdowns */}
                  <label htmlFor="communicableDisease" className="block text-gray-700 text-sm font-medium mb-1">
-                    Communicable Disease
+                    Notification
                  </label>
                  <select
                     id="communicableDisease"

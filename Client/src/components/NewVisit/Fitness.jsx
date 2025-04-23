@@ -154,7 +154,7 @@ const generateFormPdf = (formData, formTitle, empNo, empName, fieldLabels) => {
 
 const FitnessPage = ({ data }) => {
     // Options (Keep as is)
-    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher"];
+    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher","Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
     const eyeExamResultOptions = ["", "Normal", "Defective", "Color Blindness"];
     const eyeExamFitStatusOptions = [ /* ... no changes ... */ ];
@@ -172,6 +172,7 @@ const FitnessPage = ({ data }) => {
     const [eyeExamResult, setEyeExamResult] = useState(""); // All Access
     const [eyeExamFitStatus, setEyeExamFitStatus] = useState(""); // All Access
     const [comments, setComments] = useState(""); // Doctor Only
+    const [specialCases, setSpecialCases] = useState(""); // Doctor Only - NEW STATE
     const [isSubmitting, setIsSubmitting] = useState(false); // For disabling buttons during API calls
 
     // --- Statutory Form States (Keep as is) ---
@@ -254,11 +255,13 @@ const FitnessPage = ({ data }) => {
                  setGeneralExamination(assessmentData.general_examination || "");
                  setEyeExamResult(assessmentData.eye_exam_result || "");
                  setEyeExamFitStatus(assessmentData.eye_exam_fit_status || "");
+                 setSpecialCases(assessmentData.special_cases || ""); // Load Special Cases
             } else {
                  // Reset Fitness Assessment fields if no assessment data found for this emp_no
                  setFitnessFormData(prevState => ({ ...prevState, emp_no: currentEmpNo, tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "" }));
                  setSelectedOptions([]); setConditionalOptions([]); setOverallFitness(""); setComments("");
                  setSystematicExamination(""); setGeneralExamination(""); setEyeExamResult(""); setEyeExamFitStatus("");
+                 setSpecialCases(""); // Reset Special Cases
             }
 
             // Load or Initialize Statutory Forms Data
@@ -275,6 +278,7 @@ const FitnessPage = ({ data }) => {
             setFitnessFormData({ emp_no: emptyEmpNo, tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "" });
             setSelectedOptions([]); setConditionalOptions([]); setOverallFitness(""); setComments("");
             setSystematicExamination(""); setGeneralExamination(""); setEyeExamResult(""); setEyeExamFitStatus("");
+            setSpecialCases(""); // Reset Special Cases
             setForm17Data({...initialForm17State, emp_no: emptyEmpNo});
             setForm38Data({...initialForm38State, emp_no: emptyEmpNo});
             setForm39Data({...initialForm39State, emp_no: emptyEmpNo});
@@ -322,7 +326,7 @@ const FitnessPage = ({ data }) => {
         setConditionalOptions(conditionalOptions.filter(option => option !== valueToRemove));
     };
     const handleCommentsChange = (e) => { setComments(e.target.value); };
-
+    const handleSpecialCasesChange = (e) => { setSpecialCases(e.target.value); }; // NEW HANDLER
     const handleStatutorySelectChange = (e) => {
         const formName = e.target.value;
         if (formName && formName !== "Select Form" && !selectedStatutoryForms.includes(formName)) {
@@ -401,6 +405,7 @@ const FitnessPage = ({ data }) => {
     // Specific submit handler for Fitness Assessment
     const handleFitnessSubmit = async () => {
         const currentEmpNo = data?.[0]?.emp_no;
+        console.log("EmpNo : ",data?.[0]?.emp_no);
         if (!currentEmpNo) {
             alert("No employee selected.");
             return;
@@ -408,14 +413,26 @@ const FitnessPage = ({ data }) => {
 
         // Determine if updating (PUT) or creating (POST)
         // We assume if data[0].fitnessassessment exists, we update, otherwise create.
-        const existingAssessment = data?.[0]?.fitnessassessment;
+        const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false;
         const method = existingAssessment ? 'PUT' : 'POST';
+
+        // i want to true or false for fitness assessment
+        //const fitnessAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false; // Adjust based on your data structure
+
+       
         // Construct URL: Append emp_no for PUT, use base URL for POST
         // IMPORTANT: Adjust this based on your actual API design!
         // Option 1: Always POST to base URL, backend handles upsert based on emp_no in payload
         // Option 2: POST to base, PUT to /fitness-tests/{emp_no}/
         // Assuming Option 1 for simplicity here:
-        const url = FITNESS_ASSESSMENT_URL; // Adjust if your API needs emp_no in URL for PUT
+        const url = FITNESS_ASSESSMENT_URL; 
+
+        //iwant to get aadhar no
+        const aadharNo = data?.[0]?.aadhar || ''; // Adjust based on your data structure
+        console.log("Aadhar No : ",aadharNo);
+        
+        console.log("URL : ",url);
+        // Adjust if your API needs emp_no in URL for PUT
 
         const payload = {
             ...fitnessFormData, // Includes emp_no, tremors, romberg_test, etc.
@@ -427,6 +444,8 @@ const FitnessPage = ({ data }) => {
             eye_exam_result: eyeExamResult,
             eye_exam_fit_status: eyeExamFitStatus,
             comments: comments,
+            aadhar:aadharNo,
+            special_cases: specialCases, // Include special cases
             emp_no: currentEmpNo, // Ensure emp_no is in the payload
         };
 
@@ -1150,6 +1169,29 @@ const FitnessPage = ({ data }) => {
                                  placeholder="Enter any relevant comments..."
                              />
                          </div>
+
+                         {/* --- Special Cases Section (NEW) --- */}
+                         <div className="mt-4">
+                             <label className={labelClass}>Special Cases</label>
+                             <div className="flex space-x-4 mt-2">
+                                 {["Yes", "No", "N/A"].map((value) => (
+                                     <label key={value} className="flex items-center space-x-2 cursor-pointer text-gray-600 hover:text-gray-900 text-sm">
+                                         <input
+                                             type="radio"
+                                             name="specialCases"
+                                             value={value}
+                                             className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                             checked={specialCases === value}
+                                             onChange={handleSpecialCasesChange}
+                                             disabled={!data?.[0]?.emp_no || isSubmitting}
+                                             title={!data?.[0]?.emp_no ? "Select an employee first" : ""}
+                                         />
+                                         <span>{value}</span>
+                                     </label>
+                                 ))}
+                             </div>
+                         </div>
+                         {/* --- End Special Cases Section --- */}
                      </div>
                   )}
                   {/* --- End Doctor Only Fields --- */}

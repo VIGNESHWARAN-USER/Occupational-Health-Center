@@ -22,11 +22,12 @@ const Consultation = ({ data, type }) => {
   const [speciality, setSpeciality] = useState(''); // Corrected typo
   const [doctorName, setDoctorName] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
+  const [specialCases,setSpecialCases]=useState('')//NEW STATE for Special Cases
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedByNurse, setSubmittedByNurse] = useState(''); // Keep if needed, source unclear
 
   // --- Derived Data & Constants ---
-  const emp_no = data && data[0]?.emp_no;
+  const emp_no = data && data[0]?.aadhar;
   const patientData = data && data[0];
   // Ensure localStorage values exist or provide defaults
   const submittedByDoctor = localStorage.getItem('userData') || 'Unknown Doctor';
@@ -59,6 +60,7 @@ const Consultation = ({ data, type }) => {
       setSpeciality(consult.speciality || ''); // Corrected typo here
       setDoctorName(consult.doctor_name || '');
       setFollowUpDate(consult.follow_up_date || '');
+      setSpecialCases(consult.special_cases|| '');//Load Special Cases
       // setSubmittedByNurse(consult.submitted_by_nurse || ''); // If needed
     } else {
       // Reset fields if no consultation data exists
@@ -80,6 +82,7 @@ const Consultation = ({ data, type }) => {
       setSpeciality(''); // Reset Speciality
       setDoctorName('');
       setFollowUpDate('');
+      setSpecialCases('');//Reset Special Cases 
       setSubmittedByNurse('');
     }
   }, [patientData]); // Depend on the entire patientData object
@@ -94,7 +97,7 @@ const Consultation = ({ data, type }) => {
     setIsSubmitting(true);
 
     const consultationPayload = {
-      emp_no: emp_no,
+      aadhar: emp_no,
       // Send entry_date ONLY if you need it for identifying an existing record to update
       // If the backend uses emp_no + latest logic, you might not need entry_date here.
       // entry_date: patientData?.entry_date,
@@ -115,6 +118,7 @@ const Consultation = ({ data, type }) => {
       hospital_name: referral === 'yes' ? hospitalName : '', // Send only if referred
       speciality: referral === 'yes' ? speciality : '', // Send only if referred (Corrected typo)
       doctor_name: referral === 'yes' ? doctorName : '', // Send only if referred
+      special_cases:specialCases,//Include Special Cases
       submitted_by_doctor: submittedByDoctor,
       // submitted_by_nurse: submittedByNurse, // Include if relevant
       follow_up_date: followUpDate || null, // Send null if empty
@@ -354,7 +358,27 @@ const Consultation = ({ data, type }) => {
           </div>
         )}
 
-        
+        {/* --- Special Cases Section (NEW) --- */}
+        <div className="border-t pt-6 space-y-2">
+          <label className={labelClasses}>Special Cases</label>
+          <div className="flex items-center gap-4 md:gap-6">
+            {["Yes", "No", "N/A"].map((value) => (
+              <label key={value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="specialCases"
+                  value={value}
+                  checked={specialCases === value}
+                  onChange={(e) => setSpecialCases(e.target.value)}
+                  className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!isDoctor || isSubmitting}
+                />
+                {value}
+              </label>
+            ))}
+          </div>
+        </div>
+        {/* --- End Special Cases Section --- */}
 
         {/* Submit Button */}
         <div className="mt-8 flex justify-end">

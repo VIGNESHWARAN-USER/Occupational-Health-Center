@@ -1,99 +1,85 @@
 import axios from "axios";
-import React, { useState, useEffect } from "react"; //Import useEffect
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 function InvestigationForm({ data }) {
+  console.log("Received data prop:", data); // Log incoming prop
   const navigate = useNavigate();
   const [selectedOption, setSelectedOption] = useState("");
-  const [formData, setFormData] = useState({}); // Initialize formData state
-  const [processedData, setProcessedData] = useState(null); // State to hold processed data
+  const [formData, setFormData] = useState({});
+  const [processedData, setProcessedData] = useState(null);
+  const accessLevel = localStorage.getItem('accessLevel');
+  console.log("Access Level:", accessLevel);
 
   // Function to safely get nested data
   const getNestedData = (obj, path) => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    // Check if obj is valid before proceeding
+    if (!obj) return null;
+    return path.split('.').reduce((acc, part) => acc && acc[part] !== undefined ? acc[part] : null, obj);
   };
 
-  // Initialize state and handle data processing
-  useEffect(() => {
-    if (data && data.length > 0 && data[0]) {
-      // Create a deep copy only if necessary, often direct use is fine if not modifying `data` prop
-      const initialData = data[0]; // Use direct reference if not modifying
-      setProcessedData(initialData); // Store the raw initial data
-      console.log("Processed Initial Data:", initialData);
-
-      // Reset form data when data prop changes (e.g., new employee selected)
-      setSelectedOption(""); // Clear selection
-      setFormData({});     // Clear form
-    } else {
-      setProcessedData(null);
-      setSelectedOption("");
-      setFormData({});
-    }
-  }, [data]); // Re-run when the main data prop changes
-
-  const invFormOptions = [
-    "HAEMATALOGY",
-    "ROUTINE SUGAR TESTS",
-    "RENAL FUNCTION TEST & ELECTROLYTES", // Added back (assuming model exists)
-    "LIPID PROFILE",
-    "LIVER FUNCTION TEST",
-    "THYROID FUNCTION TEST",
-    "AUTOIMMUNE TEST", // Assuming model exists
-    "COAGULATION TEST",
-    "ENZYMES & CARDIAC Profile",
-    "URINE ROUTINE",
-    "SEROLOGY",
-    "MOTION",
-    "ROUTINE CULTURE & SENSITIVITY TEST", // Added back
-    "Men's Pack",
-    "Women's Pack", // Assuming model exists
-    "Occupational Profile", // Assuming model exists
-    "Others TEST", // Assuming model exists
-    "OPHTHALMIC REPORT",
-    "X-RAY", // Assuming model exists
-    "USG",
-    "CT", // Assuming model exists
-    "MRI",
-  ];
-
-  // Map frontend options to backend data keys
+  // --- Map frontend options to backend data keys ---
+  // Make sure these keys exactly match the keys in your `processedData` object
   const categoryMap = {
     "HAEMATALOGY": "haematology",
     "ROUTINE SUGAR TESTS": "routinesugartests",
-    "RENAL FUNCTION TEST & ELECTROLYTES": "renalfunctiontest", // Match model name
+    "RENAL FUNCTION TEST & ELECTROLYTES": "renalfunctiontests_and_electrolytes",
     "LIPID PROFILE": "lipidprofile",
     "LIVER FUNCTION TEST": "liverfunctiontest",
     "THYROID FUNCTION TEST": "thyroidfunctiontest",
+    "AUTOIMMUNE TEST": "autoimmunetest",
     "COAGULATION TEST": "coagulationtest",
     "ENZYMES & CARDIAC Profile": "enzymesandcardiacprofile",
     "URINE ROUTINE": "urineroutine",
     "SEROLOGY": "serology",
     "MOTION": "motion",
-    "ROUTINE CULTURE & SENSITIVITY TEST": "culturesensitivitytest", // Match model name
+    "ROUTINE CULTURE & SENSITIVITY TEST": "routinecultureandsensitive",
     "Men's Pack": "menspack",
-    "OPHTHALMIC REPORT": "opthalmicreport", // Check spelling if model is OphthalmicReport
-    "USG": "usg", // Assuming USGReport model name
-    "MRI": "mri", // Assuming MRIReport model name
-    // Add mappings for other categories if needed (XRAY, CT, Women's Pack etc.)
-     "X-RAY": "xray", // Example mapping
-     "CT": "ct", // Example mapping
+    "Women's Pack": "womenpack",
+    "Occupational Profile": "occupationalprofile",
+    "Others TEST": "otherstest",
+    "OPHTHALMIC REPORT": "opthalamicreport", // Double check backend model/key spelling if issues arise
+    "USG": "usg",
+    "MRI": "mri",
+    "X-RAY": "xray",
+    "CT": "ct",
   };
+
+  // List of all possible investigation options (display names)
+  const allInvFormOptions = Object.keys(categoryMap); // Derive from map for consistency
+
+  // Initialize state and handle data processing
+  useEffect(() => {
+    if (data && data.length > 0 && data[0]) {
+      const initialData = data[0];
+      setProcessedData(initialData);
+      console.log("Processed Initial Data:", initialData);
+
+      // Reset form when data changes (e.g., new employee)
+      setSelectedOption("");
+      setFormData({});
+    } else {
+      console.log("Data prop is empty or invalid, resetting state.");
+      setProcessedData(null);
+      setSelectedOption("");
+      setFormData({});
+    }
+  }, [data]); // Re-run only when the main data prop changes
 
   // Initialize form data when selection changes
   const handleOptionChange = (e) => {
     const selected = e.target.value;
     setSelectedOption(selected);
-
-    // Reset form data first
-    setFormData({});
+    setFormData({}); // Reset form data first
 
     if (selected && processedData) {
       const categoryKey = categoryMap[selected];
       const categoryData = categoryKey ? getNestedData(processedData, categoryKey) : null;
+      console.log(`Data for selected category (${selected} -> ${categoryKey}):`, categoryData);
 
       if (categoryData && typeof categoryData === 'object') {
-        // Exclude metadata fields when setting initial form data
-        const { id, latest_id, emp_no, entry_date, ...initialFields } = categoryData;
+        // Exclude metadata fields AND emp_no when setting initial form data
+        const { id, latest_id, aadhar, entry_date, emp_no, ...initialFields } = categoryData;
         console.log(`Initializing form for ${selected} with:`, initialFields);
         setFormData(initialFields);
       } else {
@@ -104,11 +90,8 @@ function InvestigationForm({ data }) {
 
   // Handle input changes and calculate comments
   const handleChange = (e) => {
-    const { id, value } = e.target; // id is the field name (e.g., "hemoglobin")
-
-    // Determine the base name (e.g., "hemoglobin" from "hemoglobin")
-    // This assumes value fields don't have suffixes like _unit, _comments etc.
-    const baseName = id.split('_reference_range_')[0] // Get base name even if changing range
+    const { id, value } = e.target;
+    const baseName = id.split('_reference_range_')[0]
                       .replace('_unit', '')
                       .replace('_comments', '');
 
@@ -117,60 +100,47 @@ function InvestigationForm({ data }) {
     const rangeToKey = `${baseName}_reference_range_to`;
     const commentKey = `${baseName}_comments`;
 
-    // Update the changed field immediately
-    const newState = {
-      ...formData,
-      [id]: value,
-    };
+    const newState = { ...formData, [id]: value };
 
-    // --- Calculate comment ONLY if the main VALUE field changed ---
     if (id === valueKey) {
-        const currentValueStr = value; // The new value being entered
-        const fromRangeStr = newState[rangeFromKey]; // Get range from potentially updated state
+        const currentValueStr = value;
+        const fromRangeStr = newState[rangeFromKey];
         const toRangeStr = newState[rangeToKey];
+        let calculatedComment = formData[commentKey] || "";
 
-        let calculatedComment = formData[commentKey] || ""; // Default to existing comment or empty
+        // Check if range values exist and are not null/undefined
+        const hasRangeFrom = fromRangeStr !== null && fromRangeStr !== undefined && String(fromRangeStr).trim() !== '';
+        const hasRangeTo = toRangeStr !== null && toRangeStr !== undefined && String(toRangeStr).trim() !== '';
 
-        // Only calculate if range values exist
-        if (fromRangeStr !== null && fromRangeStr !== undefined && toRangeStr !== null && toRangeStr !== undefined) {
+        if (hasRangeFrom && hasRangeTo) {
             const currentValue = parseFloat(currentValueStr);
             const fromRange = parseFloat(fromRangeStr);
             const toRange = parseFloat(toRangeStr);
 
-            // Check if all are valid numbers
             if (!isNaN(currentValue) && !isNaN(fromRange) && !isNaN(toRange)) {
-                if (currentValue < fromRange || currentValue > toRange) {
-                    calculatedComment = "Abnormal";
-                } else {
-                    calculatedComment = "Normal";
-                }
+                calculatedComment = (currentValue < fromRange || currentValue > toRange) ? "Abnormal" : "Normal";
             } else if (currentValueStr.trim() === '') {
-                 calculatedComment = ""; // Clear comment if value is cleared
+                calculatedComment = ""; // Clear comment if value is cleared
             } else {
-                // Handle cases where ranges aren't numbers or value isn't a number
-                // Keep existing comment or set to empty/indicator?
-                // calculatedComment = "N/A"; // Or keep existing: formData[commentKey] || ""
-                // Let's clear it if value is not a number but range exists
-                 if (isNaN(currentValue)) calculatedComment = "";
+                 // Value is not a number, clear comment
+                 calculatedComment = "";
             }
         } else if (currentValueStr.trim() === '') {
              calculatedComment = ""; // Clear comment if value is cleared and no range exists
+        } else {
+             // No range defined, clear comment or leave as is? Let's clear it.
+             calculatedComment = "";
         }
-
-        // Update the comment in the new state object
         newState[commentKey] = calculatedComment;
     }
-
-    // Set the final state
     setFormData(newState);
   };
-
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!processedData || !processedData.emp_no) {
+    if (!processedData || !processedData.aadhar) {
       alert("Employee details not loaded. Cannot submit.");
       return;
     }
@@ -179,28 +149,30 @@ function InvestigationForm({ data }) {
         return;
     }
 
-    let url = "";
-    // Map selected option to backend API endpoint suffix/identifier
+    // --- Map selected option to backend API endpoint suffix/identifier ---
     const endpointMap = {
-        "HAEMATALOGY": "addInvestigation", // Assuming this is the haematalogy endpoint
+        "HAEMATALOGY": "addInvestigation",
         "ROUTINE SUGAR TESTS": "addRoutineSugarTest",
-        "RENAL FUNCTION TEST & ELECTROLYTES": "addRenalFunctionTest", // Match your URL pattern
+        "RENAL FUNCTION TEST & ELECTROLYTES": "addRenalFunctionTest",
         "LIPID PROFILE": "addLipidProfile",
         "LIVER FUNCTION TEST": "addLiverFunctionTest",
         "THYROID FUNCTION TEST": "addThyroidFunctionTest",
+        "AUTOIMMUNE TEST": "addAutoimmuneTest", // Added endpoint
         "COAGULATION TEST": "addCoagulationTest",
         "ENZYMES & CARDIAC Profile": "addEnzymesAndCardiacProfile",
         "URINE ROUTINE": "addUrineRoutine",
         "SEROLOGY": "addSerology",
         "MOTION": "addMotion",
-        "ROUTINE CULTURE & SENSITIVITY TEST": "addCultureSensitivityTest", // Match your URL pattern
+        "ROUTINE CULTURE & SENSITIVITY TEST": "addCultureSensitivityTest",
         "Men's Pack": "addMensPack",
-        "OPHTHALMIC REPORT": "addOpthalmicReport", // Check spelling
+        "Women's Pack": "addWomensPack", // Added endpoint
+        "Occupational Profile": "addOccupationalProfile", // Added endpoint
+        "Others TEST": "addOthersTest", // Added endpoint
+        "OPHTHALMIC REPORT": "addOpthalmicReport",
         "USG": "addUSG",
         "MRI": "addMRI",
-        "X-RAY": "addXRay", // Example
-        "CT": "addCT", // Example
-        // Add other mappings
+        "X-RAY": "addXRay",
+        "CT": "addCT",
     };
 
     const endpoint = endpointMap[selectedOption];
@@ -208,24 +180,24 @@ function InvestigationForm({ data }) {
         alert(`No submission endpoint configured for "${selectedOption}".`);
         return;
     }
-    url = `http://localhost:8000/${endpoint}`; // Construct full URL
+    const url = `http://localhost:8000/${endpoint}`; // Construct full URL
 
     try {
-      // Ensure emp_no is included in the data being sent
-      const dataToSend = { ...formData, emp_no: processedData.emp_no };
-      console.log("Submitting Data:", dataToSend);
+      // Ensure aadhar is included, but NOT emp_no unless specifically needed by backend
+      const { emp_no, ...formDataToSend } = formData; // Remove emp_no from form data if present
+      const finalPayload = { ...formDataToSend, aadhar: processedData.aadhar };
+      console.log("Submitting Data:", finalPayload); // Log data being sent
 
-      const response = await axios.post(url, dataToSend, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await axios.post(url, finalPayload, {
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.status === 200 || response.status === 201) {
         alert("Data submitted successfully!");
-         // Optionally clear the form or navigate away
+        // Consider resetting form or giving other feedback
         // setFormData({});
         // setSelectedOption("");
+        // navigate('/some-success-page'); // Example navigation
       } else {
         alert(`Submission failed with status: ${response.status}`);
       }
@@ -236,22 +208,53 @@ function InvestigationForm({ data }) {
     }
   };
 
+  // --- Function to get today's date in YYYY-MM-DD format ---
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // --- Filter options for Doctor based on today's entry_date ---
+  const getDoctorOptions = () => {
+    if (!processedData) return [];
+
+    const today = getTodayDateString();
+    console.log("Today's Date for filtering:", today);
+
+    return allInvFormOptions.filter(option => {
+        const categoryKey = categoryMap[option];
+        if (!categoryKey) return false; // Skip if no mapping
+
+        const categoryData = getNestedData(processedData, categoryKey);
+        // Check if data exists and if its entry_date matches today
+        const hasDataToday = categoryData && categoryData.entry_date === today;
+
+        // Log check result for debugging
+        // console.log(`Checking ${option} (${categoryKey}): Data exists=`, !!categoryData, `Entry date=`, categoryData?.entry_date, `Matches today=`, hasDataToday);
+
+        return hasDataToday;
+    });
+  };
+
+
   // Render dynamic fields based on selection
   const renderFields = (category) => {
     if (!processedData || !category) return null;
 
     const categoryKey = categoryMap[category];
+    // Use getNestedData to safely access category data
     const categoryData = categoryKey ? getNestedData(processedData, categoryKey) : null;
 
     if (!categoryData || typeof categoryData !== 'object') {
-         // If no initial data for this category, maybe render empty fields based on a schema?
-         // For now, return null or a message.
         console.log(`No data structure found for category: ${category}`);
-        return <p className="text-gray-500 italic">No data structure available for {category}.</p>;
+        return <p className="text-gray-500 italic">No data available or structure defined for {category}.</p>;
     }
 
-    // Get field names, excluding metadata
-    const { id, latest_id, emp_no, entry_date, ...filteredCategoryData } = categoryData;
+    // Get field names, excluding metadata AND emp_no
+    const { id, latest_id, aadhar, entry_date, emp_no, ...filteredCategoryData } = categoryData;
     const allKeys = Object.keys(filteredCategoryData);
 
     // Identify base keys (those without suffixes)
@@ -259,24 +262,31 @@ function InvestigationForm({ data }) {
         !key.endsWith('_unit') &&
         !key.endsWith('_reference_range_from') &&
         !key.endsWith('_reference_range_to') &&
-        !key.endsWith('_comments')
+        !key.endsWith('_comments') &&
+        key !== 'emp_no' // Explicitly exclude emp_no here as well
     );
 
      // Check if baseKeys could be identified, fallback if needed
     if (baseKeys.length === 0 && allKeys.length > 0) {
-        console.warn("Could not automatically determine base keys for", category, ". Displaying all.");
-         // Fallback: Render all fields simply if base key logic fails
+        console.warn("Could not automatically determine base keys for", category, ". Displaying all relevant keys.");
+        // Filter out emp_no from allKeys for the fallback rendering
+        const relevantKeys = allKeys.filter(key => key !== 'emp_no');
+        if (relevantKeys.length === 0) {
+             return <p className="text-gray-500 italic">No displayable fields found for {category} after filtering.</p>;
+        }
         return (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {allKeys.map((key) => (
+                {relevantKeys.map((key) => (
                     <div key={key}>
                         <label htmlFor={key} className="block text-sm font-medium text-gray-700 capitalize">
                             {key.replace(/_/g, ' ')}
                         </label>
                         <input
                             type="text" id={key} name={key}
-                            value={formData[key] || ''} onChange={handleChange}
-                            className="mt-1 py-2 px-3 block w-full rounded-md border-gray-300 bg-blue-100 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            // Use formData state for controlled input
+                            value={formData[key] !== undefined ? formData[key] : ''}
+                            onChange={handleChange}
+                            className="mt-1 py-2 px-3 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" // Make editable
                         />
                     </div>
                 ))}
@@ -287,6 +297,7 @@ function InvestigationForm({ data }) {
 
     return (
       <div className="space-y-4">
+        {/* Map over baseKeys (already filtered to exclude emp_no) */}
         {baseKeys.map((baseKey) => {
           // Construct the related field names
           const valueKey = baseKey;
@@ -295,7 +306,7 @@ function InvestigationForm({ data }) {
           const rangeToKey = `${baseKey}_reference_range_to`;
           const commentKey = `${baseKey}_comments`;
 
-          // Check if related keys exist in the original data structure (optional but good practice)
+          // Check if related keys exist in the original filtered data structure
           const hasUnit = allKeys.includes(unitKey);
           const hasRangeFrom = allKeys.includes(rangeFromKey);
           const hasRangeTo = allKeys.includes(rangeToKey);
@@ -304,6 +315,7 @@ function InvestigationForm({ data }) {
           const label = baseKey.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
           return (
+            // Using baseKey as key is fine here since it's unique within this render
             <div key={baseKey} className="grid grid-cols-1 md:grid-cols-5 gap-x-3 gap-y-2 p-3 border rounded bg-gray-50 items-end">
               {/* Column 1: Value (Editable) */}
               <div className="md:col-span-1">
@@ -311,11 +323,12 @@ function InvestigationForm({ data }) {
                   {label}
                 </label>
                 <input
-                  type="text" // Use text initially, can change to number if strict validation needed
+                  type="text"
                   id={valueKey}
                   name={valueKey}
                   className="py-2 px-3 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" // Editable style
-                  value={formData[valueKey] || ""}
+                  // Use formData state for controlled input, fallback to empty string
+                  value={formData[valueKey] !== undefined ? formData[valueKey] : ""}
                   onChange={handleChange}
                   placeholder="Result"
                 />
@@ -332,10 +345,11 @@ function InvestigationForm({ data }) {
                     id={unitKey}
                     name={unitKey}
                     className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed" // Disabled style
-                    value={formData[unitKey] || ""}
-                    onChange={handleChange} // Keep handler if needed, but field is disabled
+                    // Use formData state, fallback to empty string
+                    value={formData[unitKey] !== undefined ? formData[unitKey] : ""}
+                    onChange={handleChange} // Keep handler, input is disabled but state can technically change
                     disabled
-                    tabIndex={-1} // Remove from tab order
+                    tabIndex={-1}
                   />
                 </div>
               )}
@@ -343,42 +357,46 @@ function InvestigationForm({ data }) {
               {/* Column 3: Range From/To (Disabled) */}
               {(hasRangeFrom || hasRangeTo) && (
                 <div className="md:col-span-1 flex items-center space-x-1">
-                  {hasRangeFrom && (
-                     <div className="flex-1">
-                        <label htmlFor={rangeFromKey} className="block text-xs font-medium text-gray-600 mb-1">
-                            Range From
-                        </label>
-                        <input
-                            type="text"
-                            id={rangeFromKey}
-                            name={rangeFromKey}
-                            className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed" // Disabled style
-                            value={formData[rangeFromKey] || ""}
-                            onChange={handleChange}
-                            disabled
-                            tabIndex={-1}
-                        />
-                    </div>
-                  )}
-                   {hasRangeTo && (
-                     <div className="flex-1">
-                         <label htmlFor={rangeToKey} className="block text-xs font-medium text-gray-600 mb-1">
-                            Range To
-                        </label>
-                        <input
-                            type="text"
-                            id={rangeToKey}
-                            name={rangeToKey}
-                            className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed" // Disabled style
-                            value={formData[rangeToKey] || ""}
-                            onChange={handleChange}
-                            disabled
-                            tabIndex={-1}
-                        />
-                    </div>
-                  )}
+                    {/* Conditional rendering for Range From */}
+                    {hasRangeFrom && (
+                        <div className="flex-1">
+                            <label htmlFor={rangeFromKey} className="block text-xs font-medium text-gray-600 mb-1">
+                                Range From
+                            </label>
+                            <input
+                                type="text"
+                                id={rangeFromKey}
+                                name={rangeFromKey}
+                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                                value={formData[rangeFromKey] !== undefined ? formData[rangeFromKey] : ""}
+                                onChange={handleChange}
+                                disabled
+                                tabIndex={-1}
+                            />
+                        </div>
+                    )}
+                     {/* Conditional rendering for Range To */}
+                    {hasRangeTo && (
+                        <div className="flex-1">
+                            <label htmlFor={rangeToKey} className="block text-xs font-medium text-gray-600 mb-1">
+                                Range To
+                            </label>
+                            <input
+                                type="text"
+                                id={rangeToKey}
+                                name={rangeToKey}
+                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                                value={formData[rangeToKey] !== undefined ? formData[rangeToKey] : ""}
+                                onChange={handleChange}
+                                disabled
+                                tabIndex={-1}
+                            />
+                        </div>
+                    )}
                 </div>
               )}
+              {/* Render a placeholder div if neither Range From nor Range To exists to maintain grid structure */}
+              {!(hasRangeFrom || hasRangeTo) && <div className="md:col-span-1"></div>}
 
 
               {/* Column 4: Comments (Disabled Textarea) */}
@@ -392,13 +410,15 @@ function InvestigationForm({ data }) {
                     name={commentKey}
                     rows="1" // Keep it short
                     className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed" // Disabled style
-                    value={formData[commentKey] || ""}
-                    onChange={handleChange}
+                    value={formData[commentKey] !== undefined ? formData[commentKey] : ""}
+                    onChange={handleChange} // Keep handler
                     disabled
                     tabIndex={-1}
                   />
                 </div>
               )}
+               {/* Render a placeholder div if no Comment field exists */}
+               {!hasComment && <div className="md:col-span-2"></div>}
             </div>
           );
         })}
@@ -414,11 +434,11 @@ function InvestigationForm({ data }) {
       {!processedData && data && data.length > 0 && (
            <p className="text-center text-orange-600 my-4">Processing employee data...</p>
       )}
-       {!data || data.length === 0 && (
+       {(!data || data.length === 0) && ( // Simplified condition
           <p className="text-center text-red-600 my-4">Please select an employee first.</p>
       )}
 
-      {/* Render dropdown only if processedData exists */}
+      {/* Render dropdown section only if processedData exists */}
       {processedData && (
         <div className="mb-6">
           <label htmlFor="investigations" className="block text-sm font-medium text-gray-700 mb-1">
@@ -427,23 +447,42 @@ function InvestigationForm({ data }) {
           <select
             id="investigations"
             name="investigations"
-            className="py-3 px-4 mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base" // Larger text
+            className="py-3 px-4 mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base"
             value={selectedOption}
             onChange={handleOptionChange}
+            disabled={!processedData} // Disable if no data
           >
             <option value="">-- Select a category --</option>
-            {invFormOptions.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
-              </option>
-            ))}
+            {/* Conditional Rendering based on Access Level */}
+            {accessLevel === "doctor" &&
+              getDoctorOptions().map((option, index) => (
+                <option key={index} value={option}>
+                  {option}
+                </option>
+              ))
+            }
+            {accessLevel === "nurse" &&
+              allInvFormOptions.map((option, index) => ( // Nurse sees all options
+                <option key={index} value={option}>
+                  {option}
+                </option>
+              ))
+            }
+            {/* Add other access levels if needed */}
+            {accessLevel !== "doctor" && accessLevel !== "nurse" && (
+                 <option value="" disabled>No investigation categories available for your role.</option>
+             )}
           </select>
+           {/* Message if doctor has no options for today */}
+           {accessLevel === "doctor" && getDoctorOptions().length === 0 && (
+                <p className="text-sm text-gray-500 mt-2 italic">No investigation records found with today's date for this employee.</p>
+           )}
         </div>
       )}
 
       {/* Render dynamic fields and submit button */}
       {selectedOption && processedData && (
-        <form onSubmit={handleSubmit}> {/* Wrap fields and button in form */}
+        <form onSubmit={handleSubmit}>
           <div className="mt-4">
             {renderFields(selectedOption)}
           </div>

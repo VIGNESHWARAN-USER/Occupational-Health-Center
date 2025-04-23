@@ -3,7 +3,7 @@ import axios from "axios";
 
 const Vaccination = ({ data }) => {
   const [vaccinationData, setVaccinationData] = useState([]);
-  const emp_no = data?.[0]?.emp_no; // Use optional chaining for safer access
+  const emp_no = data?.[0]?.aadhar; // Use optional chaining for safer access
 
   // Check if data or emp_no is missing early
   if (!data || data.length === 0 || !emp_no) {
@@ -74,7 +74,7 @@ const Vaccination = ({ data }) => {
 
     try {
       await axios.post("http://localhost:8000/vaccination/", {
-        emp_no: emp_no,
+        aadhar: aadhar,
         vaccination: vaccinationData, // Send the array directly
       });
       alert("Vaccination data submitted successfully!");
