@@ -66,7 +66,7 @@ function Viewprescription() {
         setError(null);
 
         try {
-            let url = 'http://localhost:8000/prescriptions/view/'; // Ensure this returns the nested 'prescription' object
+            let url = 'https://occupational-health-center-1.onrender.com/prescriptions/view/'; // Ensure this returns the nested 'prescription' object
             const response = await axios.get(url);
 
             console.log('Fetched prescriptions:', response.data);

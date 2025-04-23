@@ -147,11 +147,11 @@ const App = () => {
     // Display Toggle State
     const [activeAnalysis, setActiveAnalysis] = useState("footfall");  // 'footfall' or 'fitness'
 
-    // API calls,  visitData set to http://localhost:8000/visitData/
+    // API calls,  visitData set to https://occupational-health-center-1.onrender.com/visitData/
     useEffect(() => {
         const fetchFitnessData = async () => {
             try {
-                const resp = await axios.post("http://localhost:8000/fitnessData/");
+                const resp = await axios.post("https://occupational-health-center-1.onrender.com/fitnessData/");
                 console.log("Fitness data:", resp.data.data);
                 setFitnessVisitData(resp.data.data);
                 setOriginalFitnessData(resp.data.data);
@@ -162,7 +162,7 @@ const App = () => {
 
         const fetchVisitData = async () => {
             try {
-                const resp = await axios.post("http://localhost:8000/visitData/");
+                const resp = await axios.post("https://occupational-health-center-1.onrender.com/visitData/");
                 console.log("Visit data:", resp.data.data);
                 setVisitData(resp.data.data);
                 setOriginalVisitData(resp.data.data);

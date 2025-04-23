@@ -35,7 +35,7 @@ const WardConsumables = () => {
 
   const fetchWardConsumables = async () => {
     try {
-      let url = "http://localhost:8000/get_ward_consumable/";
+      let url = "https://occupational-health-center-1.onrender.com/get_ward_consumable/";
       const params = [];
       if (fromDate) params.push(`from_date=${fromDate}`);
       if (toDate) params.push(`to_date=${toDate}`);
@@ -81,7 +81,7 @@ const WardConsumables = () => {
   const fetchBrandSuggestions = debounce(async (chemicalName, medicineForm) => {
     if (chemicalName.length < 3 || !medicineForm) return;
     try {
-      const res = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setSuggestions(res.data.suggestions);
       setShowSuggestions(true);
     } catch (err) {
@@ -92,7 +92,7 @@ const WardConsumables = () => {
   const fetchChemicalSuggestions = debounce(async (brandName, medicineForm) => {
     if (brandName.length < 3 || !medicineForm) return;
     try {
-      const res = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
       setChemicalSuggestions(res.data.suggestions);
       setShowChemicalSuggestions(true);
     } catch (err) {
@@ -103,7 +103,7 @@ const WardConsumables = () => {
   const fetchDoseSuggestions = debounce(async (brandName, chemicalName, medicineForm) => {
     if (!brandName || !chemicalName || !medicineForm) return;
     try {
-      const res = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setDoseSuggestions(res.data.suggestions);
       setShowDoseSuggestions(res.data.suggestions.length > 1);
       if (!doseManuallyEntered && res.data.suggestions.length === 1) {
@@ -172,7 +172,7 @@ const WardConsumables = () => {
     }
 
     try {
-      await axios.post("http://localhost:8000/add_ward_consumable/", {
+      await axios.post("https://occupational-health-center-1.onrender.com/add_ward_consumable/", {
         ...formData,
         consumed_date: getTodayDate()
       });

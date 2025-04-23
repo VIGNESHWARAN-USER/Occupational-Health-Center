@@ -36,7 +36,7 @@ const Forgot = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:8000/forgot_password/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/forgot_password/", {
         username: name,
       });
 
@@ -62,7 +62,7 @@ const Forgot = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:8000/verify_otp/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/verify_otp/", {
         username: name,
         otp,
       });
@@ -93,7 +93,7 @@ const Forgot = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post("http://localhost:8000/reset_password/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/reset_password/", {
         username: name,
         newPassword: newPass,
       });

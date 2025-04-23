@@ -94,7 +94,7 @@ const InstrumentCalibration = () => {
 
   const fetchPendingCalibrations = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/get_pending_calibrations/");
+      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_pending_calibrations/");
       setPendingCalibrations(response.data.pending_calibrations);
     } catch (error) {
       console.error("Error fetching pending calibrations:", error);
@@ -103,7 +103,7 @@ const InstrumentCalibration = () => {
 
   const fetchCalibrationHistory = async () => {
     try {
-      const response = await axios.get("http://localhost:8000/get_calibration_history/");
+      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibration_history/");
       setCalibrationHistory(response.data.calibration_history);
       setShowHistory(true);
     } catch (error) {
@@ -130,7 +130,7 @@ const InstrumentCalibration = () => {
     }
 
     try {
-      await axios.post("http://localhost:8000/add_instrument/", newInstrument);
+      await axios.post("https://occupational-health-center-1.onrender.com/add_instrument/", newInstrument);
       setShowModal(false);
       fetchPendingCalibrations();
       setNewInstrument({
@@ -168,7 +168,7 @@ const InstrumentCalibration = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:8000/complete_calibration/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/complete_calibration/", {
         id: selectedInstrument.id,
         ...completionDetails
       });

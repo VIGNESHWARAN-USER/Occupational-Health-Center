@@ -13,8 +13,8 @@ const CurrentStock = () => {
   useEffect(() => {
     const doArchiveAndFetch = async () => {
       try {
-        await axios.post("http://localhost:8000/archive_stock/");
-        const res = await axios.get("http://localhost:8000/current_stock/");
+        await axios.post("https://occupational-health-center-1.onrender.com/archive_stock/");
+        const res = await axios.get("https://occupational-health-center-1.onrender.com/current_stock/");
         setStockData(res.data.stock);
         setFilteredData(res.data.stock);
       } catch (err) {

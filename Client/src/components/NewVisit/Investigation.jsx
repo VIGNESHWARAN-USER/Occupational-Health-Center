@@ -180,7 +180,7 @@ function InvestigationForm({ data }) {
         alert(`No submission endpoint configured for "${selectedOption}".`);
         return;
     }
-    const url = `http://localhost:8000/${endpoint}`; // Construct full URL
+    const url = `https://occupational-health-center-1.onrender.com/${endpoint}`; // Construct full URL
 
     try {
       // Ensure aadhar is included, but NOT emp_no unless specifically needed by backend

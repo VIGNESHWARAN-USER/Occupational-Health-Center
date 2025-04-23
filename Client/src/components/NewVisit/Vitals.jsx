@@ -246,7 +246,7 @@ const VitalsForm = ({ data, type }) => {
         }
 
         // Replace with your actual backend API endpoint URL
-        const apiUrl = "http://localhost:8000/addvitals";
+        const apiUrl = "https://occupational-health-center-1.onrender.com/addvitals";
 
         try {
             // Send as multipart/form-data using Axios

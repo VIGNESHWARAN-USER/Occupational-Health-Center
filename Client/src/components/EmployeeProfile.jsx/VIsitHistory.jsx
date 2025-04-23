@@ -18,7 +18,7 @@ const VisitHistory = ({ data }) => {
         const fetchVisitData = async () => {
             try {
                 const response = await axios.post(
-                    `http://localhost:8000/visitData/${emp_no}`
+                    `https://occupational-health-center-1.onrender.com/visitData/${emp_no}`
                 );
                 const data = await response.data.data;
                 console.log(data);
