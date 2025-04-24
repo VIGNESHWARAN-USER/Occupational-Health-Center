@@ -52,7 +52,7 @@ const Sidebar = () => {
     if (accessLevel === 'nurse' || accessLevel === 'doctor') {
         try {
         const response = await axios.get("https://occupational-health-center-1.onrender.com/get_red_status_count/");
-        setPendingCount(response.data.count);
+        setPendingCount(response.data.red_count);
         } catch (error) {
         console.error("Error fetching red count:", error);
         setPendingCount(0); // Default to 0 on error
