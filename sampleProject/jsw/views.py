@@ -3817,6 +3817,7 @@ def get_current_stock(request):
     Combine quantities for duplicate entries.
     """
     try:
+        print(PharmacyStock.objects.values())
         stock_data = (
             PharmacyStock.objects
             .values("entry_date", "medicine_form", "brand_name", "chemical_name", "dose_volume", "expiry_date")
@@ -3845,6 +3846,71 @@ def get_current_stock(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def get_stock_history(request):
+    """
+    Fetch stock history grouped by Medicine Form, Brand Name, Chemical Name, Dose/Volume, and Expiry Date.
+    Combine total_quantities for duplicate entries based on the grouping.
+    """
+    try:
+        # Optional: Keep this print for debugging during development
+        # print(PharmacyStockHistory.objects.values())
+
+        # Define the fields to group by
+        grouping_fields = [
+            # "entry_date", # Usually you don't group history by entry_date unless you want sums *per day*
+            "medicine_form",
+            "brand_name",
+            "chemical_name",
+            "dose_volume",
+            "expiry_date"
+         ]
+
+        # Fetch and aggregate data
+        stock_data = (
+            PharmacyStockHistory.objects
+            .values(*grouping_fields) # Group by these fields
+            .annotate(
+                total_quantity_sum=Sum("total_quantity"),
+                # Removed Sum("quantity") as 'quantity' doesn't exist in PharmacyStockHistory
+                # Also fetch the latest entry_date for context within the group
+                latest_entry_date=Max("entry_date")
+            )
+            .order_by("medicine_form", "brand_name", "chemical_name", "dose_volume", "expiry_date")
+        )
+
+        # Optional: Keep this print for debugging
+        # print(stock_data)
+
+        # Format the data for the response
+        data = [
+            {
+                # Use the latest entry date associated with this group
+                "entry_date": entry["latest_entry_date"].strftime("%Y-%m-%d") if entry.get("latest_entry_date") else None,
+                "medicine_form": entry["medicine_form"],
+                "brand_name": entry["brand_name"],
+                "chemical_name": entry["chemical_name"],
+                "dose_volume": entry["dose_volume"],
+                # Renamed for clarity, reflects the sum of 'total_quantity' from history records
+                "total_quantity_recorded": entry["total_quantity_sum"],
+                # Removed 'quantity_expiry' as 'quantity' doesn't exist
+                "expiry_date": entry["expiry_date"].strftime("%b-%y"),  # e.g., 'Jul-25'
+            }
+            for entry in stock_data
+        ]
+
+        return JsonResponse({"stock_history": data}, safe=False) # Changed key to 'stock_history'
+
+    except Exception as e:
+        # It's good practice to log the error too
+        # import logging
+        # logging.exception("Error in get_stock_history")
+        print(f"Error in get_stock_history: {e}") # Print error for debugging
+        return JsonResponse({"error": str(e)}, status=500)
+
+
 @csrf_exempt # Should be GET
 def get_current_expiry(request):
     """
@@ -4194,7 +4260,7 @@ from dateutil.relativedelta import relativedelta
 
 def get_next_due_date(calibration_date_str, freq):
     calibration_date = datetime.strptime(calibration_date_str, "%Y-%m-%d")
-    freq = freq.lower()
+    freq = freq.lower().strip()
 
     if freq == "yearly":
         return calibration_date + relativedelta(years=1)
@@ -4204,6 +4270,13 @@ def get_next_due_date(calibration_date_str, freq):
         return calibration_date + relativedelta(months=3)
     elif freq == "monthly":
         return calibration_date + relativedelta(months=1)
+    elif freq == "once in 2 months":
+        return calibration_date + relativedelta(months=2)
+    elif freq == "once in 2 years":
+        return calibration_date + relativedelta(years=2)
+
+    # You can log unknown freq for debugging if needed
+    print(f"Unrecognized frequency: {freq}")
     return None
 
 
@@ -4315,14 +4388,15 @@ def complete_calibration(request):
             data = json.loads(request.body)
             instrument_id = data.get("id")
             freq = data.get("freq")
+            today = datetime.today().date()
             next_due = get_next_due_date(str(today), freq)
-            next_due_date=next_due
+            next_due_date = next_due.date()
 
             if not (instrument_id and freq and next_due_date):
                 return JsonResponse({"error": "Missing fields"}, status=400)
 
-            today = datetime.today().date()
-            next_due_date = datetime.strptime(next_due_date, "%Y-%m-%d").date()
+            
+            next_due_date = next_due_date
 
             # Get the instrument's base record
             old_record = InstrumentCalibration.objects.get(id=instrument_id)
@@ -4355,6 +4429,56 @@ def complete_calibration(request):
             return JsonResponse({"error": str(e)}, status=500)
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=405)
+   
+
+
+@csrf_exempt
+def add_instrument(request):
+    try:
+        if request.method != "POST":
+            return JsonResponse({"error": "Invalid method"}, status=405)
+
+        if not request.body:
+            return JsonResponse({"error": "Empty request body"}, status=400)
+
+        body_unicode = request.body.decode('utf-8')
+        data = json.loads(body_unicode)
+
+        # Ensure all required fields are present
+        required_fields = [
+            "equipment_sl_no", 
+            "instrument_name", 
+            "numbers", 
+            "calibration_date", 
+            "next_due_date", 
+            "calibration_status"
+        ]
+        if any(field not in data or not data[field] for field in required_fields):
+            return JsonResponse({"error": "Missing required fields"}, status=400)
+        
+        next_due_date = get_next_due_date(data["calibration_date"], data["freq"])
+
+        # Create the new instrument record
+        InstrumentCalibration.objects.create(
+            equipment_sl_no=data["equipment_sl_no"],
+            instrument_name=data["instrument_name"],
+            numbers=data["numbers"],
+            certificate_number=data.get("certificate_number"),
+            make=data.get("make"),
+            model_number=data.get("model_number"),
+            freq=data.get("freq"),
+            calibration_date=data["calibration_date"],
+            next_due_date=next_due_date.strftime("%Y-%m-%d"),
+            calibration_status=bool(int(data["calibration_status"]))
+        )
+
+        return JsonResponse({"message": "Instrument added successfully"}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
     
 
 
@@ -4736,6 +4860,8 @@ def get_red_status_count(request):
     try:
         today = datetime.today().date()
         red_count = 0
+        yellow_count = 0
+        green_count = 0
         instruments = InstrumentCalibration.objects.filter(calibration_status=False)
         for instrument in instruments:
             if not instrument.next_due_date or not instrument.freq:
@@ -4746,10 +4872,13 @@ def get_red_status_count(request):
             diff_in_days = (due_date - today).days
             months_diff = diff_in_days / 30.44
             fraction = months_diff / total_months
-            if fraction < 0.33:
+            if fraction >= 0.66:
+                green_count += 1
+            elif fraction >=0.33:
+                yellow_count += 1
+            else:
                 red_count += 1
 
-        print(f"Final RED count: {red_count}")
-        return JsonResponse({"count": red_count})
+        return JsonResponse({"red_count": red_count,"yellow_count": yellow_count,"green_count": green_count})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

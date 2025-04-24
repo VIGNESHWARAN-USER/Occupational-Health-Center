@@ -87,6 +87,7 @@ urlpatterns = [
     # Pharmacy / Inventory / Calibration (Unchanged - No apparent emp_no/aadhar link)
     path("add-stock/", views.add_stock, name="add-stock"),
     path('current_stock/', views.get_current_stock, name='current_stock'),
+    path('stock_history/', views.get_stock_history, name='stock_history'),
     path('current_expiry/', views.get_current_expiry, name='current_expiry'),
     path('remove_expiry/', views.remove_expired_medicine, name='remove_expiry'),
     path("expiry_register/", views.get_expiry_register, name="expiry_register"),

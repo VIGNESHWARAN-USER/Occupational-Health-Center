@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { debounce } from "lodash"; // ✅ Import debounce
 import Sidebar from "../Sidebar";
+import { useNavigate } from "react-router-dom";
 
 const AddStock = () => {
   const [formData, setFormData] = useState({
@@ -166,7 +167,7 @@ const AddStock = () => {
     }
     fetchDoseSuggestions(suggestion, formData.chemical_name, formData.medicine_form);
   };
-  
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -200,8 +201,13 @@ const AddStock = () => {
     <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
+        <div className="flex justify-between">
+        <h2 className="text-3xl font-bold mb-4">Add Stock</h2>
+        <button onClick={()=>{navigate('../stockhistory')}} className="bg-green-500 text-white px-4 py-2 rounded-lg font-bold">View History</button>
+        </div>
+      
         <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold mb-4">Add Stock</h2>
+          
           {message && <p className="text-red-600">{message}</p>}
           <form onSubmit={handleSubmit} className="space-y-4">
           <div>

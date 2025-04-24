@@ -1744,7 +1744,9 @@ class SignificantNotes(BaseModel):
 
 # --- Pharmacy Stock History Model ---
 # No emp_no, so no aadhar added here
-class PharmacyStockHistory(BaseModel):
+#Don't add the BaseModel Here.
+class PharmacyStockHistory(models.Model):
+    entry_date = models.DateField(default = timezone.now)
     medicine_form = models.CharField(max_length=20)
     brand_name = models.CharField(max_length=255)
     chemical_name = models.CharField(max_length=255)
