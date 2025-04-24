@@ -1489,6 +1489,9 @@ class PharmacyStock(BaseModel):
         DROPS = "Drops", "Drops"
         FLUIDS = "Fluids", "Fluids"
         OTHER = "Other", "Other"
+        LOTIONS = "Lotions", "Lotions"
+        POWDER = "Powder", "Powder"
+        RESPULES = "Respules", "Respules"
     medicine_form = models.CharField(max_length=20, choices=MedicineFormChoices.choices)
     brand_name = models.CharField(max_length=255)
     chemical_name = models.CharField(max_length=255)
@@ -1553,7 +1556,7 @@ class WardConsumables(BaseModel):
 # --- Pharmacy Medicine Model ---
 # No emp_no, so no aadhar added here
 class PharmacyMedicine(BaseModel):
-    MEDICINE_FORMS = [("Tablet", "Tablet"), ("Syrup", "Syrup"), ("Injection", "Injection"), ("Creams", "Creams"), ("Drops", "Drops"), ("Fluids", "Fluids"), ("Other", "Other"),]
+    MEDICINE_FORMS = [("Tablet", "Tablet"), ("Syrup", "Syrup"), ("Injection", "Injection"), ("Creams", "Creams"),("Lotions","Lotions"),("Powder","Powder"),("Respules","Respules"), ("Drops", "Drops"), ("Fluids", "Fluids"), ("Other", "Other"),]
     medicine_form = models.CharField(max_length=20, choices=MEDICINE_FORMS)
     brand_name = models.CharField(max_length=255)
     chemical_name = models.CharField(max_length=255)
