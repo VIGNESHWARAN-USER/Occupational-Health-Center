@@ -17,8 +17,6 @@ const NewVisit = ({data}) => {
     { id: "DocMedicalHistory", label: "Medical/Surgical/Personal History" },
     { id: "DocInvestigations", label: "Investigations" },
     { id: "DocVaccination", label: "Vaccination" },
-    { id: "DocFitness", label: "Fitness" },
-    { id: "Consultation", label: "Consultation" },
     { id: "Visithistory", label: "Visit History" },
   ];
 

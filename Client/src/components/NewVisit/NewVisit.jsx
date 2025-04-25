@@ -847,6 +847,23 @@ const NewVisit = () => {
                       />
                     </div>)
                   }
+
+                  {type === "Contractor" &&
+                    (<div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Status
+                      </label>
+                        <select name="contractor_status" value={formData.contractor_status || ""}
+                        onChange={handleChange}  id="" className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                          <option value="">Select</option>
+                          <option value="mbc">MBC</option>
+                          <option value="jbc">JBC</option>
+                          <option value="jbn">JBN</option>
+                          <option value="shutdown">Shutdown</option>
+                        </select>
+                    </div>)
+                  }
                   <div>
                     <label className="block text-sm font-medium text-gray-700 ">Designation</label>
                     <input

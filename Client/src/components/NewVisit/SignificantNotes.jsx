@@ -77,7 +77,7 @@ const SignificantNotes = ({ data, type }) => {
     { value: 'Notification 2', label: 'Notifcation 2' },
     { value: 'Notification 3', label: 'Notifcation 3' }
   ];
-  const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' } ];
+  const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' }, { value: 'RWC', label: 'RWC' } ];
   const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Injury', label: 'Occupational Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Communication Injury', label: 'Communication Injury'}, {value: 'Others', label: 'Others'} ];
   const illnessTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Illness', label: 'Occupational Illness'}, {value: 'Occupational Disease', label: 'Occupational Disease'} ];
 
@@ -362,7 +362,7 @@ const SignificantNotes = ({ data, type }) => {
              {/* History Column */}
              <div className="h-64"> {/* Fixed height for history list consistency */}
                 <HistoryList
-                    title="Communicable Disease History"
+                    title="Notification History"
                     notes={historicalNotes}
                     fieldKey="communicable_disease" // Use the correct field key from your API data
                     isLoading={isLoadingHistory}

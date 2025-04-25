@@ -298,11 +298,68 @@ const Consultation = ({ data, type }) => {
              </div>
          </div>
 
+         {type !== '' && (
+          <div className="border-t pt-6 space-y-4">
+             <h3 className="text-xl font-semibold mb-2">Shifting In Ambulance</h3>
+            <div>
+              <div className="flex items-center gap-4 md:gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="referral" value="yes"
+                    checked={referral === 'yes'} onChange={() => setReferral('yes')}
+                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                  /> Yes
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="referral" value="no"
+                    checked={referral === 'no'} onChange={() => setReferral('no')}
+                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                  /> No
+                </label>
+                 <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="referral" value="" // Represents 'null'
+                    checked={referral === null || referral === ''} onChange={() => setReferral(null)}
+                    className="form-radio text-gray-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                  /> N/A
+                </label>
+              </div>
+            </div>
+
+            {/* Show referral details only if 'yes' is selected */}
+            {referral === 'yes' && (
+                <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1"> {/* Indent referral details */}
+                 <div>
+                    <label htmlFor="hospitalName" className={labelClasses}>Hospital Name</label>
+                    <input id="hospitalName" type="text" className={inputClasses}
+                        placeholder="Enter hospital name..." value={hospitalName}
+                        onChange={(e) => setHospitalName(e.target.value)} disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="speciality" className={labelClasses}>Speciality</label>
+                    <input id="speciality" type="text" className={inputClasses}
+                        placeholder="Enter speciality (e.g., Cardiology)..." value={speciality} /* Corrected */
+                        onChange={(e) => setSpeciality(e.target.value)} /* Corrected */ disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="doctorName" className={labelClasses}>Referred Doctor Name (Optional)</label>
+                    <input id="doctorName" type="text" className={inputClasses}
+                        placeholder="Enter referred doctor's name if known..." value={doctorName}
+                        onChange={(e) => setDoctorName(e.target.value)} disabled={!isDoctor}
+                    />
+                </div>
+                </div>
+            )}
+          </div>
+        )}
+
 
         {/* Referral Section - Conditionally Rendered */}
-        {type !== 'Visitor' && (
+        {type !== '' && (
           <div className="border-t pt-6 space-y-4">
-             <h3 className="text-xl font-semibold mb-2">Referral (Optional)</h3>
+             <h3 className="text-xl font-semibold mb-2">Referral</h3>
             <div>
               <label className={labelClasses}>Do you need a referral?</label>
               <div className="flex items-center gap-4 md:gap-6">
