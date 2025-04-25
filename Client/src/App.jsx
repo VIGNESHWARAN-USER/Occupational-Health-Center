@@ -31,6 +31,7 @@ import WardConsumable from './components/Pharmacy/wardconsumable'
 import InstrumentCalibration from './components/instrumentcalibration'
 import Viewprescription from './components/Pharmacy/viewprescription'
 import StockHistory from './components/Pharmacy/stockHistory'
+import AmbulanceConsumables from './components/Pharmacy/ambulanceconsumable'
 
 function App() {
   return (
@@ -65,6 +66,7 @@ function App() {
           <Route path = '/expiryregister' element = {<ExpiryRegister/>}/>
           <Route path = '/discarddamaged' element = {<DiscardedMedicines/>}/>
           <Route path = '/wardconsumable' element = {<WardConsumable/>}/>
+          <Route path = '/ambulanceconsumable' element= {<AmbulanceConsumables/>}/>
           <Route path = '/instrumentcalibration' element = {<InstrumentCalibration/>}/>
           <Route path = '/addstock' element = {<AddStock/>}/>
           <Route path = '/currentstock' element = {<CurrentStock/>}/>

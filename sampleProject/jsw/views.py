@@ -36,7 +36,7 @@ from matplotlib.offsetbox import TextArea
 
 # App specific models
 from .models import (
-    AutoimmuneTest, CTReport, CultureSensitivityTest, Member, Dashboard, FitnessAssessment, OccupationalProfile, OthersTest, Prescription, Appointment,
+    AmbulanceConsumables, AutoimmuneTest, CTReport, CultureSensitivityTest, Member, Dashboard, FitnessAssessment, OccupationalProfile, OthersTest, Prescription, Appointment,
     DiscardedMedicine, InstrumentCalibration, PharmacyMedicine,
     PharmacyStockHistory, WardConsumables, WomensPack, XRay, user, mockdrills,
     ReviewCategory, Review, eventsandcamps, VaccinationRecord,
@@ -4132,8 +4132,7 @@ def add_discarded_medicine(request):
                     return JsonResponse({"error": f"Not enough stock. Available: {stock_item.quantity}.", "success": False}, status=400)
 
                 stock_item.quantity -= quantity_to_discard
-                if stock_item.quantity <= 0: stock_item.delete()
-                else: stock_item.save()
+                stock_item.save()
 
                 DiscardedMedicine.objects.create(
                     medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
@@ -4195,6 +4194,135 @@ def get_ward_consumables(request):
             "error": "An internal server error occurred while fetching consumables.",
             "detail": str(e)
         }, status=500)
+    
+
+@csrf_exempt
+def get_ambulance_consumables(request):
+    try:
+        ambulance_consumables_qs = AmbulanceConsumables.objects.all()
+
+        from_date = request.GET.get("from_date")
+        to_date = request.GET.get("to_date")
+
+        if from_date:
+            ambulance_consumables_qs = ambulance_consumables_qs.filter(consumed_date__gte=from_date)
+        if to_date:
+            ambulance_consumables_qs = ambulance_consumables_qs.filter(consumed_date__lte=to_date)
+
+        ambulance_consumables_qs = ambulance_consumables_qs.order_by("-entry_date").values(
+            "id", "entry_date", "medicine_form", "brand_name", "chemical_name",
+            "dose_volume", "quantity", "expiry_date", "consumed_date"
+        )
+
+        data = []
+        for entry in ambulance_consumables_qs:
+            expiry_date_str = entry["expiry_date"].strftime("%b-%y") if entry.get("expiry_date") else None
+            consumed_date_str = entry["consumed_date"].strftime("%Y-%m-%d") if entry.get("consumed_date") else None
+            entry_date_str = entry["entry_date"].strftime("%Y-%m-%d %H:%M:%S") if entry.get("entry_date") else None
+
+            data.append({
+                "id": entry["id"],
+                "entry_date": entry_date_str,
+                "medicine_form": entry["medicine_form"],
+                "brand_name": entry["brand_name"],
+                "chemical_name": entry["chemical_name"],
+                "dose_volume": entry["dose_volume"],
+                "quantity": entry["quantity"],
+                "expiry_date": expiry_date_str,
+                "consumed_date": consumed_date_str,
+            })
+
+        return JsonResponse({"ambulance_consumables": data}, safe=False)
+
+    except Exception as e:
+        print(f"Error in get_ambulance_consumables: {e}")
+        return JsonResponse({
+            "error": "An internal server error occurred while fetching consumables.",
+            "detail": str(e)
+        }, status=500)
+
+
+
+@csrf_exempt
+def add_ambulance_consumable(request):
+    """
+    Add a new Ambulance consumable entry, and update PharmacyStock.
+    Mirrors the logic of add_discarded_medicine.
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            medicine_form = data.get("medicine_form")
+            brand_name = data.get("brand_name")
+            chemical_name = data.get("chemical_name")
+            dose_volume = data.get("dose_volume")
+            expiry_date = data.get("expiry_date") # Expecting YYYY-MM-DD string
+            consumed_date = data.get("consumed_date") # Expecting YYYY-MM-DD string
+            try:
+                # Parse expiry_date as a month-year string
+                expiry_date_obj = datetime.strptime(expiry_date, "%Y-%m")
+                expiry_date = expiry_date_obj.replace(day=1).date()  # Set day to 1st
+            except ValueError:
+                return JsonResponse({"error": "Invalid expiry date format. Expected YYYY-MM.", "success": False}, status=400)
+
+
+            try:
+                quantity_to_consume = int(data.get("quantity", 0))
+            except (ValueError, TypeError):
+                 return JsonResponse({"error": "Invalid quantity provided.", "success": False}, status=400)
+            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_to_consume > 0, consumed_date]):
+                 return JsonResponse({"error": "Missing required consumable information.", "success": False}, status=400)
+
+            
+            with transaction.atomic():
+                matching_medicine = PharmacyStock.objects.filter(
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    chemical_name=chemical_name,
+                    dose_volume=dose_volume,
+                    expiry_date=expiry_date # Match the exact expiry date
+                ).first()
+
+                if not matching_medicine:
+                    return JsonResponse({"error": "Matching medicine batch not found in PharmacyStock.", "success": False}, status=404) # 404 Not Found is appropriate
+
+                # Check if sufficient quantity is available in PharmacyStock
+                if matching_medicine.quantity < quantity_to_consume:
+                    return JsonResponse({
+                        "error": f"Not enough quantity available in PharmacyStock. Available: {matching_medicine.quantity}, Requested: {quantity_to_consume}.",
+                        "success": False
+                    }, status=400) # 400 Bad Request is appropriate
+
+                # Reduce quantity in PharmacyStock
+                matching_medicine.quantity -= quantity_to_consume
+                matching_medicine.save()
+
+                AmbulanceConsumables.objects.create(
+                    entry_date=matching_medicine.entry_date,
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    chemical_name=chemical_name,
+                    dose_volume=dose_volume,
+                    quantity=quantity_to_consume,
+                    expiry_date=expiry_date,
+                    consumed_date=consumed_date, # Use date sent from frontend
+                )
+
+            # If transaction completes without error
+            return JsonResponse({"message": "Ambulance consumable added and stock updated successfully", "success": True})
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format.", "success": False}, status=400)
+        except Exception as e:
+            # Log the exception for debugging
+            print(f"Error in add_ward_consumable: {e}")
+            # Provide a more user-friendly generic error
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e), "success": False}, status=500)
+
+    return JsonResponse({"error": "Invalid request method. Only POST is allowed.", "success": False}, status=405) # 405 Method Not Allowed
+
+
+    
 @csrf_exempt
 def add_ward_consumable(request):
     """ Records a ward consumable usage and updates (decrements) PharmacyStock. """
@@ -4234,11 +4362,10 @@ def add_ward_consumable(request):
                     return JsonResponse({"error": f"Not enough stock. Available: {stock_item.quantity}.", "success": False}, status=400)
 
                 stock_item.quantity -= quantity_to_consume
-                if stock_item.quantity <= 0: stock_item.delete()
-                else: stock_item.save()
+                stock_item.save()
 
                 WardConsumables.objects.create(
-                    entry_date=timezone.now(), medicine_form=medicine_form, brand_name=brand_name,
+                    entry_date=stock_item.entry_date, medicine_form=medicine_form, brand_name=brand_name,
                     chemical_name=chemical_name, dose_volume=dose_volume, quantity=quantity_to_consume,
                     expiry_date=expiry_date_obj, consumed_date=consumed_date_obj,
                 )

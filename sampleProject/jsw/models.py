@@ -1552,6 +1552,20 @@ class WardConsumables(BaseModel):
     def __str__(self):
         consumed_date_str = self.consumed_date.strftime('%Y-%m-%d') if self.consumed_date else 'N/A'
         return f"{self.brand_name} ({self.dose_volume}) - Consumed {consumed_date_str}"
+    
+
+class AmbulanceConsumables(models.Model):
+    entry_date = models.DateField(default=timezone.now)
+    medicine_form = models.CharField(max_length=20)
+    brand_name = models.CharField(max_length=255)  # Medicine name given by the company
+    chemical_name = models.CharField(max_length=255)  # Active ingredient
+    dose_volume = models.CharField(max_length=50)
+    quantity = models.PositiveIntegerField()
+    expiry_date = models.DateField()
+    consumed_date = models.DateField(auto_now_add=True)  # Date when medicine was discarded
+
+    def _str_(self):
+        return f"{self.brand_name} ({self.dose_volume}) - {self.discarded_date}"
 
 # --- Pharmacy Medicine Model ---
 # No emp_no, so no aadhar added here

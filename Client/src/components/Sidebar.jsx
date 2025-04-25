@@ -7,7 +7,8 @@ import {
   FaSignOutAlt,
   FaPills,
   FaBars, // Added for hamburger icon
-  FaTimes, // Added for close icon
+  FaTimes,
+  FaAmbulance, // Added for close icon
 } from "react-icons/fa";
 import {
   MdDashboard,
@@ -116,6 +117,7 @@ const Sidebar = () => {
       { name: "Expiry Register", to: "../expiryregister", icon: <MdWarning /> },
       { name: "Discard/Damaged", to: "../discarddamaged", icon: <MdDelete /> },
       { name: "Ward Consumable", to: "../wardconsumable", icon: <MdInventory /> },
+      { name: "Ambulance Consumable", to: "../ambulanceconsumable", icon: <FaAmbulance /> },
     ],
   };
 

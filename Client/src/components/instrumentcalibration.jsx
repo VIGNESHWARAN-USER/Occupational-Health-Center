@@ -320,13 +320,13 @@ const InstrumentCalibration = () => {
 
               <div className="flex space-x-2">
                 <div className="px-3 py-2 bg-red-600 text-white rounded shadow">
-                  Red: {statusCounts.red_count}
+                  {statusCounts.red_count}
                 </div>
                 <div className="px-3 py-2 bg-yellow-500 text-white rounded shadow">
-                  Yellow: {statusCounts.yellow_count}
+                  {statusCounts.yellow_count}
                 </div>
                 <div className="px-3 py-2 bg-green-600 text-white rounded shadow">
-                  Green: {statusCounts.green_count}
+                  {statusCounts.green_count}
                 </div>
               </div>
             </>
