@@ -1570,7 +1570,7 @@ class PharmacyMedicine(BaseModel):
 
 # --- Instrument Calibration Model ---
 # No emp_no, so no aadhar added here
-class InstrumentCalibration(models.Model): # Not inheriting BaseModel
+class InstrumentCalibration(BaseModel): # Not inheriting BaseModel
     equipment_sl_no = models.CharField(max_length=255)
     instrument_name = models.CharField(max_length=255)
     numbers = models.IntegerField()

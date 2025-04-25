@@ -359,10 +359,11 @@ const InstrumentCalibration = () => {
                   <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.next_due_date}</td>
                   <td className="border px-3 py-2 text-sm text-center">
                     <button
-                      className={`${getButtonColor(item.next_due_date, item.freq)} text-white py-1 px-3 rounded hover:opacity-80`}
+                      className={`${getButtonColor(item.next_due_date, item.freq)} text-white py-3 px-4 rounded hover:opacity-80`}
                       onClick={() => handleOpenCompleteModal(item)}
+                      disabled = {`${getButtonColor(item.next_due_date, item.freq)}` === "bg-green-600"}
                     >
-                      Complete
+                      
                     </button>
                   </td>
                 </tr>
