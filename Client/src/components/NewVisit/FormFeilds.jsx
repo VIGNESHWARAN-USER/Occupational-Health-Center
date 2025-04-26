@@ -1,14 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-// import { motion } from 'framer-motion'; // Keep if you plan animations later
-// import { FaFileUpload } from 'react-icons/fa'; // Keep if you plan file uploads
-
-// Assume logo is passed as a prop or imported if static
-// import logoImg from '../assets/logo.png';
-
-// Helper function to get default form structure (remains the same)
 const getDefaultFormData = (formType) => {
-    // ... (keep the existing getDefaultFormData function as is)
     switch (formType) {
         case 'ophthalmicReport':
             return {

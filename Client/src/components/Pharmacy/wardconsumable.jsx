@@ -12,6 +12,7 @@ const WardConsumables = () => {
     brand_name: "",
     dose_volume: "",
     quantity: "",
+    total_quantity: "",
     expiry_date: "",
     consumed_date: new Date().toISOString().split("T")[0],
   });
@@ -166,7 +167,7 @@ const WardConsumables = () => {
     e.preventDefault();
     setMessage("");
 
-    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.consumed_date) {
+    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.total_quantity || !formData.consumed_date) {
       setMessage("All required fields must be filled.");
       return;
     }
@@ -184,6 +185,7 @@ const WardConsumables = () => {
         brand_name: "",
         dose_volume: "",
         quantity: "",
+        total_quantity: "",
         expiry_date: "",
         consumed_date: getTodayDate(),
       });
@@ -203,6 +205,7 @@ const WardConsumables = () => {
       brand_name: "",
       dose_volume: "",
       quantity: "",
+      total_quantity: "",
       expiry_date: "",
       consumed_date: getTodayDate(),
     });
@@ -278,6 +281,7 @@ const WardConsumables = () => {
                       <th className="p-3 text-left">Brand</th>
                       <th className="p-3 text-left">Dose</th>
                       <th className="p-3 text-left">Qty</th>
+                      <th className="p-3 text-left">Total Qty</th>
                       <th className="p-3 text-left">Expiry</th>
                       <th className="p-3 text-left">Consumed</th>
                     </tr>
@@ -290,6 +294,7 @@ const WardConsumables = () => {
                         <td className="p-2">{item.brand_name}</td>
                         <td className="p-2">{item.dose_volume}</td>
                         <td className="p-2">{item.quantity}</td>
+                        <td className="p-2">{item.total_quantity}</td>
                         <td className="p-2">{item.expiry_date || "N/A"}</td>
                         <td className="p-2 text-red-600 font-semibold">
                           {new Date(item.consumed_date).toLocaleDateString("en-GB", {
@@ -421,6 +426,19 @@ const WardConsumables = () => {
                   value={formData.quantity}
                   onChange={handleChange}
                   min="1" // Ensure quantity is positive
+                  className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-medium mb-1">Total Quantity <span className="text-red-500">*</span></label>
+                <input
+                  type="number"
+                  name="total_quantity"
+                  value={formData.total_quantity}
+                  onChange={handleChange}
+                  min="1" // Ensure total_quantity is positive
                   className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
