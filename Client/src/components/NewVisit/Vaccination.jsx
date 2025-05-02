@@ -225,7 +225,7 @@ const Vaccination = ({ data }) => {
               {/* Disease, Vaccine Name, Status */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label htmlFor={`disease_name_${vIndex}`} className="block text-sm font-medium text-gray-700 mb-1">Disease Name <span className="text-red-500">*</span></label>
+                  <label htmlFor={`disease_name_${vIndex}`} className="block text-sm font-medium text-gray-700 mb-1">Vaccine<span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     id={`disease_name_${vIndex}`}

@@ -330,7 +330,7 @@ function InvestigationForm({ data }) {
                   // Use formData state for controlled input, fallback to empty string
                   value={formData[valueKey] !== undefined ? formData[valueKey] : ""}
                   onChange={handleChange}
-                  placeholder="Result"
+                  placeholder="Normal / Abnormal (Result)"
                 />
               </div>
 

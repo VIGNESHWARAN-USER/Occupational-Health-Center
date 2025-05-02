@@ -1574,26 +1574,7 @@ const NewVisit = () => {
                     </div>
                   </div>
                 )}
-
-                {register.startsWith("Special Work Fitness") && (
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
-                      <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
-                        <option value="">Select</option>
-                        <option value="Height Work">Height</option>
-                        <option value="Gas Line Work">Gas Line</option>
-                        <option value="Confined Space Work">Confined Space</option>
-                        <option value="SCBA Rescue Work">SCBA Rescuer</option>
-                        <option value="Fire Rescue Work">Fire Rescuer</option>
-                        <option value="Lone Man Work">Lone Worker</option>
-                        <option value="Fisher Man Work">Fisher Man</option>
-                        <option value="Snake Catcher Work">Snake Catcher</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
+                
                 {register.startsWith("BP Sugar Check") && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>

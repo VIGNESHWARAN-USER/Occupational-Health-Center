@@ -72,10 +72,10 @@ const SignificantNotes = ({ data, type }) => {
   // --- Dropdown Options (replace with your actual options) ---
   const communicableDiseaseOptions = [
     { value: '', label: 'Select...' }, // Add a default empty option
-    { value: 'Notification 0', label: 'Notifcation 0' },
-    { value: 'Notification 1', label: 'Notifcation 1' },
-    { value: 'Notification 2', label: 'Notifcation 2' },
-    { value: 'Notification 3', label: 'Notifcation 3' }
+    { value: 'Notification 0', label: 'Notification 0' },
+    { value: 'Notification 1', label: 'Notification 1' },
+    { value: 'Notification 2', label: 'Notification 2' },
+    { value: 'Notification 3', label: 'Notification 3' }
   ];
   const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' }, { value: 'RWC', label: 'RWC' } ];
   const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Injury', label: 'Occupational Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Communication Injury', label: 'Communication Injury'}, {value: 'Others', label: 'Others'} ];

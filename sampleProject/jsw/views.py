@@ -2090,7 +2090,7 @@ def fitness_test(request): # Removed pk argument, assumes aadhar in payload
             aadhar = data.get('aadhar')
             print("Data : ",data,"Aathar1 : ",aadhar) # Expect aadhar
             entry_date = date.today()
-
+            print(data)
             if not aadhar:
                 logger.warning(f"{log_prefix} failed: Aadhar required")
                 return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
@@ -2119,10 +2119,11 @@ def fitness_test(request): # Removed pk argument, assumes aadhar in payload
                 'conditional_fit_feilds': conditional_fit_fields_list, # Use parsed list
                 'general_examination': data.get("general_examination"),
                 'systematic_examination': data.get("systematic_examination"),
-                'eye_exam_result': data.get("eye_exam_result"),
                 'eye_exam_fit_status': data.get("eye_exam_fit_status"),
                 'validity': parse_date_internal(data.get("validity")), # Parse date
                 'comments': data.get("comments"),
+                'otherJobNature': data.get("other_job_nature"),
+                'conditionalotherJobNature': data.get("conditional_other_job_nature"),
                 'employer': data.get("employer"),
                 # Assuming 'emp_no' field still exists in FitnessAssessment, populate it if sent
                 'emp_no': data.get("emp_no")
@@ -2165,19 +2166,23 @@ def add_consultation(request):
     model_class = Consultation
     log_prefix = "add_consultation"
     success_noun = "Consultation"
-    # ... copy & adapt the logic from add_vital_details, parsing date fields ...
+
     if request.method == "POST":
         aadhar = None
         try:
             data = json.loads(request.body.decode('utf-8'))
+            logger.debug(f"Received data for {log_prefix}: {json.dumps(data)[:500]}...") # Log truncated data
+
             aadhar = data.get('aadhar')
-            entry_date = date.today()
+            entry_date = date.today() # Use today's date for the record
+
             if not aadhar:
                 logger.warning(f"{log_prefix} failed: Aadhar required")
                 return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
 
-            # Prepare defaults, mapping payload keys to model fields
+            # --- Prepare defaults dictionary, mapping payload keys to model fields ---
             defaults = {
+                # Existing Clinical Notes
                 'complaints': data.get('complaints'),
                 'examination': data.get('examination'),
                 'systematic': data.get('systematic'),
@@ -2185,44 +2190,80 @@ def add_consultation(request):
                 'diagnosis': data.get('diagnosis'),
                 'procedure_notes': data.get('procedure_notes'),
                 'obsnotes': data.get('obsnotes'),
+
+                # Investigation, Advice, Follow-up
                 'investigation_details': data.get('investigation_details'),
                 'advice': data.get('advice'),
                 'follow_up_date': parse_date_internal(data.get('follow_up_date')), # Parse date
+
+                # Case Details
                 'case_type': data.get('case_type'),
                 'illness_or_injury': data.get('illness_or_injury'),
                 'other_case_details': data.get('other_case_details'),
                 'notifiable_remarks': data.get('notifiable_remarks'),
-                'referral': data.get('referral'),
+
+                # Referral Details (Conditional based on 'referral' value)
+                'referral': data.get('referral'), # Stores 'yes', 'no', or null
                 'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else '',
-                'speciality': data.get('speciality') if data.get('referral') == 'yes' else '', # Corrected spelling
+                'speciality': data.get('speciality') if data.get('referral') == 'yes' else '',
                 'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else '',
-                'submitted_by_doctor': data.get('submitted_by_doctor'),
-                'submitted_by_nurse': data.get('submitted_by_nurse'),
-                # Special cases
-            'special_cases': data.get('special_cases'), # Get 'special_cases' value from payload
-                 # Assuming 'emp_no' field still exists in Consultation model
+
+                # --- NEW: Shifting Data (Conditional based on 'shifting_required' value) ---
+                'shifting_required': data.get('shifting_required'), # Stores 'yes', 'no', or null
+                'shifting_notes': data.get('shifting_notes') if data.get('shifting_required') == 'yes' else '',
+                'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else '',
+                # --- END: Shifting Data ---
+
+                # Special Cases
+                'special_cases': data.get('special_cases'),
+
+                # Submission Metadata
+                'submitted_by_doctor': data.get('submitted_by_doctor'), # Expecting username from frontend localStorage
+                'submitted_by_nurse': data.get('submitted_by_nurse'),   # Expecting username or null
+
+                # Identifiers (emp_no is included for legacy/reference if present)
                 'emp_no': data.get('emp_no')
             }
+            # --- End Prepare defaults ---
+
+            # Filter out None values to avoid overwriting existing data with null unless intended
+            # Frontend should send empty strings ('') for fields meant to be cleared.
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
+            # --- Use update_or_create to handle both new and existing consultations for the day ---
             instance, created = model_class.objects.update_or_create(
-                aadhar=aadhar, entry_date=entry_date, defaults=filtered_defaults
+                aadhar=aadhar,
+                entry_date=entry_date, # Match based on aadhar and today's date
+                defaults=filtered_defaults # Apply the filtered data
             )
+
             message = f"{success_noun} {'added' if created else 'updated'} successfully"
-            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}.")
+            logger.info(f"{log_prefix} successful for aadhar {aadhar} on {entry_date}. Created: {created}. ID: {instance.id}")
             return JsonResponse({
                 'status': 'success',
                 'message': message,
-                'consultation_id': instance.id,
+                'consultation_id': instance.id, # Return the ID of the created/updated record
                 'created': created
-            }, status=201 if created else 200)
-        except json.JSONDecodeError: # ... error handling ...
+            }, status=201 if created else 200) # Use 201 for creation, 200 for update
+
+        except json.JSONDecodeError:
             logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
-        except Exception as e: # ... error handling ...
+        except ValidationError as e: # Catch potential model validation errors
+            logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Validation error: {e.message_dict}", exc_info=True)
+            return JsonResponse({'status': 'error', 'message': 'Validation Error', 'details': e.message_dict}, status=400)
+        except IntegrityError as e: # Catch potential DB integrity errors (e.g., unique constraints)
+             logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Integrity error: {e}", exc_info=True)
+             return JsonResponse({'status': 'error', 'message': 'Database integrity error. A record might already exist.'}, status=409) # 409 Conflict
+        except Exception as e:
             logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
-            return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.'}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
+            return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.', 'detail': str(e)}, status=500)
+
+    # Handle non-POST requests
+    logger.warning(f"{log_prefix} failed: Invalid request method. Only POST allowed.")
+    response = JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
+    response['Allow'] = 'POST' # Set Allow header for 405 response
+    return response
 
 
 @csrf_exempt

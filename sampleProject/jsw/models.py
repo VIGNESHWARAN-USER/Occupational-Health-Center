@@ -1015,15 +1015,9 @@ class WomensPack(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar 
     Mammogaram  = models.TextField(max_length=255)
-    Mammogaram_unit = models.TextField(max_length=255)
-    Mammogaram_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Mammogaram_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Mammogaram_comments = models.TextField(max_length=255)
     
     PAP_Smear  = models.TextField(max_length=255)
-    PAP_Smear_unit = models.TextField(max_length=255)
-    PAP_Smear_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    PAP_Smear_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     PAP_Smear_comments = models.TextField(max_length=255)
     
     def __str__(self):
@@ -1034,15 +1028,9 @@ class OccupationalProfile(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar     
     Audiometry  = models.TextField(max_length=255)
-    Audiometry_unit = models.TextField(max_length=255)
-    Audiometry_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Audiometry_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Audiometry_comments = models.TextField(max_length=255)
     
     PFT  = models.TextField(max_length=255)
-    PFT_unit = models.TextField(max_length=255)
-    PFT_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    PFT_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     PFT_comments = models.TextField(max_length=255)
     
     def __str__(self):
@@ -1053,21 +1041,12 @@ class OthersTest(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar   
     Bone_Densitometry = models.TextField(max_length=255)
-    Bone_Densitometry_unit = models.TextField(max_length=255)
-    Bone_Densitometry_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Bone_Densitometry_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Bone_Densitometry_comments = models.TextField(max_length=255)
     
     Dental = models.TextField(max_length=255)
-    Dental_unit = models.TextField(max_length=255)
-    Dental_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Dental_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Dental_comments = models.TextField(max_length=255)
     
     Pathology = models.TextField(max_length=255)
-    Pathology_unit = models.TextField(max_length=255)
-    Pathology_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Pathology_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Pathology_comments = models.TextField(max_length=255)
     
     def __str__(self):
@@ -1079,21 +1058,12 @@ class OphthalmicReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     vision = models.TextField(max_length=255)
-    vision_unit = models.TextField(max_length=255)
-    vision_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    vision_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     vision_comments = models.TextField(max_length=255)
 
     color_vision = models.TextField(max_length=255)
-    color_vision_unit = models.TextField(max_length=255)
-    color_vision_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    color_vision_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     color_vision_comments = models.TextField(max_length=255)
     
     Cataract_glaucoma = models.TextField(max_length=255)
-    Cataract_glaucoma_unit = models.TextField(max_length=255)
-    Cataract_glaucoma_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Cataract_glaucoma_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Cataract_glaucoma_comments = models.TextField(max_length=255)
 
     def __str__(self):
@@ -1103,33 +1073,18 @@ class XRay(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     Chest = models.TextField(max_length=255)
-    Chest_unit = models.TextField(max_length=255)
-    Chest_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Chest_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Chest_comments = models.TextField(max_length=255)
     
     Spine = models.TextField(max_length=255)
-    Spine_unit = models.TextField(max_length=255)
-    Spine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Spine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Spine_comments = models.TextField(max_length=255)
     
     Abdomen = models.TextField(max_length=255)
-    Abdomen_unit = models.TextField(max_length=255)
-    Abdomen_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Abdomen_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Abdomen_comments = models.TextField(max_length=255)
     
     KUB = models.TextField(max_length=255)
-    KUB_unit = models.TextField(max_length=255)
-    KUB_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    KUB_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     KUB_comments = models.TextField(max_length=255)
     
     Pelvis = models.TextField(max_length=255)
-    Pelvis_unit = models.TextField(max_length=255)
-    Pelvis_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Pelvis_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Pelvis_comments = models.TextField(max_length=255)   
     
     def __str__(self):
@@ -1140,27 +1095,15 @@ class USGReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     usg_abdomen = models.TextField(max_length=255)
-    usg_abdomen_unit = models.TextField(max_length=255)
-    usg_abdomen_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    usg_abdomen_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     usg_abdomen_comments = models.TextField(max_length=255)
 
     usg_kub = models.TextField(max_length=255)
-    usg_kub_unit = models.TextField(max_length=255)
-    usg_kub_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    usg_kub_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     usg_kub_comments = models.TextField(max_length=255)
 
     usg_pelvis = models.TextField(max_length=255)
-    usg_pelvis_unit = models.TextField(max_length=255)
-    usg_pelvis_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    usg_pelvis_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     usg_pelvis_comments = models.TextField(max_length=255)
 
     usg_neck = models.TextField(max_length=255)
-    usg_neck_unit = models.TextField(max_length=255)
-    usg_neck_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    usg_neck_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     usg_neck_comments = models.TextField(max_length=255)
 
     def __str__(self):
@@ -1172,33 +1115,18 @@ class CTReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     CT_brain = models.TextField(max_length=255)
-    CT_brain_unit = models.TextField(max_length=255)
-    CT_brain_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    CT_brain_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     CT_brain_comments = models.TextField(max_length=255)
 
     CT_lungs = models.TextField(max_length=255)
-    CT_lungs_unit = models.TextField(max_length=255)
-    CT_lungs_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    CT_lungs_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     CT_lungs_comments = models.TextField(max_length=255)
 
     CT_abdomen = models.TextField(max_length=255)
-    CT_abdomen_unit = models.TextField(max_length=255)
-    CT_abdomen_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    CT_abdomen_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     CT_abdomen_comments = models.TextField(max_length=255)
 
     CT_spine = models.TextField(max_length=255)
-    CT_spine_unit = models.TextField(max_length=255)
-    CT_spine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    CT_spine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     CT_spine_comments = models.TextField(max_length=255)
 
     CT_pelvis = models.TextField(max_length=255)
-    CT_pelvis_unit = models.TextField(max_length=255)
-    CT_pelvis_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    CT_pelvis_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     CT_pelvis_comments = models.TextField(max_length=255)
     
     def __str__(self):
@@ -1209,33 +1137,18 @@ class MRIReport(BaseModel):
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     mri_brain = models.TextField(max_length=255)
-    mri_brain_unit = models.TextField(max_length=255)
-    mri_brain_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mri_brain_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     mri_brain_comments = models.TextField(max_length=255)
 
     mri_lungs = models.TextField(max_length=255)
-    mri_lungs_unit = models.TextField(max_length=255)
-    mri_lungs_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mri_lungs_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     mri_lungs_comments = models.TextField(max_length=255)
 
     mri_abdomen = models.TextField(max_length=255)
-    mri_abdomen_unit = models.TextField(max_length=255)
-    mri_abdomen_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mri_abdomen_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     mri_abdomen_comments = models.TextField(max_length=255)
 
     mri_spine = models.TextField(max_length=255)
-    mri_spine_unit = models.TextField(max_length=255)
-    mri_spine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mri_spine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     mri_spine_comments = models.TextField(max_length=255)
 
     mri_pelvis = models.TextField(max_length=255)
-    mri_pelvis_unit = models.TextField(max_length=255)
-    mri_pelvis_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mri_pelvis_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     mri_pelvis_comments = models.TextField(max_length=255)
 
     def __str__(self):
@@ -1286,11 +1199,6 @@ class FitnessAssessment(BaseModel):
         POSITIVE = 'positive', 'Positive'
         NEGATIVE = 'negative', 'Negative'
 
-    class EyeExamResultChoices(models.TextChoices):
-        NORMAL = 'Normal', 'Normal'
-        DEFECTIVE = 'Defective', 'Defective'
-        COLOR_BLINDNESS = 'Color Blindness', 'Color Blindness'
-
     class EyeExamFitStatusChoices(models.TextChoices):
         FIT = 'Fit', 'Fit'
         FIT_NEW_GLASS = 'Fit when newly prescribed glass', 'Fit when newly prescribed glass'
@@ -1313,7 +1221,8 @@ class FitnessAssessment(BaseModel):
     romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
     acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
     trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
-    
+    otherJobNature = models.CharField(max_length=225, blank=True, null=True)
+    conditionalotherJobNature = models.CharField(max_length=225, blank=True, null=True)
     #special cases
     special_cases=models.CharField(max_length=10,blank=True,null=True)
 
@@ -1327,12 +1236,6 @@ class FitnessAssessment(BaseModel):
     # Examinations
     general_examination = models.TextField(blank=True, null=True)
     systematic_examination = models.TextField(blank=True, null=True)
-    eye_exam_result = models.CharField(
-        max_length=20,
-        choices=EyeExamResultChoices.choices,
-        blank=True,
-        null=True
-    )
     eye_exam_fit_status = models.CharField(
         max_length=100,
         choices=EyeExamFitStatusChoices.choices,
@@ -1460,6 +1363,10 @@ class Consultation(models.Model): # Changed inheritance, ensure ID/entry_date ar
     hospital_name = models.CharField(max_length=255, blank=True, null=True)
     speciality = models.CharField(max_length=255, blank=True, null=True)
     doctor_name = models.CharField(max_length=255, blank=True, null=True)
+
+    shifting_required = models.CharField(max_length=10, blank=True, null=True) 
+    shifting_notes = models.TextField(blank=True, null=True)
+    ambulance_details = models.TextField(blank=True, null=True)
     
     #special cases
     special_cases=models.CharField(max_length=10, blank=True, null=True)

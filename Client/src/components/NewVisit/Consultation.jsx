@@ -6,10 +6,10 @@ const Consultation = ({ data, type }) => {
   // --- State Variables ---
   const [complaints, setComplaints] = useState('');
   const [examination, setExamination] = useState(''); // General Exam
-  const [systematic, setSystematic] = useState(''); // Systematic Exam (New field)
+  const [systematic, setSystematic] = useState(''); // Systematic Exam
   const [lexamination, setLexamination] = useState(''); // Local Exam
   const [diagnosis, setDiagnosis] = useState(''); // Diagnosis Notes
-  const [procedureNotes, setProcedureNotes] = useState(''); // Procedure Notes (Separated)
+  const [procedureNotes, setProcedureNotes] = useState(''); // Procedure Notes
   const [obsnotes, setObsnotes] = useState(''); // Observation/Ward Notes
   const [notifiableRemarks, setNotifiableRemarks] = useState('');
   const [caseType, setCaseType] = useState('');
@@ -17,25 +17,29 @@ const Consultation = ({ data, type }) => {
   const [otherCaseDetails, setOtherCaseDetails] = useState('');
   const [investigationDetails, setInvestigationDetails] = useState('');
   const [adviceDetails, setAdviceDetails] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [specialCases, setSpecialCases] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedByNurse, setSubmittedByNurse] = useState(''); // Keep if needed
+
+  // Referral State
   const [referral, setReferral] = useState(null); // 'yes', 'no', or null
   const [hospitalName, setHospitalName] = useState('');
-  const [speciality, setSpeciality] = useState(''); // Corrected typo
+  const [speciality, setSpeciality] = useState('');
   const [doctorName, setDoctorName] = useState('');
-  const [followUpDate, setFollowUpDate] = useState('');
-  const [specialCases,setSpecialCases]=useState('')//NEW STATE for Special Cases
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedByNurse, setSubmittedByNurse] = useState(''); // Keep if needed, source unclear
+
+  // --- NEW: Shifting State ---
+  const [shiftingRequired, setShiftingRequired] = useState(null); // 'yes', 'no', or null
+  const [shiftingNotes, setShiftingNotes] = useState('');
+  const [ambulanceDetails, setAmbulanceDetails] = useState('');
+  // --- END: Shifting State ---
 
   // --- Derived Data & Constants ---
-  const emp_no = data && data[0]?.aadhar;
+  const emp_no = data && data[0]?.aadhar; // Use aadhar as the primary identifier
   const patientData = data && data[0];
-  // Ensure localStorage values exist or provide defaults
   const submittedByDoctor = localStorage.getItem('userData') || 'Unknown Doctor';
   const accessLevel = localStorage.getItem('accessLevel');
   const isDoctor = accessLevel === 'doctor';
-
-  // Unused caseTypeOptions kept for reference
-  // const caseTypeOptions = [ ... ];
 
   // --- useEffect for Auto-filling ---
   useEffect(() => {
@@ -43,11 +47,10 @@ const Consultation = ({ data, type }) => {
       const consult = patientData.consultation;
       setComplaints(consult.complaints || '');
       setExamination(consult.examination || '');
-      setSystematic(consult.systematic || ''); // Populate Systematic Exam
+      setSystematic(consult.systematic || '');
       setLexamination(consult.lexamination || '');
-      setDiagnosis(consult.diagnosis || ''); // Populate Diagnosis Notes
-      // *** Adjust 'procedure_notes' if your backend field name is different ***
-      setProcedureNotes(consult.procedure_notes || ''); // Populate Procedure Notes
+      setDiagnosis(consult.diagnosis || '');
+      setProcedureNotes(consult.procedure_notes || '');
       setObsnotes(consult.obsnotes || '');
       setNotifiableRemarks(consult.notifiable_remarks || '');
       setCaseType(consult.case_type || '');
@@ -55,21 +58,30 @@ const Consultation = ({ data, type }) => {
       setOtherCaseDetails(consult.other_case_details || '');
       setInvestigationDetails(consult.investigation_details || '');
       setAdviceDetails(consult.advice || '');
-      setReferral(consult.referral || null); // Handles 'yes', 'no', or null/empty from backend
-      setHospitalName(consult.hospital_name || '');
-      setSpeciality(consult.speciality || ''); // Corrected typo here
-      setDoctorName(consult.doctor_name || '');
       setFollowUpDate(consult.follow_up_date || '');
-      setSpecialCases(consult.special_cases|| '');//Load Special Cases
+      setSpecialCases(consult.special_cases || '');
+
+      // Populate Referral State
+      setReferral(consult.referral || null);
+      setHospitalName(consult.hospital_name || '');
+      setSpeciality(consult.speciality || '');
+      setDoctorName(consult.doctor_name || '');
+
+      // --- NEW: Populate Shifting State ---
+      setShiftingRequired(consult.shifting_required || null);
+      setShiftingNotes(consult.shifting_notes || '');
+      setAmbulanceDetails(consult.ambulance_details || '');
+      // --- END: Populate Shifting State ---
+
       // setSubmittedByNurse(consult.submitted_by_nurse || ''); // If needed
     } else {
       // Reset fields if no consultation data exists
       setComplaints('');
       setExamination('');
-      setSystematic(''); // Reset Systematic
+      setSystematic('');
       setLexamination('');
-      setDiagnosis(''); // Reset Diagnosis
-      setProcedureNotes(''); // Reset Procedure Notes
+      setDiagnosis('');
+      setProcedureNotes('');
       setObsnotes('');
       setNotifiableRemarks('');
       setCaseType('');
@@ -77,13 +89,21 @@ const Consultation = ({ data, type }) => {
       setOtherCaseDetails('');
       setInvestigationDetails('');
       setAdviceDetails('');
-      setReferral(null); // Reset Referral
-      setHospitalName('');
-      setSpeciality(''); // Reset Speciality
-      setDoctorName('');
       setFollowUpDate('');
-      setSpecialCases('');//Reset Special Cases 
+      setSpecialCases('');
       setSubmittedByNurse('');
+
+      // Reset Referral State
+      setReferral(null);
+      setHospitalName('');
+      setSpeciality('');
+      setDoctorName('');
+
+      // --- NEW: Reset Shifting State ---
+      setShiftingRequired(null);
+      setShiftingNotes('');
+      setAmbulanceDetails('');
+      // --- END: Reset Shifting State ---
     }
   }, [patientData]); // Depend on the entire patientData object
 
@@ -98,15 +118,12 @@ const Consultation = ({ data, type }) => {
 
     const consultationPayload = {
       aadhar: emp_no,
-      // Send entry_date ONLY if you need it for identifying an existing record to update
-      // If the backend uses emp_no + latest logic, you might not need entry_date here.
-      // entry_date: patientData?.entry_date,
       complaints: complaints,
       examination: examination,
-      systematic: systematic, // Include Systematic Exam
+      systematic: systematic,
       lexamination: lexamination,
-      diagnosis: diagnosis, // Diagnosis Notes
-      procedure_notes: procedureNotes, // Procedure Notes (Adjust key if needed)
+      diagnosis: diagnosis,
+      procedure_notes: procedureNotes,
       obsnotes: obsnotes,
       notifiable_remarks: notifiableRemarks,
       case_type: caseType,
@@ -114,61 +131,71 @@ const Consultation = ({ data, type }) => {
       other_case_details: otherCaseDetails,
       investigation_details: investigationDetails,
       advice: adviceDetails,
-      referral: referral, // Will be 'yes', 'no', or null
-      hospital_name: referral === 'yes' ? hospitalName : '', // Send only if referred
-      speciality: referral === 'yes' ? speciality : '', // Send only if referred (Corrected typo)
-      doctor_name: referral === 'yes' ? doctorName : '', // Send only if referred
-      special_cases:specialCases,//Include Special Cases
+      special_cases: specialCases,
       submitted_by_doctor: submittedByDoctor,
+      follow_up_date: followUpDate || null,
+
+      // Referral Data (Conditional)
+      referral: referral,
+      hospital_name: referral === 'yes' ? hospitalName : '',
+      speciality: referral === 'yes' ? speciality : '',
+      doctor_name: referral === 'yes' ? doctorName : '',
+
+      // --- NEW: Shifting Data (Conditional) ---
+      shifting_required: shiftingRequired, // Send 'yes', 'no', or null
+      shifting_notes: shiftingRequired === 'yes' ? shiftingNotes : '', // Send only if shifting
+      ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '', // Send only if shifting
+      // --- END: Shifting Data ---
+
       // submitted_by_nurse: submittedByNurse, // Include if relevant
-      follow_up_date: followUpDate || null, // Send null if empty
     };
 
     console.log("Submitting Payload:", consultationPayload); // Log payload before sending
 
     try {
-      // Adjust endpoint if it's for update vs add
       const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationPayload);
 
       if (response.status === 200 || response.status === 201) {
         alert("Consultation data submitted successfully!");
 
-        // --- Check and Book Follow-up Appointment ---
+        // --- Check and Book Follow-up Appointment (Keep existing logic) ---
         if (followUpDate) {
-          console.log("Follow-up date detected, attempting to book appointment...");
-           const appointmentPayload = {
-            role: patientData?.type || 'Unknown',
-            name: patientData?.name || 'N/A',
-            employeeId: emp_no,
-             // Adjust organization logic as needed
-            organization: (patientData?.type === 'Employee' || patientData?.type === 'Visitor') ? (patientData?.employer || patientData?.organization || 'N/A') : null,
-            aadharNo: patientData?.aadhar || "Unknown",
-            contractorName: patientData?.type === 'Contractor' ? (patientData?.employer || 'N/A') : "Unknown",
-            purpose: "Follow Up",
-            appointmentDate: followUpDate,
-            time: "10:00", // Consider making this configurable or dynamic
-            bookedBy: submittedByDoctor,
-            consultedDoctor: submittedByDoctor,
-          };
+          // ... (existing appointment booking logic remains here) ...
+             console.log("Follow-up date detected, attempting to book appointment...");
+             const appointmentPayload = {
+                 role: patientData?.type || 'Unknown',
+                 name: patientData?.name || 'N/A',
+                 employeeId: patientData?.emp_no || '', // Send original emp_no if available for legacy/display
+                 organization: (patientData?.type === 'Employee' || patientData?.type === 'Visitor') ? (patientData?.employer || patientData?.organization || 'N/A') : null,
+                 aadharNo: emp_no, // Use aadhar as primary identifier
+                 contractorName: patientData?.type === 'Contractor' ? (patientData?.employer || 'N/A') : null, // Adjust logic as needed
+                 purpose: "Follow Up",
+                 appointmentDate: followUpDate,
+                 time: "10:00", // Consider making this configurable or dynamic
+                 bookedBy: submittedByDoctor,
+                 consultedDoctor: submittedByDoctor,
+                 // Include employer field if needed by backend for appointment
+                 employer: patientData?.employer || '',
+             };
 
-          try {
-            const apptResponse = await axios.post("https://occupational-health-center-1.onrender.com/bookAppointment/", appointmentPayload);
-            if (apptResponse.status === 200 || apptResponse.status === 201) {
-              alert(`Follow-up appointment booked successfully! ${apptResponse.data.message || ''}`);
-            } else {
-               console.error('Appointment Booking Error Response:', apptResponse);
-               alert(`Consultation saved, but failed to book follow-up appointment: ${apptResponse.data?.error || apptResponse.statusText || 'Unknown error'}`);
-            }
-          } catch (apptError) {
-            console.error('Error booking follow-up appointment:', apptError);
-            let errorMsg = "Consultation saved, but an error occurred while booking the follow-up appointment.";
-            if (apptError.response?.data?.error) {
-                errorMsg += ` Error: ${apptError.response.data.error}`;
-            } else if (apptError.message) {
-                errorMsg += ` Error: ${apptError.message}`;
-            }
-            alert(errorMsg);
-          }
+             try {
+                 const apptResponse = await axios.post("https://occupational-health-center-1.onrender.com/bookAppointment/", appointmentPayload);
+                 if (apptResponse.status === 200 || apptResponse.status === 201) {
+                 alert(`Follow-up appointment booked successfully! ${apptResponse.data.message || ''}`);
+                 } else {
+                 console.error('Appointment Booking Error Response:', apptResponse);
+                 alert(`Consultation saved, but failed to book follow-up appointment: ${apptResponse.data?.error || apptResponse.statusText || 'Unknown error'}`);
+                 }
+             } catch (apptError) {
+                 console.error('Error booking follow-up appointment:', apptError);
+                 let errorMsg = "Consultation saved, but an error occurred while booking the follow-up appointment.";
+                 if (apptError.response?.data?.error) {
+                     errorMsg += ` Error: ${apptError.response.data.error}`;
+                 } else if (apptError.message) {
+                     errorMsg += ` Error: ${apptError.message}`;
+                 }
+                 alert(errorMsg);
+             }
         }
         // --- End Appointment Booking ---
 
@@ -199,6 +226,9 @@ const Consultation = ({ data, type }) => {
   const textAreaClasses = `w-full p-4 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
   const inputClasses = `w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
   const labelClasses = "block text-gray-700 mb-2 text-lg font-medium";
+  const radioLabelClasses = "flex items-center gap-2 cursor-pointer";
+  const radioInputClasses = "form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed";
+  const sectionHeadingClasses = "text-xl font-semibold mb-2";
 
   return (
     <div className="bg-white min-h-screen p-4 md:p-6">
@@ -223,7 +253,6 @@ const Consultation = ({ data, type }) => {
         </div>
 
         <div>
-          {/* Added Systematic Examination */}
           <label className={labelClasses} htmlFor="systematic">Systemic Examination</label>
           <textarea id="systematic" className={textAreaClasses} rows="4"
             placeholder="Enter systematic examination details here (CVS, RS, GIT, CNS etc)" value={systematic}
@@ -240,7 +269,6 @@ const Consultation = ({ data, type }) => {
         </div>
 
         <div>
-          {/* Changed label, uses 'diagnosis' state */}
           <label className={labelClasses} htmlFor="diagnosis">Diagnosis Notes</label>
           <textarea id="diagnosis" className={textAreaClasses} rows="4"
             placeholder="Enter diagnosis notes here..." value={diagnosis}
@@ -249,7 +277,6 @@ const Consultation = ({ data, type }) => {
         </div>
 
         <div>
-          {/* NEW Procedure Notes field */}
           <label className={labelClasses} htmlFor="procedureNotes">Procedure Notes</label>
           <textarea id="procedureNotes" className={textAreaClasses} rows="4"
             placeholder="Enter procedure notes here (if any)..." value={procedureNotes}
@@ -298,87 +325,81 @@ const Consultation = ({ data, type }) => {
              </div>
          </div>
 
-         {type !== '' && (
+        {/* --- NEW: Shifting In Ambulance Section --- */}
+        {type !== '' && ( // Conditionally render based on `type` if needed, or remove if always shown
           <div className="border-t pt-6 space-y-4">
-             <h3 className="text-xl font-semibold mb-2">Shifting In Ambulance</h3>
+            <h3 className={sectionHeadingClasses}>Shifting In Ambulance</h3>
             <div>
+              <label className={labelClasses}>Is shifting required?</label>
               <div className="flex items-center gap-4 md:gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="referral" value="yes"
-                    checked={referral === 'yes'} onChange={() => setReferral('yes')}
-                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                <label className={radioLabelClasses}>
+                  <input type="radio" name="shiftingRequired" value="yes" // Use unique name
+                    checked={shiftingRequired === 'yes'} onChange={() => setShiftingRequired('yes')}
+                    className={radioInputClasses} disabled={!isDoctor}
                   /> Yes
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="referral" value="no"
-                    checked={referral === 'no'} onChange={() => setReferral('no')}
-                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                <label className={radioLabelClasses}>
+                  <input type="radio" name="shiftingRequired" value="no"
+                    checked={shiftingRequired === 'no'} onChange={() => setShiftingRequired('no')}
+                    className={radioInputClasses} disabled={!isDoctor}
                   /> No
                 </label>
-                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="referral" value="" // Represents 'null'
-                    checked={referral === null || referral === ''} onChange={() => setReferral(null)}
-                    className="form-radio text-gray-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                 <label className={radioLabelClasses}>
+                  <input type="radio" name="shiftingRequired" value=""
+                    checked={shiftingRequired === null || shiftingRequired === ''} onChange={() => setShiftingRequired(null)}
+                    className={radioInputClasses.replace('blue','gray')} disabled={!isDoctor} // Slightly grayed out for N/A
                   /> N/A
                 </label>
               </div>
             </div>
 
-            {/* Show referral details only if 'yes' is selected */}
-            {referral === 'yes' && (
-                <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1"> {/* Indent referral details */}
+            {/* Show shifting details only if 'yes' is selected */}
+            {shiftingRequired === 'yes' && (
+                <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1">
                  <div>
-                    <label htmlFor="hospitalName" className={labelClasses}>Hospital Name</label>
-                    <input id="hospitalName" type="text" className={inputClasses}
-                        placeholder="Enter hospital name..." value={hospitalName}
-                        onChange={(e) => setHospitalName(e.target.value)} disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
+                    <label htmlFor="shiftingNotes" className={labelClasses}>Shifting Notes</label>
+                    <textarea id="shiftingNotes" className={textAreaClasses} rows="3"
+                        placeholder="Enter reason for shifting, patient condition, etc..." value={shiftingNotes}
+                        onChange={(e) => setShiftingNotes(e.target.value)} disabled={!isDoctor} required={shiftingRequired === 'yes'}
                     />
                 </div>
 
                 <div>
-                    <label htmlFor="speciality" className={labelClasses}>Speciality</label>
-                    <input id="speciality" type="text" className={inputClasses}
-                        placeholder="Enter speciality (e.g., Cardiology)..." value={speciality} /* Corrected */
-                        onChange={(e) => setSpeciality(e.target.value)} /* Corrected */ disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
-                    />
-                </div>
-
-                <div>
-                    <label htmlFor="doctorName" className={labelClasses}>Referred Doctor Name (Optional)</label>
-                    <input id="doctorName" type="text" className={inputClasses}
-                        placeholder="Enter referred doctor's name if known..." value={doctorName}
-                        onChange={(e) => setDoctorName(e.target.value)} disabled={!isDoctor}
+                    <label htmlFor="ambulanceDetails" className={labelClasses}>Ambulance Details / Consumables Used</label>
+                    <textarea id="ambulanceDetails" className={textAreaClasses} rows="3"
+                        placeholder="Enter ambulance number, driver, consumables used..." value={ambulanceDetails}
+                        onChange={(e) => setAmbulanceDetails(e.target.value)} disabled={!isDoctor} required={shiftingRequired === 'yes'}
                     />
                 </div>
                 </div>
             )}
           </div>
         )}
+        {/* --- END: Shifting In Ambulance Section --- */}
 
-
-        {/* Referral Section - Conditionally Rendered */}
-        {type !== '' && (
+        {/* Referral Section - Kept separate */}
+        {type !== '' && ( // Conditionally render based on `type` if needed, or remove if always shown
           <div className="border-t pt-6 space-y-4">
-             <h3 className="text-xl font-semibold mb-2">Referral</h3>
+            <h3 className={sectionHeadingClasses}>Referral</h3>
             <div>
               <label className={labelClasses}>Do you need a referral?</label>
               <div className="flex items-center gap-4 md:gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="referral" value="yes"
+                <label className={radioLabelClasses}>
+                  <input type="radio" name="referral" value="yes" // Keep name="referral"
                     checked={referral === 'yes'} onChange={() => setReferral('yes')}
-                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                    className={radioInputClasses} disabled={!isDoctor}
                   /> Yes
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className={radioLabelClasses}>
                   <input type="radio" name="referral" value="no"
                     checked={referral === 'no'} onChange={() => setReferral('no')}
-                    className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                    className={radioInputClasses} disabled={!isDoctor}
                   /> No
                 </label>
-                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="referral" value="" // Represents 'null'
+                 <label className={radioLabelClasses}>
+                  <input type="radio" name="referral" value=""
                     checked={referral === null || referral === ''} onChange={() => setReferral(null)}
-                    className="form-radio text-gray-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed" disabled={!isDoctor}
+                    className={radioInputClasses.replace('blue','gray')} disabled={!isDoctor}
                   /> N/A
                 </label>
               </div>
@@ -386,20 +407,20 @@ const Consultation = ({ data, type }) => {
 
             {/* Show referral details only if 'yes' is selected */}
             {referral === 'yes' && (
-                <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1"> {/* Indent referral details */}
+                <div className="space-y-4 pl-2 border-l-2 border-blue-200 ml-1">
                  <div>
                     <label htmlFor="hospitalName" className={labelClasses}>Hospital Name</label>
                     <input id="hospitalName" type="text" className={inputClasses}
                         placeholder="Enter hospital name..." value={hospitalName}
-                        onChange={(e) => setHospitalName(e.target.value)} disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
+                        onChange={(e) => setHospitalName(e.target.value)} disabled={!isDoctor} required={referral === 'yes'}
                     />
                 </div>
 
                 <div>
                     <label htmlFor="speciality" className={labelClasses}>Speciality</label>
                     <input id="speciality" type="text" className={inputClasses}
-                        placeholder="Enter speciality (e.g., Cardiology)..." value={speciality} /* Corrected */
-                        onChange={(e) => setSpeciality(e.target.value)} /* Corrected */ disabled={!isDoctor} required={referral === 'yes'} // Make required if referred
+                        placeholder="Enter speciality (e.g., Cardiology)..." value={speciality}
+                        onChange={(e) => setSpeciality(e.target.value)} disabled={!isDoctor} required={referral === 'yes'}
                     />
                 </div>
 
@@ -415,19 +436,19 @@ const Consultation = ({ data, type }) => {
           </div>
         )}
 
-        {/* --- Special Cases Section (NEW) --- */}
+        {/* --- Special Cases Section (Kept as is) --- */}
         <div className="border-t pt-6 space-y-2">
           <label className={labelClasses}>Special Cases</label>
           <div className="flex items-center gap-4 md:gap-6">
             {["Yes", "No", "N/A"].map((value) => (
-              <label key={value} className="flex items-center gap-2 cursor-pointer">
+              <label key={value} className={radioLabelClasses}>
                 <input
                   type="radio"
                   name="specialCases"
                   value={value}
                   checked={specialCases === value}
                   onChange={(e) => setSpecialCases(e.target.value)}
-                  className="form-radio text-blue-500 h-5 w-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={radioInputClasses}
                   disabled={!isDoctor || isSubmitting}
                 />
                 {value}
@@ -449,7 +470,7 @@ const Consultation = ({ data, type }) => {
         </div>
       </form>
       {/* Significant Notes Component */}
-      <div className="border-t pt-6">
+      <div className="border-t pt-6 mt-8"> {/* Added margin-top */}
              <SignificantNotes data={data} type={type} />
         </div>
     </div>
