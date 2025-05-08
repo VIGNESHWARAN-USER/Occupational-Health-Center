@@ -44,8 +44,9 @@ const BpStandardsModal = ({ isOpen, onClose }) => {
 
 
 // --- Main Vitals Form Component (Integrated) ---
-const VitalsForm = ({ data, type }) => {
+const VitalsForm = ({ data, type, mrdNo }) => {
     const initialData = data?.[0] || {};
+    console.log(mrdNo)
 
     // State includes status fields, matching the Django model
     const [formData, setFormData] = useState({
@@ -219,7 +220,7 @@ const VitalsForm = ({ data, type }) => {
                 submissionData.append(key, formData[key]);
             }
         }
-
+        submissionData.append('mrdNo', mrdNo);
         // Map frontend file keys to backend model field names
         const fileFieldMapping = {
             SelfDeclaration: 'self_declared',
@@ -409,22 +410,7 @@ const VitalsForm = ({ data, type }) => {
                 {/* Form uses the updated handleSubmit */}
                 <form onSubmit={handleSubmit} className="space-y-6"> {/* No encType needed, Axios handles it */}
 
-                    {/* --- Aadhar Display (Readonly) --- */}
-                    <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-                         <h3 className="text-md font-semibold text-gray-700 mb-2">Identifier</h3>
-                         <div>
-                            <label htmlFor="aadhar_display" className="block text-sm font-medium text-gray-700 mb-1">Aadhar Number</label>
-                            <input
-                                id="aadhar_display"
-                                name="aadhar_display" // Not submitted
-                                readOnly
-                                value={formData.aadhar || 'Not available'}
-                                type="text"
-                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed focus:outline-none sm:text-sm"
-                                tabIndex={-1}
-                            />
-                         </div>
-                    </section>
+                    
 
                     {/* --- Blood Pressure Section --- */}
                     <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">

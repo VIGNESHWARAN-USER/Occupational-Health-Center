@@ -12,13 +12,13 @@ const VisitHistory = ({ data }) => {
     const [visitData, setVisitData] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const emp_no = data.emp_no;
+    const aadhar = data.aadhar;
     console.log(data)
     useEffect(() => {
         const fetchVisitData = async () => {
             try {
                 const response = await axios.post(
-                    `https://occupational-health-center-1.onrender.com/visitData/${emp_no}`
+                    `https://occupational-health-center-1.onrender.com/visitData/${aadhar}`
                 );
                 const data = await response.data.data;
                 console.log(data);
@@ -31,7 +31,7 @@ const VisitHistory = ({ data }) => {
             }
         };
         fetchVisitData();
-    }, [emp_no]);
+    }, [aadhar]);
 
     const applyFilter = () => {
         const filtered = visitData.filter((item) => {
@@ -184,7 +184,7 @@ const VisitHistory = ({ data }) => {
                                         <button
                                             onClick={() => {
                                                 navigate("../summary", {
-                                                    state: { emp_no: emp_no, date: visit.date, visit: visitData.type_of_visit },
+                                                    state: { aadhar: aadhar, date: visit.date, visit: visitData.type_of_visit },
                                                 });
                                             }}
                                             className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition duration-300"

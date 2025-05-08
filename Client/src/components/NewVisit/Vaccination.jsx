@@ -11,13 +11,15 @@ const defaultVaccineRecord = {
 };
 
 const Vaccination = ({ data }) => {
+  
   const [vaccinationData, setVaccinationData] = useState([]);
   const [isLoading, setIsLoading] = useState(false); // Added for submit feedback
   const [error, setError] = useState(null); // Added for displaying submit errors
 
-  // Safely extract emp_no (aadhar)
+  // Safely extract aadhar (aadhar)
   // Use useCallback to memoize this value if needed elsewhere, though simple extraction is fine here.
-  const emp_no = data?.[0]?.aadhar;
+  const aadhar = data?.[0]?.aadhar;
+  const mrdNo = data?.[0]?.mrdNo;
 
   // --- Effect to Load Initial Data ---
   useEffect(() => {
@@ -131,7 +133,7 @@ const Vaccination = ({ data }) => {
     e.preventDefault();
     setError(null); // Clear previous errors
 
-    if (!emp_no) {
+    if (!aadhar) {
         setError("Employee Aadhar number is missing. Cannot submit.");
         alert("Employee Aadhar number is missing. Cannot submit."); // Keep alert for immediate feedback if needed
         return;
@@ -154,9 +156,10 @@ const Vaccination = ({ data }) => {
 
     setIsLoading(true);
     try {
-      // *** FIXED THE BUG HERE: Use emp_no instead of undefined 'aadhar' ***
+      // *** FIXED THE BUG HERE: Use aadhar instead of undefined 'aadhar' ***
       await axios.post("https://occupational-health-center-1.onrender.com/vaccination/", {
-        aadhar: emp_no, // Corrected variable name
+        aadhar: aadhar, // Corrected variable name
+        mrdNo: mrdNo,
         vaccination: vaccinationData,
       });
       alert("Vaccination data submitted successfully!");
@@ -174,11 +177,11 @@ const Vaccination = ({ data }) => {
   // --- Render Logic ---
 
   // Early return if essential data is missing
-  if (!emp_no) {
+  if (!aadhar) {
     return (
       <div className="mt-4 bg-white rounded-lg shadow-md p-4">
         <h1 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
-          Vaccination Information
+          Vaccination 
         </h1>
         <p className="p-4 text-center text-red-600 font-medium">
           Employee Aadhar data not available. Cannot display or add vaccination records.
@@ -190,7 +193,7 @@ const Vaccination = ({ data }) => {
   return (
     <div className="mt-4 bg-white rounded-lg shadow-md p-6">
       <h1 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
-        Vaccination Information for Aadhar: {emp_no}
+        Vaccination
       </h1>
 
       {error && <p className="text-red-600 mb-4 text-center font-medium">{error}</p>}

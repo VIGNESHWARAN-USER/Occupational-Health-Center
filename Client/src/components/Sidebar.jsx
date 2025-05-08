@@ -8,7 +8,8 @@ import {
   FaPills,
   FaBars, // Added for hamburger icon
   FaTimes,
-  FaAmbulance, // Added for close icon
+  FaAmbulance,
+  FaUpload, // Added for close icon
 } from "react-icons/fa";
 import {
   MdDashboard,
@@ -90,6 +91,7 @@ const Sidebar = () => {
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Data Upload", to: "../dataupload", icon: <FaUpload /> },
       { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' }, // Added badge identifier
     ],
     doctor: [

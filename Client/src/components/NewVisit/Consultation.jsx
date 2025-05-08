@@ -20,7 +20,6 @@ const Consultation = ({ data, type }) => {
   const [followUpDate, setFollowUpDate] = useState('');
   const [specialCases, setSpecialCases] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedByNurse, setSubmittedByNurse] = useState(''); // Keep if needed
 
   // Referral State
   const [referral, setReferral] = useState(null); // 'yes', 'no', or null
@@ -37,7 +36,7 @@ const Consultation = ({ data, type }) => {
   // --- Derived Data & Constants ---
   const emp_no = data && data[0]?.aadhar; // Use aadhar as the primary identifier
   const patientData = data && data[0];
-  const submittedByDoctor = localStorage.getItem('userData') || 'Unknown Doctor';
+  const submittedDoctor = localStorage.getItem('userData') || 'Unknown Doctor';
   const accessLevel = localStorage.getItem('accessLevel');
   const isDoctor = accessLevel === 'doctor';
 
@@ -73,7 +72,6 @@ const Consultation = ({ data, type }) => {
       setAmbulanceDetails(consult.ambulance_details || '');
       // --- END: Populate Shifting State ---
 
-      // setSubmittedByNurse(consult.submitted_by_nurse || ''); // If needed
     } else {
       // Reset fields if no consultation data exists
       setComplaints('');
@@ -91,7 +89,6 @@ const Consultation = ({ data, type }) => {
       setAdviceDetails('');
       setFollowUpDate('');
       setSpecialCases('');
-      setSubmittedByNurse('');
 
       // Reset Referral State
       setReferral(null);
@@ -132,7 +129,7 @@ const Consultation = ({ data, type }) => {
       investigation_details: investigationDetails,
       advice: adviceDetails,
       special_cases: specialCases,
-      submitted_by_doctor: submittedByDoctor,
+      submittedDoctor: submittedDoctor,
       follow_up_date: followUpDate || null,
 
       // Referral Data (Conditional)
@@ -147,7 +144,6 @@ const Consultation = ({ data, type }) => {
       ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '', // Send only if shifting
       // --- END: Shifting Data ---
 
-      // submitted_by_nurse: submittedByNurse, // Include if relevant
     };
 
     console.log("Submitting Payload:", consultationPayload); // Log payload before sending
@@ -172,8 +168,8 @@ const Consultation = ({ data, type }) => {
                  purpose: "Follow Up",
                  appointmentDate: followUpDate,
                  time: "10:00", // Consider making this configurable or dynamic
-                 bookedBy: submittedByDoctor,
-                 consultedDoctor: submittedByDoctor,
+                 bookedBy: submittedDoctor,
+                 consultedDoctor: "",
                  // Include employer field if needed by backend for appointment
                  employer: patientData?.employer || '',
              };

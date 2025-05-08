@@ -55,111 +55,131 @@ const NewVisit = () => {
     hospitalName: "",
   });
 
+  const fileInputRef = useRef(null);
 
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
+  };
 
-  // const dataMapping = {
-  //   Employee: {
-  //     Preventive: {
-  //       "Pre employment": "Medical Examination",
-  //       "Pre employment (Food Handler)": "Medical Examination",
-  //       "Pre Placement": "Medical Examination",
-  //       "Annual / Periodical": "Medical Examination",
-  //       "Periodical (Food Handler)": "Medical Examination",
-  //       "Camps (Mandatory)": "Medical Examination",
-  //       "Camps (Optional)": "Medical Examination",
-  //       "Special Work Fitness": "Periodic Work Fitness",
-  //       "Special Work Fitness (Renewal)": "Periodic Work Fitness",
-  //       "Fitness After Medical Leave": "Fitness After Medical Leave",
-  //       "Fitness After Long Leave": "Fitness After Long Leave",
-  //       "Mock Drill": "Mock Drill",
-  //       "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-  //       "Retirement Examination": "Retirement Examination",
-  //       "Other": "Other"
-  //     },
-  //     Curative: {
-  //       "Illness": "Outpatient",
-  //       "Over Counter Illness": "Outpatient",
-  //       "Injury": "Outpatient",
-  //       "Over Counter Injury": "Outpatient",
-  //       "Followup Visits": "Outpatient",
-  //       "BP Sugar ( Abnormal Value)": "Outpatient",
-  //       "Injury Outside the Premises": "Outpatient",
-  //       "Over Counter Injury Outside the Premises": "Outpatient",
-  //       "Alcohol Abuse": "Alcohol Abuse",
-  //       "Other": "Other"
-  //     }
-  //   },
-  //   Contractor: {
-  //     Preventive: {
-  //       "Pre employment": "Medical Examination",
-  //       "Pre employment (Food Handler)": "Medical Examination",
-  //       "Pre Placement Same Contract": "Medical Examination",
-  //       "Pre Employment Contract change": "Medical Examination",
-  //       "Annual / Periodical": "Medical Examination",
-  //       "Periodical (Food Handler)": "Medical Examination",
-  //       "Camps (Mandatory)": "Medical Examination",
-  //       "Camps (Optional)": "Medical Examination",
-  //       "Special Work Fitness": "Periodic Work Fitness",
-  //       "Special Work Fitness (Renewal)": "Periodic Work Fitness",
-  //       "Fitness After Medical Leave": "Fitness After Medical Leave",
-  //       "Fitness Long Medical Leave": "Fitness Long Medical Leave",
-  //       "Mock Drill": "Mock Drill",
-  //       "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-  //       "Other": "Other"
-  //     },
-  //     Curative: {
-  //       "Illness": "Outpatient",
-  //       "Over Counter Illness": "Outpatient",
-  //       "Injury": "Outpatient",
-  //       "Over Counter Injury": "Outpatient",
-  //       "Followup Visits": "Outpatient",
-  //       "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)",
-  //       "Other": "Other"
-  //     },
-  //   },
-  //   Visitor: {
-  //     Preventive: {
-  //       "Visitor Fitness": "Visitor Fitness",
-  //       "Other": "Other"
-  //     },
-  //     Curative: {
-  //       "Visitor Patient": "Visitor Patient",
-  //       "Followup Visits": "Followup Visits",
-  //       "Other": "Other"
-  //     }
-  //   } 
-  // };
-  const dataMapping = {
-    Employee : {
-        "Medical Examination":["Pre employment","Pre employment (Food Handler)","Pre Placement","Annual / Periodical","Periodical (Food Handler)","Camps (Mandatory)","Camps (Optional)"],
-         "Periodic Work Fitness" :["Special Work Fitness","Special Work Fitness (Renewal)"],
-         "Fitness After Medical Leave" :["Fitness After Medical Leave"],
-         "Fitness After Long Leave" :["Fitness After Long Leave"],
-         "Mock Drill":["Mock Drill"],
-         "BP Sugar Check (Normal Value)":["BP Sugar Check (Normal Value)"],
-         "Outpatient":["Illness","Over Counter Illness","Injury","Over Counter Injury","Followup Visits","Bp Sugar Chart","Injury Outside the Premises","Over Counter Injury Outside the Premises"],
-         "Alcohol Abuse":["Alcohol Abuse"]
+  const handleImageUpload = async (e) => {
+    if (!e.target.files || !e.target.files[0]) {
+      setUploadError('No file selected');
+      return;
+    }
 
-      },
+    const file = e.target.files[0];
 
-      Contractor : {
-        "Medical Examination":["Pre employment","Pre employment (Food Handler)","Pre Placement","Pre Employment Contract change","Annual / Periodical","Periodical (Food Handler)","Camps (Mandatory)","Camps (Optional)"],
-         "Periodic Work Fitness" :["Special Work Fitness","Special Work Fitness (Renewal)"],
-         "Fitness After Medical Leave" :["Fitness After Medical Leave"],
-         "Fitness After Long Leave" :["Fitness After Long Leave"],
-         "Mock Drill":["Mock Drill"],
-         "BP Sugar Check (Normal Value)":["BP Sugar Check (Normal Value)"],
-         "Outpatient":["Illness","Over Counter Illness","Injury","Over Counter Injury","Followup Visits","Bp Sugar Chart","Injury Outside the Premises","Over Counter Injury Outside the Premises"],
-         "Alcohol Abuse":["Alcohol Abuse"]
-      },
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please upload an image file.');
+      return;
+    }
 
-      Visitor: {
-         "Periodic Work Fitness" :["Visitors Outsider Fitness"],
-         "Outpatient":["Visitors Outsider patient","Followup Visits"]
+    setUploadError(null); // Clear any previous errors
+    const reader = new FileReader();
+    
+    reader.onloadend = async () => {
+      try {
+        const imageData = reader.result;
+        setUploadedImage(imageData);
+        
+        if (!formData.aadhar) {
+          alert("Please search and get employee data by Aadhar number first");
+          return;
+        }
+
+        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+          profileImage: imageData, 
+          formData 
+        });
+
+        if (updateResponse.status === 200) {
+          alert("Profile image updated successfully!");
+          // Refresh employee list or update local state
+          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          setEmployees(fetchResponse.data.data);
+          setFilteredEmployees(fetchResponse.data.data);
+          setdata([{ ...formData, profileImage: imageData }]);
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Error uploading image!");
       }
+    };
 
-  }
+    reader.onerror = () => {
+      setUploadError('Error reading file');
+    };
 
+    reader.readAsDataURL(file);
+  };
+
+  const dataMapping = {
+    Employee: {
+      Preventive: {
+        "Pre employment": "Medical Examination",
+        "Pre employment (Food Handler)": "Medical Examination",
+        "Pre Placement": "Medical Examination",
+        "Annual / Periodical": "Medical Examination",
+        "Periodical (Food Handler)": "Medical Examination",
+        "Camps (Mandatory)": "Medical Examination",
+        "Camps (Optional)": "Medical Examination",
+        "Special Work Fitness": "Periodic Work Fitness",
+        "Special Work Fitness (Renewal)": "Periodic Work Fitness",
+        "Fitness After Medical Leave": "Fitness After Medical Leave",
+        "Fitness After Long Leave": "Fitness After Long Leave",
+        "Mock Drill": "Mock Drill",
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+      },
+      Curative: {
+        "Illness": "Outpatient",
+        "Over Counter Illness": "Outpatient",
+        "Injury": "Outpatient",
+        "Over Counter Injury": "Outpatient",
+        "Followup Visits": "Outpatient",
+        "BP Sugar ( Abnormal Value)": "Outpatient",
+        "Injury Outside the Premises": "Outpatient",
+        "Over Counter Injury Outside the Premises": "Outpatient",
+        "Alcohol Abuse": "Alcohol Abuse"
+      }
+    },
+    Contractor: {
+      Preventive: {
+        "Pre employment": "Medical Examination",
+        "Pre employment (Food Handler)": "Medical Examination",
+        "Pre Placement": "Medical Examination",
+        "Annual / Periodical": "Medical Examination",
+        "Periodical (Food Handler)": "Medical Examination",
+        "Camps (Mandatory)": "Medical Examination",
+        "Camps (Optional)": "Medical Examination",
+        "Special Work Fitness": "Periodic Work Fitness",
+        "Special Work Fitness (Renewal)": "Periodic Work Fitness",
+        "Fitness After Medical Leave": "Fitness After Medical Leave",
+        "Fitness Long Medical Leave": "Fitness Long Medical Leave",
+        "Mock Drill": "Mock Drill",
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+      },
+      Curative: {
+        "Illness": "Outpatient",
+        "Over Counter Illness": "Outpatient",
+        "Injury": "Outpatient",
+        "Over Counter Injury": "Outpatient",
+        "Followup Visits": "Outpatient",
+        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)"
+      },
+      Visitor: {
+        Preventive: {
+          "Visitors Outsider Fitness": "Visitors Outsider Fitness"
+        },
+        Curative: {
+          "Visitors Outsider Patient": "Visitors Outsider Patient"
+        }
+      }
+    }
+  };
+
+  
+  const [loading1, setLoading1] = useState(false);
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prevFormData => ({
@@ -171,91 +191,223 @@ const NewVisit = () => {
   console.log(data)
   const handleSubmitEntries = async (e) => {
     e.preventDefault();
+    setLoading1(true);
 
-    if (!formData.emp_no) {
-      alert("Employee number is required!");
+    // Validate required fields
+    if (!formData.aadhar) {
+      alert("Please search and get employee data by Aadhar number first");
+      setLoading1(false);
       return;
     }
 
-    let extraData = {};
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
 
-    // Conditionally add fields to the extraData object
+    // Check if employee has any entries for today
+    const hasEntryToday = formData.entry_date === today && formData.mrdNo !== "";
+
+    const message1 = "Are you sure you want to submit the entry as footfall?";
+    const message2 = "This employee has already been registered in the system for today. Are you sure you want to submit the entry as another footfall?";
+    
+    const confirm = window.confirm(hasEntryToday ? message2 : message1);
+    if (!confirm) {
+      setLoading1(false);
+      return;
+    }
+
+    // Validate required selections
+    if (!type) {
+      alert("Please select Type");
+      setLoading1(false);
+      return;
+    }
+
+    if (!visit) {
+      alert("Please select Type of Visit");
+      setLoading1(false);
+      return;
+    }
+
+    if (!register) {
+      alert("Please select Register");
+      setLoading1(false);
+      return;
+    }
+
+    // Validate additional fields based on register type
     if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
-      extraData = { ...extraData, ...annualPeriodicalFields };
-    }
-    if (register.startsWith("Camps")) {
-      extraData = { ...extraData, ...campFields };
-    }
-    if (register.startsWith("Pre Placement Same Contract")) {
-      extraData = { ...extraData, ...campFields }; // Corrected: using campFields as contractName is stored there
-    }
-    if (register.startsWith("Pre Placement Contract change")) {
-      extraData = { ...extraData, ...campFields }; // Corrected: using campFields as prevcontractName and old_emp_no are stored there
-    }
-    if (register.startsWith("Special Work Fitness")) {
-      // Assuming you have a state variable to hold the selected reason
-      const reasonSelect = document.getElementById("reason");
-      const selectedReason = reasonSelect.value;
-      extraData = { ...extraData, reason: selectedReason };
-    }
-    if (register.startsWith("BP Sugar Check")) {
-      const bpStatusSelect = document.getElementById("reason");
-      const selectedBpStatus = bpStatusSelect.value;
-      extraData = { ...extraData, status: selectedBpStatus };
-    }
-    if (register.startsWith("Illness")) {
-      const illnessReasonSelect = document.getElementById("reason");
-      const selectedIllnessReason = illnessReasonSelect.value;
-      extraData = { ...extraData, reason: selectedIllnessReason };
-    }
-    if (register.startsWith("BP Sugar Chart")) {
-      const bpChartReasonSelect = document.getElementById("reason");
-      const selectedBpChartReason = bpChartReasonSelect.value;
-      extraData = { ...extraData, reason: selectedBpChartReason };
-    }
-    if (register.startsWith("Followup Visits")) {
-      const followupPurposeSelect = document.getElementById("reason");
-      const selectedFollowupPurpose = followupPurposeSelect.value;
-
-      extraData = { ...extraData, purpose: selectedFollowupPurpose };
-      // Add the 'others' input if the purpose is 'Others'
-      if (selectedFollowupPurpose === "Others") {
-        extraData = { ...extraData, purpose_others: purpose }; // Assuming 'purpose' state holds the 'Others' input value
+      if (!annualPeriodicalFields.year || !annualPeriodicalFields.batch || !annualPeriodicalFields.hospitalName) {
+        alert("Please fill all Annual/Periodical fields (Year, Batch, Hospital Name)");
+        setLoading1(false);
+        return;
       }
     }
 
+    if (register.startsWith("Camps")) {
+      if (!campFields.campName || !campFields.hospitalName) {
+        alert("Please fill all Camp fields (Camp Name, Hospital Name)");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    if (register.startsWith("Pre Placement Same Contract")) {
+      if (!campFields.contractName) {
+        alert("Please fill Contract Name");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    if (register.startsWith("Pre Placement Contract change")) {
+      if (!campFields.prevcontractName || !campFields.old_emp_no) {
+        alert("Please fill all Pre Placement Contract Change fields (Previous Contract Name, Employee Number)");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    if (register.startsWith("BP Sugar Check")) {
+      const bpStatusSelect = document.getElementById("reason");
+      if (!bpStatusSelect || !bpStatusSelect.value) {
+        alert("Please select Patient Status");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    if (register.startsWith("BP Sugar Chart")) {
+      const bpChartReasonSelect = document.getElementById("reason");
+      if (!bpChartReasonSelect || !bpChartReasonSelect.value) {
+        alert("Please select Job Nature (Reason)");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    if (register.startsWith("Followup Visits")) {
+      const followupPurposeSelect = document.getElementById("reason");
+      if (!followupPurposeSelect || !followupPurposeSelect.value) {
+        alert("Please select Purpose");
+        setLoading1(false);
+        return;
+      }
+      if (followupPurposeSelect.value === "Others" && !purpose) {
+        alert("Please specify the purpose in Others field");
+        setLoading1(false);
+        return;
+      }
+    }
+
+    // Prepare the submission data
+    const submissionData = {
+      formDataDashboard: {
+        typeofVisit: visit,
+        category: type,
+        register: register,
+        purpose: purpose
+      },
+      extraData: {},
+      formData: {
+        ...formData,
+        entry_date: today,
+        type: type,
+        type_of_visit: visit,
+        register: register,
+        purpose: purpose
+      }
+    };
+
+    // Add conditional fields based on register type
+    if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        year: annualPeriodicalFields.year,
+        batch: annualPeriodicalFields.batch,
+        hospitalName: annualPeriodicalFields.hospitalName
+      };
+    }
+
+    if (register.startsWith("Camps")) {
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        campName: campFields.campName,
+        hospitalName: campFields.hospitalName
+      };
+    }
+
+    if (register.startsWith("Pre Placement Same Contract")) {
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        contractName: campFields.contractName
+      };
+    }
+
+    if (register.startsWith("Pre Placement Contract change")) {
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        prevcontractName: campFields.prevcontractName,
+        old_emp_no: campFields.old_emp_no
+      };
+    }
+
+    if (register.startsWith("BP Sugar Check")) {
+      const bpStatusSelect = document.getElementById("reason");
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        status: bpStatusSelect.value
+      };
+    }
+
+    if (register.startsWith("BP Sugar Chart")) {
+      const bpChartReasonSelect = document.getElementById("reason");
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        reason: bpChartReasonSelect.value
+      };
+    }
+
+    if (register.startsWith("Followup Visits")) {
+      const followupPurposeSelect = document.getElementById("reason");
+      submissionData.extraData = {
+        ...submissionData.extraData,
+        purpose: followupPurposeSelect.value,
+        ...(followupPurposeSelect.value === "Others" && { purpose_others: purpose })
+      };
+    }
+
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", {
-        formDataDashboard,
-        extraData,
-        formData
-      }, {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", submissionData, {
         headers: {
           "Content-Type": "application/json"
         }
       });
 
       if (response.status === 200) {
-        console.log(response.data.mrdNo);
-        setMRDNo(response.data.mrdNo)
+        console.log("MRD Number:", response.data.mrdNo);
+        setMRDNo(response.data.mrdNo);
+        setFormData(prev => ({...prev, mrdNo: response.data.mrdNo}));
+        setdata([{...formData, mrdNo: response.data.mrdNo}]);
         alert("Data submitted successfully!");
       } else {
         alert("Something went wrong!");
       }
     } catch (error) {
       if (error.response && error.response.status === 400) {
-        alert(error.response.data.error); // Show user-friendly message
+        alert(error.response.data.error);
       } else {
         console.error("Error submitting form:", error);
         alert("Error submitting data!");
       }
+    } finally {
+      setLoading1(false);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const updatedformData = { ...formData, role: type }
+      const updatedformData = { ...formData, role: type, mrdNo: mrdNo }
       console.log(updatedformData)
       const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
         headers: {
@@ -356,6 +508,8 @@ const NewVisit = () => {
               menspack: {},
               moj: "",
               motion: {},
+              entry_date: new Date().toISOString().split('T')[0],
+              mrdNo: "",
               mri: {},
               msphistory: {},
               name: "",
@@ -420,6 +574,7 @@ const NewVisit = () => {
     setProfileImage(null); // Clear profile image
     setUploadedImage(null);
     setIsNewEmployee(false);
+    setMRDNo("");
   };
 
   const { search, reference } = useLocation().state || {};
@@ -460,47 +615,36 @@ const NewVisit = () => {
 
   // Update Register options and Purpose dynamically
   const getRegisterOptions = () => {
-    return Object.values(dataMapping[type]?.[selectedPurpose] || {});
+    return Object.keys(dataMapping[type]?.[visit] || {});
   };
-
-    // --- CORRECTED Handler for Register Dropdown Change ---
+    
     const handleRegisterChange = (e) => {
       const selectedRegister = e.target.value;
-      console.log("Selected Register:", selectedRegister);
-  
-      // Update the state variable controlling the dropdown's value
       setRegister(selectedRegister);
+      const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
+      setPurpose(autoPurpose);
+      setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
   
-      // Update ONLY the 'register' field in the dashboard state object
-      // DO NOT touch the 'purpose' field here. It was set by handlePurposeChange.
-      setFormDataDashboard(prev => ({
-          ...prev,
-          register: selectedRegister
-          // REMOVED: purpose: autoPurpose
-      }));
-  
-      // Reset additional fields when register changes (This part is correct)
+      // Reset additional fields when register changes
       setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
-      setCampFields({ campName: "", hospitalName: "", contractName: "", prevcontractName: "", old_emp_no: "" }); // Ensure all conditional fields are reset if applicable
+      setCampFields({ campName: "", hospitalName: "" });
     };
-
-  const handleTypeChange = (e) => {
-    const selectedType = e.target.value;
-    setType(selectedType);
-    setRegister(""); // Reset register
-    setPurpose("");   // Reset purpose
-    setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" })); // Update dashboard data and reset
-    // Also clear formData when the type changes, to avoid unexpected behavior
-    setFormData({ aadhar: searchId, role: selectedType });
-  };
-
-  const handleVisitChange = (e) => {
-    const selectedVisit = e.target.value;
-    setVisit(selectedVisit);
-    setRegister(""); // Reset register
-    setPurpose("");   // Reset purpose
-    setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); // Update dashboard data and reset
-  };
+  
+    const handleTypeChange = (e) => {
+      const selectedType = e.target.value;
+      setType(selectedType);
+      setRegister(""); // Reset register
+      setPurpose("");   // Reset purpose
+      setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" })); // Update dashboard data and reset
+    };
+  
+    const handleVisitChange = (e) => {
+      const selectedVisit = e.target.value;
+      setVisit(selectedVisit);
+      setRegister(""); // Reset register
+      setPurpose("");   // Reset purpose
+      setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); // Update dashboard data and reset
+    };
 
   const [age, setAge] = useState('');
 
@@ -537,24 +681,22 @@ const NewVisit = () => {
   ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering)
 
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setUploadError('Please upload an image file.');
-        return;
-      }
-
-      setUploadError(null); // Clear any previous errors
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUploadedImage(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleProfileIconClick = () => {
+    // Toggle webcam state
+    setProfileImage(null)
+    setUploadedImage(null)
+    setIsWebcamActive(!isWebcamActive);
   };
+
+  const handleCancelWebcam = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsWebcamActive(false);
+  };
+
   const handlePurposeChange = (e) =>{
     const purpose = e.target.value;
     console.log("purpose : ",purpose);
@@ -809,7 +951,7 @@ const NewVisit = () => {
                 <h2 className="text-lg font-medium my-4">Employment Details</h2>
                 <div className="grid grid-cols-3 mb-16 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 ">Employee Number</label>
+                    <label className="block text-sm font-medium text-gray-700 ">{type === "Contractor" && "Contract Employee Number" || "Employee Number"}</label>
                     <input
                       name="emp_no"
                       value={formData.emp_no || ''}
@@ -1132,7 +1274,7 @@ const NewVisit = () => {
       case "Vaccination":
         return <Vaccination data={data} />;
       case "Vitals":
-        return <Vitals data={data} type={type} />;
+        return <Vitals data={data} type={type} mrdNo={mrdNo} />;
       case "MedicalHistory":
         return <MedicalHistory data={data} />;
       case "Consultation":
@@ -1177,97 +1319,6 @@ const NewVisit = () => {
 
   }, [isWebcamActive]); // Depend on 'image' to restart webcam if needed
 
-  const handleProfileIconClick = () => {
-    // Toggle webcam state
-    setProfileImage(null)
-    setUploadedImage(null)
-    setIsWebcamActive(!isWebcamActive);
-  };
-
-  const captureImage = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (video && canvas) {
-      // Check if the video is ready to play
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-        const dataURL = canvas.toDataURL('image/jpeg'); // Or 'image/png'
-        setProfileImage(dataURL);
-        setIsWebcamActive(false); // Deactivate webcam after capture
-        // Stop the webcam stream after capturing
-        if (video.srcObject) {
-          const stream = video.srcObject;
-          stream.getTracks().forEach(track => track.stop());
-          video.srcObject = null;
-        }
-      }
-      else {
-        // Video not ready.
-        console.warn("Video stream not ready yet.  Trying again...");
-        // Consider setting a timer to retry or display a message to the user.
-      }
-    }
-
-  };
-
-  const handleUpload = async () => {
-    if (profileImage) {
-      console.log("Uploading image:", profileImage);
-      try {
-        // Convert Data URL to Blob
-        const blob = dataURLtoBlob(profileImage);
-        const formDataImg = new FormData();
-        formDataImg.append('image', blob, `profile_${formData.emp_no}.jpg`);
-        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { profileImage: profileImage, formData });
-        if (updateResponse.status === 200) {
-          alert("Profile image updated successfully!");
-          // Refresh employee list or update local state
-          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
-          setEmployees(fetchResponse.data.data);
-          setFilteredEmployees(fetchResponse.data.data);
-          console.log(fetchResponse.data.data);
-          setdata([{ ...formData, profileImage: profileImage }]); // Update local
-          // Function to convert Data URL to Blob
-
-        }
-        // }
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        alert("Error uploading uploading image!");
-      }
-    }
-
-  };
-  // Function to convert Data URL to Blob
-  const dataURLtoBlob = (dataURL) => {
-    // Convert base64/URLEncoded data component to raw binary data held in a string
-    let byteString;
-    if (dataURL.split(',')[0].indexOf('base64') >= 0)
-      byteString = atob(dataURL.split(',')[1]);
-    else
-      byteString = unescape(dataURL.split(',')[1]);
-
-    // Separate out the mime component
-    const mimeString = dataURL.split(',')[0].split(':')[1].split(';')[0];
-
-    // Write the bytes of the string to a typed array
-    const ia = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
-    }
-
-    return new Blob([ia], { type: mimeString });
-
-  }
-
-  const handleRetake = () => {
-    setProfileImage(null); // Clear the image to reactivate the webcam
-    setIsWebcamActive(true);
-  };
-
   if (accessLevel === "nurse" || accessLevel === "doctor") {
     return (
       <div className="h-screen flex bg-[#8fcadd]">
@@ -1307,8 +1358,22 @@ const NewVisit = () => {
                           <video
                             ref={videoRef}
                             autoPlay
-                            className="w-44 h-44 rounded-full object-cover" // Increased size to w-20 h-20
+                            className="w-44 h-44 rounded-full object-cover"
                           />
+                          <div className="flex space-x-2 mt-2">
+                            <button
+                              onClick={captureImage}
+                              className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
+                            >
+                              <FaCamera className="mr-2" /> Capture
+                            </button>
+                            <button
+                              onClick={handleCancelWebcam}
+                              className="flex items-center bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </>
                       ) : (
                         <div className="relative">
@@ -1322,36 +1387,11 @@ const NewVisit = () => {
                   )}
 
                   <div className="flex flex-col space-y-2">
-                    {isWebcamActive && (
-                      <button
-                        onClick={captureImage}
-                        className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
-                      >
-                        <FaCamera className="mr-2" /> Capture
-                      </button>
-                    )}
-                    {profileImage && (
-                      <>
-                        <button
-                          onClick={handleUpload}
-                          className="flex items-center bg-green-500 text-white py-2 px-4 rounded hover:bg-green-700"
-                        >
-                          <FaUpload className="mr-2" /> Upload
-                        </button>
-                        <button
-                          onClick={handleRetake}
-                          className="flex items-center bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-700"
-                        >
-                          <FaRedo className="mr-2" /> Retake
-                        </button>
-                      </>
-                    )}
                     {!profileImage && !isWebcamActive && (
                       <>
                         <div className="flex flex-col space-y-2">
-                         
                           <input
-                            id="imageUpload"
+                            ref={fileInputRef}
                             type="file"
                             accept="image/*"
                             onChange={handleImageUpload}
@@ -1359,6 +1399,12 @@ const NewVisit = () => {
                           />
                           {uploadError && <p className="text-red-500">{uploadError}</p>}
                         </div>
+                        <button
+                          onClick={handleUploadClick}
+                          className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
+                        >
+                          <FaUpload className="mr-2" /> Upload Picture
+                        </button>
                         <button
                           onClick={handleProfileIconClick}
                           className="flex items-center bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
@@ -1400,87 +1446,80 @@ const NewVisit = () => {
                       </button>
                       <button
                         onClick={handleSubmitEntries}
-                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                        className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
                       >
-                        Add Entry
+                        { loading1 === true &&
+                <div className="inline-block h-8 w-8 text-white animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div> || "Add Entry"
+              }
                       </button>
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"> {/* Changed to 3 columns */}
-                   {/* Type (Category) Selection */}
-                   <div>
-                     <label htmlFor="typeSelect" className="block text-gray-700 text-sm font-bold mb-2">
-                       Select Type <span className="text-red-500">*</span>
-                     </label>
-                     <select
-                       id="typeSelect"
-                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-white"
-                       value={type}
-                       onChange={handleTypeChange}
-                     >
-                       <option value="Employee">Employee</option>
-                       <option value="Contractor">Contractor</option>
-                       <option value="Visitor">Visitor</option>
-                     </select>
-                   </div>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {/* Type Selection */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Select Type
+                    </label>
+                    <select
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                      value={type}
+                      onChange={handleTypeChange}
+                    >
+                      <option value="">Select Type</option>
+                      <option>Employee</option>
+                      <option>Contractor</option>
+                      <option>Visitor</option>
+                    </select>
+                  </div>
 
-                   {/* Purpose Dropdown - Controls selectedPurpose and determines visit type */}
-                   <div>
-                       <label className="block text-gray-700 text-sm font-bold mb-2">
-                         Purpose <span className="text-red-500">*</span>:
-                       </label>
-                       <select
-                         id="purpose"
-                         className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-white"
-                         value={selectedPurpose} // Controlled by selectedPurpose state
-                         onChange={handlePurposeChange} // Use the updated handler
-                         required
-                       >
-                         <option value="">Select Purpose</option>
-                         {purposeOptions.map(option => ( // Use purposeOptions array
-                           <option key={option} value={option}>{option}</option>
-                         ))}
-                       </select>
-                     </div>
+                  {/* Visit Selection */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Select Type of Visit
+                    </label>
+                    <select
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                      value={visit}
+                      onChange={handleVisitChange}
+                    >
+                      <option value="">Select Visit Type</option>
+                      <option>Preventive</option>
+                      <option>Curative</option>
+                    </select>
+                  </div>
 
+                  {/* Register Selection */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Select Register
+                    </label>
+                    <select
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                      value={register}
+                      onChange={handleRegisterChange}
+                    >
+                      <option value="">Select Register</option>
+                      {getRegisterOptions().map((option) => (
+                        <option key={option}>{option}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                   {/* Type of Visit Display (Readonly) - Shows determined visit type */}
-                     <div>
-                         <label className="block text-gray-700 text-sm font-bold mb-2">
-                           Type of Visit
-                         </label>
-                         <input
-                           type="text"
-                           value={visit} // Display the derived visit state ('Preventive' or 'Curative')
-                           placeholder="Determined by Purpose"
-                           readOnly
-                           className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-700" // Adjusted style for readonly
-                         />
-                     </div>
-
-                     {/* Register Selection - Options depend on type and determined visit */}
-                     <div>
-                       <label className="block text-gray-700 text-sm font-bold mb-2">
-                         Select Register <span className="text-red-500">*</span>
-                       </label>
-                       <select
-                         className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm bg-white"
-                         value={register}
-                         onChange={handleRegisterChange}
-                         required
-                        //  disabled={visit} // Disable if visit type hasn't been determined yet
-                       >
-                         <option value="">Select Register</option>
-                         {getRegisterOptions().map((option) => ( 
-                          
-                          //  {console.log(option);}
-                           <option key={option} value={option}>{option}</option>
-                         ))}
-                       </select>
-                     </div>
-
-                 </div> {/* End of 3-column grid */}
+                  {/* Purpose (Auto-selected) */}
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Purpose
+                    </label>
+                    <input
+                      type="text"
+                      value={purpose}
+                      placeholder="Select the above feilds"
+                      readOnly
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100"
+                    />
+                  </div>
+                </div>
 
                 {/* Conditionally Rendered Fields */}
                 {(register === "Annual / Periodical" || register === "Periodical (Food Handler)") && (
@@ -1588,19 +1627,6 @@ const NewVisit = () => {
                   </div>
                 )}
 
-                {register.startsWith("Illness") && (
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
-                      <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
-                        <option value="">Select</option>
-                        Newly detected BP / DM , Patient not in control
-                        <option value="Newly detected BP / DM">Newly detected BP / DM</option>
-                        <option value="Patient not in control">Patient not in control</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
 
                 {register.startsWith("BP Sugar Chart") && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
@@ -1691,7 +1717,6 @@ const NewVisit = () => {
 };
 
 export default NewVisit;
-
 
 
 

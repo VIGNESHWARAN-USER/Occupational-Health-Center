@@ -88,7 +88,7 @@ const Investigation = ({ data }) => {
 
     if (!categoryData) return null;
 
-    const { id, latest_id, emp_no, investigation, entry_date, ...filteredData } = categoryData; // Remove id, latest_id, emp_no, investigation and entry_date
+    const { id, latest_id, aadhar, emp_no, investigation, entry_date, ...filteredData } = categoryData; // Remove id, latest_id, aadhar, emp_no, investigation and entry_date
     const entries = Object.entries(filteredData); // Convert object to array of [key, value] pairs
 
     return (

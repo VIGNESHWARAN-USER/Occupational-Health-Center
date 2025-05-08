@@ -355,13 +355,7 @@ const MedicalHistory = ({ data }) => {
                       </table>
             </div>
 
-            <div style={cardStyle}>
-              <h2 style={titleStyle}>Submission Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>Submitted By Nurse: <span className="font-medium">{submissionDetails?.submittedBy || 'N/A'}</span></div>
-                <div>Patient Booked to Dr.: <span className="font-medium">{submissionDetails?.bookedTo || 'N/A'}</span></div>
-              </div>
-            </div>
+            
         </div>
     );
 };

@@ -14,6 +14,7 @@ const DetailItem = ({ label, value, isFullWidth = false }) => (
 
 // --- Display Component for Form 17 ---
 const RenderForm17Display = ({ formData }) => {
+    console.log(formData)
     if (!formData) return null;
     return (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
@@ -152,7 +153,7 @@ const RenderForm27Display = ({ formData }) => {
 // --- Main Fitness Page Display Component ---
 const Fitness = ({ data }) => {
   console.log(data);
-  const fitnessAssessmentData = data.fitnessassessment;
+  const fitnessAssessmentData = data;
   const [displayData, setDisplayData] = useState({
     tremors: "N/A",
     romberg_test: "N/A",

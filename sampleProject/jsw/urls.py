@@ -1,4 +1,4 @@
-# urls.py
+# urls.py corrected
 
 from . import views
 from django.urls import path
@@ -7,84 +7,84 @@ from django.conf.urls.static import static
 from django.conf import settings # Import settings
 
 urlpatterns = [
-    # Authentication & Member Management (Unchanged)
+    # Authentication & Member Management
     path('login', views.login, name='login'),
     path('forgot_password/', views.forgot_password, name='forgot_password'),
     path('verify_otp/', views.verify_otp, name='verify_otp'),
     path('reset_password/', views.reset_password, name='reset_password'),
     path('find_member_by_email/', views.find_member_by_email, name='find_member_by_email'),
-    path('members/add/', views.add_member, name='member-add'), # Renamed for clarity
+    path('members/add/', views.add_member, name='member-add'),
     path('members/update/<int:member_id>/', views.update_member, name='update_member'),
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
-    path('addUsers/', views.create_users, name='addusers'), # For initial setup
+    path('addUsers/', views.create_users, name='addusers'),
 
     # Core Data Fetching / Entry (Using Aadhar)
-    path('userData', views.fetchdata, name = 'userData'), # Fetches latest based on aadhar
-    path('addEntries', views.addEntries, name='add_Entries'), # Uses aadhar from payload
-    path('addbasicdetails', views.add_basic_details, name = 'addDetails'), # Uses aadhar from payload
-    path('updateProfileImage/<str:aadhar>', views.uploadImage, name='upload_image'), # CHANGED: emp_no -> aadhar
-    path('visitData/<str:aadhar>', views.fetchVisitdata, name = 'fetchVisitdata'), # CHANGED: emp_no -> aadhar
-    path('visitData/<str:aadhar>/<str:date_str>', views.fetchVisitDataWithDate, name = 'fetchVisitdataWithDate'), # CHANGED: emp_no -> aadhar, date -> date_str
-    path('update_employee_status/', views.update_employee_status, name='update_employee_status'), # Uses aadhar from payload
+    path('userData', views.fetchdata, name = 'userData'),
+    path('addEntries', views.addEntries, name='add_Entries'),
+    path('addbasicdetails', views.add_basic_details, name = 'addDetails'),
+    path('updateProfileImage/<str:aadhar>', views.uploadImage, name='upload_image'),
+    path('visitData/<str:aadhar>', views.fetchVisitdata, name = 'fetchVisitdata'),
+    path('visitData/<str:aadhar>/<str:date_str>', views.fetchVisitDataWithDate, name = 'fetchVisitdataWithDate'),
+    path('update_employee_status/', views.update_employee_status, name='update_employee_status'),
 
     # Vitals & Investigations (Using Aadhar from payload)
     path('addvitals', views.add_vital_details, name = 'addVitals'),
-    path("addInvestigation", views.add_haem_report, name="addInvestigation"), # Keep alias, uses aadhar
-    path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"), # uses aadhar
-    path("addRenalFunctionTest", views.add_renel_function, name="addRenalFunctionTest"), # uses aadhar
-    path("addLipidProfile", views.add_lipid_profile, name="addLipidProfile"), # uses aadhar
-    path("addLiverFunctionTest", views.add_liver_function, name="addLiverFunctionTest"), # uses aadhar
-    path("addThyroidFunctionTest", views.add_thyroid_function, name="addThyroidFunctionTest"), # uses aadhar
-    path("addAutoimmuneFunctionTest", views.add_autoimmune_function, name="addAutoimmuneFunctionTest"), # uses aadhar    
-    path("addCoagulationTest", views.add_coagulation_function, name="addCoagulationTest"), # Assuming view exists and uses aadhar
-    path("addEnzymesAndCardiacProfile", views.add_enzymes_cardiac, name="addEnzymesAndCardiacProfile"), # uses aadhar
-    path("addUrineRoutine", views.add_urine_routine, name="addUrineRoutine"), # uses aadhar
-    path("addSerology", views.add_serology, name="addSerology"), # Corrected view, uses aadhar
-    path("addMotion", views.add_motion_test, name="addMotion"), # uses aadhar
-    path("addCultureSensitivityTest", views.add_culturalsensitivity_function, name="addCultureSensitivityTest"), # uses aadhar
+    path("addInvestigation", views.add_haem_report, name="addInvestigation"),
+    path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"),
+    # Correction: Point to the corrected view name
+    path("addRenalFunctionTest", views.add_renal_function, name="addRenalFunctionTest"),
+    path("addLipidProfile", views.add_lipid_profile, name="addLipidProfile"),
+    path("addLiverFunctionTest", views.add_liver_function, name="addLiverFunctionTest"),
+    path("addThyroidFunctionTest", views.add_thyroid_function, name="addThyroidFunctionTest"),
+    path("addAutoimmuneFunctionTest", views.add_autoimmune_function, name="addAutoimmuneFunctionTest"),
+    path("addCoagulationTest", views.add_coagulation_function, name="addCoagulationTest"),
+    path("addEnzymesAndCardiacProfile", views.add_enzymes_cardiac, name="addEnzymesAndCardiacProfile"),
+    path("addUrineRoutine", views.add_urine_routine, name="addUrineRoutine"),
+    path("addSerology", views.add_serology, name="addSerology"),
+    path("addMotion", views.add_motion_test, name="addMotion"),
+    path("addCultureSensitivityTest", views.add_culturalsensitivity_function, name="addCultureSensitivityTest"), # Corrected spelling of view function
 
     # Other Medical Data (Using Aadhar from payload)
-    path("medical-history/", views.create_medical_history, name="create_medical_history"), # uses aadhar
-    path("addMensPack", views.add_mens_pack, name="addMensPack"), # uses aadhar
+    path("medical-history/", views.create_medical_history, name="create_medical_history"),
+    path("addMensPack", views.add_mens_pack, name="addMensPack"),
     path("addWomensPack", views.add_womens_function, name="addWomensPack"),
-    path("addOccupationalprofile", views.add_occupationalprofile_function, name="addMensPack"),
+    path("addOccupationalprofile", views.add_occupationalprofile_function, name="addOccupationalprofile"), # Corrected name to match view
     path("addOtherstest", views.add_otherstest_function, name="addOtherstest"),
+    # Correction: Point to the corrected view name
+    path("addOpthalmicReport", views.add_ophthalmic_report, name="addOphthalmicReport"), # Corrected view name and path spelling consistency
+    path("addUSG", views.add_usg_report, name="addUSG"),
+    path("addMRI", views.add_mri_report, name="addMRI"),
+    path("addXRay", views.add_xray_function, name="addXRay"),
+    path("addCT", views.add_ct_function, name="addCT"),
 
-    path("addOpthalmicReport", views.add_opthalmic_report, name="addOpthalmicReport"), # uses aadhar
-    path("addUSG", views.add_usg_report, name="addUSG"), # uses aadhar
-    path("addMRI", views.add_mri_report, name="addMRI"), # uses aadhar
-    path("addXRay", views.add_xray_function, name="addXRay"), # uses aadhar
-    path("addCT", views.add_ct_function, name="addCT"), # uses aadhar
-    
-    path("vaccination/", views.insert_vaccination, name="insert_vaccination"), # uses aadhar
-    path("getvaccinations/", views.fetch_vaccinations, name="get_vaccination"), # Optional aadhar filter?
-    path("fitness-tests/", views.fitness_test, name="fitness_test"), # uses aadhar
-    path('consultations/add/', views.add_consultation, name='add_consultation'), # uses aadhar
-    path('significant_notes/add/', views.add_significant_notes, name='add_significant_note'), # uses aadhar
-    path('get_notes/<str:aadhar>', views.get_notes, name='get_notes_by_aadhar'), # CHANGED: emp_no -> aadhar
-    path('get_notes/', views.get_notes_all, name='get_notes_all'), # Fetches all
+    path("vaccination/", views.insert_vaccination, name="insert_vaccination"),
+    path("getvaccinations/", views.fetch_vaccinations, name="get_vaccination"),
+    path("fitness-tests/", views.fitness_test, name="fitness_test"),
+    path('consultations/add/', views.add_consultation, name='add_consultation'),
+    path('significant_notes/add/', views.add_significant_notes, name='add_significant_note'),
+    path('get_notes/<str:aadhar>', views.get_notes, name='get_notes_by_aadhar'),
+    path('get_notes/', views.get_notes_all, name='get_notes_all'),
 
-    # Forms (Using Aadhar from payload - Check Models!)
-    path('form17/', views.create_form17, name='create_form17'), # uses aadhar
-    path('form38/', views.create_form38, name='create_form38'), # uses aadhar
-    path('form39/', views.create_form39, name='create_form39'), # uses aadhar
-    path('form40/', views.create_form40, name='create_form40'), # uses aadhar
-    path('form27/', views.create_form27, name='create_form27'), # uses aadhar
+    # Forms (Using Aadhar from payload)
+    path('form17/', views.create_form17, name='create_form17'),
+    path('form38/', views.create_form38, name='create_form38'),
+    path('form39/', views.create_form39, name='create_form39'),
+    path('form40/', views.create_form40, name='create_form40'),
+    path('form27/', views.create_form27, name='create_form27'),
 
     # Appointments (Using AadharNo / ID)
-    path('bookAppointment/', views.BookAppointment, name='book_appointment'), # Renamed for clarity
+    path('bookAppointment/', views.BookAppointment, name='book_appointment'),
     path('uploadAppointment/', views.uploadAppointment, name='uploadAppointment'),
-    path('appointments/', views.get_appointments, name='get_appointments'), # Can filter by aadharNo query param
-    path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'), # Uses appointment ID
+    path('appointments/', views.get_appointments, name='get_appointments'),
+    path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'),
 
     # Prescriptions (Using Aadhar / ID)
-    path('prescriptions/add/', views.add_prescription, name='add_prescription'), # Uses aadhar from payload
-    path('prescriptions/view/', views.view_prescriptions, name='view_prescriptions'), # Lists all
-    path('prescriptions/view/<str:aadhar>/', views.view_prescriptions_emp, name='view_update_prescriptions_by_aadhar'), # CHANGED: emp_no -> aadhar (Handles GET/PUT)
-    path('prescriptions/view/id/<int:prescription_id>/', views.view_prescription_by_id, name='view_prescription_by_id'),
-    # path('prescriptions/update/<int:prescription_id>/', views.update_prescription, name='update_prescription'), # Covered by PUT in view_prescriptions_emp
+    path('prescriptions/add/', views.add_prescription, name='add_prescription'),
+    path('prescriptions/view/', views.view_prescriptions, name='view_prescriptions'),
+    path('prescriptions/view/<str:aadhar>/', views.view_prescriptions_emp, name='view_update_prescriptions_by_aadhar'),
+    path('prescriptions/view/id/<int:prescription_id>/', views.view_prescription_by_id, name='view_prescription_by_id'), # Uncommented as view exists
 
-    # Pharmacy / Inventory / Calibration (Unchanged - No apparent emp_no/aadhar link)
+    # Pharmacy / Inventory / Calibration
     path("add-stock/", views.add_stock, name="add-stock"),
     path('current_stock/', views.get_current_stock, name='current_stock'),
     path('stock_history/', views.get_stock_history, name='stock_history'),
@@ -109,25 +109,25 @@ urlpatterns = [
     path("get_pending_next_month_count/", views.get_pending_next_month_count, name="get_pending_next_month_count"),
 
 
-    # Mock Drills / Camps / Reviews (Check identifier usage)
-    path('save-mockdrills/', views.save_mockdrills, name='save_mockdrills'), # Uses aadhar from payload if applicable
+    # Mock Drills / Camps / Reviews
+    path('save-mockdrills/', views.save_mockdrills, name='save_mockdrills'),
     path('get-mockdrills/', views.get_mockdrills, name='get_mockdrills'),
     path('add-camp/', views.add_camp, name='add_camp'),
     path('get-camps/', views.get_camps, name='get_camps'),
     path('upload-files/', views.upload_files, name='upload_files'),
     path('download-file/', views.download_file, name='download_file'),
     path('delete-file/', views.delete_file, name='delete_file'),
-    path("categories/", views.get_categories, name="get_categories"), # Renamed view import usage
-    path("reviews/<str:status>/", views.get_reviews, name="get_reviews"), # Renamed view import usage
-    path("add-review/", views.add_review, name="add_review"), # Renamed view import usage
+    path("categories/", views.get_categories, name="get_categories"),
+    path("reviews/<str:status>/", views.get_reviews, name="get_reviews"),
+    path("add-review/", views.add_review, name="add_review"),
 
-    # Dashboard Stats / General Fetch (Unaffected by primary key change)
+    # Dashboard Stats / General Fetch
     path('dashboard/', views.dashboard_stats, name='dashboard'),
-    path('visitData/', views.fetchVisitdataAll, name = 'fetchVisitdataAll'), # Fetches all dashboard
-    path('fitnessData/', views.fetchFitnessData, name = 'fetchFitnessDataAll'), # Fetches all fitness
+    path('visitData/', views.fetchVisitdataAll, name = 'fetchVisitdataAll'),
+    path('fitnessData/', views.fetchFitnessData, name = 'fetchFitnessDataAll'),
     path('get_current_expiry_count/', views.get_current_expiry_count, name='get_current_expiry_count'),
     path('get_red_status_count/', views.get_red_status_count, name='get_red_status_count'),
-
+    path('hrupload', views.hrupload, name='hrupload'),
 
 ]
 

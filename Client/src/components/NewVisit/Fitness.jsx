@@ -335,36 +335,68 @@ useEffect(() => {
 
 
         // --- Statutory Form Input Handlers (Age calculation already present) ---
-        const handleForm17InputChange = (event) => { /* ... no changes needed ... */};
-        const handleForm38InputChange = (event) => { setForm38Data({ ...form38Data, [event.target.name]: event.target.value }); };
-        const handleForm39InputChange = (event) => { setForm39Data({ ...form39Data, [event.target.name]: event.target.value }); };
-        const handleForm40InputChange = (event) => { setForm40Data({ ...form40Data, [event.target.name]: event.target.value }); };
-        const handleForm27InputChange = (event) => { setForm27Data({ ...form27Data, [event.target.name]: event.target.value }); };
+        const handleForm17InputChange = (event) => {
+            const { name, value } = event.target;
+            setForm17Data(prevData => ({
+                ...prevData,
+                [name]: value,
+                // Calculate age if DOB changes
+                ...(name === 'dob' && value ? {
+                    age: moment().diff(moment(value), 'years').toString()
+                } : {})
+            }));
+        };
+        const handleForm38InputChange = (event) => {
+            const { name, value } = event.target;
+            setForm38Data(prevData => ({
+                ...prevData,
+                [name]: value,
+                // Calculate age if DOB changes
+                ...(name === 'dob' && value ? {
+                    age: moment().diff(moment(value), 'years').toString()
+                } : {})
+            }));
+        };
+        const handleForm39InputChange = (event) => {
+            const { name, value } = event.target;
+            setForm39Data(prevData => ({
+                ...prevData,
+                [name]: value,
+                // Calculate age if DOB changes
+                ...(name === 'dob' && value ? {
+                    age: moment().diff(moment(value), 'years').toString()
+                } : {})
+            }));
+        };
+        const handleForm40InputChange = (event) => {
+            const { name, value } = event.target;
+            setForm40Data(prevData => ({
+                ...prevData,
+                [name]: value,
+                // Calculate age if DOB changes
+                ...(name === 'dob' && value ? {
+                    age: moment().diff(moment(value), 'years').toString()
+                } : {})
+            }));
+        };
+        const handleForm27InputChange = (event) => {
+            const { name, value } = event.target;
+            setForm27Data(prevData => ({
+                ...prevData,
+                [name]: value,
+                // Calculate age if DOB changes
+                ...(name === 'dob' && value ? {
+                    age: moment().diff(moment(value), 'years').toString()
+                } : {})
+            }));
+        };
         // --- End Handlers ---
 
-        // getCookie function (IMPLEMENTED - Basic)
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    // Does this cookie string begin with the name we want?
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-
-        // --- Submit Handlers (IMPLEMENTED) ---
+        
 
         // Generic submit logic
         const submitData = async (url, method, payload, successMessage, errorMessagePrefix) => {
             setIsSubmitting(true);
-            const csrftoken = getCookie('csrftoken'); // Ensure your backend sets this cookie
             console.log(`Submitting to ${url} with method ${method}`, payload); // Debug log
 
             try {
@@ -372,7 +404,6 @@ useEffect(() => {
                     method: method,
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken, // Include CSRF token if needed by backend (like Django)
                     },
                     body: JSON.stringify(payload),
                 });
@@ -406,85 +437,89 @@ useEffect(() => {
                 return;
             }
 
+            // Check if overall fitness is selected
+            if (!overallFitness) {
+                alert("Please select Overall Fitness status before submitting.");
+                return;
+            }
+
+            // Get required fields
+            const aadharNo = data?.[0]?.aadhar || '';
+            const mrdNo = data?.[0]?.mrdNo || '';
+
+            // Validate required fields
+            if (!aadharNo) {
+                alert("Aadhar number is required. Please ensure employee has a valid Aadhar number.");
+                return;
+            }
+
+            if (!mrdNo) {
+                alert("MRD number is required. Please ensure employee has a valid MRD number.");
+                return;
+            }
+
             // Determine if updating (PUT) or creating (POST)
-            // We assume if data[0].fitnessassessment exists, we update, otherwise create.
             const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false;
             const method = existingAssessment ? 'PUT' : 'POST';
 
-            // i want to true or false for fitness assessment
-            //const fitnessAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false; // Adjust based on your data structure
-
-        
             // Construct URL: Append emp_no for PUT, use base URL for POST
-            // IMPORTANT: Adjust this based on your actual API design!
-            // Option 1: Always POST to base URL, backend handles upsert based on emp_no in payload
-            // Option 2: POST to base, PUT to /fitness-tests/{emp_no}/
-            // Assuming Option 1 for simplicity here:
             const url = FITNESS_ASSESSMENT_URL; 
 
-            //iwant to get aadhar no
-            const aadharNo = data?.[0]?.aadhar || ''; // Adjust based on your data structure
-            console.log("Aadhar No : ",aadharNo);
-            
-            console.log("URL : ",url);
-            // Adjust if your API needs emp_no in URL for PUT
+            const employer = data?.[0]?.type || '';
+            const submittedDoctor = localStorage.getItem("userData") || '';
 
             // Inside handleFitnessSubmit
-const payload = {
-    ...fitnessFormData,
-    job_nature: JSON.stringify(selectedOptions),
-    conditional_fit_feilds: JSON.stringify(conditionalOptions),
-    overall_fitness: overallFitness,
-    systematic_examination: systematicExamination,
-    general_examination: generalExamination,
-    // eye_exam_result: eyeExamResult, // Removed this line as eyeExamResult state doesn't seem to exist, using eye_exam_fit_status below
-    eye_exam_fit_status: eyeExamFitStatus,
-    comments: comments,
-    aadhar: aadharNo,
-    special_cases: specialCases,
-    emp_no: currentEmpNo,
+            const payload = {
+                ...fitnessFormData,
+                mrdNo: mrdNo,
+                job_nature: JSON.stringify(selectedOptions),
+                submittedDoctor: submittedDoctor,
+                conditional_fit_feilds: JSON.stringify(conditionalOptions),
+                overall_fitness: overallFitness,
+                systematic_examination: systematicExamination,
+                general_examination: generalExamination,
+                eye_exam_fit_status: eyeExamFitStatus,
+                comments: comments,
+                aadhar: aadharNo,
+                employer: employer,
+                special_cases: specialCases,
+                emp_no: currentEmpNo,
+                other_job_nature: otherJobNature,
+                conditional_other_job_nature: conditionalotherJobNature,
+            };
 
-    // --- ADJUST/ADD THESE ---
-    other_job_nature: otherJobNature, // Use correct backend key (e.g., snake_case)
-    conditional_other_job_nature: conditionalotherJobNature, // Add this field with correct backend key
-    // --- END ADJUST/ADD ---
-};
-
-await submitData(
-    url,
-    method,
-    payload, // Pass the updated payload
-    "Fitness Assessment submitted successfully!",
-    "Fitness Assessment Submission"
-);
-            // Optionally refresh data or update UI state after successful submission
+            await submitData(
+                url,
+                method,
+                payload,
+                "Fitness Assessment submitted successfully!",
+                "Fitness Assessment Submission"
+            );
         };
 
         // Generic handler for submitting Statutory Forms
         const submitStatutoryForm = async (baseUrl, formData, formName, setDataState, defaultState, removeFormCallback) => {
             const currentEmpNo = data?.[0]?.emp_no;
-            if (!currentEmpNo || !formData.emp_no) {
-                // Check formData.emp_no as well, should have been set
-                alert(`Cannot submit ${formName}. Employee number is missing.`);
+            const aadharNo = data?.[0]?.aadhar || '';
+            const employer = data?.[0]?.type || '';
+
+            if (!aadharNo) {
+                alert(`Cannot submit ${formName}. Aadhar number is missing.`);
                 return;
             }
 
-            // Determine PUT vs POST
-            // Check if the initial data load contained this form for the employee
-            const formKey = formName.toLowerCase().replace(' ', ''); // e.g., "form17"
-            const existingForm = data?.[0]?.[formKey];
-            const method = existingForm ? 'PUT' : 'POST';
+            // Always use POST method
+            const method = 'POST';
 
-            // Construct URL - Adjust based on your API design
-            // Assuming PUT/POST to /formXX/{emp_no}/ or similar unique identifier if needed
-            // Or POST to /formXX/ and backend handles upsert based on emp_no in payload
-            // Let's assume the API uses emp_no in the URL for updates:
-            const url = `${baseUrl}${method === 'PUT' ? `${formData.emp_no}/` : ''}`; // Adjust this separator '/' if needed
-            // const url = baseUrl; // Simpler if backend handles upsert via POST
+            // Construct URL - Using base URL since backend will handle upsert based on aadhar
+            const url = baseUrl;
 
-            // Ensure emp_no is correctly in the payload being sent
-            const payload = { ...formData, emp_no: currentEmpNo };
-
+            // Ensure aadhar and employer are in the payload
+            const payload = { 
+                ...formData, 
+                aadhar: aadharNo,
+                employer: employer
+            };
 
             const result = await submitData(
                 url,
@@ -629,12 +664,9 @@ await submitData(
                     </div>
                 </div>
                 {/* Buttons */}
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-end items-center">
                     <button onClick={submitForm17} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Form 17'}
-                    </button>
-                    <button onClick={() => generateFormPdf(form17Data, "Form 17", data?.[0]?.emp_no, data?.[0]?.name, FORM17_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                        Generate PDF
                     </button>
                 </div>
             </div>
@@ -712,12 +744,9 @@ await submitData(
                     </div>
                 </div>
                 {/* Buttons */}
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-end items-center">
                     <button onClick={submitForm38} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Form 38'}
-                    </button>
-                    <button onClick={() => generateFormPdf(form38Data, "Form 38", data?.[0]?.emp_no, data?.[0]?.name, FORM38_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                        Generate PDF
                     </button>
                 </div>
             </div>
@@ -805,12 +834,9 @@ await submitData(
                     </div>
                 </div>
                 {/* Buttons */}
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-end items-center">
                     <button onClick={submitForm39} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Form 39'}
-                    </button>
-                    <button onClick={() => generateFormPdf(form39Data, "Form 39", data?.[0]?.emp_no, data?.[0]?.name, FORM39_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                        Generate PDF
                     </button>
                 </div>
             </div>
@@ -917,12 +943,9 @@ await submitData(
                     </div>
                 </div>
                 {/* Buttons */}
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-end items-center">
                     <button onClick={submitForm40} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Form 40'}
-                    </button>
-                    <button onClick={() => generateFormPdf(form40Data, "Form 40", data?.[0]?.emp_no, data?.[0]?.name, FORM40_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                        Generate PDF
                     </button>
                 </div>
             </div>
@@ -999,12 +1022,9 @@ await submitData(
                     </div>
                 </div>
                 {/* Buttons */}
-                <div className="mt-4 flex justify-between items-center">
+                <div className="mt-4 flex justify-end items-center">
                     <button onClick={submitForm27} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                         {isSubmitting ? 'Submitting...' : 'Submit Form 27'}
-                    </button>
-                    <button onClick={() => generateFormPdf(form27Data, "Form 27", data?.[0]?.emp_no, data?.[0]?.name, FORM27_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                        Generate PDF
                     </button>
                 </div>
             </div>
@@ -1133,6 +1153,7 @@ await submitData(
                                     <option value="fit">Fit</option>
                                     <option value="unfit">Unfit</option>
                                     <option value="conditional">Conditional Fit</option>
+                                    <option value="pending">Pending</option>
                                 </select>
                             </div>
 

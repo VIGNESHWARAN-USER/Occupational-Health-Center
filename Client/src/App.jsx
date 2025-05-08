@@ -32,6 +32,7 @@ import InstrumentCalibration from './components/instrumentcalibration'
 import Viewprescription from './components/Pharmacy/viewprescription'
 import StockHistory from './components/Pharmacy/stockHistory'
 import AmbulanceConsumables from './components/Pharmacy/ambulanceconsumable'
+import DataUpload from './components/DataUpload'
 
 function App() {
   return (
@@ -76,6 +77,7 @@ function App() {
           <Route path = '/wardconsumable' element = {<WardConsumable/>}/>
           <Route path = '/instrumentcalibration' element = {<InstrumentCalibration/>}/>
           <Route path = '/viewprescription' element = {<Viewprescription/>}/>
+          <Route path='/dataupload' element = {<DataUpload/>}/>
       </Route>
     </Routes>
     </div>

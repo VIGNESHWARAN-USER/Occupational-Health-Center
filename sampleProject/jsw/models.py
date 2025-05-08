@@ -170,6 +170,7 @@ class vitals(BaseModel):
     fc = models.FileField(upload_to= 'fc/', blank = True, null=True)
     report = models.FileField(upload_to= 'report/', blank = True, null=True)
     self_declared = models.FileField(upload_to= 'self_declared/', blank = True, null=True)
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Vitals for Emp {self.emp_no}"
@@ -1164,7 +1165,7 @@ class Appointment(BaseModel):
 
     appointment_no = models.TextField(max_length = 255, blank=True)
     booked_date = models.DateField()
-    mrd_no = models.TextField(max_length=255, blank=True)
+    mrdNo = models.TextField(max_length=255, blank=True)
     role = models.TextField(max_length=100 , blank=True)
     emp_no = models.TextField(max_length=255, blank=True)
     # aadhar_no = models.TextField(max_length=225, blank=True) # Original aadhar_no
@@ -1225,13 +1226,13 @@ class FitnessAssessment(BaseModel):
     conditionalotherJobNature = models.CharField(max_length=225, blank=True, null=True)
     #special cases
     special_cases=models.CharField(max_length=10,blank=True,null=True)
-
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     # Job & Fitness Status
     job_nature = models.JSONField(blank=True, null=True)
     overall_fitness = models.CharField(max_length=20, choices=OverallFitnessChoices.choices, blank=True, null=True)
     conditional_fit_feilds = models.JSONField(blank=True, null=True)
     
-    
+    submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     # Examinations
     general_examination = models.TextField(blank=True, null=True)
@@ -1322,6 +1323,7 @@ class MedicalHistory(BaseModel):
     children_data = models.JSONField(null=True, blank=True)
     conditions = models.JSONField(null=True, blank=True)
     spouse_data=models.JSONField(null=True,blank=True)
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Medical History for Emp No: {self.emp_no or 'N/A'}"
@@ -1370,10 +1372,9 @@ class Consultation(models.Model): # Changed inheritance, ensure ID/entry_date ar
     
     #special cases
     special_cases=models.CharField(max_length=10, blank=True, null=True)
-
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     # --- Submission Metadata ---
-    submitted_by_doctor = models.CharField(max_length=100, blank=True, null=True)
-    submitted_by_nurse = models.CharField(max_length=100, blank=True, null=True)
+    submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         # Optional: Unique constraint if needed
@@ -1617,6 +1618,7 @@ class Form40(BaseModel):
     typhoidVaccinationDate = models.DateField(blank=True, null=True)
     signatureOfFMO = models.TextField(blank=True, null=True)
     remarks = models.CharField(max_length=255, blank=True, null=True)
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return f"Form 40 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"

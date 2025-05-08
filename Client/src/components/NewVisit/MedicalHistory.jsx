@@ -3,6 +3,7 @@ import Select from 'react-select';
 
 // This is the second code snippet provided, which already includes the spouse functionality.
 const MedicalHistory1 = ({ data }) => {
+ 
   // console.log(data); // Keep console logs minimal in final code unless debugging
   const emp_no = data && data[0] ? data[0]?.emp_no : null; // Use emp_no if available
   const aadhar = data && data[0] ? data[0]?.aadhar : null; // Extract Aadhar
@@ -115,99 +116,142 @@ const MedicalHistory1 = ({ data }) => {
     multiValueRemove: (provided) => ({ ...provided, color: '#004085', cursor: 'pointer', ':hover': { backgroundColor: '#0056b3', color: 'white', }, }),
    };
 
-  // --- useEffect for Data Loading ---
-  useEffect(() => {
+   // --- useEffect for Data Loading ---
+   useEffect(() => {
+    // Check if data is valid and contains the necessary structure
     if (data && data[0]) {
       const currentData = data[0];
       const currentInitialSex = currentData?.sex || "";
-      setSex(currentInitialSex);
+      setSex(currentInitialSex); // Set sex state based on main data
 
-      const medical = currentData['msphistory'] || {}; // Get the medical history object
+      // --- Safely access medical history data ---
+      // Use 'msphistory' key as shown in your provided data structure
+      // Provide a default empty object {} if msphistory is null or undefined
+      const medical = currentData.medicalhistory || {};
+      console.log("Extracted medical history data:", medical); // Good for debugging
 
-      // Load Personal History
-      setPersonalHistory(medical.personal_history || { diet: "", paan: { yesNo: "", years: "" }, alcohol: { yesNo: "", years: "", frequency: "" }, smoking: { yesNo: "", years: "", perDay: "" } });
-
-      // Load Medical Data
-       const loadedMedicalData = medical.medical_data || {};
-        const completeMedicalData = Object.keys(initialMedicalData).reduce((acc, key) => {
-            const loadedItem = loadedMedicalData[key] || {};
-            acc[key] = {
-                ...initialMedicalData[key],
-                ...loadedItem,
-                detail: (key === 'Obstetric' || key === 'Gynaec')
-                    ? (Array.isArray(loadedItem.detail)
-                        ? loadedItem.detail
-                        : (typeof loadedItem.detail === 'string' && loadedItem.detail
-                            ? loadedItem.detail.split(',').map(s => s.trim()).filter(Boolean)
-                            : []))
-                    : (loadedItem.detail || ""),
-                children: Array.isArray(loadedItem.children) ? loadedItem.children : []
-            };
-            return acc;
-        }, {});
-      setMedicalData(completeMedicalData);
-
-      // Load Female Worker specific data
-      setFemaleWorker(medical.female_worker || { obstetricHistory: "", gynecologicalHistory: "" });
-
-      // Load Surgical History
-      setSurgicalHistory({
-            ...(medical.surgical_history || { comments: "", history: "" }),
-            children: Array.isArray(medical.surgical_history?.children) ? medical.surgical_history.children : []
+      // --- Load Personal History ---
+      // Provide a robust fallback for the entire personal_history object and its nested parts
+      const defaultPersonalHistory = { diet: "", paan: { yesNo: "", years: "" }, alcohol: { yesNo: "", years: "", frequency: "" }, smoking: { yesNo: "", years: "", perDay: "" } };
+      const loadedPersonalHistory = medical.personal_history || {};
+      setPersonalHistory({
+          ...defaultPersonalHistory, // Start with defaults
+          ...loadedPersonalHistory, // Override with loaded data
+          // Ensure nested objects also have defaults if missing in loaded data
+          paan: { ...defaultPersonalHistory.paan, ...(loadedPersonalHistory.paan || {}) },
+          alcohol: { ...defaultPersonalHistory.alcohol, ...(loadedPersonalHistory.alcohol || {}) },
+          smoking: { ...defaultPersonalHistory.smoking, ...(loadedPersonalHistory.smoking || {}) },
       });
 
-      // Load Allergy info
-      setAllergyFields(medical.allergy_fields || { drug: { yesNo: "" }, food: { yesNo: "" }, others: { yesNo: "" } });
+      // --- Load Medical Data ---
+      // Ensure the structure always matches initialMedicalData, merging deeply
+      const loadedMedicalData = medical.medical_data || {};
+      const completeMedicalData = Object.keys(initialMedicalData).reduce((acc, key) => {
+        const loadedItem = loadedMedicalData[key] || {}; // Fallback for each condition
+        acc[key] = {
+          ...initialMedicalData[key], // Ensure all default fields exist
+          ...loadedItem, // Override with loaded data
+          // Special handling for Obstetric/Gynaec detail (string/array)
+          detail: (key === 'Obstetric' || key === 'Gynaec')
+            ? (Array.isArray(loadedItem.detail)
+                ? loadedItem.detail // Use if it's already an array
+                : (typeof loadedItem.detail === 'string' && loadedItem.detail
+                    ? loadedItem.detail.split(',').map(s => s.trim()).filter(Boolean) // Split if string
+                    : initialMedicalData[key].detail)) // Fallback to initial empty array
+            : (loadedItem.detail !== undefined && loadedItem.detail !== null ? loadedItem.detail : initialMedicalData[key].detail), // Use loaded detail or initial default ""
+          // Ensure children is always an array
+          children: Array.isArray(loadedItem.children) ? loadedItem.children : initialMedicalData[key].children
+        };
+        return acc;
+      }, {});
+      setMedicalData(completeMedicalData);
+
+      // --- Load Female Worker specific data ---
+      setFemaleWorker(medical.female_worker || { obstetricHistory: "", gynecologicalHistory: "" });
+
+      // --- Load Surgical History ---
+      // Ensure children is an array, provide defaults for comments/history
+      const loadedSurgical = medical.surgical_history || {};
+      setSurgicalHistory({
+        comments: loadedSurgical.comments || "",
+        history: loadedSurgical.history || "", // Keep the legacy 'history' field if it exists
+        children: Array.isArray(loadedSurgical.children) ? loadedSurgical.children : []
+      });
+
+      // --- Load Allergy info ---
+      const defaultAllergyFields = { drug: { yesNo: "" }, food: { yesNo: "" }, others: { yesNo: "" } };
+      const loadedAllergyFields = medical.allergy_fields || {};
+      setAllergyFields({
+          ...defaultAllergyFields,
+          drug: { ...defaultAllergyFields.drug, ...(loadedAllergyFields.drug || {}) },
+          food: { ...defaultAllergyFields.food, ...(loadedAllergyFields.food || {}) },
+          others: { ...defaultAllergyFields.others, ...(loadedAllergyFields.others || {}) },
+      });
       setAllergyComments(medical.allergy_comments || { drug: "", food: "", others: "" });
 
-       // Load Children Data
-       setChildrenData(Array.isArray(medical.children_data) ? medical.children_data.map(c => ({ ...defaultPerson, ...c })) : []);
+      // --- Load Children Data ---
+      // Ensure it's an array and merge with default structure
+      setChildrenData(Array.isArray(medical.children_data) ? medical.children_data.map(c => ({ ...defaultPerson, ...c })) : []);
 
-       // Load Family History (Parents/Grandparents + Condition Comments)
-       const loadedFamilyHistoryRaw = medical.family_history || {};
-       const { spouse, ...familyHistoryRest } = loadedFamilyHistoryRaw; // Separate potential legacy spouse field
-       const completeFamilyHistory = Object.keys(initialFamilyHistory).reduce((acc, key) => {
+      // --- Load Family History (Parents/Grandparents + Conditions) ---
+      const loadedFamilyHistoryRaw = medical.family_history || {};
+      // Separate potential legacy spouse field if it exists within family_history
+      const { spouse, ...familyHistoryRest } = loadedFamilyHistoryRaw;
+      const completeFamilyHistory = Object.keys(initialFamilyHistory).reduce((acc, key) => {
+            // Handle parent/grandparent status/reason/remarks
             if (['father', 'mother', 'maternalGrandFather', 'maternalGrandMother', 'paternalGrandFather', 'paternalGrandMother'].includes(key)) {
                  acc[key] = { ...initialFamilyHistory[key], ...(familyHistoryRest[key] || {}) };
-            } else {
+            }
+            // Handle condition detail/comment/children
+            else {
+                 const loadedItem = familyHistoryRest[key] || {};
                  acc[key] = {
-                     ...initialFamilyHistory[key],
-                     ...(familyHistoryRest[key] || {}),
-                     children: Array.isArray(familyHistoryRest[key]?.children) ? familyHistoryRest[key].children : []
+                     ...initialFamilyHistory[key], // Default structure
+                     ...loadedItem, // Loaded values
+                     children: Array.isArray(loadedItem.children) ? loadedItem.children : [] // Ensure children array
                  };
             }
             return acc;
        }, {});
-       setFamilyHistory(completeFamilyHistory);
+      setFamilyHistory(completeFamilyHistory); // Set state excluding legacy spouse
 
-       // **** LOAD SPOUSE DATA IS HERE ****
-       if (Array.isArray(medical.spouse_data)) {
-            setSpousesData(medical.spouse_data.map(sp => ({ ...defaultPerson, ...sp })));
-       } else if (spouse && typeof spouse === 'object') { // Handle legacy single spouse
-            setSpousesData([{ ...defaultPerson, ...spouse }]);
-       } else {
-            setSpousesData([]); // Default to empty if none found
-       }
+      // --- LOAD SPOUSE DATA ---
+      // Prioritize the dedicated 'spouse_data' array field
+      if (Array.isArray(medical.spouse_data)) {
+           setSpousesData(medical.spouse_data.map(sp => ({ ...defaultPerson, ...sp })));
+      }
+      // Fallback to handle legacy single 'spouse' object within 'family_history'
+      else if (spouse && typeof spouse === 'object' && !Array.isArray(spouse)) {
+           console.warn("Loading spouse data from legacy 'family_history.spouse' field.");
+           setSpousesData([{ ...defaultPerson, ...spouse }]);
+      }
+      // Default to empty array if neither is found
+      else {
+           setSpousesData([]);
+      }
 
-        // Load conditions state (selections for family history dropdowns)
-        setConditions({ ...initialConditions, ...(medical.conditions || {}) });
+      // --- Load conditions state ---
+      // (Selections for family history condition dropdowns)
+      setConditions({ ...initialConditions, ...(medical.conditions || {}) });
 
     } else {
-         // Optional: Reset states if data is invalid/null
-         setSex("");
-         setPersonalHistory({ diet: "", paan: { yesNo: "", years: "" }, alcohol: { yesNo: "", years: "", frequency: "" }, smoking: { yesNo: "", years: "", perDay: "" } });
-         setMedicalData(initialMedicalData);
-         setFemaleWorker({ obstetricHistory: "", gynecologicalHistory: "" });
-         setSurgicalHistory({ comments: "", history: "", children: [] });
-         setFamilyHistory(initialFamilyHistory);
-         setAllergyFields({ drug: { yesNo: "" }, food: { yesNo: "" }, others: { yesNo: "" } });
-         setAllergyComments({ drug: "", food: "", others: "" });
-         setChildrenData([]);
-         setSpousesData([]); // Reset spouse data
-         setConditions(initialConditions);
+      // Reset all states if data prop is null, undefined, or empty
+      console.log("No valid data received, resetting medical history form state.");
+      setSex("");
+      setPersonalHistory({ diet: "", paan: { yesNo: "", years: "" }, alcohol: { yesNo: "", years: "", frequency: "" }, smoking: { yesNo: "", years: "", perDay: "" } });
+      setMedicalData(initialMedicalData);
+      setFemaleWorker({ obstetricHistory: "", gynecologicalHistory: "" });
+      setSurgicalHistory({ comments: "", history: "", children: [] });
+      setFamilyHistory(initialFamilyHistory);
+      setAllergyFields({ drug: { yesNo: "" }, food: { yesNo: "" }, others: { yesNo: "" } });
+      setAllergyComments({ drug: "", food: "", others: "" });
+      setChildrenData([]);
+      setSpousesData([]); // Reset spouse data
+      setConditions(initialConditions);
     }
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]); // Dependency array
+    // Dependency array: Re-run this effect only when the `data` prop changes.
+    // Make sure `initialMedicalData`, `initialFamilyHistory`, `initialConditions`, `defaultPerson` are defined outside the effect or stable.
+  }, [data]);
 
   // --- Handlers ---
 
@@ -382,7 +426,8 @@ const MedicalHistory1 = ({ data }) => {
 
     // Prepare final data payload
     const formData = {
-      emp_no: aadhar,
+      mrdNo: data.mrdNo,
+      emp_no: data.emp_no,
       aadhar: aadhar, // Include Aadhar
       personal_history: personalHistory,
       medical_data: processedMedicalData,

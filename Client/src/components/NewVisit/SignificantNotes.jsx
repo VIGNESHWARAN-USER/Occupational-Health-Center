@@ -83,32 +83,35 @@ const SignificantNotes = ({ data, type }) => {
 
 
   // --- Extract employee number and check access level ---
-  const emp_no = data && data.length > 0 ? data[0]?.aadhar : null;
+  const emp_no = data && data.length > 0 ? data[0]?.emp_no : null;
+  const aadhar = data && data.length > 0 ? data[0]?.aadhar : null;
   const accessLevel = typeof window !== 'undefined' ? localStorage.getItem('accessLevel') : null; // Check for window object
   const isDoctor = accessLevel === 'doctor' || accessLevel === 'nurse';
 
   // Function to fetch history and find previous entry (remains mostly the same)
-  const fetchHistory = async (employeeNumber) => {
-        if (!employeeNumber) return;
+  const fetchHistory = async (aadharNumber) => {
+        if (!aadharNumber) return;
 
         setIsLoadingHistory(true);
         setHistoryError(null);
         setHistoricalNotes([]);
         setPreviousCommunicableDisease(''); // Reset previous value on fetch
         try {
-            const response = await axios.post(`https://occupational-health-center-1.onrender.com/get_notes/${employeeNumber}`);
+            const response = await axios.post(`https://occupational-health-center-1.onrender.com/get_notes/${aadharNumber}`);
             console.log("Fetched Historical Notes:", response.data);
 
-            // Ensure fetchedNotesArray is always an array
+            // Handle the new response format
             let fetchedNotesArray = [];
-            if (response.data?.data && Array.isArray(response.data.data)) {
+            if (response.data?.notes && Array.isArray(response.data.notes)) {
+                fetchedNotesArray = response.data.notes;
+            } else if (response.data?.data && Array.isArray(response.data.data)) {
                 fetchedNotesArray = response.data.data;
             } else if (Array.isArray(response.data)) {
-                 fetchedNotesArray = response.data;
+                fetchedNotesArray = response.data;
             } else {
-                 console.warn("Fetched history data is not in expected array format:", response.data);
+                console.warn("Unexpected response format:", response.data);
+                return;
             }
-
 
             // Sort notes descending by date for finding previous entry and for display
             const sortedNotes = [...fetchedNotesArray].sort((a, b) => {
@@ -123,42 +126,16 @@ const SignificantNotes = ({ data, type }) => {
             // Set historical notes state (used by all HistoryList components)
             setHistoricalNotes(sortedNotes);
 
-            // Find the *most recent previous* entry (could be the latest if submitting new)
-            // that has a non-empty communicable_disease value
+            // Find the most recent previous entry with a non-empty communicable_disease value
             let prevValue = '';
-            // Start from the first entry (index 0) as we want the absolute latest historical value
             for (let i = 0; i < sortedNotes.length; i++) {
-                 if (sortedNotes[i]?.communicable_disease) {
-                    // Check if the current input field is already populated with this exact latest value
-                    // If so, we want the one *before* that.
-                    const latestNotes = data && data.length > 0 ? data[0]?.significant_notes : null;
-                    if (latestNotes?.communicable_disease === sortedNotes[i].communicable_disease && i + 1 < sortedNotes.length) {
-                         // Find the next non-empty one
-                         for (let j = i + 1; j < sortedNotes.length; j++) {
-                            if (sortedNotes[j]?.communicable_disease) {
-                                prevValue = sortedNotes[j].communicable_disease;
-                                break;
-                            }
-                         }
-                    } else {
-                        prevValue = sortedNotes[i].communicable_disease;
-                    }
-                    break; // Found the relevant previous value
-                 }
-            }
-
-             // Update: Simplify finding the 'previous' entry. Show the most recent historical entry.
-             // The logic above might be overly complex. Let's just find the first historical entry with a value.
-             prevValue = '';
-             for (let i = 0; i < sortedNotes.length; i++) {
                 if (sortedNotes[i]?.communicable_disease) {
                     prevValue = sortedNotes[i].communicable_disease;
                     break; // Found the most recent non-empty previous value
                 }
-             }
+            }
 
             setPreviousCommunicableDisease(prevValue);
-            // --- End finding previous entry ---
 
         } catch (err) {
             console.error("Error fetching history:", err);
@@ -193,8 +170,8 @@ const SignificantNotes = ({ data, type }) => {
     }
 
     // 2. Fetch historical notes if emp_no is available
-    if (emp_no) {
-        fetchHistory(emp_no);
+    if (aadhar) {
+        fetchHistory(aadhar);
     } else {
         // No emp_no, clear history state
         setHistoricalNotes([]);
@@ -204,14 +181,14 @@ const SignificantNotes = ({ data, type }) => {
     }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, emp_no]); // Rerun when data or emp_no changes
+  }, [data, aadhar]); // Rerun when data or emp_no changes
 
 
   // --- Handle form submission ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!emp_no) {
-        alert("Employee number is missing. Cannot submit.");
+    if (!aadhar) {
+        alert("Employee aadhar number is missing. Cannot submit.");
         return;
     }
     // Relax validation: Allow submission even if only dropdowns are selected
@@ -221,8 +198,8 @@ const SignificantNotes = ({ data, type }) => {
     // }
     setIsSubmitting(true);
     const significantNotesData = {
-      emp_no: emp_no,
-      aadhar: data?.[0]?.aadhar || null, // Send null if empty
+      emp_no: emp_no || null,
+      aadhar: aadhar, // Send null if empty
       healthsummary: healthsummary || null, // Send null if empty
       remarks: remarks || null,
       communicable_disease: communicableDisease || null,
@@ -240,7 +217,7 @@ const SignificantNotes = ({ data, type }) => {
         setIncidentType(''); setIncident(''); setIllnessType('');
 
         // IMPORTANT: Refetch history AFTER successful submission to include the new entry
-        fetchHistory(emp_no);
+        fetchHistory(aadhar);
 
         // Optionally: Call a function passed via props to update parent state if needed
         // e.g., onDataUpdateSuccess();
