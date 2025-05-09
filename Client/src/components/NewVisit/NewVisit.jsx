@@ -998,11 +998,23 @@ const NewVisit = () => {
                         <select name="contractor_status" value={formData.contractor_status || ""}
                         onChange={handleChange}  id="" className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                          <option value="">Select</option>
-                          <option value="mbc">MBC</option>
-                          <option value="jbc">JBC</option>
+                         <option value="">Select</option>
+                          <option value="ssc">SSC</option>
                           <option value="jbn">JBN</option>
+                          <option value="tmc">TMC</option>
+                          <option value="jbc">JBC</option>
+                          <option value="ggbs">GGBS</option>
+                          <option value="jbi">JBI</option>
+                          <option value="jba">JBA</option>
+                          <option value="support_staff">Support Staff</option>
+                          <option value="mbc">MBC</option>
+                          <option value="propreitor">Propreitor</option>
+                          <option value="csr_foundation">CSR Foundation</option>
+                          <option value="transporter">Transporter</option>
+                          <option value="jsw_society">JSW Society</option>
                           <option value="shutdown">Shutdown</option>
+                          <option value="iti_apprentice">ITI Apprentice</option>
+                          <option value="supplier">Supplier</option>
                         </select>
                     </div>)
                   }
