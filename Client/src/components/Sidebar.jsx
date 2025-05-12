@@ -114,7 +114,7 @@ const Sidebar = () => {
       { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
       { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
       { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
-      { name: "Prescription Issued / Prescribed Out", to: "../prescribedout", icon: <MdReceipt /> }, // Re-added based on previous version logic might imply it's needed
+      { name: "Prescription In", to: "../prescriptionin", icon: <MdReceipt /> }, // Re-added based on previous version logic might imply it's needed
       { name: "Current Expiry", to: "../currentexpiry", icon: <MdWarning />, badgeName: 'expiry' }, // Added badge identifier
       { name: "Expiry Register", to: "../expiryregister", icon: <MdWarning /> },
       { name: "Discard/Damaged", to: "../discarddamaged", icon: <MdDelete /> },

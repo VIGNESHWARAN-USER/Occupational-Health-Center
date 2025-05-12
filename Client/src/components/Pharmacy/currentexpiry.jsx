@@ -10,7 +10,7 @@ const CurrentExpiry = () => {
   // Fetch expiry stock
   const fetchExpiryStock = () => {
     axios
-      .get("https://occupational-health-center-1.onrender.com/current_expiry/")
+      .post("https://occupational-health-center-1.onrender.com/current_expiry/")
       .then((response) => {
         setExpiryStock(response.data.expiry_stock);
         setLoading(false);

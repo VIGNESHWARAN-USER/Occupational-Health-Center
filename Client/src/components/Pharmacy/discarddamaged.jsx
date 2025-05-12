@@ -22,7 +22,6 @@ const DiscardedMedicines = () => {
     brand_name: "",
     dose_volume: "",
     quantity: "",
-    total_quantity: "",
     expiry_date: "",
     reason: "",
   });
@@ -40,7 +39,7 @@ const DiscardedMedicines = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const medicineOptions = ["Tablet", "Syrup", "Injection", "Creams", "Drops", "Fluids", "Other"];
+  const medicineOptions = ["Tablet", "Syrup", "Injection","Lotions","Respules","Powder", "Creams", "Drops", "Fluids", "Other"];
 
   useEffect(() => {
     fetchDiscardedMedicines();
@@ -156,7 +155,7 @@ const DiscardedMedicines = () => {
         expiry_date: `${formData.expiry_date}-01`,
       });
       setMessage("Discarded medicine added successfully!");
-      setFormData({ medicine_form: "", chemical_name: "", brand_name: "", dose_volume: "", quantity: "",total_quantity: "", expiry_date: "", reason: "" });
+      setFormData({ medicine_form: "", chemical_name: "", brand_name: "", dose_volume: "", quantity: "", expiry_date: "", reason: "" });
       fetchDiscardedMedicines();
       setShowForm(false);
     } catch (error) {
@@ -172,7 +171,6 @@ const DiscardedMedicines = () => {
       Brand: item.brand_name,
       Dose: item.dose_volume,
       Quantity: item.quantity,
-      "Total Quantity": item.quantity,
       "Discarded Date": formatDate(item.entry_date),
       "Expiry Date": item.expiry_date,
       Reason: item.reason,
@@ -227,7 +225,6 @@ const DiscardedMedicines = () => {
                         <th className="p-3 text-left">Brand</th>
                         <th className="p-3 text-left">Dose</th>
                         <th className="p-3 text-left">Quantity</th>
-                        <th className="p-3 text-left">Total Quantity</th>
                         <th className="p-3 text-left">Discarded Date</th>
                         <th className="p-3 text-left">Expiry Date</th>
                         <th className="p-3 text-left">Reason</th>
@@ -241,7 +238,6 @@ const DiscardedMedicines = () => {
                           <td className="p-3">{item.brand_name}</td>
                           <td className="p-3">{item.dose_volume}</td>
                           <td className="p-3 font-bold">{item.quantity}</td>
-                          <td className="p-3 font-bold">{item.total_quantity}</td>
                           <td className="p-3 text-red-600 font-semibold">{formatDate(item.entry_date)}</td>
                           <td className="p-3">{item.expiry_date}</td>
                           <td className="p-3 text-red-600 font-semibold">{item.reason}</td>
@@ -303,10 +299,6 @@ const DiscardedMedicines = () => {
             <div>
               <label className="block font-medium">Quantity</label>
               <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-            </div>
-            <div>
-              <label className="block font-medium">Total Quantity</label>
-              <input type="number" name="total_quantity" value={formData.total_quantity} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
             </div>
             <div>
               <label className="block font-medium">Expiry Date</label>

@@ -23,7 +23,6 @@ const ExpiryRegister = () => {
       if (toDate) params.to_date = toDate;
 
       const res = await axios.get("https://occupational-health-center-1.onrender.com/expiry_register/", { params });
-      console.log(res.data.expiry_register)
       setExpiryRegister(res.data.expiry_register);
       setLoading(false);
     } catch (err) {
@@ -55,8 +54,7 @@ const ExpiryRegister = () => {
       "Brand Name": item.brand_name,
       "Chemical Name": item.chemical_name,
       "Dose/Volume": item.dose_volume,
-      "Quantity": item.quantity,
-      "Total Quantity" : item.total_quantity,
+      Quantity: item.quantity,
       "Expiry Date": formatDate(item.expiry_date),
       "Removed Date": formatDate(item.removed_date),
     }));
@@ -129,7 +127,6 @@ const ExpiryRegister = () => {
                   <th className="p-3 text-left">Chemical Name</th>
                   <th className="p-3 text-left">Dose/Volume</th>
                   <th className="p-3 text-left">Quantity</th>
-                  <th className="p-3 text-left">Total Quantity</th>
                   <th className="p-3 text-left">Expiry Date</th>
                   <th className="p-3 text-left">Removed Date</th>
                 </tr>
@@ -143,7 +140,6 @@ const ExpiryRegister = () => {
                       <td className="p-3 text-gray-600">{item.chemical_name}</td>
                       <td className="p-3">{item.dose_volume}</td>
                       <td className="p-3 font-bold">{item.quantity}</td>
-                      <td className="p-3 font-bold">{item.total_quantity}</td>
                       <td className="p-3">{formatDate(item.expiry_date)}</td>
                       <td className="p-3 text-green-700 font-semibold">
                         {formatDate(item.removed_date)}

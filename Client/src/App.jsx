@@ -33,7 +33,7 @@ import Viewprescription from './components/Pharmacy/viewprescription'
 import StockHistory from './components/Pharmacy/stockHistory'
 import AmbulanceConsumables from './components/Pharmacy/ambulanceconsumable'
 import DataUpload from './components/DataUpload'
-
+import PrescriptionIn from './components/Pharmacy/prescriptionin'
 function App() {
   return (
     <div className='bg-[#8fcadd] overflow-auto  h-screen'>
@@ -78,6 +78,7 @@ function App() {
           <Route path = '/instrumentcalibration' element = {<InstrumentCalibration/>}/>
           <Route path = '/viewprescription' element = {<Viewprescription/>}/>
           <Route path='/dataupload' element = {<DataUpload/>}/>
+          <Route path = '/prescriptionin' element = {<PrescriptionIn/>}/>
       </Route>
     </Routes>
     </div>

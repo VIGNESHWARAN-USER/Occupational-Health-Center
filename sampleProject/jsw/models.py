@@ -98,6 +98,7 @@ class employee_details(BaseModel):
     other_reason_details = models.TextField(blank=True, null=True)
     mrdNo = models.CharField(max_length=255, blank=True)
     guardian = models.CharField(max_length=255, blank=True)
+    otherRegister = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.emp_no if self.emp_no else f"Employee {self.id}" # Handle missing emp_no
@@ -129,6 +130,7 @@ class Dashboard(BaseModel):
     status = models.CharField(max_length=255, blank=True)
     mrdNo = models.CharField(max_length=255, blank=True)
     visitOutcome = models.CharField(max_length=255, blank=True)
+    otherRegister = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return f"Dashboard Record {self.id} for Emp {self.emp_no}"
@@ -1528,6 +1530,7 @@ class Prescription(BaseModel):
     issued_by = models.CharField(max_length=50)
     nurse_notes = models.TextField(blank=True, null=True)
     issued_status = models.IntegerField(default=0) # 0 = Not Issued, 1 = Issued ?
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
 
     # id = models.AutoField(primary_key=True) # Usually handled by Django unless custom needed
 
@@ -1684,3 +1687,26 @@ class PharmacyStockHistory(models.Model):
 
     def __str__(self): # Corrected from _str_
         return f"{self.brand_name} ({self.chemical_name}) - Archived History"
+
+
+class DailyQuantity(models.Model):
+    chemical_name = models.CharField(max_length=255, db_index=True)
+    brand_name = models.CharField(max_length=255)
+    dose_volume = models.CharField(max_length=100)
+    # Add expiry_date. Allow it to be null if some items might not have one.
+    expiry_date = models.DateField(null=True, blank=True, db_index=True) # Add expiry date
+
+    date = models.DateField(db_index=True) # Date for which the quantity applies
+    quantity = models.PositiveIntegerField(default=0) # The quantity entered/used for that day
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # Update uniqueness constraint to include expiry_date
+        unique_together = [['chemical_name', 'brand_name', 'dose_volume', 'expiry_date', 'date']]
+        verbose_name = "Daily Quantity"
+        verbose_name_plural = "Daily Quantities"
+        ordering = ['date', 'chemical_name', 'brand_name', 'expiry_date'] # Add expiry to ordering
+
+    def __str__(self):
+        expiry_str = f" (Exp: {self.expiry_date})" if self.expiry_date else ""
+        return f"{self.chemical_name} ({self.brand_name} - {self.dose_volume}{expiry_str}) on {self.date}: {self.quantity}"

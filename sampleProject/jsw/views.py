@@ -45,7 +45,7 @@ from .models import (
     LiverFunctionTest, ThyroidFunctionTest, CoagulationTest, EnzymesCardiacProfile,
     UrineRoutineTest, SerologyTest, MotionTest, MensPack, OphthalmicReport,
     USGReport, MRIReport, Consultation, SignificantNotes, Form17, Form38,
-    Form39, Form40, Form27
+    Form39, Form40, Form27, DailyQuantity
 )
 
 # Configure logging (ensure this is set up in settings.py ideally)
@@ -659,6 +659,7 @@ def addEntries(request):
             'old_emp_no': extra_data.get('old_emp_no', ''), 'reason': extra_data.get('reason', ''),
             'status': extra_data.get('status', ''),
             'mrdNo': determined_mrd_no,
+            'otherRegister': extra_data.get('otherRegister', '')
         }
         employee_defaults_filtered = {k: v for k, v in employee_defaults.items() if v is not None}
 
@@ -675,6 +676,7 @@ def addEntries(request):
             dashboard_defaults = {
                 'type': employee_entry.type, 'type_of_visit': employee_entry.type_of_visit,
                 'register': employee_entry.register, 'purpose': employee_entry.purpose,
+                'otherRegister': employee_entry.otherRegister,
                 'year': employee_entry.year, 'batch': employee_entry.batch,
                 'hospitalName': employee_entry.hospitalName, 'campName': employee_entry.campName,
                 'contractName': employee_entry.contractName, 'prevcontractName': employee_entry.prevcontractName,
@@ -2086,136 +2088,144 @@ def uploadAppointment(request):
         return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
 
 
-# --- Prescriptions ---
 
 @csrf_exempt
 def add_prescription(request):
-    """Adds or updates prescription data based on AADHAR and current date."""
-    if request.method == "POST":
-        data = None; aadhar = None
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            logger.debug(f"Received data for add_prescription: {json.dumps(data)[:500]}...")
-
-            aadhar = data.get('aadhar')
-            name = data.get('name')
-            submitted_by = data.get('submitted_by')
-            issued_by = data.get('issued_by') # Optional at creation
-
-            # Validations
-            if not aadhar: return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
-            if not name: return JsonResponse({"error": "Employee name (name) is required"}, status=400)
-            if not submitted_by: return JsonResponse({"error": "submitted_by is required"}, status=400)
-
-            # Extract prescription details (ensure they are lists or default to empty list)
-            details = { f: data.get(f, []) for f in [
-                'tablets', 'syrups', 'injections', 'creams', 'drops', 'fluids',
-                'lotions', 'respules', 'suture_procedure', 'dressing', 'powder', 'others' ]}
-            for key, val in details.items(): # Ensure all details are lists
-                if not isinstance(val, list): details[key] = []
-
-            current_entry_date = date.today()
-
-            defaults = {
-                'name': name, 'submitted_by': submitted_by, 'issued_by': issued_by or '',
-                'nurse_notes': data.get('nurse_notes', ''),
-                'issued_status': data.get('issued_status', 0), # Default to 0 (Pending)
-                'emp_no': data.get('emp_no'), # Store if provided
-                **details
-            }
-            filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
-
-
-            prescription, created = Prescription.objects.update_or_create(
-                aadhar=aadhar,
-                entry_date=current_entry_date,
-                defaults=filtered_defaults
-            )
-
-            message = "Prescription added" if created else "Prescription updated"
-            logger.info(f"{message} for aadhar {aadhar} on {current_entry_date}. ID: {prescription.id}, Status: {prescription.issued_status}")
-            return JsonResponse({
-                "message": message, "prescription_id": prescription.id, "id": prescription.id,
-                "created": created, "issued_status": prescription.issued_status
-            }, status=201 if created else 200)
-
-        except json.JSONDecodeError:
-            logger.error("add_prescription failed: Invalid JSON data.", exc_info=True)
-            return JsonResponse({"error": "Invalid JSON data in request body"}, status=400)
-        except Exception as e:
-            logger.exception(f"add_prescription failed for aadhar '{aadhar or 'N/A'}': {e}")
-            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
-    else:
+    """
+    Adds a new prescription with MRD number and handles stock deduction.
+    Each MRD number gets a new entry in the system.
+    """
+    if request.method != "POST":
+        logger.warning(f"add_prescription failed: Invalid request method '{request.method}'. Only POST allowed.")
         response = JsonResponse({"error": "Request method must be POST"}, status=405)
         response['Allow'] = 'POST'
         return response
 
+    data = None
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        print("Data : ", data)
+
+        # --- Extract Basic Information ---
+        emp_no = data.get('emp_no')
+        name = data.get('name')
+        aadhar = data.get('aadhar')
+        mrd_no = data.get('mrdNo')  # Get MRD number
+        entry_date = timezone.now().date()  # Get current date
+
+        # --- Basic Validation ---
+        if not mrd_no:
+            logger.warning("add_prescription failed: MRD number is required")
+            return JsonResponse({"error": "MRD number is required"}, status=400)
+        if not emp_no:
+            logger.warning("add_prescription failed: emp_no is required")
+            return JsonResponse({"error": "Employee number (emp_no) is required"}, status=400)
+        if not name:
+            logger.warning("add_prescription failed: name is required")
+            return JsonResponse({"error": "Employee name (name) is required"}, status=400)
+
+        submitted_by = data.get('submitted_by')
+        issued_by = data.get('issued_by')
+        if not submitted_by or not issued_by:
+            logger.warning("add_prescription failed: submitted_by and issued_by are required fields")
+            return JsonResponse({"error": "submitted_by and issued_by are required fields"}, status=400)
+
+        # --- Prepare prescription data ---
+        prescription_data = {
+            'emp_no': emp_no,
+            'name': name,
+            'aadhar': aadhar,
+            'mrdNo': mrd_no,
+            'tablets': data.get('tablets'),
+            'syrups': data.get('syrups'),
+            'injections': data.get('injections'),
+            'creams': data.get('creams'),
+            'drops': data.get('drops'),
+            'fluids': data.get('fluids'),
+            'lotions': data.get('lotions'),
+            'powder': data.get('powder'),
+            'respules': data.get('respules'),
+            'suture_procedure': data.get('suture_procedure'),
+            'dressing': data.get('dressing'),
+            'others': data.get('others'),
+            'submitted_by': submitted_by,
+            'issued_by': issued_by,
+            'nurse_notes': data.get('nurse_notes'),
+            'issued_status': data.get('issued_status')
+        }
+
+        # Filter out None values
+        prescription_data = {k: v for k, v in prescription_data.items() if v is not None}
+
+        # --- Use update_or_create based on emp_no, mrdNo and entry_date ---
+        prescription, created = Prescription.objects.update_or_create(
+            emp_no=emp_no,
+            mrdNo=mrd_no,
+            entry_date=entry_date,
+            defaults=prescription_data
+        )
+
+        message = "Prescription added successfully" if created else "Prescription updated successfully"
+        return JsonResponse({
+            "message": message,
+            "emp_no": emp_no,
+            "mrdNo": mrd_no,
+            "entry_date": entry_date.isoformat()
+        }, status=201 if created else 200)
+
+    except json.JSONDecodeError:
+        logger.error("add_prescription failed: Invalid JSON data.", exc_info=True)
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        logger.exception(f"add_prescription failed for emp_no {emp_no or 'Unknown'}: An unexpected error occurred.")
+        return JsonResponse({"error": "An internal server error occurred while processing prescription."}, status=500)
+
 @csrf_exempt
-def view_prescriptions_emp(request, aadhar):
-    """Handles GET (view) and PUT (update/issue) for prescriptions by AADHAR."""
+def view_prescriptions(request):
+    
     if request.method == 'GET':
-        try:
-            prescriptions_qs = Prescription.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id')
-            data = []
-            for p in prescriptions_qs:
-                 p_data = model_to_dict(p)
-                 p_data['entry_date'] = p.entry_date.isoformat() if p.entry_date else None
-                 data.append(p_data)
-            logger.info(f"Fetched {len(data)} prescriptions for aadhar {aadhar}.")
-            return JsonResponse({'prescriptions': data})
-        except Exception as e:
-            logger.exception(f"Error viewing prescriptions for aadhar {aadhar} (GET): {e}")
-            return JsonResponse({'error': 'An unexpected error occurred.', 'detail': str(e)}, status=500)
+        prescriptions = Prescription.objects.all()
+        data = []
+        for prescription in prescriptions:
+            print(prescription.aadhar)
+            data.append({
+                'id': prescription.id,
+                'emp_no': prescription.emp_no,
+                'aadhar': prescription.aadhar, # Include aadhar in response
+                'name': prescription.name,  # Concatenate names
+                'entry_date': prescription.entry_date.strftime('%Y-%m-%d'), # Format date,
+                'issued_status': prescription.issued_status,  # Replace the status for view
+                'prescription':{
+                    'id': prescription.id,
+                    'emp_no': prescription.emp_no,
+                    'aadhar': prescription.aadhar, # Include aadhar in response
+                    'name': f"{prescription.submitted_by} / {prescription.issued_by}",  # Concatenate names
+                    'tablets':  prescription.tablets,
+                    'syrups': prescription.syrups,
+                    'injections':  prescription.injections,
+                    'creams': prescription.creams,
+                    'drops':  prescription.drops,
+                    'fluids': prescription.fluids,
+                    'lotions':  prescription.lotions,
+                    'powder': prescription.powder,
+                    'respules':  prescription.respules,
+                    'suture_procedure': prescription.suture_procedure,
+                    'others': prescription.others,
+                    'dressing': prescription.dressing,
+                    'submitted_by':  prescription.submitted_by,
+                    'issued_by':  prescription.issued_by,
+                    'nurse_notes': prescription.nurse_notes,
+                    'entry_date': prescription.entry_date.strftime('%Y-%m-%d'), # Format date,
+                    
 
-    elif request.method == 'PUT':
-        prescription_id = None
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            prescription_id = data.get('id') or data.get('prescription_id')
-            if not prescription_id:
-                 return JsonResponse({'error': 'Missing prescription ID in PUT request data'}, status=400)
-
-            # Use select_for_update if stock deduction needs to be atomic with status update
-            with transaction.atomic():
-                 prescription = Prescription.objects.select_for_update().get(pk=prescription_id, aadhar=aadhar)
-
-                 # Check if already issued if re-issuing is not allowed
-                 # if prescription.issued_status == 1:
-                 #     return JsonResponse({'error': 'Prescription already issued.'}, status=400)
-
-                 # Update fields relevant to issuing
-                 prescription.issued_by = data.get('issued_by', prescription.issued_by)
-                 prescription.nurse_notes = data.get('nurse_notes', prescription.nurse_notes)
-                 new_status = data.get('issued_status', 1) # Default to issuing (1)
-                 if new_status not in [0, 1]:
-                     return JsonResponse({'error': 'Invalid issued_status value (must be 0 or 1).'}, status=400)
-                 prescription.issued_status = new_status
-
-                 # If updating items based on dispensed quantity (more complex logic needed here)
-                 # Example: prescription.tablets = data.get('tablets', prescription.tablets)
-
-                 prescription.save(update_fields=['issued_by', 'nurse_notes', 'issued_status']) # Add items if updated
-                 logger.info(f"Updated Prescription ID: {prescription.id} for aadhar {aadhar}. Status set to {prescription.issued_status}")
-
-            return JsonResponse({
-                'message': f'Prescription {prescription.id} updated successfully.',
-                'issued_status': prescription.issued_status
+                }
             })
 
-        except Prescription.DoesNotExist: # More specific than Http404 from get_object_or_404
-             logger.warning(f"Prescription not found for ID: {prescription_id} and Aadhar: {aadhar}")
-             return JsonResponse({'error': 'Prescription not found for this ID and Aadhar.'}, status=404)
-        except json.JSONDecodeError:
-            logger.error(f"Invalid JSON received updating prescription for aadhar {aadhar}", exc_info=True)
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except Exception as e:
-            logger.exception(f"Error updating prescription for aadhar {aadhar} (PUT, ID: {prescription_id}): {e}")
-            return JsonResponse({'error': 'An unexpected error occurred.', 'detail': str(e)}, status=500)
-    else:
-        response = JsonResponse({'error': 'Invalid request method. Use GET or PUT.'}, status=405)
-        response['Allow'] = 'GET, PUT'
-        return response
+        # print(data)
 
+        return JsonResponse({'prescriptions': data})
+    else:
+        return JsonResponse({'error': 'Invalid request method. Only GET allowed.'}, status=405)
 
 # --- Mock Drills / Camps / Reviews / Misc ---
 
@@ -3072,6 +3082,432 @@ def get_current_expiry(request):
         response['Allow'] = 'POST'
         return response
 
+try:
+    from .models import DailyQuantity
+except ImportError:
+    logging.critical("Failed to import DailyQuantity model. Ensure it's defined in models.py and the import path is correct.")
+    # Raise configuration error during startup if essential model is missing
+    raise ImproperlyConfigured("DailyQuantity model is not available.")
+
+try:
+    # Replace 'PharmacyStock' with your actual stock model name
+    from .models import PharmacyStock
+    HAS_STOCK_MODEL = True
+    if PharmacyStock is None:
+        raise ImportError("PharmacyStock imported as None") # Be explicit if import results in None
+except ImportError:
+    HAS_STOCK_MODEL = False
+    logging.warning("Optional PharmacyStock model not found or failed to import. Fetching logic will rely solely on DailyQuantity, which might be incomplete for identifying all possible stock items.")
+
+
+#update_pharmacy_stock
+@csrf_exempt
+def update_pharmacy_stock(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body.decode('utf-8'))
+            print("Data : ", data)
+            chemical_name = data.get("chemicalName")
+            brand_name = data.get("brandName")
+            expiry_date = data.get("expiryDate")
+            dose_volume = data.get("doseVolume")
+            quantity = data.get("quantity")
+            action = data.get("action")
+
+            if not expiry_date:
+                return JsonResponse({"error": "Expiry Date ('expiryDate') is required."}, status=400)
+            
+            if not dose_volume:
+                return JsonResponse({"error": "Dose Volume ('doseVolume') is required."}, status=400)
+            
+            if not quantity:
+                return JsonResponse({"error": "Quantity ('quantity') is required."}, status=400)
+            
+            if not action:
+                return JsonResponse({"error": "Action ('action') is required."}, status=400)
+            
+            if action not in ['increase', 'decrease']:
+                return JsonResponse({"error": "Invalid action. Must be 'increase' or 'decrease'."}, status=400)
+            
+            with transaction.atomic():
+                medicine = PharmacyStock.objects.select_for_update().get(chemical_name=chemical_name, brand_name=brand_name, dose_volume=dose_volume, expiry_date=expiry_date)
+                
+                if action == 'increase':
+                    medicine.quantity += quantity
+                else:
+                    medicine.quantity -= quantity   
+                
+                medicine.save(update_fields=['quantity'])
+                
+                return JsonResponse({"message": "Stock updated successfully", "success": True})
+                    
+        except Exception as e:
+            logger.exception("Error updating pharmacy stock")
+            return JsonResponse({"error": "Server error updating stock.", "detail": str(e)}, status=500)
+    else:
+        response = JsonResponse({"error": "Invalid method. Use PUT."}, status=405)
+        response['Allow'] = 'PUT'
+        return response
+
+
+def get_days_in_month(year, month):
+    """Returns the number of days in a given month (1-indexed)."""
+    if not (1 <= month <= 12):
+        raise ValueError("Month must be between 1 and 12")
+    if month == 12:
+        next_month_first_day = date(year + 1, 1, 1)
+    else:
+        next_month_first_day = date(year, month + 1, 1)
+    last_day_current_month = next_month_first_day - timedelta(days=1)
+    return last_day_current_month.day
+
+def parse_expiry_date(date_str):
+    # ... (implementation from previous answer) ...
+    if not date_str or not isinstance(date_str, str): return None
+    try:
+        parsed = django_parse_date(date_str)
+        if parsed: return parsed
+        else:
+             try: return date.fromisoformat(date_str) # Strict ISO YYYY-MM-DD
+             except ValueError:
+                 try: # Handle potential datetime string with timezone
+                    parsed_dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    return parsed_dt.date()
+                 except ValueError:
+                    logger.warning(f"Could not parse expiry date string: {date_str}")
+                    return None
+    except Exception as e:
+        logger.error(f"Unexpected error during expiry date parsing for '{date_str}': {e}")
+        return None
+
+
+
+@csrf_exempt
+def get_prescription_in_data(request):
+    """
+    Fetches unique stock items and their corresponding daily quantities
+    for a given month and year.
+    """
+    # Check model availability again (belt-and-suspenders)
+    if DailyQuantity is None:
+        return JsonResponse({'error': 'Server configuration error: DailyQuantity model not available.'}, status=500)
+
+    if request.method != 'GET':
+        logger.warning(f"get_prescription_in_data rejected non-GET request: {request.method}")
+        return JsonResponse({'error': 'GET method required'}, status=405)
+
+    try:
+        # --- Parameter Validation ---
+        today = timezone.now().date()
+        try:
+            year_str = request.GET.get('year', str(today.year))
+            month_str = request.GET.get('month', str(today.month))
+            year = int(year_str)
+            month = int(month_str)
+            if not (1 <= month <= 12): raise ValueError("Month must be between 1 and 12.")
+            if year < 1900 or year > 2100: raise ValueError("Year out of reasonable range.")
+        except (ValueError, TypeError):
+             logger.warning(f"Invalid year/month parameters: year='{request.GET.get('year')}', month='{request.GET.get('month')}'")
+             return JsonResponse({'error': 'Invalid or missing year/month parameter.'}, status=400)
+
+        logger.info(f"Fetching prescription-in data for {year}-{month:02d}")
+
+        # --- Date Range Calculation ---
+        try:
+            start_date = date(year, month, 1)
+            days_in_req_month = get_days_in_month(year, month)
+            end_date = date(year, month, days_in_req_month)
+        except ValueError as date_err:
+             logger.error(f"Error calculating date range for {year}-{month}: {date_err}")
+             return JsonResponse({'error': 'Internal error calculating month days.'}, status=500)
+
+        # --- Step 1: Get Unique Stock Identifiers ---
+        unique_items_qs = None
+        required_fields = ['chemical_name', 'brand_name', 'dose_volume'] # Core identifiers
+        stock_fields_to_get = required_fields + ['expiry_date']
+
+        if HAS_STOCK_MODEL and PharmacyStock:
+            logger.debug("Querying PharmacyStock model for unique items.")
+            # *** ADJUST field names to match your PharmacyStock model ***
+            unique_items_qs = PharmacyStock.objects.values(*stock_fields_to_get).distinct().order_by('chemical_name', 'brand_name', 'expiry_date')
+        elif DailyQuantity:
+             logger.warning("Querying DailyQuantity as fallback for unique items.")
+             # This might miss items never entered or only with far future expiry
+             unique_items_qs = DailyQuantity.objects.filter(
+                 # Look for entries in the requested month OR relevant expiry
+                 Q(date__year=year, date__month=month) | Q(expiry_date__gte=start_date) | Q(expiry_date__isnull=True)
+             ).values(*stock_fields_to_get).distinct().order_by('chemical_name', 'brand_name', 'expiry_date')
+        else:
+             logger.critical("Configuration Error: No model available to determine unique stock items.")
+             return JsonResponse({'error': 'Server configuration error: Cannot determine stock items.'}, status=500)
+
+        # Convert to list for efficient iteration & check if empty
+        item_identifiers_list = list(unique_items_qs)
+        if not item_identifiers_list:
+            logger.warning(f"No unique stock items identified for {year}-{month} based on available data.")
+            return JsonResponse([], safe=False) # Return empty list if no items found
+
+        logger.debug(f"Found {len(item_identifiers_list)} unique item identifiers.")
+
+        # --- Step 2: Fetch Relevant Daily Quantities ---
+        q_objects_filter = Q()
+        valid_identifiers_found_for_q = False
+        for item in item_identifiers_list:
+             # Ensure the item dict has the required keys for filtering
+             if all(k in item for k in required_fields):
+                 q_objects_filter |= Q(
+                     chemical_name=item['chemical_name'],
+                     brand_name=item['brand_name'],
+                     dose_volume=item['dose_volume'],
+                     expiry_date=item.get('expiry_date') # Handles None expiry
+                 )
+                 valid_identifiers_found_for_q = True
+             else:
+                  logger.warning(f"Skipping identifier dict (missing keys) when building Q filter: {item}")
+
+        daily_data_qs = DailyQuantity.objects.none() # Default to empty queryset
+        if valid_identifiers_found_for_q:
+            # Fetch records matching any valid identifier within the date range
+            daily_data_qs = DailyQuantity.objects.filter(
+                q_objects_filter,
+                date__gte=start_date,
+                date__lte=end_date
+            ).values(
+                'chemical_name', 'brand_name', 'dose_volume', 'expiry_date',
+                'date', 'quantity' # Ensure quantity is selected
+            )
+            logger.debug(f"Found {daily_data_qs.count()} daily quantity records for the month.")
+        else:
+             logger.warning("No valid identifiers found to build DailyQuantity filter.")
+
+
+        # --- Step 3: Organize Daily Data into a Lookup Map ---
+        # Key: tuple(chem, brand, dose, expiry_obj_or_None), Value: {day_num: qty}
+        daily_quantities_map = {}
+        for dq in daily_data_qs:
+            # Validate essential keys before creating map entry
+            if not all(k in dq for k in required_fields + ['date']):
+                logger.warning(f"Skipping daily quantity record (missing keys) for map: {dq}")
+                continue
+            expiry_key = dq.get('expiry_date') # Date object or None from DB
+            key = (dq['chemical_name'], dq['brand_name'], dq['dose_volume'], expiry_key)
+            try:
+                day_num = dq['date'].day
+                quantity_val = dq.get('quantity', 0) # Default to 0 if quantity missing
+            except AttributeError: # Handle if 'date' is somehow not a date object
+                 logger.warning(f"Skipping daily quantity record with invalid date object: {dq}")
+                 continue
+
+            if key not in daily_quantities_map:
+                daily_quantities_map[key] = {}
+            daily_quantities_map[key][day_num] = quantity_val
+
+        # --- Step 4: Structure Final JSON Response ---
+        structured_data = []
+        processed_chemicals = {} # Helper: chemical_name -> index in structured_data
+        s_no_counter = 1
+
+        for item in item_identifiers_list:
+            # Validate item before structuring
+            if not all(k in item for k in required_fields):
+                 logger.warning(f"Skipping item during final structuring (missing keys): {item}")
+                 continue
+
+            chem_name = item['chemical_name']
+
+            # Find or create the chemical group in the result list
+            if chem_name not in processed_chemicals:
+                 group_index = len(structured_data)
+                 processed_chemicals[chem_name] = group_index
+                 structured_data.append({
+                     "s_no": s_no_counter,
+                     "chemical_name": chem_name,
+                     "brands": []
+                 })
+                 s_no_counter += 1
+            else:
+                 group_index = processed_chemicals[chem_name]
+
+            # Prepare data for the current brand variant
+            brand_name = item['brand_name']
+            dose_volume = item['dose_volume']
+            expiry_date_obj = item.get('expiry_date') # Date object or None
+            # Format date for JSON response (ISO format recommended)
+            expiry_date_str = expiry_date_obj.isoformat() if expiry_date_obj else None
+
+            # Lookup daily quantities using the map
+            lookup_key = (chem_name, brand_name, dose_volume, expiry_date_obj)
+            brand_daily_data_raw = daily_quantities_map.get(lookup_key, {}) # Get {day: qty} or {}
+
+            # Format the daily quantities object for the frontend
+            daily_quantities_formatted = {}
+            monthly_total = 0
+            for i in range(1, days_in_req_month + 1):
+                qty = brand_daily_data_raw.get(i, 0) # Default to 0
+                # Ensure frontend receives number or empty string (consistency)
+                daily_quantities_formatted[f"day_{i}"] = qty if qty != 0 else '' # Send empty string for 0? Or keep 0? FE handles '' or 0. Let's keep 0.
+                # daily_quantities_formatted[f"day_{i}"] = qty # Keep as number (0 or positive)
+                monthly_total += qty
+
+            # Append brand details to its chemical group
+            # Ensure target list exists
+            if group_index < len(structured_data) and 'brands' in structured_data[group_index]:
+                structured_data[group_index]['brands'].append({
+                    "brand_name": brand_name,
+                    "dosage": dose_volume, # Match frontend 'dosage' key
+                    "daily_quantities": daily_quantities_formatted,
+                    "monthly_total": monthly_total,
+                    "expiry_date": expiry_date_str, # Send ISO string or null
+                })
+            else:
+                logger.error(f"Logic error: Could not find chemical group at index {group_index} for chemical {chem_name}")
+
+
+        logger.info(f"Successfully structured data for {len(structured_data)} chemicals for {year}-{month:02d}.")
+        return JsonResponse(structured_data, safe=False) # Return the list
+
+    # --- General Exception Handling ---
+    except Exception as e:
+        logger.exception(f"Critical error occurred in get_prescription_in_data for {request.GET.get('year')}-{request.GET.get('month')}")
+        return JsonResponse({'error': f'An unexpected server error occurred: {type(e).__name__}'}, status=500)
+
+
+@csrf_exempt
+@transaction.atomic
+def update_daily_quantities(request):
+    """
+    Receives daily quantity updates and saves them based on
+    chemical, brand, dose, expiry_date, and date.
+    """
+    if DailyQuantity is None:
+        return JsonResponse({'error': 'Server configuration error: DailyQuantity model not available.'}, status=500)
+
+    if request.method != 'POST':
+        logger.warning("update_daily_quantities rejected non-POST request")
+        return JsonResponse({'error': 'POST method required'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        if not isinstance(data, list):
+            raise ValueError("Invalid data format: Expected a list of quantity updates.")
+
+        updated_count = 0
+        created_count = 0
+        skipped_count = 0
+        processed_entries = 0
+
+        logger.info(f"Received {len(data)} entries for daily quantity update.")
+        print(f"--- Starting Daily Quantity Update Transaction ---") # DEBUG START
+
+        for entry in data:
+            processed_entries += 1
+            print(f"\n--- Processing Entry #{processed_entries} ---") # DEBUG ENTRY START
+            print(f"  Raw Entry Data: {entry}") # DEBUG RAW
+
+            # --- Extract and Validate ---
+            chem_name = entry.get('chemical_name')
+            brand_name = entry.get('brand_name')
+            dose_volume = entry.get('dose_volume') # Keep original type for now
+            expiry_date_str = entry.get('expiry_date')
+            year = entry.get('year')
+            month = entry.get('month')
+            day = entry.get('day')
+            quantity_val = entry.get('quantity')
+
+            # Refined Validation
+            valid = True
+            if not (isinstance(chem_name, str) and chem_name): valid = False; logger.warning(f"Invalid chem_name: {chem_name}")
+            if not (isinstance(brand_name, str) and brand_name): valid = False; logger.warning(f"Invalid brand_name: {brand_name}")
+            if dose_volume is None: valid = False; logger.warning(f"Missing dose_volume") # Check presence
+            if not isinstance(year, int): valid = False; logger.warning(f"Invalid year type: {type(year)}")
+            if not (isinstance(month, int) and 1 <= month <= 12): valid = False; logger.warning(f"Invalid month: {month}")
+            if not (isinstance(day, int) and 1 <= day <= 31): valid = False; logger.warning(f"Invalid day: {day}")
+            if not (isinstance(quantity_val, int) and quantity_val >= 0): valid = False; logger.warning(f"Invalid quantity: {quantity_val}")
+
+            if not valid:
+                logger.warning(f"Skipping entry #{processed_entries} due to missing/invalid core data types.")
+                skipped_count += 1
+                continue
+
+            # --- Parse Dates and Quantity ---
+            try:
+                entry_date = date(year, month, day)
+                entry_expiry_date = parse_expiry_date(expiry_date_str)
+                entry_quantity = quantity_val # Already validated
+                print(f"  Parsed Date: {entry_date} ({type(entry_date)})") # DEBUG PARSED
+                print(f"  Parsed Expiry: {entry_expiry_date} ({type(entry_expiry_date)})") # DEBUG PARSED
+                print(f"  Parsed Quantity: {entry_quantity} ({type(entry_quantity)})") # DEBUG PARSED
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Skipping entry #{processed_entries} due to invalid date during object creation ({e}): {entry}")
+                skipped_count += 1
+                continue
+
+            # --- Prepare for DB Operation ---
+            # Convert dose_volume to string for lookup IF model uses CharField
+            # *** ADJUST THIS if your model field is DecimalField/FloatField etc. ***
+            dose_volume_str = str(dose_volume)
+
+            lookup_keys = {
+                'chemical_name': chem_name,
+                'brand_name': brand_name,
+                'dose_volume': dose_volume_str,
+                'expiry_date': entry_expiry_date,
+                'date': entry_date,
+            }
+            defaults = {
+                'quantity': entry_quantity,
+                # Add expiry to defaults as well, in case it needs updating or setting on create
+                'expiry_date': entry_expiry_date, # Keep original expiry unless specific logic added
+            }
+            print(f"  Lookup Keys for DB: {lookup_keys}") # DEBUG KEYS
+            print(f"  Defaults for DB: {defaults}") # DEBUG DEFAULTS
+
+            # --- Database update_or_create ---
+            try:
+                obj, created = DailyQuantity.objects.update_or_create(
+                    defaults=defaults,
+                    **lookup_keys
+                )
+                action = "CREATED" if created else "UPDATED"
+                print(f"  DB Result: {action} record with ID: {obj.id}") # DEBUG DB RESULT
+                if created: created_count += 1
+                else: updated_count += 1
+            except Exception as db_error:
+                 logger.error(f"Database error processing entry #{processed_entries} {lookup_keys}: {db_error}")
+                 print(f"  DB ERROR: {db_error}") # DEBUG DB ERROR
+                 skipped_count += 1
+                 # Decide on transaction strategy: continue or rollback?
+                 # To rollback on first error: transaction.set_rollback(True); raise db_error
+                 # Current behavior: log error and continue with next entry
+
+        # --- Response ---
+        msg = f'Daily quantities processed: {created_count} created, {updated_count} updated, {skipped_count} skipped out of {processed_entries} received.'
+        logger.info(msg)
+        print(f"--- Finished Daily Quantity Update Transaction: {msg} ---") # DEBUG END
+        status_code = 200 if skipped_count == 0 else 207
+        return JsonResponse({
+            'message': msg,
+            'created': created_count, 'updated': updated_count,
+            'skipped': skipped_count, 'received': processed_entries
+        }, status=status_code)
+
+    # --- General Error Handling ---
+    except json.JSONDecodeError:
+        logger.error("update_daily_quantities failed: Invalid JSON.")
+        print("--- ERROR: Invalid JSON received ---") # DEBUG JSON ERROR
+        return JsonResponse({'error': 'Invalid JSON format.'}, status=400)
+    except ValueError as ve:
+         logger.error(f"update_daily_quantities validation failed: {ve}")
+         print(f"--- ERROR: Validation Error - {ve} ---") # DEBUG VALIDATION ERROR
+         return JsonResponse({'error': str(ve)}, status=400)
+    except Exception as e:
+        logger.exception("update_daily_quantities failed unexpectedly.")
+        print(f"--- CRITICAL ERROR: {type(e).__name__} - {e} ---") # DEBUG UNEXPECTED ERROR
+        return JsonResponse({'error': f'An unexpected server error occurred: {type(e).__name__}'}, status=500)
+
+        from django.http import JsonResponse
+
+
 @csrf_exempt
 def remove_expired_medicine(request):
     """ Mark expired medicine as removed and update history archive date. """
@@ -3159,6 +3595,77 @@ def get_expiry_register(request):
          response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
          response['Allow'] = 'GET'
          return response
+
+@csrf_exempt
+def get_expiry_dates(request):
+    if request.method == 'GET':
+        try:
+            chemical_name = request.GET.get("chemical_name", "").strip()
+            brand_name = request.GET.get("brand_name", "").strip()
+            dose_volume = request.GET.get("dose_volume", "").strip()
+
+            logger.debug(f"get_expiry_dates: chemical_name='{chemical_name}', brand_name='{brand_name}', dose_volume='{dose_volume}'")
+
+            if not chemical_name or not brand_name or not dose_volume:
+                return JsonResponse({"suggestions": []})
+
+            # Important: Filter by exact values
+            expiry_dates = (
+                PharmacyStock.objects.filter(  # Use PharmacyStock model
+                    chemical_name__iexact=chemical_name,
+                    brand_name__iexact=brand_name,
+                    dose_volume__iexact=dose_volume  # Case-insensitive
+                )
+                .values_list("expiry_date", flat=True)
+                .distinct()
+                .order_by("expiry_date")
+            )
+
+            formatted_expiry_dates = [date.strftime('%Y-%m-%d') for date in expiry_dates if date] #Handle if expiry_date is null/None
+            logger.debug(f"Expiry dates for {chemical_name}, {brand_name}, {dose_volume}: {formatted_expiry_dates}")
+            return JsonResponse({"suggestions": formatted_expiry_dates})
+
+        except Exception as e:
+            logger.exception("get_expiry_dates failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
+
+
+
+@csrf_exempt  # Should be GET, review if you want to keep it exempt or not
+def get_quantity_suggestions(request):
+    if request.method == 'GET':
+        try:
+            chemical_name = request.GET.get("chemical_name", "").strip()
+            brand_name = request.GET.get("brand_name", "").strip()
+            expiry_date = request.GET.get("expiry_date", "").strip() # Get expiry date from request
+
+            if not chemical_name or not brand_name or not expiry_date:
+                return JsonResponse({"suggestions": []})
+
+            # Query PharmacyStock objects matching criteria
+            #Using Q objects for more complex query logic to handle different cases
+            quantities = PharmacyStock.objects.filter(
+                Q(chemical_name__iexact=chemical_name) &
+                Q(brand_name__iexact=brand_name) &
+                Q(expiry_date=expiry_date) # Match expiry date directly, format must match YYYY-MM-DD
+            ).values_list("quantity", flat=True).distinct().order_by("quantity") #Distinct and order by quantity
+
+            #Convert to list and log output
+            qty_suggestions = list(quantities)
+
+            logger.debug(f"Quantity suggestions for {chemical_name}, {brand_name}, {expiry_date}: {qty_suggestions}")
+            return JsonResponse({"suggestions": qty_suggestions})
+
+        except ValueError as ve: #Catch Value Errors when incorrect date formats passed
+            logger.error(f"Date parsing error: {ve}")
+            return JsonResponse({"error": "Invalid date format. Use YYYY-MM-DD.", "detail": str(ve)}, status=400)
+
+        except Exception as e:
+            logger.exception("get_quantity_suggestions failed: An unexpected error occurred.")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
+
 
 @csrf_exempt # Should be GET
 def get_discarded_medicines(request):

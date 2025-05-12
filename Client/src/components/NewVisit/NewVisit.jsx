@@ -22,6 +22,7 @@ const NewVisit = () => {
   const [visit, setVisit] = useState("Preventive");
   const [register, setRegister] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [OtherRegister, setOtherRegister] = useState("");
   const [activeTab, setActiveTab] = useState("BasicDetails");
   const [data, setdata] = useState([]);
   const [singleData, setsingleData] = useState([]);
@@ -122,14 +123,16 @@ const NewVisit = () => {
         "Pre Placement": "Medical Examination",
         "Annual / Periodical": "Medical Examination",
         "Periodical (Food Handler)": "Medical Examination",
+        "Retirement medical examination": "Medical Examination",
         "Camps (Mandatory)": "Medical Examination",
         "Camps (Optional)": "Medical Examination",
         "Special Work Fitness": "Periodic Work Fitness",
         "Special Work Fitness (Renewal)": "Periodic Work Fitness",
         "Fitness After Medical Leave": "Fitness After Medical Leave",
-        "Fitness After Long Leave": "Fitness After Long Leave",
+        "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
         "Mock Drill": "Mock Drill",
-        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Other": "Other",
       },
       Curative: {
         "Illness": "Outpatient",
@@ -137,17 +140,19 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Followup Visits": "Outpatient",
-        "BP Sugar ( Abnormal Value)": "Outpatient",
+        "BP Sugar Chart": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
-        "Alcohol Abuse": "Alcohol Abuse"
+        "Alcohol Abuse": "Alcohol Abuse",
+        "Other": "Other",
       }
     },
     Contractor: {
       Preventive: {
         "Pre employment": "Medical Examination",
         "Pre employment (Food Handler)": "Medical Examination",
-        "Pre Placement": "Medical Examination",
+        "Pre Placement (Same Contract)": "Medical Examination",
+        "Pre Placement (Contract change)": "Medical Examination",
         "Annual / Periodical": "Medical Examination",
         "Periodical (Food Handler)": "Medical Examination",
         "Camps (Mandatory)": "Medical Examination",
@@ -155,9 +160,10 @@ const NewVisit = () => {
         "Special Work Fitness": "Periodic Work Fitness",
         "Special Work Fitness (Renewal)": "Periodic Work Fitness",
         "Fitness After Medical Leave": "Fitness After Medical Leave",
-        "Fitness Long Medical Leave": "Fitness Long Medical Leave",
+        "Fitness Personal Long Leave": "Fitness Personal Long Leave",
         "Mock Drill": "Mock Drill",
-        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Other": "Other",
       },
       Curative: {
         "Illness": "Outpatient",
@@ -165,15 +171,28 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Followup Visits": "Outpatient",
-        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Normal Value)"
+        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
+        "Injury Outside the Premises": "Outpatient",
+        "Over Counter Injury Outside the Premises": "Outpatient",
+        "Alcohol Abuse": "Alcohol Abuse",
+        "Other": "Other",
       },
-      Visitor: {
-        Preventive: {
-          "Visitors Outsider Fitness": "Visitors Outsider Fitness"
-        },
-        Curative: {
-          "Visitors Outsider Patient": "Visitors Outsider Patient"
-        }
+    },
+    Visitor: {
+      Preventive: {
+        "Fitness": "Fitness",
+        "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)"
+      },
+      Curative: {
+        "Illness": "Outpatient",
+        "Over Counter Illness": "Outpatient",
+        "Injury": "Outpatient",
+        "Over Counter Injury": "Outpatient",
+        "Followup Visits": "Outpatient",
+        "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
+        "Injury Outside the Premises": "Outpatient",
+        "Over Counter Injury Outside the Premises": "Outpatient",
+        "Other": "Other",
       }
     }
   };
@@ -443,6 +462,7 @@ const NewVisit = () => {
         if (filtered.length > 0) {
           // Get the latest record by sorting by id (or updated_at)
           const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
+          latestEmployee.mrdNo = "";
           console.log("Latest Employee:", latestEmployee);
           setFilteredEmployees([latestEmployee]);
           setdata([latestEmployee]);
@@ -523,6 +543,7 @@ const NewVisit = () => {
               profilepic_url: "",
               purpose: "",
               register: "",
+              OtherRegister: "",
               renalfunctiontests_and_electrolytes: {},
               role: type,
               routinesugartests: {},
@@ -629,13 +650,26 @@ const NewVisit = () => {
       setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
       setCampFields({ campName: "", hospitalName: "" });
     };
+    const handleOtherRegisterChange = (e) => {
+      const selectedRegister = e.target.value;
+      setOtherRegister(selectedRegister);
+      const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
+      setPurpose(autoPurpose);
+      setFormDataDashboard(prev => ({ ...prev, otherRegister: selectedRegister, purpose: autoPurpose }));
+
+      // Reset additional fields when register changes
+      setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
+      setCampFields({ campName: "", hospitalName: "" });
+    };
   
     const handleTypeChange = (e) => {
       const selectedType = e.target.value;
+      console.log("Selected Type:", selectedType);
       setType(selectedType);
       setRegister(""); // Reset register
+      setOtherRegister
       setPurpose("");   // Reset purpose
-      setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" })); // Update dashboard data and reset
+      setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", setOtherRegister:"", purpose: "" })); // Update dashboard data and reset
     };
   
     const handleVisitChange = (e) => {
@@ -797,7 +831,7 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 ">Identification Marks 1</label>
+                <label className="block text-sm font-medium text-gray-700 ">Identification Mark 1</label>
                 <input
                   name="identification_marks1"
                   value={formData.identification_marks1 || ''}
@@ -808,7 +842,7 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 ">Identification Marks 2</label>
+                <label className="block text-sm font-medium text-gray-700 ">Identification Mark 2</label>
                 <input
                   name="identification_marks2"
                   value={formData.identification_marks2 || ''}
@@ -1292,7 +1326,7 @@ const NewVisit = () => {
       case "Consultation":
         return <Consultation data={data} type={visit} />;
       case "Prescription":
-        return <Prescription data={data} />;
+        return <Prescription data={data} condition={false}/>;
       case "formFields":
         return <FormFields formType={"alcoholCheck"} />;
       default:
@@ -1532,6 +1566,21 @@ const NewVisit = () => {
                     />
                   </div>
                 </div>
+
+                {(register === "Other") && (
+                  <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                      Other Purpose
+                    </label>
+                    <input
+                      type="text"
+                      value={OtherRegister}
+                      onChange={handleOtherRegisterChange}
+                      placeholder="Specify other purpose"
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-100"
+                    />
+                  </div>
+                )}
 
                 {/* Conditionally Rendered Fields */}
                 {(register === "Annual / Periodical" || register === "Periodical (Food Handler)") && (

@@ -81,16 +81,18 @@ urlpatterns = [
     # Prescriptions (Using Aadhar / ID)
     path('prescriptions/add/', views.add_prescription, name='add_prescription'),
     path('prescriptions/view/', views.view_prescriptions, name='view_prescriptions'),
-    path('prescriptions/view/<str:aadhar>/', views.view_prescriptions_emp, name='view_update_prescriptions_by_aadhar'),
-    path('prescriptions/view/id/<int:prescription_id>/', views.view_prescription_by_id, name='view_prescription_by_id'), # Uncommented as view exists
+    path('api/prescription-in-data/', views.get_prescription_in_data, name='get_prescription_in_data'),
+    path('api/update-daily-quantities/', views.update_daily_quantities, name='update_daily_quantities'),
 
-    # Pharmacy / Inventory / Calibration
+       # Pharmacy / Inventory / Calibration
     path("add-stock/", views.add_stock, name="add-stock"),
     path('current_stock/', views.get_current_stock, name='current_stock'),
     path('stock_history/', views.get_stock_history, name='stock_history'),
     path('current_expiry/', views.get_current_expiry, name='current_expiry'),
     path('remove_expiry/', views.remove_expired_medicine, name='remove_expiry'),
     path("expiry_register/", views.get_expiry_register, name="expiry_register"),
+    path("get-expiry-dates/", views.get_expiry_dates, name="expiry_date"),
+    path("get-quantity-suggestions/", views.get_quantity_suggestions, name="quantity_suggestions"),
     path("get-brand-names/", views.get_brand_names, name="get_brand_names"),
     path("get_chemical_name/", views.get_chemical_name, name="get_chemical_name"),
     path("discarded_medicines/", views.get_discarded_medicines, name="discarded_medicines"),
@@ -129,6 +131,9 @@ urlpatterns = [
     path('get_red_status_count/', views.get_red_status_count, name='get_red_status_count'),
     path('hrupload', views.hrupload, name='hrupload'),
 
+    
+    path('update-pharmacy-stock/', views.update_pharmacy_stock, name='update_pharmacy_stock'),
+  
 ]
 
 # Add static files serving during development
