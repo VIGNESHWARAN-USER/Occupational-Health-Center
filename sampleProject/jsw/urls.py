@@ -12,7 +12,7 @@ urlpatterns = [
     path('forgot_password/', views.forgot_password, name='forgot_password'),
     path('verify_otp/', views.verify_otp, name='verify_otp'),
     path('reset_password/', views.reset_password, name='reset_password'),
-    path('find_member_by_email/', views.find_member_by_email, name='find_member_by_email'),
+    path('find_member_by_email/', views.find_member_by_aadhar, name='find_member_by_email'),
     path('members/add/', views.add_member, name='member-add'),
     path('members/update/<int:member_id>/', views.update_member, name='update_member'),
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
@@ -111,9 +111,10 @@ urlpatterns = [
     path("get_pending_next_month_count/", views.get_pending_next_month_count, name="get_pending_next_month_count"),
 
 
-    # Mock Drills / Camps / Reviews
+    # Mock Drills / Camps / Review
     path('save-mockdrills/', views.save_mockdrills, name='save_mockdrills'),
     path('get-mockdrills/', views.get_mockdrills, name='get_mockdrills'),
+    path('get-one-mockdrills/', views.get_one_mockdrills, name='get_mockdrills'),
     path('add-camp/', views.add_camp, name='add_camp'),
     path('get-camps/', views.get_camps, name='get_camps'),
     path('upload-files/', views.upload_files, name='upload_files'),

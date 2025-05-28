@@ -75,7 +75,7 @@ const RecordsFilters = () => {
                 }
 
                 // Fetch summary/notes/consultation data for filter options
-                const summaryResponse = await axios.post("https://occupational-health-center-1.onrender.com/get_notes/");
+                const summaryResponse = await axios.get("https://occupational-health-center-1.onrender.com/get_notes/");
                 const summaryData = summaryResponse?.data?.data; // For Diagnosis
                 const consultationData = summaryResponse?.data?.consultation; // For Referrals
                 console.log("Fetched /get_notes/ response:", summaryResponse.data);

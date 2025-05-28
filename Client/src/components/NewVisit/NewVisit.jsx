@@ -233,7 +233,7 @@ const NewVisit = () => {
       setLoading1(false);
       return;
     }
-
+    
     // Validate required selections
     if (!type) {
       alert("Please select Type");
@@ -426,6 +426,10 @@ const NewVisit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      if(mrdNo === ""){
+        alert("Please submit the entries first to get MRD Number"); 
+        return;
+      }
       const updatedformData = { ...formData, role: type, mrdNo: mrdNo }
       console.log(updatedformData)
       const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
@@ -444,7 +448,6 @@ const NewVisit = () => {
       alert("Error submitting data!");
     }
   };
-
   const handleSearch = async () => {  // Make handleSearch async
     if (searchId.trim() === "") {
       setFilteredEmployees(employees);
@@ -533,8 +536,10 @@ const NewVisit = () => {
               mri: {},
               msphistory: {},
               name: "",
-              permanent_nationality: "",
-              residential_nationality: "",
+              permanent_country: "",
+              residential_country: "",
+              nationality: "",
+              docname: "",
               opthalamicreport: {},
               phone_Office: "",
               phone_Personal: "",
@@ -808,17 +813,7 @@ const NewVisit = () => {
                   <option>Other</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 ">Aadhar No.</label>
-                <input
-                  name="aadhar"
-                  value={formData.aadhar || ''}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="Enter 12-digit Aadhar No."
-                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 ">Blood Group</label>
                 <input
@@ -830,6 +825,23 @@ const NewVisit = () => {
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              <div>
+                  <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
+                  <select
+                    name="marital_status"
+                    value={formData.marital_status || ""}
+                    onChange={handleChange}
+                    className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select</option>
+                    <option>Single</option>
+                    <option>Married</option>
+                    <option>Divorced</option>
+                    <option>Widowed</option>
+                    <option>Separated</option>
+                    <option>Other</option>
+                  </select>
+                </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 ">Identification Mark 1</label>
                 <input
@@ -852,7 +864,27 @@ const NewVisit = () => {
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
+              <div>
+                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 ">Nationality</label>
+                <select name="nationality" id="nationality"
+                  value={formData.nationality || ''}
+                  onChange={handleChange}
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select</option>
+                  <option value="Indian">Indian</option>
+                  <option value="Foreign">Foreign</option>
+                </select>
+              </div>
+              {(formData.nationality === "Foreign") && (<div>
+                <label htmlFor="docName" className="block text-sm font-medium text-gray-700 ">Document Name</label>
+                <input name="docName" id="docName"
+                  value={formData.docName || ''}
+                  onChange={handleChange}
+                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                </input>
+              </div>)}
               {type === "Visitor" ? (
                 <>
                 <div>
@@ -879,23 +911,8 @@ const NewVisit = () => {
                 </div>
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
-                  <select
-                    name="marital_status"
-                    value={formData.marital_status || ""}
-                    onChange={handleChange}
-                    className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select</option>
-                    <option>Single</option>
-                    <option>Married</option>
-                    <option>Divorced</option>
-                    <option>Widowed</option>
-                    <option>Separated</option>
-                    <option>Other</option>
-                  </select>
-                </div>
+                <div></div>
+                
               )}
             </div>
 
@@ -1244,13 +1261,13 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 ">Nationality</label>
+                <label className="block text-sm font-medium text-gray-700 ">Country</label>
                 <input
-                  name='permanent_nationality'
-                  value={formData.permanent_nationality || ''}
+                  name='permanent_country'
+                  value={formData.permanent_country || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter Nationality"
+                  placeholder="Enter Country"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1294,13 +1311,13 @@ const NewVisit = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 ">Nationality</label>
+                <label className="block text-sm font-medium text-gray-700 ">Country</label>
                 <input
-                  name='residential_nationality'
-                  value={formData.residential_nationality || ''}
+                  name='residential_country'
+                  value={formData.residential_country || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter Nationality"
+                  placeholder="Enter Country"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1324,11 +1341,11 @@ const NewVisit = () => {
       case "MedicalHistory":
         return <MedicalHistory data={data} />;
       case "Consultation":
-        return <Consultation data={data} type={visit} />;
+        return <Consultation data={data} type={visit} register = {register}/>;
       case "Prescription":
-        return <Prescription data={data} condition={false}/>;
+        return <Prescription data={data} condition={false} register = {register}/>;
       case "formFields":
-        return <FormFields formType={"alcoholCheck"} />;
+        return <FormFields formType={"alcoholPage"} />;
       default:
         return <div>Unknown Tab</div>;
     }

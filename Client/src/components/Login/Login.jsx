@@ -84,12 +84,12 @@ const Login = () => {
         </div>
       </div>
 
-      <div className="md:w-3/5 w-full h-full flex items-center justify-center overflow-hidden relative">
+      <div className="md:w-3/5 w-full h-full bg-[#e7f8f9] flex items-center justify-center overflow-hidden relative">
         <div
           className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out"
         ></div>
 
-        <div className="relative z-10 w-full sm:w-4/5 md:w-3/4 max-w-md p-6 md:p-8 bg-white  border border-white border-opacity-30 rounded-lg shadow-2xl">
+        <div className="relative z-10 w-full sm:w-4/5 md:w-3/4 max-w-md p-6 md:p-8 bg-white/30 backdrop-blur-md   border border-white border-opacity-30 rounded-2xl shadow-[0_0_20px_rgba(59,130,246,0.5)]">
           <h2 className="text-2xl md:text-4xl font-bold text-center mb-4">Login</h2>
           <p className="text-center text-gray-600 mb-6 text-sm md:text-base">Welcome to JSW OHC</p>
           <form onSubmit={login}>

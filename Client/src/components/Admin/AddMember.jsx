@@ -56,7 +56,7 @@ function AddMember() {
     const navigate = useNavigate();
 
     // --- Component State ---
-    const [searchEmail, setSearchEmail] = useState('');
+    const [searchAadhar, setSearchAadhar] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [searchStatus, setSearchStatus] = useState({ type: null, message: null }); // type: 'success', 'error', 'info' | message: string
     const [showForm, setShowForm] = useState(false);
@@ -69,7 +69,7 @@ function AddMember() {
 
     // --- Reset Handler ---
     const handleResetToSearch = useCallback(() => {
-        setSearchEmail('');
+        setSearchAadhar('');
         setSearchStatus({ type: null, message: null });
         setSubmitStatus({ type: null, message: null });
         setShowForm(false);
@@ -83,36 +83,40 @@ function AddMember() {
 
     // --- Email Search Handler ---
     const handleSearch = useCallback(async () => {
-        if (!searchEmail.trim() || !/\S+@\S+\.\S+/.test(searchEmail)) { // Basic email format check
-            setSearchStatus({ type: 'error', message: "Please enter a valid email address." });
+        if (!searchAadhar.trim() || !/^\d{12}$/.test(searchAadhar)) {
+            setSearchStatus({ type: 'error', message: "Please enter a valid 12-digit Aadhar number." });
             return;
         }
         setIsSearching(true);
         setSearchStatus({ type: null, message: null });
         setSubmitStatus({ type: null, message: null });
-        setShowForm(false); // Hide form during new search
+        setShowForm(false);
         setMemberId(null);
         setMemberType('');
         setOHCFormData(initialOHCState);
         setExternalFormData(initialExternalState);
 
-        // --- Adjust API endpoint as needed ---
-        const searchUrl = `https://occupational-health-center-1.onrender.com/find_member_by_email/?email=${encodeURIComponent(searchEmail)}`;
-
         try {
+            const searchUrl = `https://occupational-health-center-1.onrender.com/find_member_by_aadhar/?aadhar=${encodeURIComponent(searchAadhar)}`;
             const response = await axios.get(searchUrl);
+            const data = response.data;
 
-            if (response.data.found) {
-                const memberData = response.data.member;
+            if (data.error) {
+                setSearchStatus({ type: 'error', message: data.message || 'An error occurred during search.' });
+                return;
+            }
+
+            if (data.found && data.member) {
+                const memberData = data.member;
                 const determinedType = memberData.memberTypeDetermined;
-                setMemberId(memberData.id); // Store ID for update
+                console
+                setMemberId(memberData.id);
                 setMemberType(determinedType);
 
-                // Pre-fill the correct form
                 const commonData = {
                     name: memberData.name || "",
                     designation: memberData.designation || "",
-                    email: memberData.email || searchEmail, // Use found or searched email
+                    email: memberData.email || "",
                     role: mapRolesToOptions(memberData.role),
                     date_exited: formatDateForInput(memberData.date_exited),
                     job_nature: memberData.job_nature || "",
@@ -129,35 +133,38 @@ function AddMember() {
                     setExternalFormData({
                         ...commonData,
                         hospital_name: memberData.hospital_name || "",
-                        aadhar: memberData.aadhar || "",
-                        // do_access: formatDateForInput(memberData.do_access), // Uncomment if needed
+                        aadhar: memberData.aadhar || searchAadhar,
                     });
                 }
                 setShowForm(true);
-                setSearchStatus({ type: 'success', message: `Member found (ID: ${memberData.id}). Details pre-filled for update.` });
-
+                setSearchStatus({
+                    type: 'success',
+                    message: `Member found (ID: ${memberData.id}). Details pre-filled for update`
+                });
             } else {
-                // Member not found, prepare for adding new
                 setMemberId(null);
-                setShowForm(true); // Show form to allow adding
-                setSearchStatus({ type: 'info', message: "Member not found. Select type below to add a new member." });
-                // Pre-fill email in both potential forms
-                setOHCFormData({ ...initialOHCState, email: searchEmail });
-                setExternalFormData({ ...initialExternalState, email: searchEmail });
+                setShowForm(true);
+                setSearchStatus({ 
+                    type: 'info', 
+                    message: `Member not found. Select type below to add a new member.` 
+                });
+                setOHCFormData({ ...initialOHCState });
+                setExternalFormData({ ...initialExternalState, aadhar: searchAadhar });
             }
         } catch (error) {
             console.error("Error searching member:", error);
-            const message = error.response?.data?.message || "Failed to search for member due to a network or server error.";
-            setSearchStatus({ type: 'error', message });
+            const errorMessage = error.response?.data?.message || 
+                               "Failed to search for member. Please check your network connection and try again.";
+            setSearchStatus({ 
+                type: 'error', 
+                message: errorMessage
+            });
             setMemberId(null);
-            // Optionally allow adding even if search fails? Decide based on UX.
-            // setShowForm(true);
-            // setOHCFormData({ ...initialOHCState, email: searchEmail });
-            // setExternalFormData({ ...initialExternalState, email: searchEmail });
+            setShowForm(false);
         } finally {
             setIsSearching(false);
         }
-    }, [searchEmail]); // Dependency: re-run if searchEmail changes
+    }, [searchAadhar]);
 
     // --- Form Input Handlers ---
     const handleChange = useCallback((e) => {
@@ -192,188 +199,252 @@ function AddMember() {
         // Prepare data based on member type
         if (memberType === 'ohc') {
             rolesForApi = ohcFormData.role ? ohcFormData.role.map(option => option.value) : [];
-            dataToSend = { ...ohcFormData, role: rolesForApi, memberType: 'ohc' };
+            dataToSend = { 
+                ...ohcFormData, 
+                role: rolesForApi, 
+                memberType: 'ohc',
+                aadhar: searchAadhar // Ensure Aadhar is included
+            };
         } else if (memberType === 'external') {
             rolesForApi = externalFormData.role ? externalFormData.role.map(option => option.value) : [];
-            dataToSend = { ...externalFormData, role: rolesForApi, memberType: 'external' };
+            dataToSend = { 
+                ...externalFormData, 
+                role: rolesForApi, 
+                memberType: 'external',
+                aadhar: searchAadhar // Ensure Aadhar is included
+            };
         }
 
         // Determine API endpoint and method
         if (memberId) {
             // UPDATE mode
-            url = `https://occupational-health-center-1.onrender.com/members/update/${memberId}/`; // Adjust endpoint as needed
+            url = `https://occupational-health-center-1.onrender.com/members/update/${memberId}/`;
             method = 'put';
-            // Optionally remove fields not intended for update (like email, emp_no)
-            // delete dataToSend.email;
-            // delete dataToSend.employee_number;
         } else {
             // ADD mode
-            url = "https://occupational-health-center-1.onrender.com/members/add/"; // Adjust endpoint as needed
+            url = "https://occupational-health-center-1.onrender.com/members/add/";
             method = 'post';
         }
 
-        console.log(`Submitting (${method.toUpperCase()}) to ${url} with data:`, dataToSend); // Debug log
-
         try {
             const response = await axios({ method, url, data: dataToSend });
-            const successMessage = response.data?.message || (memberId ? "Member updated successfully!" : "Member added successfully!");
+            const successMessage = memberId 
+                ? "Member details updated successfully!" 
+                : "New member added successfully!";
             setSubmitStatus({ type: 'success', message: successMessage });
-            // alert(successMessage); // Optional: replace with better feedback
-            setTimeout(handleResetToSearch, 1500); // Reset after a short delay to show success message
-
+            
+            // If it was an update, refresh the form with new data
+            if (memberId) {
+                handleSearch(); // Re-fetch the updated data
+            } else {
+                // For new members, reset the form after a delay
+                setTimeout(handleResetToSearch, 2000);
+            }
         } catch (error) {
             console.error(`Error ${memberId ? 'updating' : 'adding'} member:`, error);
-            // Try to get specific error message from backend response
-            const errorMsg = error.response?.data?.message || `Failed to ${memberId ? 'update' : 'add'} member. Please check details or server logs.`;
+            const errorMsg = error.response?.data?.message ||
+                `Failed to ${memberId ? 'update' : 'add'} member. Please try again.`;
             setSubmitStatus({ type: 'error', message: errorMsg });
-            // alert(`Error: ${errorMsg}`); // Optional: replace with better feedback
         } finally {
             setIsSubmitting(false);
         }
-    }, [memberType, memberId, ohcFormData, externalFormData, handleResetToSearch]); // Dependencies
+    }, [memberType, memberId, ohcFormData, externalFormData, searchAadhar, handleResetToSearch, handleSearch]);
 
-    // --- Conditional Rendering for Form Fields ---
-    // Wrap field rendering in useCallback if they become complex, but usually not needed
+    // --- Enhanced Form Field Rendering ---
     const renderOHCStaffFields = () => (
-         <>
-            {/* Row 1: Emp No (ReadOnly if Update), Name */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                    <label htmlFor="employee_number" className="block text-gray-700 mb-1 text-sm font-medium">Employee Number *</label>
-                    <input id="employee_number" type="text" name="employee_number" value={ohcFormData.employee_number} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                </div>
-                <div>
-                    <label htmlFor="name_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Name *</label>
-                    <input id="name_ohc" type="text" name="name" value={ohcFormData.name} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
+        <>
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                <h3 className="text-lg font-semibold text-blue-800 mb-2">OHC Staff Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Employee Number *</label>
+                        <input
+                            type="text"
+                            name="employee_number"
+                            value={ohcFormData.employee_number}
+                            onChange={handleChange}
+                            required
+                            readOnly={!!memberId}
+                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                memberId ? 'bg-gray-100' : ''
+                            }`}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Name *</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={ohcFormData.name}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Designation *</label>
+                        <input
+                            type="text"
+                            name="designation"
+                            value={ohcFormData.designation}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Email *</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={ohcFormData.email}
+                            onChange={handleChange}
+                            required
+                            readOnly={!!memberId}
+                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                                memberId ? 'bg-gray-100' : ''
+                            }`}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Date of Joining *</label>
+                        <input
+                            type="date"
+                            name="doj"
+                            value={ohcFormData.doj}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
+                        <input
+                            type="tel"
+                            name="phone_number"
+                            value={ohcFormData.phone_number}
+                            onChange={handleChange}
+                            required
+                            pattern="[0-9]{10}"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Job Nature</label>
+                        <input
+                            type="text"
+                            name="job_nature"
+                            value={ohcFormData.job_nature}
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Role (Access) *</label>
+                        <Select
+                            name="role"
+                            isMulti
+                            options={roleOptions}
+                            value={ohcFormData.role}
+                            onChange={handleSelectChange}
+                            required
+                            className="mt-1"
+                        />
+                    </div>
                 </div>
             </div>
-             {/* Row 2: Designation, Phone, Email (ReadOnly if Update) */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                 <div>
-                    <label htmlFor="designation_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Designation *</label>
-                    <input id="designation_ohc" type="text" name="designation" value={ohcFormData.designation} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                    <label htmlFor="phone_number_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Phone No. *</label>
-                    <input id="phone_number_ohc" type="tel" name="phone_number" value={ohcFormData.phone_number} onChange={handleChange} required pattern="[0-9]{10,15}" title="Enter 10-15 digits"
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                    <label htmlFor="email_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Email ID *</label>
-                    <input id="email_ohc" type="email" name="email" value={ohcFormData.email} onChange={handleChange} required
-                           readOnly={!!memberId} aria-readonly={!!memberId}
-                           className={`w-full p-2 border rounded-md ${!!memberId ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-50'} focus:ring-1 focus:ring-blue-400`} />
-                 </div>
-             </div>
-             {/* Row 3: DOJ *, DO(Exit) */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <div>
-                    <label htmlFor="doj" className="block text-gray-700 mb-1 text-sm font-medium">DOJ *</label>
-                    <input id="doj" type="date" name="doj" value={ohcFormData.doj} onChange={handleChange} required max={new Date().toISOString().split("T")[0]} // Prevent future DOJ
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                    <label htmlFor="date_exited_ohc" className="block text-gray-700 mb-1 text-sm font-medium">DO (Exit)</label>
-                    <input id="date_exited_ohc" type="date" name="date_exited" value={ohcFormData.date_exited} onChange={handleChange} min={ohcFormData.doj || undefined} // Exit date must be after DOJ
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-             </div>
-             {/* Row 4: Job Nature, Role * */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <div>
-                    <label htmlFor="job_nature_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Job Nature</label>
-                    <input id="job_nature_ohc" type="text" name="job_nature" value={ohcFormData.job_nature} onChange={handleChange}
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                    <label htmlFor="role_ohc" className="block text-gray-700 mb-1 text-sm font-medium">Role (Access) *</label>
-                    <Select inputId="role_ohc" name="role" isMulti options={roleOptions} value={ohcFormData.role}
-                            onChange={handleSelectChange} required // Basic required, more complex validation might be needed
-                            className="w-full basic-multi-select" classNamePrefix="select"/>
-                     {ohcFormData.role.length === 0 && <p className="text-xs text-red-500 mt-1">Role is required.</p>} {/* Simple validation message */}
-                 </div>
-            </div>
-         </>
+        </>
     );
 
     const renderExternalHospitalFields = () => (
-         <>
-             {/* Row 1: Name *, Hospital * */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                    <label htmlFor="name_ext" className="block text-gray-700 mb-1 text-sm font-medium">Name *</label>
-                    <input id="name_ext" type="text" name="name" value={externalFormData.name} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                </div>
-                <div>
-                    <label htmlFor="hospital_name" className="block text-gray-700 mb-1 text-sm font-medium">Name of Hospital *</label>
-                    <input id="hospital_name" type="text" name="hospital_name" value={externalFormData.hospital_name} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
+        <>
+            <div className="mb-4 p-4 bg-green-50 rounded-lg">
+                <h3 className="text-lg font-semibold text-green-800 mb-2">External Hospital Staff Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Name *</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={externalFormData.name}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Hospital Name *</label>
+                        <input
+                            type="text"
+                            name="hospital_name"
+                            value={externalFormData.hospital_name}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Designation *</label>
+                        <input
+                            type="text"
+                            name="designation"
+                            value={externalFormData.designation}
+                            onChange={handleChange}
+                            required
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Email *</label>
+                        <input
+                            type="email"
+                            name="email"
+                            value={externalFormData.email}
+                            onChange={handleChange}
+                            required
+                            readOnly={!!memberId}
+                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm ${
+                                memberId ? 'bg-gray-100' : ''
+                            }`}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
+                        <input
+                            type="tel"
+                            name="phone_number"
+                            value={externalFormData.phone_number}
+                            onChange={handleChange}
+                            required
+                            pattern="[0-9]{10}"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Job Nature</label>
+                        <input
+                            type="text"
+                            name="job_nature"
+                            value={externalFormData.job_nature}
+                            onChange={handleChange}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Role (Access) *</label>
+                        <Select
+                            name="role"
+                            isMulti
+                            options={roleOptions}
+                            value={externalFormData.role}
+                            onChange={handleSelectChange}
+                            required
+                            className="mt-1"
+                        />
+                    </div>
                 </div>
             </div>
-             {/* Row 2: Designation *, Aadhar * */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <div>
-                    <label htmlFor="designation_ext" className="block text-gray-700 mb-1 text-sm font-medium">Designation *</label>
-                    <input id="designation_ext" type="text" name="designation" value={externalFormData.designation} onChange={handleChange} required
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                    <label htmlFor="aadhar" className="block text-gray-700 mb-1 text-sm font-medium">Aadhar *</label>
-                    <input id="aadhar" type="text" name="aadhar" value={externalFormData.aadhar} onChange={handleChange} required pattern="\d{12}" title="Enter 12 digit Aadhar number"
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-             </div>
-             {/* Row 3: Email (ReadOnly if Update), Phone * */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                    <label htmlFor="email_ext" className="block text-gray-700 mb-1 text-sm font-medium">Mail ID *</label>
-                    <input id="email_ext" type="email" name="email" value={externalFormData.email} onChange={handleChange} required
-                           readOnly={!!memberId} aria-readonly={!!memberId}
-                           className={`w-full p-2 border rounded-md ${!!memberId ? 'bg-gray-200 cursor-not-allowed' : 'bg-gray-50'} focus:ring-1 focus:ring-blue-400`}/>
-                </div>
-                <div>
-                    <label htmlFor="phone_number_ext" className="block text-gray-700 mb-1 text-sm font-medium">Phone No. *</label>
-                    <input id="phone_number_ext" type="tel" name="phone_number" value={externalFormData.phone_number} onChange={handleChange} required pattern="[0-9]{10,15}" title="Enter 10-15 digits"
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                </div>
-            </div>
-             {/* Row 4: DO Access (Uncomment if used), DO Exit */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {/* Uncomment if do_access field exists and is needed
-                  <div>
-                     <label htmlFor="do_access" className="block text-gray-700 mb-1 text-sm font-medium">DO Access</label>
-                     <input id="do_access" type="date" name="do_access" value={externalFormData.do_access} onChange={handleChange} max={new Date().toISOString().split("T")[0]}
-                            className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                  </div>
-                  */}
-                 <div>
-                    <label htmlFor="date_exited_ext" className="block text-gray-700 mb-1 text-sm font-medium">DO (Exit)</label>
-                    <input id="date_exited_ext" type="date" name="date_exited" value={externalFormData.date_exited} onChange={handleChange}
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                  {/* Add spacer if DO Access is commented out */}
-                  {/* <div></div> */}
-             </div>
-             {/* Row 5: Job Nature, Role * */}
-             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                 <div>
-                    <label htmlFor="job_nature_ext" className="block text-gray-700 mb-1 text-sm font-medium">Job Nature</label>
-                    <input id="job_nature_ext" type="text" name="job_nature" value={externalFormData.job_nature} onChange={handleChange}
-                           className="w-full p-2 border rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-400"/>
-                 </div>
-                 <div>
-                     <label htmlFor="role_ext" className="block text-gray-700 mb-1 text-sm font-medium">Role (Access) *</label>
-                     <Select inputId="role_ext" name="role" isMulti options={roleOptions} value={externalFormData.role}
-                            onChange={handleSelectChange} required
-                            className="w-full basic-multi-select" classNamePrefix="select"/>
-                      {externalFormData.role.length === 0 && <p className="text-xs text-red-500 mt-1">Role is required.</p>} {/* Simple validation message */}
-                 </div>
-            </div>
-         </>
+        </>
     );
 
     // --- Main Render ---
@@ -413,15 +484,17 @@ function AddMember() {
                 >
                     <div className="flex flex-wrap items-end gap-4"> {/* Use gap for spacing */}
                         <div className="flex-grow min-w-[250px]"> {/* Ensure input doesn't get too small */}
-                            <label htmlFor="searchEmail" className="block text-gray-700 mb-1 text-sm font-medium">
-                                Enter Member Email to Search or Add
+                            <label htmlFor="searchAadhar" className="block text-gray-700 mb-1 text-sm font-medium">
+                                Enter Member Aadhar Number to Search or Add
                             </label>
                             <input
-                                id="searchEmail"
-                                type="email"
-                                value={searchEmail}
-                                onChange={(e) => setSearchEmail(e.target.value)}
-                                placeholder="e.g., user@example.com"
+                                id="searchAadhar"
+                                type="text"
+                                value={searchAadhar}
+                                onChange={(e) => setSearchAadhar(e.target.value)}
+                                placeholder="e.g., 123456789012"
+                                pattern="\d{12}"
+                                maxLength={12}
                                 className="w-full p-2 border border-gray-300 rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 disabled={isSearching}
                             />
@@ -429,8 +502,8 @@ function AddMember() {
                         <button
                             type="button"
                             onClick={handleSearch}
-                            disabled={isSearching || !searchEmail}
-                            className={`bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition-colors duration-200 ${isSearching || !searchEmail ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={isSearching || !searchAadhar}
+                            className={`bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition-colors duration-200 ${isSearching || !searchAadhar ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             {isSearching ? ( /* Spinner SVG */ <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ) : null}
                             {isSearching ? 'Searching...' : 'Search / Find'}
@@ -496,21 +569,26 @@ function AddMember() {
                             {/* Submit/Status Area (Only show if a type is selected/determined) */}
                             {memberType && (
                                 <div className="flex flex-col sm:flex-row justify-between items-center pt-5 border-t border-gray-200 mt-4 gap-4">
-                                     {/* Submit Status Message */}
-                                     <div className="flex-grow text-center sm:text-left">
+                                    {/* Submit Status Message */}
+                                    <div className="flex-grow text-center sm:text-left">
                                         {submitStatus.message && (
                                             <p className={`text-sm font-medium ${submitStatusColor}`}>
                                                 {submitStatus.message}
                                             </p>
                                         )}
-                                     </div>
+                                    </div>
 
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
                                         className={`bg-green-600 text-white px-6 py-2 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1 transition-all duration-200 w-full sm:w-auto ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
-                                         {isSubmitting ? ( /* Spinner SVG */ <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ) : null}
+                                        {isSubmitting ? (
+                                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                        ) : null}
                                         {isSubmitting ? 'Processing...' : (memberId ? 'Update Information' : 'Add New Member')}
                                     </button>
                                 </div>

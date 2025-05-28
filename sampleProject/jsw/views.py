@@ -211,96 +211,160 @@ def login(request):
     return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
 
 @csrf_exempt
-def find_member_by_email(request):
-    # Should ideally be GET
+def find_member_by_aadhar(request):
     if request.method == 'GET':
-        email = request.GET.get('email')
-        if not email: return JsonResponse({'found': False, 'message': 'Email parameter is required'}, status=400)
-        try:
-            member = Member.objects.filter(email__iexact=email).first()
-            if member:
-                member_type = 'ohc' if member.employee_number else 'external'
-                member_data = model_to_dict(member, exclude=['password', 'entry_date']) # Exclude sensitive/internal
-                # Format role and dates
-                member_data['role'] = member.role.split(',') if member.role else []
-                member_data['doj'] = member.doj.isoformat() if member.doj else None
-                member_data['date_exited'] = member.date_exited.isoformat() if member.date_exited else None
-                member_data['memberTypeDetermined'] = member_type
-                return JsonResponse({'found': True, 'member': member_data}, status=200)
-            else:
-                # Return found: False, not a 404, as the search completed successfully without finding a match
-                return JsonResponse({'found': False, 'message': 'Member not found'}, status=200)
-        except Exception as e:
-            logger.exception(f"Error finding member by email {email}.")
-            return JsonResponse({'found': False, 'message': 'An internal server error occurred during search.'}, status=500)
-    return JsonResponse({'message': 'Invalid request method. Use GET.'}, status=405)
+        aadhar_param = request.GET.get('aadhar')
+        if not aadhar_param:
+            return JsonResponse({'error': True, 'message': 'Aadhar number is required'}, status=400)
 
+        try:
+            # Check OHC (employee_details model)
+            try:
+                employee_record = employee_details.objects.filter(aadhar=aadhar_param).first()
+                if employee_record:
+                    roles_list = [r.strip().lower() for r in employee_record.role.split(',')] if employee_record.role else []
+                    member_data = {
+                        'id': employee_record.id, # <<<<<<<<<<<<---- ADD THIS LINE (or ensure it's .pk)
+                        'name': employee_record.name,
+                        'designation': employee_record.designation,
+                        'email': employee_record.mail_id_Office or employee_record.mail_id_Personal,
+                        'phone_number': employee_record.phone_Office or employee_record.phone_Personal,
+                        'role': roles_list,
+                        'job_nature': employee_record.job_nature,
+                        'doj': employee_record.doj.strftime('%Y-%m-%d') if employee_record.doj else None,
+                        'employee_number': employee_record.emp_no,
+                        'aadhar': employee_record.aadhar,
+                        'memberTypeDetermined': 'ohc',
+                        'date_exited': None,
+                        'hospital_name': None,
+                    }
+                    return JsonResponse({
+                        'found': True,
+                        'member': member_data,
+                        'message': 'OHC Staff member found.'
+                    })
+            except employee_details.DoesNotExist: # This won't be hit if using filter().first()
+                pass
+            except Exception as e_emp:
+                print(f"Error querying employee_details for Aadhar {aadhar_param}: {str(e_emp)}")
+                # Potentially return an error or log more carefully
+
+            # Check General Member table
+            try:
+                member_instance = Member.objects.filter(aadhar=aadhar_param).first() # Use your actual model name
+                if member_instance:
+                    roles_list = [r.strip().lower() for r in member_instance.role.split(',')] if member_instance.role else []
+                    member_data = {
+                        'id': member_instance.id, # <<<<<<<<<<<<---- ADD THIS LINE (or ensure it's .pk)
+                        'name': member_instance.name,
+                        'designation': member_instance.designation,
+                        'email': member_instance.email,
+                        'phone_number': member_instance.phone_number,
+                        'role': roles_list,
+                        'job_nature': member_instance.job_nature,
+                        'doj': member_instance.doj.strftime('%Y-%m-%d') if member_instance.doj else None,
+                        'date_exited': member_instance.date_exited.strftime('%Y-%m-%d') if member_instance.date_exited else None,
+                        'employee_number': member_instance.employee_number,
+                        'hospital_name': member_instance.hospital_name,
+                        'aadhar': member_instance.aadhar,
+                        'memberTypeDetermined': member_instance.type
+                    }
+                    return JsonResponse({
+                        'found': True,
+                        'member': member_data,
+                        'message': 'Member found.'
+                    })
+            except Member.DoesNotExist: # This won't be hit if using filter().first()
+                pass
+            except Exception as e_mem:
+                 print(f"Error querying Member for Aadhar {aadhar_param}: {str(e_mem)}")
+                 # Potentially return an error here
+
+
+            # If no record found in either table after checks
+            return JsonResponse({'found': False, 'message': 'Member not found in any records.'}, status=200)
+
+        except Exception as e:
+            print(f"Outer error finding member by Aadhar {aadhar_param}: {str(e)}")
+            return JsonResponse({'error': True, 'message': 'An internal server error occurred.'}, status=500)
+
+    return JsonResponse({'error': True, 'message': 'Only GET method is allowed'}, status=405)
 @csrf_exempt
 def add_member(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            member_type = data.get('memberType') # 'ohc' or 'external'
-            required = ['name', 'designation', 'email', 'role', 'phone_number']
+    if request.method != 'POST':
+        return JsonResponse({'message': 'Only POST allowed'}, status=405)
 
-            if member_type == 'ohc':
-                required.extend(['employee_number', 'doj'])
-            elif member_type == 'external':
-                required.extend(['hospital_name', 'aadhar'])
-            else:
-                return JsonResponse({'message': 'Invalid memberType specified (must be ohc or external)'}, status=400)
+    try:
+        data = json.loads(request.body)
+        member_type = data.get('memberType')
+        print("member_type", member_type)
 
-            missing = [f for f in required if not data.get(f)]
-            if missing: return JsonResponse({'message': f"Missing required fields: {', '.join(missing)}"}, status=400)
+        # Validate memberType
+        if member_type not in ['ohc', 'external']:
+            return JsonResponse({'message': 'Invalid memberType'}, status=400)
 
-            # Check for existing email or employee number
-            if Member.objects.filter(email__iexact=data['email']).exists():
-                return JsonResponse({'message': f"A member with this email already exists."}, status=409) # 409 Conflict
-            if member_type == 'ohc' and Member.objects.filter(employee_number=data['employee_number']).exists():
-                return JsonResponse({'message': f"A member with this employee number already exists."}, status=409) # 409 Conflict
+        # Required fields
+        required = ['name', 'designation', 'email', 'role', 'phone_number', 'aadhar']
+        if member_type == 'ohc':
+            required += ['employee_number', 'doj']
+        elif member_type == 'external':
+            required += ['hospital_name']
 
-            # Determine password (use provided or generate default)
-            roles = data.get('role', [])
-            if not isinstance(roles, list): # Ensure role is a list
-                 roles = [str(roles)] if roles else []
-            raw_pw = data.get('password')
-            if not raw_pw:
-                 default_role_prefix = roles[0] if roles else 'User'
-                 raw_pw = f"{default_role_prefix}123!" # Example default, ensure it meets complexity rules if any
+        # Check missing fields
+        missing = [f for f in required if not data.get(f)]
+        if missing:
+            return JsonResponse({'message': f"Missing fields: {', '.join(missing)}"}, status=400)
 
-            hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # Uniqueness checks
+        if Member.objects.filter(email__iexact=data['email']).exists():
+            return JsonResponse({'message': 'Email already exists.'}, status=409)
+        if member_type == 'ohc' and Member.objects.filter(employee_number=data['employee_number']).exists():
+            return JsonResponse({'message': 'Employee number already exists.'}, status=409)
+        if Member.objects.filter(aadhar=data['aadhar']).exists():
+            return JsonResponse({'message': 'Aadhar number already exists.'}, status=409)
 
-            member_data = {
-                'name': data['name'],
-                'designation': data['designation'],
-                'email': data['email'],
-                'role': ','.join(roles), # Store roles as comma-separated string
-                'phone_number': data['phone_number'],
-                'job_nature': data.get('job_nature'), # Optional
-                'date_exited': parse_date_internal(data.get('date_exited')), # Optional
-                'password': hashed_pw,
-                'entry_date': date.today() # Set entry date
-            }
+        # Handle password
+        raw_pw = data.get('password', f"{data['role'][0]}123" if data.get('role') else "DefaultPass123!")
+        hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-            if member_type == 'ohc':
-                member_data.update({
-                    'employee_number': data['employee_number'],
-                    'doj': parse_date_internal(data.get('doj')) # Required for OHC
-                })
-            elif member_type == 'external':
-                member_data.update({
-                    'hospital_name': data['hospital_name'], # Required for external
-                    'aadhar': data['aadhar'] # Required for external
-                    # 'do_access': data.get('do_access', False) # Example optional field
-                })
+        # Build member data
+        member_data = {
+            'name': data['name'],
+            'designation': data['designation'],
+            'email': data['email'],
+            'role': ','.join(data.get('role', [])),
+            'phone_number': data['phone_number'],
+            'job_nature': data.get('job_nature'),
+            'date_exited': django_parse_date(data.get('date_exited')),
+            'password': hashed_pw,
+            'entry_date': date.today(),
+            'aadhar': data['aadhar'],
+            'type': member_type  # Ensure the type is saved properly
+        }
 
-            member = Member.objects.create(**member_data)
-            logger.info(f"Member added ID: {member.id}, Type: {member_type}, Name: {member.name}")
-            return JsonResponse({'message': 'Member added successfully', 'memberId': member.id}, status=201) # 201 Created
-        except json.JSONDecodeError: return JsonResponse({'message': 'Invalid JSON format'}, status=400)
-        except ValidationError as e: return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e: logger.exception("add_member failed."); return JsonResponse({'message': 'An internal server error occurred.'}, status=500)
-    return JsonResponse({'message': 'Invalid request method. Use POST.'}, status=405)
+        # Add type-specific fields
+        if member_type == 'ohc':
+            member_data.update({
+                'employee_number': data['employee_number'],
+                'doj': django_parse_date(data.get('doj'))
+            })
+        elif member_type == 'external':
+            member_data.update({
+                'hospital_name': data['hospital_name']
+            })
+
+        # Create member
+        member = Member.objects.create(**member_data)
+        logger.info(f"Member added ID: {member.id}, Type: {member_type}")
+        return JsonResponse({'message': 'Member added successfully', 'memberId': member.id}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'message': 'Invalid JSON'}, status=400)
+    except ValidationError as e:
+        return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
+    except Exception as e:
+        logger.exception("add_member failed.")
+        return JsonResponse({'message': 'Internal error.'}, status=500)
 
 @csrf_exempt
 def update_member(request, member_id):
@@ -631,6 +695,8 @@ def addEntries(request):
             'permanent_address': employee_data.get('permanent_address', ''),
             'permanent_area': employee_data.get('permanent_area', ''),
             'permanent_state': employee_data.get('permanent_state', ''),
+            'nationality': employee_data.get('nationality', ''),
+            'docName': employee_data.get('docName', ''),
             'permanent_nationality': employee_data.get('permanent_nationality', ''),
             'residential_address': employee_data.get('residential_address', ''),
             'residential_area': employee_data.get('residential_area', ''),
@@ -743,6 +809,8 @@ def add_basic_details(request):
             'mail_id_Emergency_Contact_Person': data.get('mail_id_Emergency_Contact_Person'),
             'emergency_contact_phone': data.get('emergency_contact_phone'), 'location': data.get('location'),
             'permanent_address': data.get('permanent_address'), 'permanent_area': data.get('permanent_area'),
+            'nationality': data.get('nationality'),
+            'docName': data.get('docName'),
             'permanent_state': data.get('permanent_state'), 'permanent_nationality': data.get('permanent_nationality'),
             'residential_address': data.get('residential_address'), 'residential_area': data.get('residential_area'),
             'residential_state': data.get('residential_state'), 'residential_nationality': data.get('residential_nationality'),
@@ -921,7 +989,7 @@ def fetchVisitdata(request, aadhar):
 @csrf_exempt
 def fetchVisitDataWithDate(request, aadhar, date_str):
     """Fetches the LATEST record ON OR BEFORE a specific date for an Aadhar across multiple models."""
-    if request.method == "POST":
+    if request.method == "GET":
         try:
             target_date_obj = parse_date_internal(date_str)
             if not target_date_obj:
@@ -1059,7 +1127,7 @@ def add_vital_details(request):
             allowed_fields = {
                 field.name for field in model_class._meta.get_fields()
                 if field.concrete and not field.primary_key and not field.is_relation and field.editable
-                   and field.name not in ['aadhar', 'entry_date', 'mrdNo', 'manual', 'fc', 'report', 'self_declared'] # Exclude files and keys
+                   and field.name not in ['aadhar', 'entry_date', 'mrdNo', 'manual', 'fc', 'report', 'self_declared', 'application_form', 'consent'] # Exclude files and keys
             }
             filtered_data = {}
             for key in allowed_fields:
@@ -1091,7 +1159,7 @@ def add_vital_details(request):
             # Handle File Uploads AFTER getting/creating the instance
             files_updated = False
             update_fields_for_save = [] # Track fields updated by files
-            file_fields = ['manual', 'fc', 'report', 'self_declared']
+            file_fields = ['manual', 'fc', 'report', 'self_declared', 'application_form', 'consent'] # List of file fields to check
             for field_name in file_fields:
                 if field_name in request.FILES:
                     # Delete old file if exists before saving new one
@@ -2229,7 +2297,6 @@ def view_prescriptions(request):
 
 # --- Mock Drills / Camps / Reviews / Misc ---
 
-# Mockdrills - Aadhar handling added
 @csrf_exempt
 def save_mockdrills(request):
     if request.method == "POST":
@@ -2248,16 +2315,19 @@ def save_mockdrills(request):
                 'date': drill_date, 'time': data.get("time"), 'department': data.get("department"),
                 'location': data.get("location"), 'scenario': data.get("scenario"),
                 'ambulance_timing': data.get("ambulance_timing"), 'departure_from_OHC': data.get("departure_from_OHC"),
-                'return_to_OHC': data.get("return_to_OHC"), 'aadhar': aadhar, 'emp_no': emp_no_val,
+                'return_to_OHC': data.get("return_to_OHC"), 
+                'aadhar': aadhar, # Aadhar is included here
+                'emp_no': emp_no_val,
                 'victim_department': data.get("victim_department"), 'victim_name': data.get("victim_name"),
                 'nature_of_job': data.get("nature_of_job"), 'age': parse_form_age(data.get("age")),
                 'mobile_no': data.get("mobile_no"), 'gender': data.get("gender"), 'vitals': data.get("vitals"),
                 'complaints': data.get("complaints"), 'treatment': data.get("treatment"),
                 'referal': data.get("referal"), 'ambulance_driver': data.get("ambulance_driver"),
                 'staff_name': data.get("staff_name"), 'OHC_doctor': data.get("OHC_doctor"),
-                'staff_nurse': data.get("staff_nurse"), 'Action_Completion': data.get("Action_Completion"),
-                'Responsible': data.get("Responsible"),
+                'staff_nurse': data.get("staff_nurse"), 'Action_Completion': data.get("action_completion"), # Corrected key to match frontend if needed
+                'Responsible': data.get("responsible"), # Corrected key to match frontend if needed
             }
+
             filtered_data = {k: v for k, v in mock_drill_data.items() if v is not None}
 
             mock_drill = mockdrills.objects.create(**filtered_data)
@@ -2284,7 +2354,7 @@ def get_mockdrills(request):
             mock_drills_list = []
             for drill in mock_drills_qs:
                  drill_data = model_to_dict(drill)
-                 drill_data['date'] = drill.date.isoformat() if drill.date else None
+                 drill_data['date'] = drill.date.format() if drill.date else None
                  # Format time if needed: drill_data['time'] = drill.time.strftime('%H:%M:%S') if drill.time else None
                  mock_drills_list.append(drill_data)
             return JsonResponse(mock_drills_list, safe=False)
@@ -2293,6 +2363,32 @@ def get_mockdrills(request):
             return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
     else:
         response = JsonResponse({"error": "Invalid request method"}, status=405)
+        response['Allow'] = 'GET'
+        return response
+    
+@csrf_exempt # Keep if you are posting to it, but for GET it's not strictly needed. For simplicity, let's assume it's only GET.
+def get_one_mockdrills(request):
+    if request.method == "GET":
+        try:
+            # Order by 'id' descending is often a reliable way to get the latest created object
+            # If you have a 'created_at' DateTimeField, that would be even better.
+            # Using '-date', '-time' as per your model structure.
+            latest_drill_qs = mockdrills.objects.all().order_by('-date', '-time').first()
+            
+            if latest_drill_qs:
+                # model_to_dict converts the model instance to a dictionary.
+                # The keys in this dictionary will be the model field names (e.g., 'action_completion', 'responsible').
+                data_to_return = model_to_dict(latest_drill_qs)
+            else:
+                data_to_return = {} # Return an empty object if no drills are found
+
+            return JsonResponse(data_to_return, safe=True) # safe=True because we are sending a dict
+
+        except Exception as e:
+            logger.exception("get_one_mockdrills failed.") # Corrected function name
+            return JsonResponse({"error": "Server error retrieving latest mock drill.", "detail": str(e)}, status=500)
+    else:
+        response = JsonResponse({"error": "Invalid request method for get_one_mockdrills"}, status=405)
         response['Allow'] = 'GET'
         return response
 
