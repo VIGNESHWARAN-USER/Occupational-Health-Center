@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'build',  // Ensure Vite outputs to 'build'
+    outDir: 'build',  
   },
+  server: {
+    port: "Give port number here..."
+  }
 });
