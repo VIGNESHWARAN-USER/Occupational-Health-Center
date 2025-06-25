@@ -121,7 +121,7 @@ const DataUpload = () => {
                 // *** Backend API Endpoint Configuration ***
                 let uploadUrl = '';
                 // Make sure base URL is configured (e.g., using environment variables or an axios instance)
-                const baseURL = 'https://occupational-health-center-1.onrender.com'; 
+                const baseURL = 'http://localhost:8000'; 
                 if (formVal === "HR Data") {
                     // uploadUrl = '/api/upload/hr-data'; // Relative path
                     uploadUrl = `${baseURL}/hrupload`; // <--- SET YOUR FULL HR DATA UPLOAD URL HERE

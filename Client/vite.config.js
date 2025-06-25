@@ -5,8 +5,5 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'build',  
-  },
-  server: {
-    port: "Give port number here..."
   }
 });

@@ -21,7 +21,7 @@ function Viewprescription() {
         try {
             setLoading(true);
             setError(null);
-            const response = await axios.get('https://occupational-health-center-1.onrender.com/prescriptions/view/');
+            const response = await axios.get('http://localhost:8000/prescriptions/view/');
             if (response.data && Array.isArray(response.data.prescriptions)) {
                 setPrescriptions(response.data.prescriptions);
                 setFilteredPrescriptions(response.data.prescriptions);
@@ -116,7 +116,7 @@ function Viewprescription() {
 
                 try {
                     // Make API call to update stock in jsw_pharmacystock
-                    const response = await axios.post('https://occupational-health-center-1.onrender.com/update-pharmacy-stock/', {
+                    const response = await axios.post('http://localhost:8000/update-pharmacy-stock/', {
                         doseVolume: item.doseVolume,
                         expiryDate: item.expiryDate,
                         quantity: parseInt(item.issuedIn),

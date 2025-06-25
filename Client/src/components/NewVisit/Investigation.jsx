@@ -204,7 +204,7 @@ function InvestigationForm({ data }) {
         alert(`No submission endpoint configured for "${categoryNameToSubmit}".`);
         return;
     }
-    const url = `https://occupational-health-center-1.onrender.com/${endpoint}`;
+    const url = `http://localhost:8000/${endpoint}`;
 
     try {
       const { emp_no, ...formDataToSend } = formData;

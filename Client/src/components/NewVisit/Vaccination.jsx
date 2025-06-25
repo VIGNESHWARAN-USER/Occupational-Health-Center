@@ -157,7 +157,7 @@ const Vaccination = ({ data }) => {
     setIsLoading(true);
     try {
       // *** FIXED THE BUG HERE: Use aadhar instead of undefined 'aadhar' ***
-      await axios.post("https://occupational-health-center-1.onrender.com/vaccination/", {
+      await axios.post("http://localhost:8000/vaccination/", {
         aadhar: aadhar, // Corrected variable name
         mrdNo: mrdNo,
         vaccination: vaccinationData,

@@ -89,7 +89,7 @@ const NewVisit = () => {
           return;
         }
 
-        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+        const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.aadhar}`, { 
           profileImage: imageData, 
           formData 
         });
@@ -97,7 +97,7 @@ const NewVisit = () => {
         if (updateResponse.status === 200) {
           alert("Profile image updated successfully!");
           // Refresh employee list or update local state
-          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          const fetchResponse = await axios.post("http://localhost:8000/userData");
           setEmployees(fetchResponse.data.data);
           setFilteredEmployees(fetchResponse.data.data);
           setdata([{ ...formData, profileImage: imageData }]);
@@ -396,7 +396,7 @@ const NewVisit = () => {
     }
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", submissionData, {
+      const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -432,7 +432,7 @@ const NewVisit = () => {
       }
       const updatedformData = { ...formData, role: type, mrdNo: mrdNo }
       console.log(updatedformData)
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -610,7 +610,7 @@ const NewVisit = () => {
       try {
         setLoading(true);
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         console.log("API Response Data:", response.data.data);
         setEmployees(response.data.data);
         console.log(response.data.data);

@@ -48,7 +48,7 @@ const Login = () => {
     else {
       try {
         setLoading(true);
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/login", {
+        const response = await axios.post("http://localhost:8000/login", {
           username: name,
           password: pass,
         });
