@@ -15,9 +15,8 @@ const filterSections = [
     { id: "purpose", label: "Purpose Filter" },
     { id: "vitals", label: "Vitals" },
     { id: "investigations", label: "Investigations" },
-    { id: "diagnosis", label: "Diagnosis and Notable Remarks" },
     { id: "fitness", label: "Fitness" },
-    { id: "prescriptions", label: "Prescriptions" },
+    // { id: "prescriptions", label: "Prescriptions" },
     { id: "referrals", label: "Referrals" },
     { id: "statutoryforms", label: "Statutory Forms" },
 ];
@@ -48,8 +47,6 @@ const RecordsFilters = () => {
     const [filteredEmployees, setFilteredEmployees] = useState([]); // Data displayed in table
     const [loading, setLoading] = useState(false);
     const [selectedRole, setSelectedRole] = useState(""); // For Employee/Contractor/Visitor filter
-    const [cd, setcd] = useState([]); // Diagnosis options
-    const [remarks, setremarks] = useState([]); // Diagnosis options
     // State for referral options
     const [specialityOptions, setSpecialityOptions] = useState([]);
     const [doctorOptions, setDoctorOptions] = useState([]);
@@ -76,33 +73,9 @@ const RecordsFilters = () => {
 
                 // Fetch summary/notes/consultation data for filter options
                 const summaryResponse = await axios.get("https://occupational-health-center-1.onrender.com/get_notes/");
-                const summaryData = summaryResponse?.data?.data; // For Diagnosis
                 const consultationData = summaryResponse?.data?.consultation; // For Referrals
-                console.log("Fetched /get_notes/ response:", summaryResponse.data);
+                console.log("Fetched /get_notes/ response:", consultationData[0].speciality);
 
-                // --- Process Diagnosis Options ---
-                if (Array.isArray(summaryData)) {
-                    const uniqueCDs = new Set();
-                    const uniqueRemarks = new Set();
-                    summaryData.forEach(element => {
-                        if (element?.communicable_disease) {
-                            uniqueCDs.add(element.communicable_disease.trim());
-                        }
-                        if (element?.remarks) {
-                            uniqueRemarks.add(element.remarks.trim());
-                        }
-                    });
-                    const cdArray = Array.from(uniqueCDs).filter(item => item !== '');
-                    const remarksArray = Array.from(uniqueRemarks).filter(item => item !== '');
-                    setcd(cdArray);
-                    setremarks(remarksArray);
-                    console.log("Populated CD options:", cdArray);
-                    console.log("Populated Remarks options:", remarksArray);
-                } else {
-                    console.error("Fetched summary data (for diagnosis) is not an array:", summaryData);
-                    setcd([]);
-                    setremarks([]);
-                }
 
                 // --- Process Referral Options ---
                 if (Array.isArray(consultationData)) {
@@ -111,8 +84,8 @@ const RecordsFilters = () => {
                     const uniqueHospitals = new Set();
                     consultationData.forEach(element => {
                         // Use 'speaciality' key from sample data (note the typo)
-                        if (element?.speaciality) {
-                            uniqueSpecialities.add(element.speaciality.trim());
+                        if (element?.speciality) {
+                            uniqueSpecialities.add(element.speciality.trim());
                         }
                         if (element?.doctor_name) {
                             uniqueDoctors.add(element.doctor_name.trim());
@@ -134,6 +107,7 @@ const RecordsFilters = () => {
                     console.log("Populated Hospital options:", hospitalArray);
 
                 } else {
+
                      console.error("Fetched consultation data (for referrals) is not an array:", consultationData);
                      setSpecialityOptions([]);
                      setDoctorOptions([]);
@@ -217,6 +191,9 @@ const RecordsFilters = () => {
 
 
     // --- Core Filtering Logic ---
+  // In RecordsFilters.js
+
+    // --- Core Filtering Logic ---
     const applyFiltersToData = () => {
         console.log("Applying filters:", selectedFilters);
         console.log("Selected Role:", selectedRole);
@@ -231,14 +208,13 @@ const RecordsFilters = () => {
         // 2. Filter by selected criteria
         const filtersMap = selectedFilters.reduce((acc, filter) => {
             const key = Object.keys(filter)[0]; // Use the potentially modified filterKey
-            acc[key] = filter[key];
+            acc[key] = Object.values(filter)[0];
             return acc;
-        }, {});
-
+        }, {}); 
         results = results.filter(employee => {
             for (const key in filtersMap) {
                 const value = filtersMap[key];
-
+                console.log(key)
                 // --- Personal Details ---
                 if (key === 'sex') { if (!employee.sex || employee.sex?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'bloodgrp') { if (employee.bloodgrp !== value) return false; }
@@ -246,13 +222,41 @@ const RecordsFilters = () => {
                 else if (key === 'ageFrom') { const age = calculateAge(employee.dob); if (age === '-' || age < parseInt(value, 10)) return false; }
                 else if (key === 'ageTo') { const age = calculateAge(employee.dob); if (age === '-' || age > parseInt(value, 10)) return false; }
 
-                // --- Employment Details ---
+                // --- Employment Details (UPDATED) ---
                 else if (key === 'designation') { if (!employee.designation || employee.designation?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'department') { if (!employee.department || employee.department?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'employer') { if (!employee.employer || employee.employer?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'moj') { if (!employee.moj || employee.moj?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'job_nature') { if (!employee.job_nature || employee.job_nature?.toLowerCase() !== value.toLowerCase()) return false; }
-                else if (key === 'doj') { if (employee.doj !== value) return false; }
+                // ADDED: Logic for dojFrom
+                else if (key === 'dojFrom') {
+                    if (!employee.doj) return false; // Fail if employee has no DOJ
+                    try {
+                        const employeeDoj = new Date(employee.doj);
+                        const filterFromDate = new Date(value);
+                        // Normalize dates to ignore time
+                        employeeDoj.setHours(0, 0, 0, 0);
+                        filterFromDate.setHours(0, 0, 0, 0);
+                        if (isNaN(employeeDoj) || isNaN(filterFromDate) || employeeDoj < filterFromDate) {
+                            return false;
+                        }
+                    } catch (e) { return false; } // Fail on invalid date format
+                }
+                // ADDED: Logic for dojTo
+                else if (key === 'dojTo') {
+                    if (!employee.doj) return false; // Fail if employee has no DOJ
+                    try {
+                        const employeeDoj = new Date(employee.doj);
+                        const filterToDate = new Date(value);
+                        // Normalize dates to ignore time
+                        employeeDoj.setHours(0, 0, 0, 0);
+                        filterToDate.setHours(0, 0, 0, 0);
+                        if (isNaN(employeeDoj) || isNaN(filterToDate) || employeeDoj > filterToDate) {
+                            return false;
+                        }
+                    } catch (e) { return false; } // Fail on invalid date format
+                }
+                // REMOVED: The old single 'doj' filter logic is no longer needed.
 
                 // --- Employment Status ---
                  else if (key === 'status') {
@@ -292,16 +296,34 @@ const RecordsFilters = () => {
                 }
                 // --- Investigations ---
                 else if (key.startsWith('investigation_')) {
-                    const filterData = value; // value is { form, param, from, to, status }
-                    const investigationData = employee[filterData.form]?.[filterData.param];
-                    if (investigationData === undefined || investigationData === null || investigationData === '') return false;
-                    if (filterData.from && filterData.to) {
-                        const numVal = parseFloat(investigationData); const fromVal = parseFloat(filterData.from); const toVal = parseFloat(filterData.to);
-                        if (isNaN(numVal) || isNaN(fromVal) || isNaN(toVal) || numVal < fromVal || numVal > toVal) return false;
+                    const filterData = value; // { form, param, from, to, status }
+                    
+                    const investigationCategory = employee[filterData.form];
+                    
+                    if (!investigationCategory) {
+                        return false;
                     }
+
+                    if (filterData.from && filterData.to) {
+                        const investigationValue = investigationCategory[filterData.param];
+                        if (investigationValue === undefined || investigationValue === null || investigationValue === '') {
+                            return false; 
+                        }
+                        const numVal = parseFloat(investigationValue);
+                        const fromVal = parseFloat(filterData.from);
+                        const toVal = parseFloat(filterData.to);
+                        if (isNaN(numVal) || numVal < fromVal || numVal > toVal) {
+                            return false;
+                        }
+                    }
+
                     if (filterData.status) {
-                        const statusField = `${filterData.param}_status`; const invStatus = employee[filterData.form]?.[statusField];
-                        if (!invStatus || invStatus.toLowerCase() !== filterData.status.toLowerCase()) return false;
+                        const statusFieldKey = `${filterData.param}_status`;
+                        const investigationStatus = investigationCategory[statusFieldKey];
+                        
+                        if (!investigationStatus || investigationStatus.toLowerCase() !== filterData.status.toLowerCase()) {
+                            return false;
+                        }
                     }
                 }
                 // --- Fitness ---
@@ -322,12 +344,50 @@ const RecordsFilters = () => {
                      const hasCond = conditionData && Array.isArray(conditionData.children) && conditionData.children.length > 0;
                      if ((value === 'Yes' && !hasCond) || (value === 'No' && hasCond)) return false;
                  }
-                 else if (key.startsWith('family_')) {
-                     const filterData = value; // { condition, status, relation }
-                     const relations = employee.msphistory?.conditions?.[filterData.condition];
-                     const relationPresent = Array.isArray(relations) && relations.some(r => r.toLowerCase() === filterData.relation.toLowerCase());
-                     if ((filterData.status === 'Yes' && !relationPresent) || (filterData.status === 'No' && relationPresent)) return false;
-                 }
+                // In applyFiltersToData, find and replace this specific block:
+
+ else if (key.startsWith('family_')) {
+    const filterData = value; // This is now { condition?, status?, relation? }
+    const medicalData = employee.msphistory?.medical_data;
+
+    let employeeHasCondition = false;
+    let commentsToCheck = "";
+
+    // Determine the scope of the search based on the filter
+    if (filterData.condition) {
+        // A specific condition is selected, so we check only that one.
+        const conditionData = medicalData?.[filterData.condition];
+        employeeHasCondition = conditionData && conditionData.comment && conditionData.comment.trim() !== "";
+        if (employeeHasCondition) {
+            commentsToCheck = conditionData.comment;
+        }
+    } else {
+        // No specific condition, so check if ANY family history exists.
+        if (medicalData) {
+            employeeHasCondition = Object.values(medicalData).some(cond => cond && cond.comment && cond.comment.trim() !== "");
+            if (employeeHasCondition) {
+                // We will check against ALL family history comments combined.
+                commentsToCheck = Object.values(medicalData).map(c => c.comment || "").join(" ");
+            }
+        }
+    }
+
+    // Now, apply the filter checks
+    // 1. Check Status (e.g., must have a condition, or must not have one)
+    if (filterData.status) {
+        if ((filterData.status === 'Yes' && !employeeHasCondition) || (filterData.status === 'No' && employeeHasCondition)) {
+            return false; // Fails the status check
+        }
+    }
+
+    // 2. Check Relation (only if a relation is specified and the status check passed)
+    if (filterData.relation && employeeHasCondition) {
+        const relationRegex = new RegExp(`\\b${filterData.relation}\\b`, 'i');
+        if (!relationRegex.test(commentsToCheck)) {
+            return false; // Fails the relation check
+        }
+    }
+}
                  else if (['drugAllergy', 'foodAllergy', 'otherAllergies'].includes(key)) {
                      let allergyType = ''; if (key === 'drugAllergy') allergyType = 'drug'; else if (key === 'foodAllergy') allergyType = 'food'; else allergyType = 'others';
                      const allergyData = employee.msphistory?.allergy_fields?.[allergyType]; if (!allergyData || allergyData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
@@ -338,8 +398,9 @@ const RecordsFilters = () => {
                  }
                 // --- Vaccination ---
                 else if (['disease', 'vaccine', 'vaccine_status'].includes(key)) {
-                     if (!employee.vaccination?.vaccination || !Array.isArray(employee.vaccination.vaccination)) return false;
-                     const match = employee.vaccination.vaccination.some(vac => {
+                     if (!employee.vaccinationrecord?.vaccination || !Array.isArray(employee.vaccinationrecord?.vaccination)) return false;
+                     console.log(employee.vaccinationrecord);
+                     const match = employee.vaccinationrecord.vaccination.some(vac => {
                          if (key === 'disease') return vac.disease_name?.toLowerCase() === value.toLowerCase();
                          if (key === 'vaccine') return vac.vaccine_name?.toLowerCase() === value.toLowerCase();
                          if (key === 'vaccine_status') return vac.status?.toLowerCase() === value.toLowerCase();
@@ -364,17 +425,11 @@ const RecordsFilters = () => {
                         } catch (e) { console.error("Date parsing error:", e); return false; }
                     }
                 }
-                // --- Diagnosis ---
-                 else if (key === 'disease') { // Check 'disease' key from Diagnosis component
-                     if (!employee?.significant_notes?.communicable_disease || employee.significant_notes.communicable_disease.toLowerCase() !== value.toLowerCase()) return false;
-                 }
-                 else if (key === 'notable_remarks') { // Check 'notable_remarks' key from Diagnosis component
-                     if (!employee?.significant_notes?.remarks || employee.significant_notes.remarks.toLowerCase() !== value.toLowerCase()) return false;
-                 }
+           
                 // --- Prescriptions ---
-                 else if (['tablets', 'injections', 'creams', 'others'].includes(key)) {
-                      if (!employee.prescription || !employee.prescription[key] || employee.prescription[key].toLowerCase() !== value.toLowerCase()) return false;
-                 }
+                //  else if (["tablets", "injections", "creams","syrups","drops","respules","lotions","fluids", "powder","suture_procedure","dressing","others" ].includes(key)) {
+                //       if (!employee.prescription || !employee.prescription[key] || employee.prescription[key].toLowerCase() !== value.toLowerCase()) return false;
+                //  }
                 // --- Referrals ---
                  else if (key.startsWith('referrals_')) {
                     const filterData = value; // { referred, speciality, hospitalName, doctorName }
@@ -383,9 +438,9 @@ const RecordsFilters = () => {
                         if (consultationData && consultationData.referral?.toLowerCase() === 'yes') return false;
                     } else {
                         if (!consultationData || consultationData.referral?.toLowerCase() !== 'yes') return false;
-                        if (filterData.speciality && consultationData.speaciality?.toLowerCase() !== filterData.speciality.toLowerCase()) return false;
-                        if (filterData.hospitalName && consultationData.hospital_name?.toLowerCase() !== filterData.hospitalName.toLowerCase()) return false;
-                        if (filterData.doctorName && consultationData.doctor_name?.toLowerCase() !== filterData.doctorName.toLowerCase()) return false;
+                        if (filterData.speciality && consultationData.speciality?.toLowerCase() !== filterData.speciality.toLowerCase()) return false;
+                        if (filterData.hospital_name && consultationData.hospital_name?.toLowerCase() !== filterData.hospitalName.toLowerCase()) return false;
+                        if (filterData.doctor_name && consultationData.doctor_name?.toLowerCase() !== filterData.doctorName.toLowerCase()) return false;
                     }
                 }
                 // --- Statutory Forms ---
@@ -512,8 +567,7 @@ const RecordsFilters = () => {
                                 {selectedSection === "investigations" && <Investigations addFilter={addFilter} />}
                                 {selectedSection === "vaccination" && <VaccinationForm addFilter={addFilter} />}
                                 {selectedSection === "purpose" && <PurposeFilter addFilter={addFilter} />}
-                                {selectedSection === "diagnosis" && <Diagnosis addFilter={addFilter} cd={cd} remarks={remarks} />}
-                                {selectedSection === "prescriptions" && <Prescriptions addFilter={addFilter} />}
+                                {/* {selectedSection === "prescriptions" && <Prescriptions addFilter={addFilter} />} */}
                                 {selectedSection === "referrals" && <Referrals addFilter={addFilter} specialityOptions={specialityOptions} hospitalOptions={hospitalOptions} doctorOptions={doctorOptions} />}
                                 {selectedSection === "statutoryforms" && <StatutoryForms addFilter={addFilter} />}
                             </motion.div>
@@ -600,12 +654,75 @@ const PersonalDetails = ({ addFilter }) => {
     };
     return (<div className="space-y-4"> <div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="ageFrom-filter">Age From</label> <input type="number" id="ageFrom-filter" name="ageFrom" value={formData.ageFrom} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 25"/> </div> <div> <label htmlFor="ageTo-filter">Age To</label> <input type="number" id="ageTo-filter" name="ageTo" value={formData.ageTo} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 40"/> </div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="sex-filter">Sex</label> <select name="sex" id="sex-filter" value={formData.sex} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any Sex</option> <option value="Male">Male</option> <option value="Female">Female</option> <option value="Other">Other</option> </select> </div> <div> <label htmlFor="bloodgrp-filter">Blood Group</label> <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="A+">A+</option> <option value="A-">A-</option> <option value="B+">B+</option> <option value="B-">B-</option> <option value="AB+">AB+</option> <option value="AB-">AB-</option> <option value="O+">O+</option> <option value="O-">O-</option> </select> </div> <div> <label htmlFor="marital_status-filter">Marital Status</label> <select name="marital_status" id="marital_status-filter" value={formData.marital_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="Single">Single</option> <option value="Married">Married</option> <option value="Separated">Separated</option> <option value="Divorced">Divorced</option> <option value="Widowed">Widowed</option> </select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Personal Details Filter</button> </div>);
 };
+// In RecordsFilters.js
+
 const EmploymentDetails = ({ addFilter }) => {
-    const [formData, setFormData] = useState({ designation: "", department: "", moj: "", employer: "", doj: "", job_nature: "", });
-    const employerOptions = { "JSW Steel": "JSW Steel", "JSW Cement": "JSW Cement", "JSW Foundation": "JSW Foundation", /*...*/ }; const mojOptions = { "New Joinee": "New Joinee", "Transfer": "Transfer", /*...*/ }; const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant", /*...*/ };
-    const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
-    const handleSubmit = () => { const filteredData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "" && v !== null)); if (Object.keys(filteredData).length > 0) { addFilter(filteredData); } else { alert("Enter at least one detail."); } setFormData({ designation: "", department: "", moj: "", employer: "", doj: "", job_nature: "" }); };
-    return (<div className="space-y-4"> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div><label htmlFor="employer-filter">Employer</label><select name="employer" id="employer-filter" value={formData.employer} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(employerOptions).map(([k, v])=>(<option key={k} value={k}>{v}</option>))}</select></div> <div><label htmlFor="moj-filter">Mode of Joining</label><select name="moj" id="moj-filter" value={formData.moj} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(mojOptions).map(([k, v])=>(<option key={k} value={k}>{v}</option>))}</select></div> <div><label htmlFor="job_nature-filter">Job Nature</label><select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(jobNatureOptions).map(([k, v])=>(<option key={k} value={k}>{v}</option>))}</select></div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div><label htmlFor="designation-filter">Designation</label><input type="text" id="designation-filter" name="designation" value={formData.designation} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Engineer"/></div> <div><label htmlFor="department-filter">Department</label><input type="text" id="department-filter" name="department" value={formData.department} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., IT"/></div> <div><label htmlFor="doj-filter">Date of Joining</label><input type="date" id="doj-filter" name="doj" value={formData.doj} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v=>v==="")}>Add Employment Details Filter</button> </div>);
+    // 1. Add dojFrom and dojTo to state, remove the single doj
+    const [formData, setFormData] = useState({
+        designation: "",
+        department: "",
+        moj: "",
+        employer: "",
+        job_nature: "",
+        dojFrom: "",
+        dojTo: "",
+    });
+
+    const employerOptions = { "JSW Steel": "JSW Steel", "JSW Cement": "JSW Cement", "JSW Foundation": "JSW Foundation" };
+    const mojOptions = { "New Joinee": "New Joinee", "Transfer": "Transfer" };
+    const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant" };
+
+    const handleChange = (e) => {
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSubmit = () => {
+        const filteredData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "" && v !== null));
+        
+        // 2. Add validation for the date range
+        if (filteredData.dojFrom && filteredData.dojTo && new Date(filteredData.dojFrom) > new Date(filteredData.dojTo)) {
+            alert("'From Date' cannot be after 'To Date'.");
+            return;
+        }
+
+        if (Object.keys(filteredData).length > 0) {
+            addFilter(filteredData);
+        } else {
+            alert("Enter at least one detail.");
+        }
+        
+        // 3. Reset the updated state
+        setFormData({
+            designation: "", department: "", moj: "", employer: "", job_nature: "", dojFrom: "", dojTo: ""
+        });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label htmlFor="employer-filter">Employer</label><select name="employer" id="employer-filter" value={formData.employer} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(employerOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
+                <div><label htmlFor="moj-filter">Mode of Joining</label><select name="moj" id="moj-filter" value={formData.moj} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(mojOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
+                <div><label htmlFor="job_nature-filter">Job Nature</label><select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(jobNatureOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label htmlFor="designation-filter">Designation</label><input type="text" id="designation-filter" name="designation" value={formData.designation} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Engineer" /></div>
+                <div><label htmlFor="department-filter">Department</label><input type="text" id="department-filter" name="department" value={formData.department} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., IT" /></div>
+            </div>
+            {/* 4. Add the new date range inputs and remove the old single date input */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t mt-4">
+                 <div>
+                    <label htmlFor="dojFrom-filter">Date of Joining (From)</label>
+                    <input type="date" id="dojFrom-filter" name="dojFrom" value={formData.dojFrom} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
+                </div>
+                 <div>
+                    <label htmlFor="dojTo-filter">Date of Joining (To)</label>
+                    <input type="date" id="dojTo-filter" name="dojTo" value={formData.dojTo} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
+                </div>
+            </div>
+
+            <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Employment Details Filter</button>
+        </div>
+    );
 };
 const Vitals = ({ addFilter }) => {
     const [formData, setFormData] = useState({ param: "systolic", bmiCategory: "", from: "", to: "", });
@@ -618,25 +735,300 @@ const Vitals = ({ addFilter }) => {
     return (<div className="space-y-4"> <div> <label htmlFor="param-vital-filter">Parameter</label> <select name="param" id="param-vital-filter" value={formData.param} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> {vitalParams.map(p => (<option key={p.value} value={p.value}>{p.label}</option>))} </select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {showBmiDropdown && (<div className="md:col-span-2"> <label htmlFor="bmiCategory-filter">BMI Category</label> <select name="bmiCategory" id="bmiCategory-filter" value={formData.bmiCategory} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Select</option> {Object.entries(bmiOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))} </select> </div>)} {showRangeInputs && (<><div> <label htmlFor="from-vital-filter">Range From</label> <input type="number" id="from-vital-filter" name="from" value={formData.from} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 120"/> </div> <div> <label htmlFor="to-vital-filter">Range To</label> <input type="number" id="to-vital-filter" name="to" value={formData.to} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 140"/> </div> </>)} </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Vital Filter ({selectedParamConfig?.label}) </button> </div>);
 };
 const Investigations = ({ addFilter }) => {
-    const formOptions = { haematology: ["hemoglobin", "total_rbc", /*...*/], routinesugartests: ["glucose_f", "hba1c",/*...*/], lipidprofile: ["calcium", /*...*/], liverfunctiontest: ["bilirubin_total", /*...*/], thyroidfunctiontest: ["t3_triiodothyronine",/*...*/], renalfunctiontests_and_electrolytes: ["urea",/*...*/], coagulationtest: ["prothrombin_time",/*...*/], enzymesandcardiacprofile: ["acid_phosphatase",/*...*/], urineroutine: ["colour",/*...*/], serology: ["screening_hiv",/*...*/], motion: ["colour_motion",/*...*/], menspack: ["psa"], opthalamicreport: ["vision",/*...*/], usg: ["usg_abdomen",/*...*/], };
+    // CORRECTED: Keys now match the lowercase model names from the Django backend.
+    const formOptions = {
+        heamatalogy: ["hemoglobin", "total_rbc", "total_wbc", "Haemotocrit", "neutrophil", "monocyte", "pcv", "mcv", "mch", "lymphocyte", "esr", "mchc", "platelet_count", "rdw", "eosinophil", "basophil", "peripheral_blood_smear_rbc_morphology" /*...*/],
+        routinesugartests: ["glucose_f", "glucose_pp", "random_blood_sugar", "estimated_average_glucose", "hba1c",/*...*/],
+        lipidprofile: ["total_cholesterol", "triglycerides", "hdl_cholesterol", "vldl_cholesterol", "ldl_cholesterol", "chol_hdl_ratio", "ldl_hdl_cho_ratio", /*...*/],
+        liverfunctiontest: ["bilirubin_total", "bilirubin_direct", "bilirubin_indirect", "sgot_ast", "sgpt_alt", "alkaline_phosphatase", "total_protein_serum", "albumin_serum", "globulin", "alb_glo_ratio", "gamma_glutamyl_transferase", /*...*/],
+        thyroidfunctiontest: ["t3_triiodothyronine", "t4_thyroxine", "tsh",/*...*/],
+        autoimmunetest: ["ana_antinuclear_antibody", "anti_ds_dna", "anticardiolipin_antibody", "rheumatoid_factor",/***/],
+        renalfunctiontests_and_electrolytes: ["urea", "blood_urea_nitrogen", "sr_creatinine", "egfr", "uric_acid", "sodium", "potassium", "calcium", "phosphorus", "chloride", "bicarbonate",/*...*/],
+        coagulationtest: ["prothrombin_time", "pt_inr", "bleeding_time", "clotting_time",/*...*/],
+        enzymesandcardiacprofile: ["acid_phosphatase", "adenosine_deaminase", "amylase", "lipase", "troponin_t", "troponin_i", "cpk_total", "cpk_mb", "ecg", "echo", "tmt",/*...*/],
+        urineroutine: ["colour", "appearance", "reaction_ph", "specific_gravity", "protein_albumin", "glucose_urine", "ketone_bodies", "urobilinogen", "bile_salts", "bile_pigments", "wbc_pus_cells", "red_blood_cells", "epithelial_cells", "casts", "crystals", "bacteria",/*...*/],
+        serology: ["screening_for_hiv_1_and_2", "hbsag", "hcv", "widal", "vdrl", "dengue_ns1ag", "dengue_igg", "dengue_igm",/*...*/],
+        motion: ["colour_appearance", "occult_blood", "ova", "cyst", "mucus", "pus_cells", "rbcs", "others",/*...*/],
+        routinesensitivitytest: ["culture_urine", "culture_motion", "culture_sputum", "culture_blood"],
+        menspack: ["psa"],
+        womenspack: ["mammogram", "pap_smear"],
+        occupationalprofile: ["audiometry", "pft", "bone_densitometry"],
+        otherstest: ["dental", "pathology"],
+        ophthalmicreport: ["vision", "color_vision", "cataract_glaucoma"], // CORRECTED spelling and consolidated
+        xray: ["xray_chest", "xray_spine", "xray_abdomen", "xray_kub", "xray_pelvis"],
+        ct: ["ct_brain", "ct_abdomen", "ct_pelvis", "ct_lungs", "ct_spine"],
+        mri: ["mri_brain", "mri_abdomen", "mri_pelvis", "mri_lungs", "mri_spine"],
+        usg: ["usg_abdomen", "usg_pelvis", "usg_neck", "usg_kub",/*...*/],
+    };
+    
+    // The rest of the component logic remains the same...
     const formatLabel = (k) => k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); const [formData, setFormData] = useState({ form: "", param: "", from: "", to: "", status: "", }); const selectedFormParams = formData.form ? formOptions[formData.form] || [] : [];
     useEffect(() => { setFormData((prev) => ({ ...prev, param: "", from: "", to: "", status: "" })); }, [formData.form]); const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = () => { const { form, param, from, to, status } = formData; if (!form || !param) { alert("Select Form and Parameter."); return; } let fp = { form, param }; let hv = false; if (from !== "" && to !== "") { if (parseFloat(from) > parseFloat(to)) { alert("'From' > 'To'."); return; } fp.from = from; fp.to = to; hv = true; } if (status !== "") { fp.status = status; hv = true; } if (!hv) { alert("Provide Range or Status."); return; } addFilter({ investigation: fp }); setFormData({ form: "", param: "", from: "", to: "", status: "" }); }; const isSubmitDisabled = !formData.form || !formData.param || (formData.from === "" && formData.to === "" && formData.status === "");
     return (<div className="space-y-4"> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div> <label htmlFor="form-investigation-filter">Form</label> <select name="form" id="form-investigation-filter" value={formData.form} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">-- Select --</option> {Object.keys(formOptions).map((k) => (<option key={k} value={k}>{formatLabel(k)}</option>))} </select> </div> <div> <label htmlFor="param-investigation-filter">Parameter</label> <select name="param" id="param-investigation-filter" value={formData.param} onChange={handleChange} disabled={!formData.form || selectedFormParams.length === 0} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"> <option value="">-- Select --</option> {selectedFormParams.map((p) => (<option key={p} value={p}>{formatLabel(p)}</option>))} </select> </div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="from-investigation-filter">From (Value)</label> <input type="number" id="from-investigation-filter" name="from" value={formData.from} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="Min"/> </div> <div> <label htmlFor="to-investigation-filter">To (Value)</label> <input type="number" id="to-investigation-filter" name="to" value={formData.to} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="Max"/> </div> <div> <label htmlFor="status-investigation-filter">Status</label> <select name="status" id="status-investigation-filter" value={formData.status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">-- Select --</option> <option value="normal">Normal</option> <option value="abnormal">Abnormal</option> </select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Investigation Filter </button> </div>);
 };
+
 const Fitness = ({ addFilter }) => {
-    const [formData, setFormData] = useState({ tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "", job_nature: "", overall_fitness: "", });
-    const yesNoOptions = { "": "Any", Positive: "Positive", Negative: "Negative" }; const jobNatureOptions = { "": "Any", "Desk Job": "Desk Job", "Field Work": "Field Work", "Manual Labor": "Manual Labor" }; const fitnessStatusOptions = { "": "Any", Fit: "Fit", "Conditionally Fit": "Conditionally Fit", Unfit: "Unfit" };
-    const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); }; const handleSubmit = () => { const fd = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "")); if (Object.keys(fd).length > 0) { addFilter({ fitness: fd }); } else { alert("Select at least one criterion."); } setFormData({ tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "", job_nature: "", overall_fitness: "" }); }; const isSubmitDisabled = Object.values(formData).every(v => v === "");
-    return (<div className="space-y-6"> <div className="grid grid-cols-2 md:grid-cols-4 gap-4"> <div> <label htmlFor="tremors-filter">Tremors</label> <select name="tremors" id="tremors-filter" value={formData.tremors} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div> <label htmlFor="romberg_test-filter">Romberg</label> <select name="romberg_test" id="romberg_test-filter" value={formData.romberg_test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div> <label htmlFor="acrophobia-filter">Acrophobia</label> <select name="acrophobia" id="acrophobia-filter" value={formData.acrophobia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div> <label htmlFor="trendelenberg_test-filter">Trendelenberg</label> <select name="trendelenberg_test" id="trendelenberg_test-filter" value={formData.trendelenberg_test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div> <label htmlFor="job_nature_fitness-filter">Job Nature</label> <select name="job_nature" id="job_nature_fitness-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(jobNatureOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div> <label htmlFor="overall_fitness-filter">Overall Fitness</label> <select name="overall_fitness" id="overall_fitness-filter" value={formData.overall_fitness} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(fitnessStatusOptions).map(([v, l])=><option key={v} value={v}>{l}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Fitness Filter </button> </div>);
+    // The keys in this state object now EXACTLY match your Django model field names.
+    const initialFormData = {
+        tremors: "",
+        romberg_test: "",
+        acrophobia: "",
+        trendelenberg_test: "",
+        CO_dizziness: "",
+        MusculoSkeletal_Movements: "",
+        Claustrophobia: "",
+        Tandem: "",
+        Nystagmus_Test: "",
+        Dysdiadochokinesia: "",
+        Finger_nose_test: "",
+        Psychological_PMK: "",
+        Psychological_zollingar: "",
+        // Assuming these other fields also match your backend models
+        special_cases: "",
+        eye_exam_fit_status: "",
+        job_nature: "",
+        overall_fitness: "",
+    };
+
+    const [formData, setFormData] = useState(initialFormData);
+
+    const NormalorAbnormal = { "": "Any", Normal: "Normal", Abnormal: "Abnormal" };
+    const yesNoOptions = { "": "Any", Yes: "Normal", No: "Abnormal" };
+    const Positiveoptions = { "": "Any", Positive: "Normal", Negative: "Abnormal" };
+    const jobNatureOptions = { "": "Any", "Desk Job": "Desk Job", "Field Work": "Field Work", "Manual Labor": "Manual Labor" };
+    const fitnessStatusOptions = { "": "Any", Fit: "Fit", "Conditionally Fit": "Conditionally Fit", Unfit: "Unfit" };
+
+    const handleChange = (e) => {
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSubmit = () => {
+        const activeFilters = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== ""));
+
+        if (Object.keys(activeFilters).length > 0) {
+            addFilter({ fitness: activeFilters });
+        } else {
+            alert("Please select at least one filter criterion.");
+        }
+        setFormData(initialFormData);
+    };
+
+    const isSubmitDisabled = Object.values(formData).every(v => v === "");
+
+    // The JSX `name` and `value` props are updated to match the new state keys.
+    return (
+        <div className="space-y-6">
+            {/* Neurological / Balance Tests */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label htmlFor="tremors-filter">Tremors</label>
+                    <select name="tremors" id="tremors-filter" value={formData.tremors} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(Positiveoptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="romberg_test-filter">Romberg Test</label>
+                    <select name="romberg_test" id="romberg_test-filter" value={formData.romberg_test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(Positiveoptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="trendelenberg_test-filter">Trendelenberg Test</label>
+                    <select name="trendelenberg_test" id="trendelenberg_test-filter" value={formData.trendelenberg_test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(Positiveoptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Tandem-filter">Tandem</label>
+                    <select name="Tandem" id="Tandem-filter" value={formData.Tandem} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Nystagmus_Test-filter">Nystagmus Test</label>
+                    <select name="Nystagmus_Test" id="Nystagmus_Test-filter" value={formData.Nystagmus_Test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Dysdiadochokinesia-filter">Dysdiadochokinesia</label>
+                    <select name="Dysdiadochokinesia" id="Dysdiadochokinesia-filter" value={formData.Dysdiadochokinesia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Finger_nose_test-filter">Finger-Nose Test</label>
+                    <select name="Finger_nose_test" id="Finger_nose_test-filter" value={formData.Finger_nose_test} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="CO_dizziness-filter">CO Dizziness</label>
+                    <select name="CO_dizziness" id="CO_dizziness-filter" value={formData.CO_dizziness} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Phobias & Psychological Tests */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label htmlFor="acrophobia-filter">Acrophobia</label>
+                    <select name="acrophobia" id="acrophobia-filter" value={formData.acrophobia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Claustrophobia-filter">Claustrophobia</label>
+                    <select name="Claustrophobia" id="Claustrophobia-filter" value={formData.Claustrophobia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Psychological_PMK-filter">Psychological PMK</label>
+                    <select name="Psychological_PMK" id="Psychological_PMK-filter" value={formData.Psychological_PMK} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="Psychological_zollingar-filter">Psychological Zollingar</label>
+                    <select name="Psychological_zollingar" id="Psychological_zollingar-filter" value={formData.Psychological_zollingar} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Fitness & Job Status */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label htmlFor="MusculoSkeletal_Movements-filter">Musculoskeletal Movements</label>
+                    <select name="MusculoSkeletal_Movements" id="MusculoSkeletal_Movements-filter" value={formData.MusculoSkeletal_Movements} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="eye_exam_fit_status-filter">Eye Exam Fitness</label>
+                    <select name="eye_exam_fit_status" id="eye_exam_fit_status-filter" value={formData.eye_exam_fit_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(fitnessStatusOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="job_nature-filter">Job Nature</label>
+                    <select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(jobNatureOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="overall_fitness-filter">Overall Fitness</label>
+                    <select name="overall_fitness" id="overall_fitness-filter" value={formData.overall_fitness} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        {Object.entries(fitnessStatusOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            {/* Special Cases */}
+            <div>
+                <label htmlFor="special_cases-filter">Special Cases</label>
+                <textarea
+                    name="special_cases"
+                    id="special_cases-filter"
+                    value={formData.special_cases}
+                    onChange={handleChange}
+                    className="w-full p-3 border rounded-lg focus:ring-blue-500"
+                    rows="3"
+                />
+            </div>
+
+            <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>
+                Add Fitness Filter
+            </button>
+        </div>
+    );
 };
+
+// ========================================================================
+// --- Filter Component Definitions (Replace your existing component with this) ---
+// ========================================================================
+
 const MedicalHistoryForm = ({ addFilter }) => {
-    const [ph, setPh] = useState({ smoking: "", alcohol: "", paan: "", diet: "", }); const [pc, setPc] = useState({ condition: "", status: "", }); const [fc, setFc] = useState({ condition: "", status: "", relation: "", }); const [al, setAl] = useState({ drugAllergy: "", foodAllergy: "", otherAllergies: "", }); const [sh, setSh] = useState({ status: "", });
+    // State and options remain the same
+    const [ph, setPh] = useState({ smoking: "", alcohol: "", paan: "", diet: "", });
+    const [pc, setPc] = useState({ condition: "", status: "", });
+    const [fc, setFc] = useState({ condition: "", status: "", relation: "", });
+    const [al, setAl] = useState({ drugAllergy: "", foodAllergy: "", otherAllergies: "", });
+    const [sh, setSh] = useState({ status: "", });
+
     const hOpts={"":"Any",Yes:"Yes",No:"No",Cessased:"Cessased"}; const yOpts={"":"Any",Yes:"Yes",No:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Hyper thyroid","Hypo thyroid","Asthma","CVS","CNS","RS","GIT","KUB","CANCER","Defective Colour Vision","OTHERS","Obstetric","Gynaec"]; const rOpts=["","Father","Mother","Brother","Sister","Son","Daughter","Spouse","Grandparent","Other"];
-    const hhc=(e)=>{setPh(p=>({...p,[e.target.name]:e.target.value}))}; const hpc=(e)=>{setPc(p=>({...p,[e.target.name]:e.target.value}))}; const hfc=(e)=>{setFc(p=>({...p,[e.target.name]:e.target.value}))}; const hal=(e)=>{setAl(p=>({...p,[e.target.name]:e.target.value}))}; const hsh=(e)=>{setSh(p=>({...p,[e.target.name]:e.target.value}))};
-    const handleSubmit = () => { let cf={}; Object.entries(ph).forEach(([k,v])=>{if(v)cf[k]=v}); Object.entries(al).forEach(([k,v])=>{if(v)cf[k]=v}); if(sh.status){cf.surgicalHistory=sh.status} if(pc.condition&&pc.status){cf[`personal_${pc.condition}`]=pc.status} if(fc.condition&&fc.status&&fc.relation){cf.familyCondition={condition:fc.condition,status:fc.status,relation:fc.relation}} if(Object.keys(cf).length > 0){addFilter(cf)}else{alert("Select at least one criterion.")} setPh({smoking:"",alcohol:"",paan:"",diet:""}); setPc({condition:"",status:""}); setFc({condition:"",status:"",relation:""}); setAl({drugAllergy:"",foodAllergy:"",otherAllergies:""}); setSh({status:""}); };
-    const isSubmitDisabled = Object.values(ph).every(v=>!v) && (!pc.condition||!pc.status) && (!fc.condition||!fc.status||!fc.relation) && Object.values(al).every(v=>!v) && !sh.status;
-    return (<div className="space-y-6"> <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Habits</legend><div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">{Object.keys(ph).map((k)=>(<div key={k}><label htmlFor={`${k}-h-f`}>{k.charAt(0).toUpperCase()+k.slice(1)}</label><select name={k} id={`${k}-h-f`} value={ph[k]} onChange={hhc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(k==='diet'?dOpts:hOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset> <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Conditions</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"><div><label htmlFor="pc-c-f">Condition</label><select name="condition" id="pc-c-f" value={pc.condition} onChange={hpc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Select--'}</option>)}</select></div><div><label htmlFor="pc-s-f">Status (Y/N)</label><select name="status" id="pc-s-f" value={pc.status} onChange={hpc} disabled={!pc.condition} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset> <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Allergies</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">{Object.keys(al).map((k)=>(<div key={k}><label htmlFor={`${k}-a-f`}>{k==='drugAllergy'?'Drug':k==='foodAllergy'?'Food':'Other'}</label><select name={k} id={`${k}-a-f`} value={al[k]} onChange={hal} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset> <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Surgical History</legend><div className="grid grid-cols-1 gap-4 mt-2"><div><label htmlFor="sh-f">Any Past Surgeries?</label><select name="status" id="sh-f" value={sh.status} onChange={hsh} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset> <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Family History</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"><div><label htmlFor="fc-c-f">Condition</label><select name="condition" id="fc-c-f" value={fc.condition} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Select--'}</option>)}</select></div><div><label htmlFor="fc-r-f">Relation</label><select name="relation" id="fc-r-f" value={fc.relation} onChange={hfc} disabled={!fc.condition} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{rOpts.map(r=><option key={r} value={r}>{r||'--Select--'}</option>)}</select></div><div><label htmlFor="fc-s-f">Status (Y/N)</label><select name="status" id="fc-s-f" value={fc.status} onChange={hfc} disabled={!fc.condition||!fc.relation} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Medical History Filter(s) </button> </div>);
+
+    // Handlers are unchanged
+    const hhc=(e)=>{setPh(p=>({...p,[e.target.name]:e.target.value}))};
+    const hpc=(e)=>{setPc(p=>({...p,[e.target.name]:e.target.value}))};
+    const hfc=(e)=>{setFc(p=>({...p,[e.target.name]:e.target.value}))};
+    const hal=(e)=>{setAl(p=>({...p,[e.target.name]:e.target.value}))};
+    const hsh=(e)=>{setSh(p=>({...p,[e.target.name]:e.target.value}))};
+
+    const handleSubmit = () => {
+        let cf={};
+        // This part is unchanged
+        Object.entries(ph).forEach(([k,v])=>{if(v)cf[k]=v});
+        Object.entries(al).forEach(([k,v])=>{if(v)cf[k]=v});
+        if(sh.status){cf.surgicalHistory=sh.status}
+        if(pc.condition&&pc.status){cf[`personal_${pc.condition}`]=pc.status}
+
+        // --- UPDATED Family History Logic ---
+        // This is the only logic that changes in this function.
+        // It now creates a filter if *any* family history field is filled.
+        const { condition, status, relation } = fc;
+        if (condition || status || relation) {
+            const familyFilter = {};
+            if (condition) familyFilter.condition = condition;
+            if (status) familyFilter.status = status;
+            if (relation) familyFilter.relation = relation;
+            cf.familyCondition = familyFilter;
+        }
+        // --- End of UPDATED Logic ---
+
+        if(Object.keys(cf).length > 0){
+            addFilter(cf);
+        } else {
+            alert("Select at least one criterion.")
+        }
+        // Reset state
+        setPh({smoking:"",alcohol:"",paan:"",diet:""});
+        setPc({condition:"",status:""});
+        setFc({condition:"",status:"",relation:""});
+        setAl({drugAllergy:"",foodAllergy:"",otherAllergies:""});
+        setSh({status:""});
+    };
+
+    // This check is now simpler to allow for more flexible filter combinations
+    const isSubmitDisabled = !Object.values(ph).some(v=>v) &&
+        (!pc.condition || !pc.status) &&
+        (!fc.condition && !fc.status && !fc.relation) &&
+        !Object.values(al).some(v=>v) &&
+        !sh.status;
+
+    return (
+    <div className="space-y-6">
+        {/* All other fieldsets are UNCHANGED */}
+        <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Habits</legend><div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">{Object.keys(ph).map((k)=>(<div key={k}><label htmlFor={`${k}-h-f`}>{k.charAt(0).toUpperCase()+k.slice(1)}</label><select name={k} id={`${k}-h-f`} value={ph[k]} onChange={hhc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(k==='diet'?dOpts:hOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset>
+        <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Conditions</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"><div><label htmlFor="pc-c-f">Condition</label><select name="condition" id="pc-c-f" value={pc.condition} onChange={hpc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Select--'}</option>)}</select></div><div><label htmlFor="pc-s-f">Status (Y/N)</label><select name="status" id="pc-s-f" value={pc.status} onChange={hpc} disabled={!pc.condition} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
+        <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Allergies</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">{Object.keys(al).map((k)=>(<div key={k}><label htmlFor={`${k}-a-f`}>{k==='drugAllergy'?'Drug':k==='foodAllergy'?'Food':'Other'}</label><select name={k} id={`${k}-a-f`} value={al[k]} onChange={hal} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset>
+        <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Surgical History</legend><div className="grid grid-cols-1 gap-4 mt-2"><div><label htmlFor="sh-f">Any Past Surgeries?</label><select name="status" id="sh-f" value={sh.status} onChange={hsh} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
+        
+        {/* --- THIS IS THE ONLY SECTION WITH A VISUAL CHANGE --- */}
+        <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Family History</legend>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                <div><label htmlFor="fc-c-f">Condition</label><select name="condition" id="fc-c-f" value={fc.condition} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Any--'}</option>)}</select></div>
+                <div><label htmlFor="fc-r-f">Relation</label><select name="relation" id="fc-r-f" value={fc.relation} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{rOpts.map(r=><option key={r} value={r}>{r||'--Any--'}</option>)}</select></div>
+                {/* The "disabled" attribute has been removed from the select below */}
+                <div><label htmlFor="fc-s-f">Status (Y/N)</label><select name="status" id="fc-s-f" value={fc.status} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
+            </div>
+        </fieldset>
+        <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Medical History Filter(s) </button>
+    </div>
+    );
 };
 const VaccinationForm = ({ addFilter }) => {
     const [formData, setFormData] = useState({ disease: "", vaccine: "", vaccine_status: "", });
@@ -653,26 +1045,25 @@ function PurposeFilter({ addFilter }) {
     const handleSubmit = () => { const pf = {}; if (fromDate) pf.fromDate = fromDate; if (toDate) pf.toDate = toDate; if (type_of_visit) pf.type_of_visit = type_of_visit; if (register) pf.register = register; if (specificCategory) pf.specificCategory = specificCategory; if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) { alert("'From' > 'To'."); return; } if (Object.keys(pf).length > 0) { addFilter({ purpose: pf }); } else { alert("Select criterion or date range."); } setFormData({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "" }); }; const isSubmitDisabled = !fromDate && !toDate && !type_of_visit && !register && !specificCategory;
     return (<div className="space-y-4"> <fieldset className="border p-4 rounded-md"><legend>Date Range</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"> <div><label htmlFor="fD-p-f">From</label><input type="date" id="fD-p-f" name="fromDate" value={fromDate} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> <div><label htmlFor="tD-p-f">To</label><input type="date" id="tD-p-f" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> </div></fieldset> <fieldset className="border p-4 rounded-md"><legend>Visit Purpose</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"> <div><label htmlFor="tov-f">Type</label><select id="tov-f" name="type_of_visit" value={type_of_visit} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="r-p-f">Register</label><select id="r-p-f" name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="sc-p-f">Specific Reason</label><select id="sc-p-f" name="specificCategory" value={specificCategory} onChange={handleChange} disabled={!register||specificOpts.length===0} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{specificOpts.map((c, i)=>(<option key={`${c}-${i}`} value={c}>{c}</option>))}</select></div> </div></fieldset> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Purpose Filter</button> </div>);
 }
-const Diagnosis = ({ addFilter, cd = [], remarks = [] }) => {
-    const [formData, setFormData] = useState({ disease: "", notable_remarks: "" });
-    const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-    const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([_,v])=>v!==""&&v!==null)); if(Object.keys(fd).length>0){addFilter(fd)}else{alert("Select Disease or Remarks status.")} setFormData({disease:"",notable_remarks:""}); }; const isSubmitDisabled = !formData.disease && !formData.notable_remarks;
-    return (<div className="space-y-4"> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div> <label htmlFor="d-d-f">Disease/Diagnosis</label> <select name="disease" id="d-d-f" value={formData.disease} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">--Select--</option> {cd.map(d => <option key={d} value={d}>{d||'N/A'}</option>)} </select> </div> <div> <label htmlFor="n-r-f">Notable Remarks?</label> <select name="notable_remarks" id="n-r-f" value={formData.notable_remarks} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">--Select--</option> {remarks.map(r => <option key={r} value={r}>{r||'N/A'}</option>)} </select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Diagnosis/Remarks Filter</button> </div>);
-};
-const Prescriptions = ({ addFilter }) => {
-    const [formData, setFormData] = useState({ tablets: "", injections: "", creams: "", others: "", });
-    const tOpts=["","Aspirin","Ibuprofen",/*...*/]; const iOpts=["","Insulin","Adrenaline",/*...*/]; const cOpts=["","Hydrocortisone",/*...*/]; const oOpts=["","Syrup A","Inhaler B",/*...*/];
-    const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-    const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([k,v])=>v!=="")); if(Object.keys(fd).length>0){addFilter(fd)}else{alert("Select medication.")} setFormData({tablets:"",injections:"",creams:"",others:""}); }; const isSubmitDisabled = Object.values(formData).every(v=>v==="");
-    return (<div className="space-y-4"> <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"> <div> <label htmlFor="t-p-f">Tablets</label> <select name="tablets" id="t-p-f" value={formData.tablets} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{tOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="i-p-f">Injections</label> <select name="injections" id="i-p-f" value={formData.injections} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{iOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="c-p-f">Creams</label> <select name="creams" id="c-p-f" value={formData.creams} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="o-p-f">Others</label> <select name="others" id="o-p-f" value={formData.others} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{oOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Prescription Filter</button> </div>);
-}
+
+// const Prescriptions = ({ addFilter }) => {
+//     const [formData, setFormData] = useState({ tablets: "", injections: "", creams: "",syrups: "",drops: "",respules: "",lotions: "",fluids: "",powder1: "",suture_procedure: "",dressing: "", others: "" });
+//     const tOpts=["","Aspirin","Ibuprofen",/*...*/]; const iOpts=["","Insulin","Adrenaline",/*...*/]; const cOpts=["","Hydrocortisone",/*...*/]; const oOpts=["","Syrup A","Inhaler B",/*...*/];
+//     const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
+//     const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([k,v])=>v!=="")); if(Object.keys(fd).length>0){addFilter(fd)}else{alert("Select medication.")} setFormData({tablets : "", injections: "", creams: "",syrups:"",drops:"",respules:"",lotions:"",fluids:"",powder1:"",suture_procedure:"",dressing:"", others: ""}); }; const isSubmitDisabled = Object.values(formData).every(v=>v==="");
+//     return (<div className="space-y-4"> <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"> <div> <label htmlFor="t-p-f">Tablets</label> <select name="tablets" id="t-p-f" value={formData.tablets} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{tOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="i-p-f">Injections</label> <select name="injections" id="i-p-f" value={formData.injections} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{iOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="c-p-f">Creams</label> <select name="creams" id="c-p-f" value={formData.creams} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="o-p-f">Others</label> <select name="others" id="o-p-f" value={formData.others} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{oOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Prescription Filter</button> </div>);
+// }
 const Referrals = ({ addFilter, specialityOptions = [], hospitalOptions = [], doctorOptions = [] }) => {
     const [formData, setFormData] = useState({ referred: "", speciality: "", hospitalName: "", doctorName: "" });
     const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" };
     const handleChange = (e) => { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([_,v])=>v!==""&&v!==null)); if(Object.keys(fd).length>0){addFilter({referrals:fd})}else{alert("Select criterion.")} setFormData({referred:"",speciality:"",hospitalName:"",doctorName:""}); }; const isSubmitDisabled = Object.values(formData).every(v=>v==="");
-    return (<form onSubmit={handleSubmit} className="space-y-4"> <div> <label htmlFor="referred-filter">Referral Made?</label> <select name="referred" id="referred-filter" value={formData.referred} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div> <label htmlFor="speciality-referral-filter">Speciality</label> <select id="speciality-referral-filter" name="speciality" value={formData.speciality} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{specialityOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> <div> <label htmlFor="hospitalName-referral-filter">Hospital</label> <select id="hospitalName-referral-filter" name="hospitalName" value={formData.hospitalName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{hospitalOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> </div> <div> <label htmlFor="doctorName-referral-filter">Doctor</label> <select id="doctorName-referral-filter" name="doctorName" value={formData.doctorName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{doctorOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> <button type="submit" className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Referral Filter</button> </form>);
+    return (<form onSubmit={handleSubmit} className="space-y-4"> <div> <label htmlFor="referred-filter">Referral Made?</label> <select name="referred" id="referred-filter" value={formData.referred} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> 
+                                                                 <div> <label htmlFor="speciality-referral-filter">Speciality</label> <select id="speciality-referral-filter" name="speciality" value={formData.speciality} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{specialityOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
+                                                                 <div> <label htmlFor="hospitalName-referral-filter">Hospital</label> <select id="hospitalName-referral-filter" name="hospitalName" value={formData.hospitalName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{hospitalOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> </div> <div> <label htmlFor="doctorName-referral-filter">Doctor</label> <select id="doctorName-referral-filter" name="doctorName" value={formData.doctorName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{doctorOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> <button type="submit" className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Referral Filter</button> </form>);
 };
+
+
 const StatutoryForms = ({ addFilter }) => {
     const [formData, setFormData] = useState({ formType: "", from: "", to: "", });
     const formOptions = ["Form27", "Form17", "Form38", "Form39", "Form40"];

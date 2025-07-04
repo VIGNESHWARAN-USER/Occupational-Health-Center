@@ -31,6 +31,7 @@ const InstrumentCalibration = () => {
   const normalizeFrequency = (freq) => freq.trim().toLowerCase();
 
   const calculateNextDueDate = (calibrationDate, freq) => {
+    if (!calibrationDate || !freq) return "";
     const date = new Date(calibrationDate);
     const normalizedFreq = normalizeFrequency(freq);
     switch (normalizedFreq) {
@@ -75,6 +76,8 @@ const InstrumentCalibration = () => {
     else if (normalizedFreq === "monthly") totalMonths = 1;
     else if (normalizedFreq === "once in 2 months") totalMonths = 2;
     else if (normalizedFreq === "once in 2 years") totalMonths = 24;
+    
+    if (diffInMs < 0) return "bg-red-600"; 
 
     const fraction = monthsDiff / totalMonths;
 
@@ -105,8 +108,25 @@ const InstrumentCalibration = () => {
 
   useEffect(() => {
     fetchPendingCalibrations();
-    fetchStatusCounts();
   }, []);
+  
+  useEffect(() => {
+    const counts = pendingCalibrations.reduce(
+      (acc, item) => {
+        const color = getButtonColor(item.next_due_date, item.freq);
+        if (color === "bg-red-600") {
+          acc.red_count++;
+        } else if (color === "bg-yellow-500") {
+          acc.yellow_count++;
+        } else if (color === "bg-green-600") {
+          acc.green_count++;
+        }
+        return acc;
+      },
+      { red_count: 0, yellow_count: 0, green_count: 0 }
+    );
+    setStatusCounts(counts);
+  }, [pendingCalibrations]);
 
   const fetchPendingCalibrations = async () => {
     try {
@@ -116,17 +136,6 @@ const InstrumentCalibration = () => {
       setPendingCalibrations(response.data.pending_calibrations);
     } catch (error) {
       console.error("Error fetching pending calibrations:", error);
-    }
-  };
-
-  const fetchStatusCounts = async () => {
-    try {
-      const response = await axios.get(
-        "https://occupational-health-center-1.onrender.com/get_red_status_count/"
-      );
-      setStatusCounts(response.data);
-    } catch (error) {
-      console.error("Error fetching status counts:", error);
     }
   };
 
@@ -238,10 +247,9 @@ const InstrumentCalibration = () => {
       if (response.data.message) {
         setShowCompleteModal(false);
         fetchPendingCalibrations();
-        fetchStatusCounts();
       }
     } catch (error) {
-      console.error("Error adding instrument:", error.response?.data || error.message);
+      console.error("Error completing calibration:", error.response?.data || error.message);
       alert("Failed to complete calibration");
     }
   };
@@ -338,16 +346,18 @@ const InstrumentCalibration = () => {
           <table className="bg-white w-full min-w-[1000px]">
             <thead>
               <tr className="bg-gray-200">
-                {["Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calibration Date", "Next Due Date", "Action"].map((head) => (
+                {/* --- CHANGE 1: Added "Status" to the headers --- */}
+                {["S.no","Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calibration Date", "Next Due Date", "Status", "Action"].map((head) => (
                   <th key={head} className="border px-4 py-2 text-left">{head}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
             {pendingCalibrations.map((item) => {
-              // console.log("Due:", item.next_due_date, "Freq:", item.freq, "Color:", getButtonColor(item.next_due_date, item.freq));
+              const buttonColor = getButtonColor(item.next_due_date, item.freq);
               return (
                 <tr key={item.id} className="hover:bg-gray-100">
+                  <td className="border px-3 py-2 text-sm">{item.id}</td>
                   <td className="border px-3 py-2 text-sm">{item.equipment_sl_no}</td>
                   <td className="border px-3 py-2 text-sm">{item.instrument_name}</td>
                   <td className="border px-3 py-2 text-sm">{item.numbers}</td>
@@ -357,13 +367,19 @@ const InstrumentCalibration = () => {
                   <td className="border px-3 py-2 text-sm">{item.freq}</td>
                   <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.calibration_date}</td>
                   <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.next_due_date}</td>
+                  
+                  {/* --- CHANGE 2: Added a new cell for the status color circle --- */}
+                  <td className="border px-3 py-2 text-center">
+                    <div className={`${buttonColor} h-4 w-4 rounded-full mx-auto`}></div>
+                  </td>
+                  
                   <td className="border px-3 py-2 text-sm text-center">
                     <button
-                      className={`${getButtonColor(item.next_due_date, item.freq)} text-white py-3 px-4 rounded hover:opacity-80`}
+                      className={`${buttonColor} text-white py-1 px-3 text-xs rounded hover:opacity-80`}
                       onClick={() => handleOpenCompleteModal(item)}
-                      disabled = {`${getButtonColor(item.next_due_date, item.freq)}` === "bg-green-600"}
+                       
                     >
-                      
+                      Complete
                     </button>
                   </td>
                 </tr>
@@ -404,7 +420,7 @@ const InstrumentCalibration = () => {
           </div>
         )}
 
-        {/* Add Instrument Modal */}
+        {/* ... (Rest of the Modals code remains the same) ... */}
         {showModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg w-1/3">
@@ -483,7 +499,6 @@ const InstrumentCalibration = () => {
           </div>
         )}
 
-        {/* Complete Calibration Modal */}
         {showCompleteModal && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-6 rounded shadow-lg w-1/3">

@@ -390,7 +390,7 @@ const PrescriptionIn = () => {
                     {/* Titles & Month Navigation */}
                     <div className='flex items-center gap-4 flex-wrap mb-2 md:mb-0'>
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 order-1">
-                            Prescription In
+                            Daily Usage
                         </h1>
                         <div className="flex items-center gap-2 order-3 md:order-2">
                              <button onClick={handlePreviousMonth} title="Previous Month" className="p-1 rounded hover:bg-gray-200 disabled:opacity-50" disabled={isLoading || isUpdating}>

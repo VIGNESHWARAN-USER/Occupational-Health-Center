@@ -78,8 +78,8 @@ const SignificantNotes = ({ data, type }) => {
     { value: 'Notification 3', label: 'Notification 3' }
   ];
   const incidentTypeOptions = [ { value: '', label: 'Select...' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' }, { value: 'RWC', label: 'RWC' } ];
-  const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Injury', label: 'Occupational Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Communication Injury', label: 'Communication Injury'}, {value: 'Others', label: 'Others'} ];
-  const illnessTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Occupational Illness', label: 'Occupational Illness'}, {value: 'Occupational Disease', label: 'Occupational Disease'} ];
+  const incidentOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Work Related Injury', label: 'Work Related Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Commutation Injury', label: 'Commutation Injury'}, {value: 'Others', label: 'Others'} ];
+  const illnessTypeOptions = [ /* ...options... */ { value: '', label: 'Select...' }, {value: 'Work Related Illness', label: 'Work Related Illness'}, {value: 'Notifiable Disease', label: 'Notifiable Disease'} ];
 
 
   // --- Extract employee number and check access level ---
@@ -97,7 +97,7 @@ const SignificantNotes = ({ data, type }) => {
         setHistoricalNotes([]);
         setPreviousCommunicableDisease(''); // Reset previous value on fetch
         try {
-            const response = await axios.post(`https://occupational-health-center-1.onrender.com/get_notes/${aadharNumber}`);
+            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${aadharNumber}`);
             console.log("Fetched Historical Notes:", response.data);
 
             // Handle the new response format
@@ -378,6 +378,7 @@ const SignificantNotes = ({ data, type }) => {
                     <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1">
                         Illness Type
                     </label>
+                    
                     <select id="illnessType" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={illnessType} onChange={(e) => setIllnessType(e.target.value)} disabled={!isDoctor}>
                        {/* <option value="">Select...</option> // Included in options array */}
                        {illnessTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}

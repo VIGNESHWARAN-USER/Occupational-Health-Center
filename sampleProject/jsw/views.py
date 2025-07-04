@@ -9,6 +9,7 @@ import os
 from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta # Added: For date calculations
 
+
 # Django Core Imports
 from django.forms import BooleanField, CharField, DateField, DateTimeField, FloatField, IntegerField, JSONField
 from django.http import JsonResponse, HttpResponse, Http404, FileResponse
@@ -346,7 +347,7 @@ def add_member(request):
         if member_type == 'ohc':
             member_data.update({
                 'employee_number': data['employee_number'],
-                'doj': django_parse_date(data.get('doj'))
+                'doj': django_parse_date(data.get('doj'))   
             })
         elif member_type == 'external':
             member_data.update({
@@ -581,7 +582,7 @@ def fetchdata(request):
                     # Ensure dates within fetched data are serialized
                     if isinstance(merged_emp[key_name], dict):
                         for sub_key, sub_value in merged_emp[key_name].items():
-                            if isinstance(sub_value, (date, datetime)):
+                            if isinstance(sub_value, (datetime.date, datetime.datetime)):
                                 merged_emp[key_name][sub_key] = sub_value.isoformat()
 
                 merged_data.append(merged_emp)
@@ -968,23 +969,51 @@ def uploadImage(request, aadhar):
 
 @csrf_exempt
 def fetchVisitdata(request, aadhar):
-    """Fetches all Dashboard visit records for a specific employee Aadhar."""
-    if request.method == "POST": # Correction: Use POST
+    """
+    Fetches all Dashboard visit records for a specific employee 
+    and combines them with the corresponding vitals data by mapping mrdNo.
+    """
+    # REST convention for fetching data is GET
+    if request.method == "POST":
         try:
+            # 1. Fetch both datasets from the database
             visit_data = list(Dashboard.objects.filter(aadhar=aadhar).order_by('-date').values())
-            for visit in visit_data:
-                 if isinstance(visit.get('date'), date):
-                     visit['date'] = visit['date'].isoformat()
+            vitals_data = list(vitals.objects.filter(aadhar=aadhar).order_by('-entry_date').values())
 
-            logger.info(f"Fetched {len(visit_data)} visit records for aadhar: {aadhar}")
+            # 2. Create a lookup map for vitals using mrdNo for efficient matching.
+            # This maps each mrdNo to its corresponding vitals dictionary.
+            # We add a check to ensure we only map records that have an mrdNo.
+            vitals_map = {vital['mrdNo']: vital for vital in vitals_data if vital.get('mrdNo')}
+
+            # 3. Iterate through the visits and enrich them with the vitals data
+            for visit in visit_data:
+                # First, serialize any date objects to strings for JSON compatibility
+                if isinstance(visit.get('date'), date):
+                    visit['date'] = visit['date'].isoformat()
+                
+                # Get the mrdNo for the current visit
+                mrd_no = visit.get('mrdNo')
+                
+                # Find the matching vitals from the map using the mrdNo.
+                # .get() safely returns None if the mrdNo is not found in the map.
+                matching_vitals = vitals_map.get(mrd_no)
+
+                # Add the found vitals data to the visit record under a 'vitals' key.
+                # This is safer than a direct update() as it avoids key collisions.
+                visit['vitals'] = matching_vitals  # This will be None if no match was found
+
+            logger.info(f"Fetched and combined {len(visit_data)} visit records for aadhar: {aadhar}")
+            
+            # 4. Return the single, combined dataset
             return JsonResponse({"message": "Visit data fetched successfully", "data": visit_data}, status=200)
 
         except Exception as e:
             logger.exception(f"fetchVisitdata failed for aadhar {aadhar}: An unexpected error occurred.")
             return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
-        logger.warning(f"fetchVisitdata failed for aadhar {aadhar}: Invalid request method.")
-        return JsonResponse({"error": "Invalid request method (use GET)"}, status=405)
+        logger.warning(f"fetchVisitdata called with invalid method {request.method} for aadhar {aadhar}.")
+        # Corrected error message to align with the check
+        return JsonResponse({"error": "Invalid request method. Please use GET."}, status=405)
 
 @csrf_exempt
 def fetchVisitDataWithDate(request, aadhar, date_str):
@@ -1360,6 +1389,8 @@ def create_medical_history(request):
                 'spouse_data': data.get('spouse_data'),
                 'conditions': data.get('conditions'),
                 'emp_no': data.get('emp_no'), # Store if present
+                'mrdNo': data.get('mrdNo'),
+                
             }
             print(defaults)
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
@@ -1444,10 +1475,12 @@ def insert_vaccination(request):
                 logger.warning(f"{log_prefix} failed: aadhar and vaccination fields are required")
                 return JsonResponse({"error": "Aadhar (aadhar) and vaccination data are required"}, status=400)
 
-            filtered_data = {'vaccination': vaccination_data, 'emp_no': data.get('emp_no')} # Store emp_no if provided
+            # CHANGED: Add mrdNo to the dictionary of fields to be saved/updated.
+            filtered_data = {'vaccination': vaccination_data, 'emp_no': data.get('emp_no',"null"), 'mrdNo': mrdNo}
 
+            # CHANGED: Remove mrdNo from the lookup parameters. The record is uniquely identified by aadhar and entry_date.
             instance, created = model_class.objects.update_or_create(
-                aadhar=aadhar, entry_date=entry_date, mrdNo=mrdNo, defaults=filtered_data
+                aadhar=aadhar, entry_date=entry_date, defaults=filtered_data
             )
             message = f"{success_noun} {'saved' if created else 'updated'} successfully"
             logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. ID: {instance.pk}")
@@ -1470,17 +1503,19 @@ def insert_vaccination(request):
         response['Allow'] = 'POST'
         return response
 
-def fetch_vaccinations(request):
+def fetch_vaccinations(request, aadhar):
     """Fetches vaccination records, optionally filtered by AADHAR."""
     if request.method == "GET":
-        aadhar_filter = request.GET.get("aadhar")
+        aadhar_filter = aadhar
+        print(aadhar)
         try:
             queryset = VaccinationRecord.objects.all()
             if aadhar_filter:
                 queryset = queryset.filter(aadhar=aadhar_filter)
-
+                
             records = list(queryset.order_by('-entry_date', '-id').values())
             for record in records:
+                print(record)
                 if isinstance(record.get('entry_date'), date):
                     record['entry_date'] = record['entry_date'].isoformat()
 
@@ -1493,6 +1528,7 @@ def fetch_vaccinations(request):
         response = JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
         response['Allow'] = 'GET'
         return response
+
 
 @csrf_exempt
 def fitness_test(request):
@@ -1535,6 +1571,11 @@ def fitness_test(request):
             defaults = {
                 'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
                 'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
+                'CO_dizziness':data.get("dizziness_cns_ent_causes"),'MusculoSkeletal_Movements':data.get("musculoskeletal_movements"),
+                'Claustrophobia':data.get("claustrophobia"),'Tandem':data.get("tandem_walking"),
+                'Nystagmus_Test':data.get("nystagmus_test"),'Dysdiadochokinesia':data.get("dysdiadochokinesia"),
+                'Finger_nose_test':data.get("finger_nose_test"),'Psychological_PMK':data.get("psychological_pmk"),
+                'Psychological_zollingar':data.get("psychological_zollinger"),
                 'special_cases': data.get('special_cases'),
                 'job_nature': job_nature_list,
                 'overall_fitness': data.get("overall_fitness"),
@@ -1627,7 +1668,8 @@ def add_consultation(request):
                 'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else None,
                 'special_cases': data.get('special_cases'),
                 'submittedDoctor': data.get("submittedDoctor"),
-                'emp_no': data.get('emp_no') # Store if provided
+                'emp_no': data.get('emp_no'), # Store if provided
+                'mrdNo':data.get('mrdNo')
             }
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
@@ -3145,7 +3187,8 @@ def get_current_expiry(request):
                         medicine_form=medicine.medicine_form, brand_name=medicine.brand_name,
                         chemical_name=medicine.chemical_name, dose_volume=medicine.dose_volume,
                         quantity=medicine.quantity, # Record the quantity at time of expiry flagging
-                        expiry_date=medicine.expiry_date
+                        expiry_date=medicine.expiry_date,
+                        total_quantity = medicine.total_quantity
                         # removed_date is initially null
                     )
                     medicine.delete() # Remove from active stock
@@ -3156,7 +3199,7 @@ def get_current_expiry(request):
             # Fetch medicines from ExpiryRegister not yet marked as removed
             expired_data_qs = ExpiryRegister.objects.filter(removed_date__isnull=True).order_by('expiry_date')
             expired_data = list(expired_data_qs.values(
-                "id", "medicine_form", "brand_name", "chemical_name", "dose_volume", "quantity", "expiry_date"
+                "id", "medicine_form", "brand_name", "chemical_name", "dose_volume", "quantity", "expiry_date", "total_quantity"
             ))
 
             data = [
@@ -3165,6 +3208,7 @@ def get_current_expiry(request):
                     "chemical_name": entry["chemical_name"], "dose_volume": entry["dose_volume"],
                     "quantity": entry["quantity"],
                     "expiry_date": entry["expiry_date"].strftime("%b-%y") if entry["expiry_date"] else "N/A",
+                    "total_quantity": entry["total_quantity"]
                 }
                 for entry in expired_data
             ]
@@ -3202,7 +3246,7 @@ def update_pharmacy_stock(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body.decode('utf-8'))
-            print("Data : ", data)
+            
             chemical_name = data.get("chemicalName")
             brand_name = data.get("brandName")
             expiry_date = data.get("expiryDate")
@@ -3210,39 +3254,72 @@ def update_pharmacy_stock(request):
             quantity = data.get("quantity")
             action = data.get("action")
 
-            if not expiry_date:
-                return JsonResponse({"error": "Expiry Date ('expiryDate') is required."}, status=400)
-            
-            if not dose_volume:
-                return JsonResponse({"error": "Dose Volume ('doseVolume') is required."}, status=400)
-            
-            if not quantity:
-                return JsonResponse({"error": "Quantity ('quantity') is required."}, status=400)
-            
-            if not action:
-                return JsonResponse({"error": "Action ('action') is required."}, status=400)
-            
+            # --- Validation ---
+            if not all([chemical_name, brand_name, expiry_date, dose_volume, action]):
+                return JsonResponse({"error": "Missing required fields (chemicalName, brandName, expiryDate, doseVolume, action)."}, status=400)
+
+            if not isinstance(quantity, (int, float)) or quantity <= 0:
+                 return JsonResponse({"error": "Quantity must be a positive number."}, status=400)
+
             if action not in ['increase', 'decrease']:
                 return JsonResponse({"error": "Invalid action. Must be 'increase' or 'decrease'."}, status=400)
             
             with transaction.atomic():
-                medicine = PharmacyStock.objects.select_for_update().get(chemical_name=chemical_name, brand_name=brand_name, dose_volume=dose_volume, expiry_date=expiry_date)
+                # Lock the pharmacy stock record to prevent race conditions
+                try:
+                    medicine = PharmacyStock.objects.select_for_update().get(
+                        chemical_name=chemical_name, 
+                        brand_name=brand_name, 
+                        dose_volume=dose_volume, 
+                        expiry_date=expiry_date
+                    )
+                except PharmacyStock.DoesNotExist:
+                    return JsonResponse({"error": "Medicine stock not found."}, status=404)
                 
+                # Update the main PharmacyStock quantity
                 if action == 'increase':
-                    medicine.quantity += quantity
-                else:
-                    medicine.quantity -= quantity   
+                    medicine.quantity = F('quantity') + quantity
+                else: # 'decrease'
+                    if medicine.quantity < quantity:
+                        return JsonResponse({
+                            "error": "Insufficient stock.", 
+                            "current_stock": medicine.quantity
+                        }, status=400)
+                    medicine.quantity = F('quantity') - quantity
                 
                 medicine.save(update_fields=['quantity'])
+
+                # --- CORRECTED LOGIC FOR DailyQuantity ---
+                # Only update the daily usage/dispensed count when stock is decreased.
+                if action == 'decrease':
+                    # Find or create a record for this specific medicine batch for today.
+                    # This tracks the total amount dispensed today.
+                    daily_record, created = DailyQuantity.objects.get_or_create(
+                        chemical_name=chemical_name,
+                        brand_name=brand_name,
+                        dose_volume=dose_volume,
+                        expiry_date=expiry_date,
+                        date=timezone.now().date(),
+                        # 'defaults' is used only when creating a new record for the day.
+                        defaults={'quantity': 0} 
+                    )
+                    
+                    # Atomically ADD the dispensed quantity to today's total.
+                    # This will never result in a negative number.
+                    daily_record.quantity = F('quantity') + quantity
+                    daily_record.save(update_fields=['quantity'])
                 
                 return JsonResponse({"message": "Stock updated successfully", "success": True})
                     
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format."}, status=400)
         except Exception as e:
             logger.exception("Error updating pharmacy stock")
-            return JsonResponse({"error": "Server error updating stock.", "detail": str(e)}, status=500)
+            return JsonResponse({"error": "An unexpected server error occurred.", "detail": str(e)}, status=500)
     else:
-        response = JsonResponse({"error": "Invalid method. Use PUT."}, status=405)
-        response['Allow'] = 'PUT'
+        # The request method is not POST
+        response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+        response['Allow'] = 'POST'
         return response
 
 
@@ -3468,6 +3545,99 @@ def get_prescription_in_data(request):
         return JsonResponse({'error': f'An unexpected server error occurred: {type(e).__name__}'}, status=500)
 
 
+import json
+import datetime
+from django.http import JsonResponse
+from django.forms.models import model_to_dict
+from django.views.decorators.csrf import csrf_exempt
+
+# --- (Your model imports go here) ---
+# from .models import employee_details, heamatalogy, ...
+
+@csrf_exempt
+def get_investigation_details(request, aadhar):
+    if request.method == "POST":
+        try:
+            if not employee_details.objects.filter(aadhar=aadhar).exists():
+                return JsonResponse({'error': f'No employee found with Aadhar: {aadhar}'}, status=404)
+
+            from_date_str = None
+            to_date_str = None
+            if request.body:
+                try:
+                    data = json.loads(request.body)
+                    from_date_str = data.get('fromDate')
+                    to_date_str = data.get('toDate')
+                except json.JSONDecodeError:
+                    pass
+
+            model_map = {
+                'heamatalogy': heamatalogy,
+                'routinesugartests': RoutineSugarTests,
+                'renalfunctiontests_and_electrolytes': RenalFunctionTest,
+                'lipidprofile': LipidProfile,
+                'liverfunctiontest': LiverFunctionTest,
+                'thyroidfunctiontest': ThyroidFunctionTest,
+                'autoimmunetest': AutoimmuneTest,
+                'coagulationtest': CoagulationTest,
+                'enzymescardiacprofile': EnzymesCardiacProfile,
+                'urineroutinetest': UrineRoutineTest,
+                'serologytest': SerologyTest,
+                'motiontest': MotionTest,
+                'culturesensitivitytest': CultureSensitivityTest,
+                'menspack': MensPack,
+                'womenspack': WomensPack,
+                'occupationalprofile': OccupationalProfile,
+                'otherstest': OthersTest,
+                'ophthalmicreport': OphthalmicReport,
+                'xray': XRay,
+                'usgreport': USGReport,
+                'ctreport': CTReport,
+                'mrireport': MRIReport,
+            }
+
+            response_data = {}
+
+            for key, model in model_map.items():
+                query = model.objects.filter(aadhar=aadhar)
+
+                if from_date_str and to_date_str:
+                    try:
+                        to_date_obj = datetime.datetime.strptime(to_date_str, '%Y-%m-%d').date()
+                        to_datetime_end_of_day = datetime.datetime.combine(to_date_obj, datetime.time.max)
+                        query = query.filter(entry_date__gte=from_date_str, entry_date__lte=to_datetime_end_of_day)
+                    except (ValueError, TypeError):
+                        return JsonResponse({'error': f"Invalid date format or model '{key}' is not filterable by date. Use YYYY-MM-DD."}, status=400)
+                
+                all_records = query.order_by('-entry_date')
+
+                records_list = []
+                for record_instance in all_records:
+                    record_dict = model_to_dict(record_instance)
+
+                    # =================================================================
+                    # === THIS IS THE FIX: Manually add the non-editable entry_date ===
+                    # =================================================================
+                    if hasattr(record_instance, 'entry_date'):
+                        record_dict['entry_date'] = record_instance.entry_date
+
+                    # Now, the existing loop will correctly format it
+                    for field_name, field_value in record_dict.items():
+                        if isinstance(field_value, (datetime.date, datetime.datetime)):
+                            record_dict[field_name] = field_value.isoformat()
+                    
+                    records_list.append(record_dict)
+
+                response_data[key] = records_list
+
+            return JsonResponse(response_data, status=200)
+
+        except Exception as e:
+            return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
+
+    return JsonResponse({'error': 'Invalid request method. Please use POST.'}, status=405)
+
+
 @csrf_exempt
 @transaction.atomic
 def update_daily_quantities(request):
@@ -3623,16 +3793,7 @@ def remove_expired_medicine(request):
                 medicine.removed_date = today
                 medicine.save(update_fields=['removed_date'])
 
-                # Update corresponding record in PharmacyStockHistory archive_date
-                # Match based on all identifying fields
-                updated_count = PharmacyStockHistory.objects.filter(
-                    # entry_date=medicine.entry_date, # Entry date might not be unique enough if stock was added multiple times
-                    medicine_form=medicine.medicine_form, brand_name=medicine.brand_name,
-                    chemical_name=medicine.chemical_name, dose_volume=medicine.dose_volume,
-                    expiry_date=medicine.expiry_date,
-                    archive_date__isnull=True # Only update if not already archived
-                ).update(archive_date=today)
-                logger.info(f"Updated archive_date for {updated_count} history records related to ExpiryRegister ID {medicine_id}")
+                
 
             return JsonResponse({"message": "Medicine removed successfully", "success": True})
 
@@ -3645,6 +3806,8 @@ def remove_expired_medicine(request):
          response = JsonResponse({"error": "Invalid request. Use POST."}, status=405)
          response['Allow'] = 'POST'
          return response
+
+
 
 @csrf_exempt # Should be GET
 def get_expiry_register(request):
@@ -3663,7 +3826,7 @@ def get_expiry_register(request):
 
             expired_medicines = queryset.order_by('-removed_date').values( # Order by removal date
                 "id", "entry_date", "medicine_form", "brand_name", "chemical_name", "dose_volume",
-                "quantity", "expiry_date", "removed_date"
+                "quantity", "expiry_date", "removed_date", "total_quantity"
             )
 
             data = []
@@ -3680,7 +3843,7 @@ def get_expiry_register(request):
                     "quantity": entry["quantity"], # Quantity at time of expiry flagging
                     "expiry_date": entry["expiry_date"].strftime("%b-%y") if entry["expiry_date"] else "",
                     "removed_date": entry["removed_date"].strftime("%d-%b-%Y") if entry["removed_date"] else "", # More specific format
-                    "total_quantity": total_quantity # Show original total quantity if found
+                    "total_quantity": entry["total_quantity"] # Show original total quantity if found
                 })
 
             return JsonResponse({"expiry_register": data}, safe=False)
@@ -4134,71 +4297,67 @@ def get_calibration_history(request):
 
 @csrf_exempt
 def complete_calibration(request):
-    """ Marks previous pending calibration as complete and creates a new pending record. """
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
-            instrument_id = data.get("id") # ID of the record being marked complete
-            new_calibration_date_str = data.get("calibration_date") # Date the calibration was actually done
-            new_certificate_number = data.get("certificate_number") # New certificate number
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method. Use POST.'}, status=405)
 
-            if not instrument_id or not new_calibration_date_str:
-                return JsonResponse({"error": "Missing instrument ID or new calibration date"}, status=400)
+    try:
+        data = json.loads(request.body)
+        
+        # --- DEBUG PRINT 1: See the raw data received from React ---
+        print("--- RAW DATA RECEIVED ---")
+        print(data)
+        
+        instrument_id = data.get("id")
+        new_completion_date_str = data.get("calibration_date")
+        new_freq = data.get("freq")
+        new_next_due_date_str = data.get("next_due_date")
+        new_certificate_number = data.get("certificate_number")
 
-            new_calibration_date = parse_date_internal(new_calibration_date_str)
-            if not new_calibration_date:
-                return JsonResponse({"error": "Invalid new calibration date format (YYYY-MM-DD)"}, status=400)
+        if not all([instrument_id, new_completion_date_str, new_freq, new_next_due_date_str]):
+            return JsonResponse({"error": "Missing required fields."}, status=400)
 
+        completion_date = parse_date_internal(new_completion_date_str)
+        next_due_date = parse_date_internal(new_next_due_date_str)
 
-            with transaction.atomic():
-                # Find the specific pending record to mark complete
-                old_record = InstrumentCalibration.objects.select_for_update().get(id=instrument_id, calibration_status=False)
+        # --- DEBUG PRINT 2: See the parsed data ---
+        print("\n--- PARSED DATA ---")
+        print(f"Instrument ID: {instrument_id} (Type: {type(instrument_id)})")
+        print(f"Completion Date: {completion_date} (Type: {type(completion_date)})")
+        print(f"Next Due Date: {next_due_date} (Type: {type(next_due_date)})")
+        print(f"Frequency: {new_freq} (Type: {type(new_freq)})")
 
-                # Update the completed record
-                old_record.calibration_status = True
-                old_record.calibration_date = new_calibration_date # Update with actual calibration date
-                old_record.certificate_number = new_certificate_number # Update certificate number
-                # Next due date on the *completed* record should ideally remain as it was originally calculated,
-                # Or maybe update it based on the new_calibration_date? Let's keep it for now.
-                old_record.save(update_fields=['calibration_status', 'calibration_date', 'certificate_number'])
+        if not completion_date or not next_due_date:
+            return JsonResponse({"error": "Invalid date format in payload."}, status=400)
 
-                # Calculate next due date based on the *new* calibration date and the frequency from the *old* record
-                freq = old_record.freq
-                next_due = get_next_due_date(new_calibration_date_str, freq)
-                if not next_due:
-                    # Handle case where frequency is invalid - maybe log and skip creation or raise error
-                    logger.error(f"Could not calculate next due date for instrument {old_record.equipment_sl_no} (Freq: {freq}). New pending record not created.")
-                    raise ValueError("Could not calculate next due date due to invalid frequency.")
+        with transaction.atomic():
+            instrument = InstrumentCalibration.objects.select_for_update().get(id=instrument_id)
+            
+            # --- DEBUG PRINT 3: Show the instrument before saving ---
+            print(f"\n--- INSTRUMENT FOUND (ID: {instrument.id}) ---")
 
-                # Create the *new* pending record for the next cycle
-                InstrumentCalibration.objects.create(
-                    equipment_sl_no=old_record.equipment_sl_no, # Copy details from old record
-                    instrument_name=old_record.instrument_name,
-                    numbers=old_record.numbers,
-                    make=old_record.make,
-                    model_number=old_record.model_number,
-                    freq=freq, # Use the same frequency
-                    calibration_date=None, # Calibration date is null for pending
-                    certificate_number=None, # Certificate number is null for pending
-                    next_due_date=next_due.date(), # Set calculated next due date
-                    calibration_status=False, # Mark as pending
-                )
+            instrument.calibration_date = completion_date
+            instrument.freq = new_freq
+            instrument.next_due_date = next_due_date
+            if new_certificate_number is not None:
+                instrument.certificate_number = new_certificate_number
+            
+            # --- DEBUG PRINT 4: This print will only be reached if the save is successful ---
+            print("\nAttempting to save instrument...")
+            instrument.save()
+            print("...Save successful!")
 
-            logger.info(f"Calibration completed for ID {instrument_id}. New pending record created.")
-            return JsonResponse({"message": "Calibration recorded successfully"})
+        logger.info(f"Calibration completed and rescheduled for Instrument ID {instrument_id}")
+        return JsonResponse({"message": "Calibration recorded and rescheduled successfully"})
 
-        except InstrumentCalibration.DoesNotExist:
-            return JsonResponse({"error": "Pending instrument record not found"}, status=404)
-        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON format"}, status=400)
-        except ValueError as ve: # Catch specific value errors like invalid date/freq
-             return JsonResponse({"error": str(ve)}, status=400)
-        except Exception as e:
-            logger.exception(f"Error completing calibration for ID {instrument_id or 'Unknown'}")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
-        response = JsonResponse({'error': 'Invalid request method'}, status=405)
-        response['Allow'] = 'POST'
-        return response
+    except InstrumentCalibration.DoesNotExist:
+        return JsonResponse({"error": "Instrument record not found"}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+    except Exception as e:
+        # --- DEBUG PRINT 5: This will catch ANY other exception and print it ---
+        logger.exception(f"CRITICAL ERROR in complete_calibration for ID {data.get('id', 'Unknown')}")
+        print(f"\n!!!!!! EXCEPTION CAUGHT !!!!!!\n{e}\n")
+        return JsonResponse({"error": "An unexpected server error occurred.", "detail": str(e)}, status=500)
 
 @csrf_exempt
 def add_instrument(request):
@@ -4455,3 +4614,53 @@ def get_current_expiry_count(request):
         return response
 
 # --- Ensure other necessary imports like models and logging are present at the top of views.py ---
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+import logging
+from .models import PharmacyMedicine  # Make sure this is your correct model
+
+logger = logging.getLogger(__name__)
+
+@require_http_methods(["GET"])
+def get_chemical_name_suggestions(request):
+    """
+    Provides suggestions for chemical names that start with the user's query
+    AND are filtered by the specific medicine type (form).
+    """
+    try:
+        # 1. Get the query parameters from the frontend request
+        name_query = request.GET.get('name', '').strip()
+        form_query = request.GET.get('medicine_form', '').strip() # e.g., 'Tablet', 'Syrup'
+
+        # If the user hasn't typed anything, return an empty list
+        if not name_query:
+            return JsonResponse({'suggestions': []})
+
+        # 2. Start by filtering for names that begin with the user's query
+        queryset = PharmacyMedicine.objects.filter(chemical_name__istartswith=name_query)
+
+        # --- THIS IS THE KEY CHANGE FOR FILTERING BY TYPE ---
+        # 3. If a medicine form was provided, further filter the queryset.
+        if form_query:
+            # This line narrows the search to only include medicines of the
+            # specified type (e.g., only 'Tablet' or only 'Syrup').
+            # '__iexact' is a case-insensitive exact match.
+            queryset = queryset.filter(medicine_form__iexact=form_query)
+        
+        # 4. Get the final, clean list of suggestions
+        suggestions = list(
+            queryset
+            .values_list('chemical_name', flat=True)
+            .distinct()
+            .order_by('chemical_name')
+            [:10]
+        )
+
+        return JsonResponse({'suggestions': suggestions})
+
+    except Exception as e:
+        logger.error(f"Error in get_chemical_name_suggestions: {e}")
+        return JsonResponse(
+            {"error": "An internal server error occurred."},
+            status=500
+        )

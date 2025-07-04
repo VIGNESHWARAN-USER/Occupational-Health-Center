@@ -1331,19 +1331,19 @@ const NewVisit = () => {
           </div>
         );
       case "Fitness":
-        return <Fitness data={data} type={visit}/>;
+        return <Fitness data={data} type={visit} mrdNo={mrdNo} />;
       case "Investigations":
         return <Investigation data={singleData} />;
       case "Vaccination":
-        return <Vaccination data={data} />;
+        return <Vaccination data={data} mrdNo={mrdNo}  />;
       case "Vitals":
-        return <Vitals data={data} type={type} mrdNo={mrdNo} />;
+        return <Vitals data={data} type={type} mrdNo={mrdNo}/>;
       case "MedicalHistory":
-        return <MedicalHistory data={data} />;
+        return <MedicalHistory data={data}  mrdNo={mrdNo}/>;
       case "Consultation":
-        return <Consultation data={data} type={visit} register = {register}/>;
+        return <Consultation data={data} type={visit} register = {register}  mrdNo={mrdNo}/>;
       case "Prescription":
-        return <Prescription data={data} condition={false} register = {register}/>;
+        return <Prescription data={data} condition={false} register = {register}  mrdNo={mrdNo}/>;
       case "formFields":
         return <FormFields formType={"alcoholPage"} />;
       default:

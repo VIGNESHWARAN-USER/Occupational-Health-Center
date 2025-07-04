@@ -1,8 +1,12 @@
 import React from 'react';
-import { FaInfoCircle } from 'react-icons/fa';
+// ==== MODIFICATION START: Import FaFileAlt for document links ====
+import { FaInfoCircle, FaFileAlt } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+// ==== MODIFICATION END ====
 
-// --- Info Modal Component ---
+// --- Info Modal Component (No changes needed) ---
 const InfoModal = ({ isOpen, onClose, title, children }) => {
+    // ... (rest of the modal code is unchanged)
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm" onClick={onClose}>
@@ -28,8 +32,23 @@ const VitalsDetails = ({ data }) => {
     const [isRespRateModalOpen, setIsRespRateModalOpen] = React.useState(false);
     const [isBmiModalOpen, setIsBmiModalOpen] = React.useState(false);
 
-    // --- BP Visualization Function ---
+    // ==== MODIFICATION START: Define and filter document fields ====
+    const documentFields = [
+        { key: 'application_form', label: 'Application Form' },
+        { key: 'self_declared', label: 'Self Declaration' },
+        { key: 'consent', label: 'Consent' },
+        { key: 'report', label: 'Lab Reports' },
+        { key: 'fc', label: 'Fitness Certificate' },
+        { key: 'manual', label: 'Confession' },
+    ];
+
+    const availableDocuments = documentFields.filter(doc => data && data[doc.key]);
+    // ==== MODIFICATION END ====
+
+
+    // --- BP Visualization Function (No changes needed) ---
     const renderBpVisualization = (systolic, diastolic, status) => {
+        // ... (rest of the function is unchanged)
         const systolicValue = parseInt(systolic, 10);
         const diastolicValue = parseInt(diastolic, 10);
 
@@ -69,8 +88,9 @@ const VitalsDetails = ({ data }) => {
         );
     };
 
-    // --- BMI Visualization Function ---
+    // --- BMI Visualization Function (No changes needed) ---
     const renderBmiVisualization = (bmi, status) => {
+        // ... (rest of the function is unchanged)
         const bmiValue = parseFloat(bmi);
 
         if (isNaN(bmiValue) || bmiValue <= 0) {
@@ -108,10 +128,10 @@ const VitalsDetails = ({ data }) => {
 
     return (
         <>
-            {/* Render Active Modals */}
+            {/* Render Active Modals (No changes needed) */}
             <InfoModal isOpen={isBpModalOpen} onClose={() => setIsBpModalOpen(false)} title="Blood Pressure Classification">
-                <p><strong>Low BP (Hypotension) :</strong> &lt; 90 / &lt; 60 mmHg</p>
-                <p><strong>Normal :</strong> &lt; 120 / &lt; 80 mmHg</p>
+                <p><strong>Low BP (Hypotension) :</strong> &lt; 90 / &gt; 60 mmHg</p>
+                <p><strong>Normal :</strong> &lt; 120 / &gt; 80 mmHg</p>
                 <p><strong>High Normal (Prehypertension) :</strong> 120-139 / 80-89 mmHg</p>
                 <p><strong>Stage 1 Hypertension :</strong> 140-159 / 90-99 mmHg</p>
                 <p><strong>Stage 2 Hypertension :</strong> ≥ 160 / ≥ 100 mmHg</p>
@@ -119,7 +139,7 @@ const VitalsDetails = ({ data }) => {
             </InfoModal>
             <InfoModal isOpen={isPulseModalOpen} onClose={() => setIsPulseModalOpen(false)} title="Pulse Information">
                 <p><strong>Normal :</strong> 60 - 100 bpm</p>
-                <p><strong>Bradycardia :</strong> &lt; 60 bpm</p>
+                <p><strong>Bradycardia :</strong> &gt; 60 bpm</p>
                 <p><strong>Tachycardia :</strong> &gt; 100 bpm</p>
             </InfoModal>
             <InfoModal isOpen={isTempModalOpen} onClose={() => setIsTempModalOpen(false)} title="Temperature Information (°F)">
@@ -127,7 +147,7 @@ const VitalsDetails = ({ data }) => {
                 <p><strong>Low Grade Fever :</strong> 99.1°F - 100.4°F</p>
                 <p><strong>Moderate Grade Fever :</strong> 100.5°F - 102.2°F</p>
                 <p><strong>High Grade Fever :</strong> 102.3°F - 105.8°F</p>
-                <p><strong>Hyperthermic :</strong> &gt; 105.8°F</p>
+                <p><strong>Hyperthermic :</strong> &lt; 105.8°F</p>
             </InfoModal>
             <InfoModal isOpen={isSpo2ModalOpen} onClose={() => setIsSpo2ModalOpen(false)} title="SpO₂ Information (%)">
                 <p><strong>Normal :</strong> 95% - 100%</p>
@@ -138,7 +158,7 @@ const VitalsDetails = ({ data }) => {
             <InfoModal isOpen={isRespRateModalOpen} onClose={() => setIsRespRateModalOpen(false)} title="Respiratory Rate Information">
                 <p><strong>Normal :</strong> 12 - 20 breaths/min</p>
                 <p><strong>Bradypnea :</strong>  &lt; 12 breaths/min</p>
-                <p><strong>Tachypnea :</strong> &gt; 20 breaths/min</p>
+                <p><strong>Tachypnea :</strong> &g; 20 breaths/min</p>
             </InfoModal>
             <InfoModal isOpen={isBmiModalOpen} onClose={() => setIsBmiModalOpen(false)} title="BMI Classification Standards">
                 <p><strong>Underweight :</strong> &lt; 18.5 kg/m²</p>
@@ -151,6 +171,7 @@ const VitalsDetails = ({ data }) => {
             <div className="mt-8 p-6 bg-white rounded-xl shadow-md">
                 <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Vitals Details</h2>
 
+                {/* --- Rest of the Vitals sections (BP, Pulse, etc.) are unchanged --- */}
                 {/* Blood Pressure Section */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
@@ -187,8 +208,8 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.pulse_comment} />
                     </div>
                 </section>
-
-                {/* Temperature Section */}
+                
+                {/* ... other vitals sections ... */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">Temperature <span className='text-xs font-normal'>(°F)</span></h3>
@@ -202,8 +223,6 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.temperature_comment} />
                     </div>
                 </section>
-
-                {/* SpO2 Section */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">SpO₂ <span className='text-xs font-normal'>(%)</span></h3>
@@ -217,8 +236,6 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.spO2_comment} />
                     </div>
                 </section>
-
-                {/* Respiratory Rate Section */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">Respiratory Rate <span className='text-xs font-normal'>(/min)</span></h3>
@@ -232,9 +249,7 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.respiratory_rate_comment} />
                     </div>
                 </section>
-
-                {/* Height, Weight, BMI Section */}
-                <section className="p-4 border rounded-lg bg-slate-50 shadow-sm space-y-4">
+                <section className="p-4 border rounded-lg bg-slate-50 shadow-sm space-y-4 mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                         <div className='space-y-4'>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -260,9 +275,39 @@ const VitalsDetails = ({ data }) => {
                         </div>
                     </div>
                 </section>
+
+                {/* ==== MODIFICATION START: New Section for Uploaded Documents ==== */}
+                <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Uploaded Documents</h3>
+                    {availableDocuments.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {availableDocuments.map((doc) => (
+                                <a
+    key={doc.key}
+    // This href builds the full, correct URL to your backend server
+    href={`https://occupational-health-center-1.onrender.com/media/${data[doc.key]}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center space-x-3 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
+>
+    <FaFileAlt className="text-blue-600 flex-shrink-0" size={20} />
+    <span className="text-sm font-medium text-gray-800 truncate" title={doc.label}>
+        {doc.label}
+    </span>
+</a>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4 text-gray-500">
+                            No documents uploaded.
+                        </div>
+                    )}
+                </section>
+                {/* ==== MODIFICATION END ==== */}
+
             </div>
 
-            {/* Inline styles for dynamic Tailwind classes */}
+            {/* Inline styles for dynamic Tailwind classes (No changes needed) */}
             <style jsx>{`
                 .text-blue-600 { color: #2563eb; } .text-blue-500 { color: #3b82f6; }
                 .text-green-600 { color: #16a34a; } .text-green-500 { color: #22c55e; }
@@ -279,8 +324,8 @@ const VitalsDetails = ({ data }) => {
 const DetailCard = ({ label, value }) => (
     <div>
         <label className="block text-gray-700 text-sm font-semibold mb-1">{label}</label>
-        <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center">
-            {value || 'No data available'}
+        <div className="px-4 py-3 w-full bg-gray-100 border border-gray-300 rounded-lg shadow-sm text-gray-900 flex items-center min-h-[46px]">
+            {value || <span className="text-gray-500 italic">N/A</span>}
         </div>
     </div>
 );

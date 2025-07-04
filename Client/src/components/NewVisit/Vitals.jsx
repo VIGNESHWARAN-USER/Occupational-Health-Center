@@ -156,6 +156,10 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (mrdNo === "") {
+            alert("Please submit the entries first to get MRD Number");
+            return;
+        }
         if (!formData.aadhar) {
             alert("Aadhar number is missing. Cannot submit vitals.");
             return;

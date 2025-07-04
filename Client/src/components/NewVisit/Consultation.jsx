@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import SignificantNotes from './SignificantNotes'; // Assuming this component exists
 
-const Consultation = ({ data, type }) => {
+const Consultation = ({ data, type ,mrdNo}) => {
   // --- State Variables ---
   const [complaints, setComplaints] = useState('');
   const [examination, setExamination] = useState(''); // General Exam
@@ -107,6 +107,10 @@ const Consultation = ({ data, type }) => {
   // --- Handle Consultation Submit ---
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (mrdNo === "") {
+      alert("Please submit the entries first to get MRD Number");
+      return;
+    }
     if (!emp_no || !isDoctor) {
       alert("Cannot submit. Ensure you are logged in as a doctor and patient data is loaded.");
       return;
@@ -131,6 +135,7 @@ const Consultation = ({ data, type }) => {
       special_cases: specialCases,
       submittedDoctor: submittedDoctor,
       follow_up_date: followUpDate || null,
+      mrdNo:mrdNo,
 
       // Referral Data (Conditional)
       referral: referral,

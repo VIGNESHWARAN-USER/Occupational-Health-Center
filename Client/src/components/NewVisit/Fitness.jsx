@@ -126,30 +126,29 @@ const allFitnessTestsConfig = [
     { key: "romberg_test", displayName: "Romberg Test", options: ["positive", "negative"] },
     { key: "acrophobia", displayName: "Fear Of Height (Acrophobia)", options: ["Yes", "No"] }, // Options Yes/No
     { key: "trendelenberg_test", displayName: "Trendelenberg Test", options: ["positive", "negative"] },
-    { key: "dizziness_cns_ent_causes", displayName: "C/O Dizziness R/O CNS/ENT causes", options: ["Yes", "No"] },
-    { key: "musculoskeletal_movements", displayName: "MusculoSkeletal Movements", options: ["Normal", "Abnormal"] },
-    { key: "claustrophobia", displayName: "Fear in confined/enclosed Space (Claustrophobia)", options: ["Yes", "No"] },
-    { key: "tandem_walking", displayName: "Straight Line (Tandem) Walking", options: ["Normal", "Abnormal"] },
-    { key: "nystagmus_test", displayName: "Nystagmus Test", options: ["Normal", "Abnormal"] },
-    { key: "dysdiadochokinesia", displayName: "Dysdiadochokinesia", options: ["Normal", "Abnormal"] },
-    { key: "finger_nose_test", displayName: "Finger Nose Test", options: ["Normal", "Abnormal"] },
-    { key: "psychological_pmk", displayName: "Psychological - PMK", options: ["Normal", "Abnormal"] },
-    { key: "psychological_zollinger", displayName: "Psychological - Zollinger", options: ["Normal", "Abnormal"] }
+    { key: "CO_dizziness", displayName: "C/O Dizziness R/O CNS/ENT causes", options: ["Yes", "No"] },
+    { key: "MusculoSkeletal_Movements", displayName: "MusculoSkeletal Movements", options: ["Normal", "Abnormal"] },
+    { key: "Claustrophobia", displayName: "Fear in confined/enclosed Space (Claustrophobia)", options: ["Yes", "No"] },
+    { key: "Tandem", displayName: "Straight Line (Tandem) Walking", options: ["Normal", "Abnormal"] },
+    { key: "Nystagmus_Test", displayName: "Nystagmus Test", options: ["Normal", "Abnormal"] },
+    { key: "Dysdiadochokinesia", displayName: "Dysdiadochokinesia", options: ["Normal", "Abnormal"] },
+    { key: "Finger_nose_test", displayName: "Finger Nose Test", options: ["Normal", "Abnormal"] },
+    { key: "Psychological_PMK", displayName: "Psychological - PMK", options: ["Normal", "Abnormal"] },
+    { key: "Psychological_zollingar", displayName: "Psychological - Zollinger", options: ["Normal", "Abnormal"] }
 ];
 
-const FitnessPage = ({ data }) => {
+const FitnessPage = ({ data,mrdNo }) => {
     const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
     const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
-    const eyeExamResultOptions = ["", "Normal", "Defective", "Color Blindness"];
     const eyeExamFitStatusOptions = ['Fit', 'Fit when newly prescribed glass', 'Fit with existing glass', 'Fit with an advice to change existing glass with newly prescribed glass', 'Unfit'];
 
     const initialFitnessFormData = {
         emp_no: data?.[0]?.emp_no || '',
         tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "",
-        dizziness_cns_ent_causes: "", musculoskeletal_movements: "", claustrophobia: "",
+        CO_dizziness: "", musculoskeletal_movements: "", claustrophobia: "",
         tandem_walking: "", nystagmus_test: "", dysdiadochokinesia: "",
-        finger_nose_test: "", psychological_pmk: "", psychological_zollinger: ""
+        Finger_nose_test: "", psychological_pmk: "", psychological_zollinger: ""
     };
 
     const [fitnessFormData, setFitnessFormData] = useState(initialFitnessFormData);
@@ -210,6 +209,7 @@ const FitnessPage = ({ data }) => {
     useEffect(() => {
         const currentEmpNo = data?.[0]?.emp_no || '';
         if (data && data[0]) {
+            console.log(data[0].fitnessassessment)
             const assessmentData = data[0].fitnessassessment;
             if (assessmentData) {
                 const loadedFitnessData = { emp_no: assessmentData.emp_no || currentEmpNo };
@@ -365,54 +365,58 @@ const FitnessPage = ({ data }) => {
         }
     };
 
-    const handleFitnessSubmit = async () => {
-        const currentEmpNo = data?.[0]?.emp_no;
-        if (!currentEmpNo) {
-            alert("No employee selected.");
-            return;
-        }
-        if (!overallFitness) {
-            alert("Please select Overall Fitness status before submitting.");
-            return;
-        }
-        const aadharNo = data?.[0]?.aadhar || '';
-        const mrdNo = data?.[0]?.mrdNo || '';
-        if (!aadharNo) {
-            alert("Aadhar number is required.");
-            return;
-        }
-        if (!mrdNo) {
-            alert("MRD number is required.");
-            return;
-        }
+    // --- AFTER (Corrected Code) ---
+const handleFitnessSubmit = async () => {
+    const currentEmpNo = data?.[0]?.emp_no;
 
-        const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false; // Re-check this key based on your data structure
-        const method = existingAssessment ? 'PUT' : 'POST';
-        const url = FITNESS_ASSESSMENT_URL;
-        const employer = data?.[0]?.type || '';
-        const submittedDoctor = localStorage.getItem("userData") || '';
+    // This check is sufficient and uses the prop correctly.
+    if (!mrdNo) { // Simplified this check to catch null/empty string
+        alert("Please submit the entries first to get MRD Number");
+        return;
+    }
+    if (!currentEmpNo) {
+        alert("No employee selected.");
+        return;
+    }
+    if (!overallFitness) {
+        alert("Please select Overall Fitness status before submitting.");
+        return;
+    }
+    const aadharNo = data?.[0]?.aadhar || '';
+    if (!aadharNo) {
+        alert("Aadhar number is required.");
+        return;
+    }
+    // The redundant mrdNo declaration and check have been REMOVED.
 
-        const payload = {
-            ...fitnessFormData, // This now includes all test fields
-            mrdNo: mrdNo,
-            job_nature: JSON.stringify(selectedOptions),
-            submittedDoctor: submittedDoctor,
-            conditional_fit_feilds: JSON.stringify(conditionalOptions),
-            overall_fitness: overallFitness,
-            systematic_examination: systematicExamination,
-            general_examination: generalExamination,
-            eye_exam_result: eyeExamResult, // Added
-            eye_exam_fit_status: eyeExamFitStatus,
-            comments: comments,
-            aadhar: aadharNo,
-            employer: employer,
-            special_cases: specialCases,
-            emp_no: currentEmpNo,
-            other_job_nature: otherJobNature,
-            conditional_other_job_nature: conditionalotherJobNature,
-        };
-        await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
+    const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false;
+    const method = existingAssessment ? 'PUT' : 'POST';
+    const url = FITNESS_ASSESSMENT_URL;
+    const employer = data?.[0]?.type || '';
+    const submittedDoctor = localStorage.getItem("userData") || '';
+
+    const payload = {
+        ...fitnessFormData,
+        // This now unambiguously uses the mrdNo from the component's props.
+        mrdNo: mrdNo,
+        job_nature: JSON.stringify(selectedOptions),
+        submittedDoctor: submittedDoctor,
+        conditional_fit_feilds: JSON.stringify(conditionalOptions),
+        overall_fitness: overallFitness,
+        systematic_examination: systematicExamination,
+        general_examination: generalExamination,
+        eye_exam_result: eyeExamResult,
+        eye_exam_fit_status: eyeExamFitStatus,
+        comments: comments,
+        aadhar: aadharNo,
+        employer: employer,
+        special_cases: specialCases,
+        emp_no: currentEmpNo,
+        other_job_nature: otherJobNature,
+        conditional_other_job_nature: conditionalotherJobNature,
     };
+    await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
+};
 
     const submitStatutoryForm = async (baseUrl, formData, formName, setDataState, defaultState, removeFormCallback) => {
         const currentEmpNo = data?.[0]?.emp_no;
@@ -635,15 +639,7 @@ const FitnessPage = ({ data }) => {
 
             {/* Eye Examination Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-                <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
-                    <label htmlFor="eyeExamResult" className="block text-base md:text-lg font-semibold mb-3 text-gray-700">Eye Examination Result</label>
-                    <select id="eyeExamResult" name="eyeExamResult" value={eyeExamResult} onChange={handleEyeExamResultChange}
-                        disabled={!data?.[0]?.emp_no || isSubmitting}
-                        className={selectClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                        title={!data?.[0]?.emp_no ? "Select an employee first" : ""}>
-                        {eyeExamResultOptions.map(option => (<option key={option} value={option} disabled={option === ""}>{option || "-- Select Result --"}</option>))}
-                    </select>
-                </div>
+               
                 <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
                     <label htmlFor="eyeExamFitStatus" className="block text-base md:text-lg font-semibold mb-3 text-gray-700">Eye Exam Fitness Status by OPHTHALMOLOGIST</label>
                     <select id="eyeExamFitStatus" name="eyeExamFitStatus" value={eyeExamFitStatus} onChange={handleEyeExamFitStatusChange}

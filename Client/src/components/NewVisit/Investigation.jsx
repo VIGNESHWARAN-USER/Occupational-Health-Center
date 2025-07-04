@@ -46,7 +46,7 @@ function InvestigationForm({ data }) {
     "URINE ROUTINE": "urineroutinetest",
     "SEROLOGY": "serologytest",
     "MOTION": "motiontest",
-    "ROUTINE CULTURE & SENSITIVITY TEST": "routinecultureandsensitive",
+    "ROUTINE CULTURE & SENSITIVITY TEST": "culturesensitivitytest",
     "Men's Pack": "menspack",
     "Women's Pack": "womenspack",
     "Occupational Profile": "occupationalprofile",
@@ -327,9 +327,9 @@ function InvestigationForm({ data }) {
                 <div className="md:col-span-1">
                   <label htmlFor={unitKey} className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
                   <input type="text" id={unitKey} name={unitKey}
-                    className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                    className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                     value={formData[unitKey] !== undefined ? formData[unitKey] : ""}
-                    onChange={handleChange} disabled tabIndex={-1} />
+                    onChange={handleChange}  tabIndex={-1} />
                 </div>
               )}
               {(hasRangeFrom || hasRangeTo) && (
@@ -338,18 +338,18 @@ function InvestigationForm({ data }) {
                         <div className="flex-1">
                             <label htmlFor={rangeFromKey} className="block text-xs font-medium text-gray-600 mb-1">Range From</label>
                             <input type="text" id={rangeFromKey} name={rangeFromKey}
-                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                                 value={formData[rangeFromKey] !== undefined ? formData[rangeFromKey] : ""}
-                                onChange={handleChange} disabled tabIndex={-1} />
+                                onChange={handleChange}  tabIndex={-1} />
                         </div>
                     )}
                     {hasRangeTo && (
                         <div className="flex-1">
                             <label htmlFor={rangeToKey} className="block text-xs font-medium text-gray-600 mb-1">Range To</label>
                             <input type="text" id={rangeToKey} name={rangeToKey}
-                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                                 value={formData[rangeToKey] !== undefined ? formData[rangeToKey] : ""}
-                                onChange={handleChange} disabled tabIndex={-1} />
+                                onChange={handleChange}  tabIndex={-1} />
                         </div>
                     )}
                 </div>
@@ -359,9 +359,9 @@ function InvestigationForm({ data }) {
                 <div className="md:col-span-2">
                   <label htmlFor={commentKey} className="block text-xs font-medium text-gray-600 mb-1">Comments</label>
                   <textarea id={commentKey} name={commentKey} rows="1"
-                    className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm cursor-not-allowed"
+                    className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                     value={formData[commentKey] !== undefined ? formData[commentKey] : ""}
-                    onChange={handleChange} disabled tabIndex={-1} />
+                    onChange={handleChange}  tabIndex={-1} />
                 </div>
               )}
                {!hasComment && <div className="md:col-span-2"></div>}

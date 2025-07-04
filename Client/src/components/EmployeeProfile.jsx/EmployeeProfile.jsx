@@ -286,7 +286,7 @@ const EmployeeProfile = () => {
         setIsLoadingNotes(true); setError(null);
         try {
             // Use the identifier provided (emp_no, aadhar, country_id)
-            const response = await axios.post(`https://occupational-health-center-1.onrender.com/get_notes/${idValue}`); // Endpoint likely uses the primary ID passed
+            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${idValue}`); // Endpoint likely uses the primary ID passed
             console.log("Fetched Notes/Status Data:", response.data);
             if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
                 const visitNotes = Array.isArray(response.data.data) ? response.data.data : [];

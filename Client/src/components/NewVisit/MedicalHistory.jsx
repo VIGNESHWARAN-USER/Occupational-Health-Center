@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 
 // This is the second code snippet provided, which already includes the spouse functionality.
-const MedicalHistory1 = ({ data }) => {
+const MedicalHistory1 = ({ data,mrdNo }) => {
  
   // console.log(data); // Keep console logs minimal in final code unless debugging
   const emp_no = data && data[0] ? data[0]?.emp_no : null; // Use emp_no if available
@@ -51,20 +51,80 @@ const MedicalHistory1 = ({ data }) => {
 
   // --- State Variables ---
   // Initial state structures
-  const initialMedicalData = {
-    DM: { detail: "", comment: "", children: [] }, RS: { detail: "", comment: "", children: [] }, CNS: { detail: "", comment: "", children: [] }, CVS: { detail: "", comment: "", children: [] }, GIT: { detail: "", comment: "", children: [] }, KUB: { detail: "", comment: "", children: [] }, HTN: { detail: "", comment: "", children: [] }, Epileptic: { detail: "", comment: "", children: [] }, Hyper_Thyroid: { detail: "", comment: "", children: [] }, Hypo_Thyroid: { detail: "", comment: "", children: [] }, Asthma: { detail: "", comment: "", children: [] }, Cancer: { detail: "", comment: "", children: [] }, Defective_Colour_Vision: { detail: "", comment: "", children: [] }, Others: { detail: "", comment: "", children: [] },
-    Obstetric: { detail: [], comment: "", children: [] }, // detail is array for multi-select
-    Gynaec: { detail: [], comment: "", children: [] }      // detail is array for multi-select
-  };
+ const initialMedicalData = {
+  // General Conditions
+  HTN: { detail: "", comment: "", children: [] },
+  DM: { detail: "", comment: "", children: [] },
+  Hyper_Thyroid: { detail: "", comment: "", children: [] },
+  Hypo_Thyroid: { detail: "", comment: "", children: [] },
+  Epileptic: { detail: "", comment: "", children: [] },
+  Vertigo: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+  Asthma: { detail: "", comment: "", children: [] },
+  Mental_Illness: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+
+  // Systemic Review
+  CNS: { detail: "", comment: "", children: [] },
+  CVS: { detail: "", comment: "", children: [] },
+  RS: { detail: "", comment: "", children: [] },
+  ENT: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+  GIT: { detail: "", comment: "", children: [] },
+  KUB: { detail: "", comment: "", children: [] },
+  Musculo_Skeletal: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+
+  // Other Conditions
+  Skin: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+  Dental_Oral: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+  Cancer: { detail: "", comment: "", children: [] },
+  Defective_Colour_Vision: { detail: "", comment: "", children: [] },
+  Others: { detail: "", comment: "", children: [] },
+
+  // Gender-Specific
+ // Multi-select (red text)
+  Prostate_Genital: { detail: "", comment: "", children: [] }, // Multi-select (red text)
+  Obstetric: { detail: [], comment: "", children: [] }, // Multi-select (per your example)
+  Gynaec: { detail: [], comment: "", children: [] }      // Multi-select (per your example)
+};
    const initialFamilyHistory = {
     father: { status: "", reason: "", remarks: "" }, mother: { status: "", reason: "", remarks: "" }, maternalGrandFather: { status: "", reason: "", remarks: "" }, maternalGrandMother: { status: "", reason: "", remarks: "" }, paternalGrandFather: { status: "", reason: "", remarks: "" }, paternalGrandMother: { status: "", reason: "", remarks: "" },
-    DM: { detail: "", comment: "", children: [] }, RS: { detail: "", comment: "", children: [] }, CNS: { detail: "", comment: "", children: [] }, CVS: { detail: "", comment: "", children: [] }, GIT: { detail: "", comment: "", children: [] }, KUB: { detail: "", comment: "", children: [] }, HTN: { detail: "", comment: "", children: [] }, Epileptic: { detail: "", comment: "", children: [] }, Hyper_Thyroid: { detail: "", comment: "", children: [] }, Hypo_Thyroid: { detail: "", comment: "", children: [] }, Asthma: { detail: "", comment: "", children: [] }, Cancer: { detail: "", comment: "", children: [] }, Defective_Colour_Vision: { detail: "", comment: "", children: [] }, Others: { detail: "", comment: "", children: [] },
-    Obstetric: { detail: "", comment: "", children: [] }, // detail/comment are text
-    Gynaec: { detail: "", comment: "", children: [] }     // detail/comment are text
+
+  // General Conditions
+  HTN: { detail: [], comment: "", children: [] },
+  DM: { detail: [], comment: "", children: [] },
+  Hyper_Thyroid: { detail: [], comment: "", children: [] },
+  Hypo_Thyroid: { detail: [], comment: "", children: [] },
+  Epileptic: { detail: [], comment: "", children: [] },
+  Vertigo: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  Asthma: { detail: [], comment: "", children: [] },
+  Mental_Illness: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+
+  // Systemic Review
+  CNS: { detail: [], comment: "", children: [] },
+  CVS: { detail: [], comment: "", children: [] },
+  RS: { detail: [], comment: "", children: [] },
+  ENT: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  GIT: { detail: [], comment: "", children: [] },
+  KUB: { detail: [], comment: "", children: [] },
+  Musculo_Skeletal: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  Others: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+
+  // Other Conditions
+  Skin: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  Dental_Oral: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  Cancer: { detail: [], comment: "", children: [] },
+  Defective_Colour_Vision: { detail: [], comment: "", children: [] },
+  Others: { detail: [], comment: "", children: [] },
+
+  // Gender-Specific
+ // Multi-select (red text)
+  Prostate_Genital: { detail: [], comment: "", children: [] }, // Multi-select (red text)
+  
+  Obstetric: { detail: [], comment: "", children: [] }, // Multi-select (per your example)
+  Gynaec: { detail: [], comment: "", children: [] }      // Multi-select (per your example)
+     // detail/comment are text
   };
   const initialConditions = { // State for multi-select dropdowns in Family History table
     DM: [], RS: [], CNS: [], CVS: [], GIT: [], KUB: [], HTN: [], Epileptic: [], Hyper_Thyroid: [], Hypo_Thyroid: [], Asthma: [], Cancer: [], Defective_Colour_Vision: [], Others: [],
-    Obstetric: [], Gynaec: []
+    Obstetric: [], Gynaec: [], Prostate_Genital: [], Mental_Illness: [], ENT: [], Musculo_Skeletal: [], Skin: [], Dental_Oral: [],Vertigo: []
   };
 
   // State hooks
@@ -88,11 +148,27 @@ const MedicalHistory1 = ({ data }) => {
     { value: "sister", label: "Sister" },
     { value: "father", label: "Father" },
     { value: "mother", label: "Mother" },
+    { value: "spouse", label: "Spouse" },
     { value: "paternalGrandFather", label: "Paternal Grand Father" },
     { value: "paternalGrandMother", label: "Paternal Grand Mother" },
     { value: "maternalGrandFather", label: "Maternal Grand Father" },
     { value: "maternalGrandMother", label: "Maternal Grand Mother" },
   ];
+
+  const maleRelativeOptions = [
+    { value: "brother", label: "Brother" },
+    { value: "father", label: "Father" },
+    { value: "paternalGrandFather", label: "Paternal Grand Father" },
+    { value: "maternalGrandFather", label: "Maternal Grand Father" },
+];
+
+const femaleRelativeOptions = [
+    { value: "sister", label: "Sister" },
+    { value: "mother", label: "Mother" },
+    { value: "spouse", label: "Spouse" },
+    { value: "paternalGrandMother", label: "Paternal Grand Mother" },
+    { value: "maternalGrandMother", label: "Maternal Grand Mother" },
+];
   const obstetricGynaecOptions = [ // Renamed from relationshipOptions2
     { value: "G1 P1 L1 A1", label: "G1 P1 L1 A1" },
     { value: "G2 P1 L1 A1", label: "G2 P1 L1 A1" },
@@ -373,7 +449,10 @@ const MedicalHistory1 = ({ data }) => {
   // --- Submit Handler ---
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    if (mrdNo === "") {
+      alert("Please submit the entries first to get MRD Number");
+      return;
+    }
     // Helper functions (same as before)
     const processHistoryItem = (item, fieldKey) => {
         if (!item) return { detail: '', comment: '', children: [] };
@@ -593,14 +672,29 @@ const MedicalHistory1 = ({ data }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[ // Standard medical conditions
-                    { key: 'HTN', label: 'HTN' }, { key: 'DM', label: 'DM' }, { key: 'Epileptic', label: 'Epileptic' },
-                    { key: 'Hyper_Thyroid', label: 'Hyper Thyroid' }, { key: 'Hypo_Thyroid', label: 'Hypo Thyroid' },
-                    { key: 'Asthma', label: 'Asthma' }, { key: 'CVS', label: 'CVS' }, { key: 'CNS', label: 'CNS' },
-                    { key: 'RS', label: 'RS' }, { key: 'GIT', label: 'GIT' }, { key: 'KUB', label: 'KUB' },
-                    { key: 'Cancer', label: 'Cancer' }, { key: 'Defective_Colour_Vision', label: 'Def. Colour Vision' },
-                    { key: 'Others', label: 'Others' },
-                  ].map(({ key, label }) => (
+                  {[
+    { "key": "HTN", "label": "HTN" },
+    { "key": "DM", "label": "DM" },
+    { "key": "Hyper_Thyroid", "label": "Hyper thyroid" },
+    { "key": "Hypo_Thyroid", "label": "Hypo thyroid" },
+    { "key": "Epileptic", "label": "Epileptic" },
+    { "key": "Vertigo", "label": "Vertigo" },
+    { "key": "Asthma", "label": "Asthma" },
+    { "key": "Mental_Illness", "label": "Mental Illness" },
+    { "key": "CNS", "label": "CNS" },
+    { "key": "CVS", "label": "CVS" },
+    { "key": "RS", "label": "RS" },
+    { "key": "ENT", "label": "ENT" },
+    { "key": "GIT", "label": "GIT" },
+    { "key": "KUB", "label": "KUB" },
+    { "key": "Musculo_Skeletal", "label": "Musculo Skeletal (Bone, Muscle,Tendon)" },
+    { "key": "Skin", "label": "Skin" },
+    { "key": "Dental_Oral", "label": "Dental /Oral" },
+    { "key": "Cancer", "label": "CANCER" },
+    { "key": "Defective_Colour_Vision", "label": "Defective Colour Vision" },
+    { "key": "Others", "label": "OTHERS" },
+    { "key": "Prostate_Genital", "label": "Prostate & Genital" },
+].map(({ key, label }) => (
                     <tr key={key} style={cellStyle}>
                       <td style={{...cellStyle, verticalAlign: 'top', paddingTop: '0.75rem'}}>{label}</td>
                       <td style={cellStyle}>
@@ -740,47 +834,99 @@ const MedicalHistory1 = ({ data }) => {
 
              {/* Family Medical Conditions Table */}
              <h3 className="text-lg font-semibold mt-6 mb-3 text-gray-800">Family Medical Conditions</h3>
-             <div style={tableContainerStyle}>
-              <table style={tableStyle}>
-                 <thead style={tableHeaderStyle}>
-                    <tr>
-                        <th style={cellStyle}>Condition</th>
-                        <th style={{...cellStyle, width: '40%'}}>Affected Relatives (Select)</th>
-                        <th style={cellStyle}>Comments / Details</th>
-                    </tr>
-                 </thead>
-                 <tbody>
-                     {[ // Base conditions
-                        { key: 'HTN', label: 'HTN' }, { key: 'DM', label: 'DM' }, { key: 'Epileptic', label: 'Epileptic' },
-                        { key: 'Hyper_Thyroid', label: 'Hyper Thyroid' }, { key: 'Hypo_Thyroid', label: 'Hypo Thyroid' },
-                        { key: 'Asthma', label: 'Asthma' }, { key: 'CVS', label: 'CVS' }, { key: 'CNS', label: 'CNS' },
-                        { key: 'RS', label: 'RS' }, { key: 'GIT', label: 'GIT' }, { key: 'KUB', label: 'KUB' },
-                        { key: 'Cancer', label: 'Cancer' }, { key: 'Defective_Colour_Vision', label: 'Def. Colour Vision' },
-                        { key: 'Others', label: 'Others' },
-                     ].concat( // Conditionally add female-related
-                        (sex === 'Female' || sex === 'Other') ? [
-                            { key: 'Obstetric', label: 'Obstetric (Family)' },
-                            { key: 'Gynaec', label: 'Gynaec (Family)' }
-                        ] : []
-                     ).map(({ key, label }) => (
-                        <tr key={key}>
-                            <td style={{...cellStyle, verticalAlign: 'top', paddingTop: '0.75rem'}}>{label}</td>
-                            <td style={cellStyle}>
-                                <Select
-                                    isMulti options={familyConditionRelationshipOptions} styles={customStyles} placeholder="Select affected relatives..." menuPlacement="auto" isDisabled={!isEditMode}
-                                    value={familyConditionRelationshipOptions.filter(option => Array.isArray(conditions[key]) && conditions[key].includes(option.value))}
-                                    onChange={(selected) => handleSelectionChange(key, selected)}
-                                />
-                            </td>
-                            <td style={cellStyle}>
-                                <textarea value={familyHistory[key]?.comment || ''} style={textareaStyle} placeholder="Add comments about condition in family..." disabled={!isEditMode}
-                                           onChange={(e) => handleFamilyMedicalConditionChange(key, "comment", e.target.value)} rows={2} />
-                            </td>
-                        </tr>
-                     ))}
-                 </tbody>
-              </table>
-            </div>
+            <div style={tableContainerStyle}>
+  <table style={tableStyle}>
+     <thead style={tableHeaderStyle}>
+        <tr>
+            <th style={cellStyle}>Condition</th>
+            <th style={{...cellStyle, width: '40%'}}>Affected Relatives (Select)</th>
+            <th style={cellStyle}>Comments / Details</th>
+        </tr>
+     </thead>
+     <tbody>
+         {[ // Base conditions
+            { key: 'HTN', label: 'HTN' },
+            { key: 'DM', label: 'DM' },
+            { key: 'Hyper_Thyroid', label: 'Hyper thyroid' },
+            { key: 'Hypo_Thyroid', label: 'Hypo thyroid' },
+            { key: 'Epileptic', label: 'Epileptic' },
+            { key: 'Vertigo', label: 'Vertigo' },
+            { key: 'Asthma', label: 'Asthma' },
+            { key: 'Mental_Illness', label: 'Mental Illness' },
+            { key: 'CNS', label: 'CNS' },
+            { key: 'CVS', label: 'CVS' },
+            { key: 'RS', label: 'RS' },
+            { key: 'ENT', label: 'ENT' },
+            { key: 'GIT', label: 'GIT' },
+            { key: 'KUB', label: 'KUB' },
+            { key: 'Musculo_Skeletal', label: 'Musculo Skeletal (Bone, Muscle,Tendon)' },
+            { key: 'Skin', label: 'Skin' },
+            { key: 'Dental_Oral', label: 'Dental /Oral' },
+            { key: 'Cancer', label: 'CANCER' },
+            { key: 'Defective_Colour_Vision', label: 'Defective Colour Vision' },
+            { key: 'Others', label: 'OTHERS' },
+         ].concat( // Conditionally add male-related
+            (sex === 'Male') ? [
+                { 
+                    key: 'Prostate_Genital', 
+                    label: 'Prostate & Genital',
+                    // Assign the specific dropdown options for this condition
+                    dropdownOptions: maleRelativeOptions 
+                }
+            ] : []
+         ).concat( // Conditionally add female-related
+            (sex === 'Female' || sex === 'Other') ? [
+                { 
+                    key: 'Obstetric', 
+                    label: 'Obstetric',
+                    // Assign the specific dropdown options for this condition
+                    dropdownOptions: femaleRelativeOptions
+                },
+                { 
+                    key: 'Gynaec', 
+                    label: 'Gynaec',
+                    // Assign the specific dropdown options for this condition
+                    dropdownOptions: femaleRelativeOptions
+                }
+            ] : []
+         ).map(({ key, label, dropdownOptions }) => { // <-- Destructure dropdownOptions here
+            
+            // Use the specific options if they exist, otherwise use the default ones
+            const currentOptions = dropdownOptions || familyConditionRelationshipOptions;
+
+            return (
+                <tr key={key}>
+                    <td style={{...cellStyle, verticalAlign: 'top', paddingTop: '0.75rem'}}>{label}</td>
+                    <td style={cellStyle}>
+                        <Select
+                            isMulti
+                            // Use the determined options for this row
+                            options={currentOptions}
+                            styles={customStyles}
+                            placeholder="Select affected relatives..."
+                            menuPlacement="auto"
+                            isDisabled={!isEditMode}
+                            // Also use the correct options list to find the selected value
+                            value={currentOptions.filter(option => Array.isArray(conditions[key]) && conditions[key].includes(option.value))}
+                            onChange={(selected) => handleSelectionChange(key, selected)}
+                        />
+                    </td>
+                    <td style={cellStyle}>
+                        <textarea
+                           value={familyHistory[key]?.comment || ''}
+                           style={textareaStyle}
+                           placeholder="Add comments about condition in family..."
+                           disabled={!isEditMode}
+                           onChange={(e) => handleFamilyMedicalConditionChange(key, "comment", e.target.value)}
+                           rows={2}
+                        />
+                    </td>
+                </tr>
+            );
+         })}
+     </tbody>
+  </table>
+</div>
 
              {/* --- SPOUSE SECTION IS HERE --- */}
             <div className="mb-6 mt-6 border-t border-gray-300 pt-4">

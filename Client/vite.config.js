@@ -6,7 +6,5 @@ export default defineConfig({
   build: {
     outDir: 'build',  
   },
-  server: {
-    port: "Give port number here..."
-  }
+ 
 });

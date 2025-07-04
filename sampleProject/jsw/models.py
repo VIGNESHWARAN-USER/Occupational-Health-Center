@@ -247,6 +247,7 @@ class eventsandcamps(BaseModel):
 
 # --- Haematology Model --- *MODIFIED*
 class heamatalogy(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     hemoglobin = models.TextField(max_length=255)
@@ -266,6 +267,12 @@ class heamatalogy(BaseModel):
     total_wbc_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
     total_wbc_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     total_wbc_comments = models.TextField(max_length=255)
+    
+    Haemotocrit = models.TextField(max_length=255)
+    Haemotocrit_unit = models.TextField(max_length=255)
+    Haemotocrit_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Haemotocrit_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Haemotocrit_comments = models.TextField(max_length=255)
 
     neutrophil = models.TextField(max_length=255)
     neutrophil_unit = models.TextField(max_length=255)
@@ -340,14 +347,18 @@ class heamatalogy(BaseModel):
     basophil_comments = models.TextField(max_length=255)
 
     peripheral_blood_smear_rbc_morphology = models.TextField(max_length=255)
+    peripheral_blood_smear_rbc_morphology_comments = models.TextField(max_length=255)
     peripheral_blood_smear_parasites = models.TextField(max_length=255)
+    peripheral_blood_smear_parasites_comments = models.TextField(max_length=255)
     peripheral_blood_smear_others = models.TextField(max_length=255)
+    peripheral_blood_smear_others_comments = models.TextField(max_length=255)
 
-    def __str__(self):
+    def _str_(self):
         return f"Haematology Report {self.id} for Emp {self.emp_no}"
 
 # --- Routine Sugar Tests Model --- *MODIFIED*
 class RoutineSugarTests(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     glucose_f = models.TextField(max_length=255)
@@ -385,6 +396,7 @@ class RoutineSugarTests(BaseModel):
 
 # --- Renal Function Test Model --- *MODIFIED*
 class RenalFunctionTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     urea = models.TextField(max_length=255)
@@ -459,13 +471,15 @@ class RenalFunctionTest(BaseModel):
 
 # --- Lipid Profile Model --- *MODIFIED*
 class LipidProfile(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
-    calcium = models.TextField(max_length=255) # Note: Calcium usually in RFT, consider if intended here
-    calcium_unit = models.TextField(max_length=255)
-    calcium_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    calcium_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
-    calcium_comments = models.TextField(max_length=255)
+    
+    Total_Cholesterol= models.TextField(max_length=255) # Note: Total Cholesterol
+    Total_Cholesterol_unit = models.TextField(max_length=255)
+    Total_Cholesterol_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Total_Cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Total_Cholesterol_comments = models.TextField(max_length=255)
 
     triglycerides = models.TextField(max_length=255)
     triglycerides_unit = models.TextField(max_length=255)
@@ -503,11 +517,12 @@ class LipidProfile(BaseModel):
     ldl_hdl_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     ldl_hdl_ratio_comments = models.TextField(max_length=255)
 
-    def __str__(self):
+    def _str_(self):
         return f"Lipid Profile Report {self.id} for Emp {self.emp_no}"
 
 # --- Liver Function Test Model --- *MODIFIED*
 class LiverFunctionTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     bilirubin_total = models.TextField(max_length=255)
@@ -581,6 +596,7 @@ class LiverFunctionTest(BaseModel):
 
 # --- Thyroid Function Test Model --- *MODIFIED*
 class ThyroidFunctionTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     t3_triiodothyronine = models.TextField(max_length=255)
@@ -607,6 +623,7 @@ class ThyroidFunctionTest(BaseModel):
 # --- Autoimmune test Model --- *MODIFIED*
  
 class AutoimmuneTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     ANA = models.TextField(max_length=255)
@@ -641,6 +658,7 @@ class AutoimmuneTest(BaseModel):
 
 # --- Coagulation Test Model --- *MODIFIED*
 class CoagulationTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     prothrombin_time = models.TextField(max_length=255)
@@ -672,6 +690,7 @@ class CoagulationTest(BaseModel):
 
 # --- Enzymes Cardiac Profile Model --- *MODIFIED*
 class EnzymesCardiacProfile(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     acid_phosphatase = models.TextField(max_length=255)
@@ -693,9 +712,6 @@ class EnzymesCardiacProfile(BaseModel):
     amylase_comments = models.TextField(max_length=255)
 
     ecg = models.TextField(max_length=255)
-    ecg_unit = models.TextField(max_length=255)
-    ecg_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ecg_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     ecg_comments = models.TextField(max_length=255)
 
     troponin_t = models.TextField(max_length=255)
@@ -718,9 +734,6 @@ class EnzymesCardiacProfile(BaseModel):
     cpk_total_comments = models.TextField(max_length=255)
 
     echo = models.TextField(max_length=255)
-    echo_unit = models.TextField(max_length=255)
-    echo_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    echo_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     echo_comments = models.TextField(max_length=255)
 
     lipase = models.TextField(max_length=255)
@@ -736,16 +749,14 @@ class EnzymesCardiacProfile(BaseModel):
     cpk_mb_comments = models.TextField(max_length=255)
 
     tmt_normal = models.TextField(max_length=255)
-    tmt_normal_unit = models.TextField(max_length=255)
-    tmt_normal_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    tmt_normal_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     tmt_normal_comments = models.TextField(max_length=255)
 
-    def __str__(self):
+    def _str_(self):
         return f"Enzymes & Cardiac Profile Report {self.id} for Emp {self.emp_no}"
 
 # --- Urine Routine Test Model --- *MODIFIED*
 class UrineRoutineTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     colour = models.TextField(max_length=255)
@@ -849,6 +860,7 @@ class UrineRoutineTest(BaseModel):
 
 # --- Serology Test Model --- *MODIFIED*
 class SerologyTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     screening_hiv = models.TextField(max_length=255)
@@ -911,6 +923,7 @@ class SerologyTest(BaseModel):
 
 # --- Motion Test Model --- *MODIFIED*
 class MotionTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     colour_motion = models.TextField(max_length=255)
@@ -975,6 +988,7 @@ class MotionTest(BaseModel):
 
 # --- Culture Sensitivity Test Model --- *MODIFIED*
 class CultureSensitivityTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     urine = models.TextField(max_length=255)
@@ -1006,6 +1020,7 @@ class CultureSensitivityTest(BaseModel):
 
 # --- Mens Pack Model --- *MODIFIED*
 class MensPack(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     psa = models.TextField(max_length=255)
@@ -1019,6 +1034,7 @@ class MensPack(BaseModel):
  
  # --- Womens Pack Model --- *MODIFIED*
 class WomensPack(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar 
     Mammogaram  = models.TextField(max_length=255)
@@ -1032,6 +1048,7 @@ class WomensPack(BaseModel):
     
  # --- OccupationalProfile Model --- *MODIFIED*    
 class OccupationalProfile(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar     
     Audiometry  = models.TextField(max_length=255)
@@ -1045,9 +1062,13 @@ class OccupationalProfile(BaseModel):
    
  # --- Others Test Model --- *MODIFIED*      
 class OthersTest(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar   
     Bone_Densitometry = models.TextField(max_length=255)
+    Bone_Densitometry_unit = models.TextField(max_length=255)
+    Bone_Densitometry_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Bone_Densitometry_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Bone_Densitometry_comments = models.TextField(max_length=255)
     
     Dental = models.TextField(max_length=255)
@@ -1056,12 +1077,13 @@ class OthersTest(BaseModel):
     Pathology = models.TextField(max_length=255)
     Pathology_comments = models.TextField(max_length=255)
     
-    def __str__(self):
+    def _str_(self):
         return f"Others Test {self.id} for Emp {self.emp_no}"
     
 
 # --- Ophthalmic Report Model --- *MODIFIED*
 class OphthalmicReport(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     vision = models.TextField(max_length=255)
@@ -1077,6 +1099,7 @@ class OphthalmicReport(BaseModel):
         return f"Ophthalmic Report {self.id} for Emp {self.emp_no}"
 
 class XRay(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     Chest = models.TextField(max_length=255)
@@ -1099,6 +1122,7 @@ class XRay(BaseModel):
     
 # --- USG Report Model --- *MODIFIED*
 class USGReport(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     usg_abdomen = models.TextField(max_length=255)
@@ -1119,6 +1143,7 @@ class USGReport(BaseModel):
 # --- CT Report Model --- *MODIFIED*
 
 class CTReport(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     CT_brain = models.TextField(max_length=255)
@@ -1141,6 +1166,7 @@ class CTReport(BaseModel):
     
 # --- MRI Report Model --- *MODIFIED*
 class MRIReport(BaseModel):
+    checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     mri_brain = models.TextField(max_length=255)
@@ -1228,6 +1254,16 @@ class FitnessAssessment(BaseModel):
     romberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
     acrophobia = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
     trendelenberg_test = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    CO_dizziness=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    MusculoSkeletal_Movements=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Claustrophobia=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Tandem =models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Nystagmus_Test=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Dysdiadochokinesia=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Finger_nose_test=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Psychological_PMK=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+    Psychological_zollingar=models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)
+
     otherJobNature = models.CharField(max_length=225, blank=True, null=True)
     conditionalotherJobNature = models.CharField(max_length=225, blank=True, null=True)
     #special cases
@@ -1267,6 +1303,7 @@ class FitnessAssessment(BaseModel):
 class VaccinationRecord(BaseModel):
     emp_no = models.CharField(max_length=30)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo=models.CharField(max_length=255,blank=True,null=True)
     vaccination = models.JSONField(default=list)
 
     def __str__(self):
@@ -1432,6 +1469,7 @@ class ExpiryRegister(BaseModel):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     removed_date = models.DateField(null=True, blank=True)
+    total_quantity = models.PositiveIntegerField()
 
     def __str__(self):
         return f"{self.brand_name} - {self.dose_volume} ({self.expiry_date})"
@@ -1446,6 +1484,7 @@ class DiscardedMedicine(BaseModel):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     reason = models.TextField()
+    total_quantity=models.PositiveBigIntegerField()
 
 
     def __str__(self):
@@ -1462,6 +1501,7 @@ class WardConsumables(BaseModel):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     consumed_date = models.DateField(auto_now_add=True) # Sets on creation
+    total_quantity=models.PositiveBigIntegerField()
 
     def __str__(self):
         consumed_date_str = self.consumed_date.strftime('%Y-%m-%d') if self.consumed_date else 'N/A'
@@ -1477,6 +1517,7 @@ class AmbulanceConsumables(models.Model):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     consumed_date = models.DateField(auto_now_add=True)  # Date when medicine was discarded
+    total_quantity=models.PositiveBigIntegerField()
 
     def _str_(self):
         return f"{self.brand_name} ({self.dose_volume}) - {self.discarded_date}"
@@ -1686,8 +1727,7 @@ class PharmacyStockHistory(models.Model):
     dose_volume = models.CharField(max_length=50)
     total_quantity = models.PositiveIntegerField(default=0) # Quantity at time of archival
     expiry_date = models.DateField()
-    # Consider adding a field for the date it was moved to history,
-    # e.g., archived_date = models.DateTimeField(auto_now_add=True)
+    
 
     def __str__(self): # Corrected from _str_
         return f"{self.brand_name} ({self.chemical_name}) - Archived History"

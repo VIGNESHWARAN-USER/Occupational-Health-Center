@@ -58,7 +58,7 @@ urlpatterns = [
     path("addCT", views.add_ct_function, name="addCT"),
 
     path("vaccination/", views.insert_vaccination, name="insert_vaccination"),
-    path("getvaccinations/", views.fetch_vaccinations, name="get_vaccination"),
+    path("getvaccinations/<str:aadhar>", views.fetch_vaccinations, name="get_vaccination"),
     path("fitness-tests/", views.fitness_test, name="fitness_test"),
     path('consultations/add/', views.add_consultation, name='add_consultation'),
     path('significant_notes/add/', views.add_significant_notes, name='add_significant_note'),
@@ -132,8 +132,11 @@ urlpatterns = [
     path('get_red_status_count/', views.get_red_status_count, name='get_red_status_count'),
     path('hrupload', views.hrupload, name='hrupload'),
 
-    
+    path('get_investigation_details/<str:aadhar>', views.get_investigation_details, name = 'get_investigations-details'),
     path('update-pharmacy-stock/', views.update_pharmacy_stock, name='update_pharmacy_stock'),
+    path(
+        'get-chemical-names/',  views.get_chemical_name_suggestions,  name='get-chemical-name-suggestions'
+    ),
   
 ]
 

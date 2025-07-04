@@ -20,6 +20,7 @@ const AllAppointments = () => {
     "Annual / Periodical", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
     "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)",
+    "Review"
   ];
 
   // Fetch employee data

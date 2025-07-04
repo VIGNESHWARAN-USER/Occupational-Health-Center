@@ -54,7 +54,8 @@ const ExpiryRegister = () => {
       "Brand Name": item.brand_name,
       "Chemical Name": item.chemical_name,
       "Dose/Volume": item.dose_volume,
-      Quantity: item.quantity,
+      "Quantity": item.quantity,
+      "Total_quantity":item.Total_quantity,
       "Expiry Date": formatDate(item.expiry_date),
       "Removed Date": formatDate(item.removed_date),
     }));
@@ -127,6 +128,7 @@ const ExpiryRegister = () => {
                   <th className="p-3 text-left">Chemical Name</th>
                   <th className="p-3 text-left">Dose/Volume</th>
                   <th className="p-3 text-left">Quantity</th>
+                  <th className="p-3 text-left">Total_quantity</th>
                   <th className="p-3 text-left">Expiry Date</th>
                   <th className="p-3 text-left">Removed Date</th>
                 </tr>
@@ -140,6 +142,7 @@ const ExpiryRegister = () => {
                       <td className="p-3 text-gray-600">{item.chemical_name}</td>
                       <td className="p-3">{item.dose_volume}</td>
                       <td className="p-3 font-bold">{item.quantity}</td>
+                      <td className="p-3 font-bold">{item.total_quantity}</td>
                       <td className="p-3">{formatDate(item.expiry_date)}</td>
                       <td className="p-3 text-green-700 font-semibold">
                         {formatDate(item.removed_date)}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import Select from "react-select";
 import { FaTrash } from "react-icons/fa";
@@ -13,7 +14,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
   let aadhar = data?.[0]?.aadhar || "";
   const emp_no = data?.[0]?.emp_no;
   const existingPrescription = data?.[0]; // Assuming 'data' prop might contain an existing prescription
-  // const prescriptionId = existingPrescription?.id; // Not used, but kept for context
 
   // State for different medicine types
   const [tablets, setTablets] = useState([]);
@@ -29,25 +29,26 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
   const [dressingItems, setDressingItems] = useState([]);
   const [others, setOthers] = useState([]);
   const [nurseNotes, setNurseNotes] = useState("");
-  const [consultedDoctor, setConsultedDoctor] = useState(""); // New state for consulted doctor
+  const [consultedDoctor, setConsultedDoctor] = useState("");
   const [error, setError] = useState("");
 
   // State for suggestions
+  const [chemicalSuggestions, setChemicalSuggestions] = useState({}); // New state for chemical suggestions
   const [brandSuggestions, setBrandSuggestions] = useState({});
   const [doseSuggestions, setDoseSuggestions] = useState({});
   const [qtySuggestions, setQtySuggestions] = useState({});
   const [expiryDateSuggestions, setExpiryDateSuggestions] = useState({});
-  const [doctorSuggestions, setDoctorSuggestions] = useState([]); // New for consulted doctor
+  const [doctorSuggestions, setDoctorSuggestions] = useState([]);
 
+  const [showChemicalSuggestions, setShowChemicalSuggestions] = useState({}); // New state for visibility
   const [showBrandSuggestions, setShowBrandSuggestions] = useState({});
   const [showDoseSuggestions, setShowDoseSuggestions] = useState({});
   const [showQtySuggestions, setShowQtySuggestions] = useState({});
   const [showExpiryDateSuggestions, setShowExpiryDateSuggestions] = useState({});
-  const [showDoctorSuggestions, setShowDoctorSuggestions] = useState(false); // New
+  const [showDoctorSuggestions, setShowDoctorSuggestions] = useState(false);
 
   const [doseManuallyEntered, setDoseManuallyEntered] = useState({});
   const [qtyManuallyEntered, setQtyManuallyEntered] = useState({});
-
   const [expandedSections, setExpandedSections] = useState([]);
 
   // Mappings and constants
@@ -73,7 +74,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
   const isNurseWithOverride = isNurse && register && typeof register === 'string' && register.toUpperCase().startsWith("OVER");
   console.log("Is Nurse with Override:", isNurseWithOverride);
 
-
   // Default row structure
   const getDefaultRow = useCallback(
     () => ({
@@ -97,16 +97,15 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         nurse_notes: "", consulted_doctor: "",
       };
 
-      if (condition && existingPrescription) { // Ensure existingPrescription is checked when condition is true
+      if (condition && existingPrescription) {
         const mapTiming = (timing) => {
           if (!timing) return [];
-          if (Array.isArray(timing)) return timing.map(t => ({ value: t, label: t })); // Ensure it's in react-select format if loaded from DB
+          if (Array.isArray(timing)) return timing.map(t => ({ value: t, label: t }));
           return String(timing).split(",").map(t => {
             const val = t.trim();
             if (val === "M") return { value: "Morning", label: "Morning" };
-            if (val === "A" || val === "AN") return { value: "AN", label: "AN" }; // Handle 'A' for Afternoon
+            if (val === "A" || val === "AN") return { value: "AN", label: "AN" };
             if (val === "N") return { value: "Night", label: "Night" };
-            // Add more mappings if needed or return as is if already correct format
             return { value: val, label: val };
           });
         };
@@ -168,21 +167,48 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         console.warn("Attempted to add row for unknown type:", type);
     }
   };
+  
+  // NEW: Fetch suggestions for Chemical Name
+  const fetchChemicalSuggestions = useCallback(
+    debounce(async (partialName, medicineForm, type, index) => {
+      if (["sutureProcedureItems", "dressingItems"].includes(type)) {
+        setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+        return;
+      }
+      if (partialName?.length < 2 || !medicineForm) {
+        setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+        return;
+      }
+      try {
+        const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-names/?name=${encodeURIComponent(partialName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
+        setChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
+        setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
+      } catch (error) {
+        console.error("Error fetching chemical suggestions:", error);
+        setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+      }
+    }, 500),
+    []
+  );
 
-  // --- Suggestion Fetching Functions ---
   const fetchBrandSuggestions = useCallback(
     debounce(async (chemicalName, medicineForm, type, index) => {
-      if (chemicalName?.length < 3 || !medicineForm) { /* ... hide suggestions ... */ return; }
+      if (chemicalName?.length < 3 || !medicineForm) {
+        setShowBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+        return;
+      }
       try {
-        const response = await axios.get(
-          `https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
-        );
-        setBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
-        setShowBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
-      } catch (error) { /* ... handle error, hide suggestions ... */ }
+        const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
+        setBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
+        setShowBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
+      } catch (error) {
+        console.error("Error fetching brand suggestions:", error);
+        setShowBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+      }
     }, 500), []
   );
 
+  // ... (other fetch functions remain the same)
   const fetchDoseSuggestions = useCallback(
     debounce(async (brandName, chemicalName, medicineForm, type, index) => {
       const requiresDoseFetch = [ "tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
@@ -238,6 +264,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       } catch (error) { console.error("Error fetching doctor suggestions:", error); setDoctorSuggestions([]); setShowDoctorSuggestions(false); }
     }, 500), []
   );
+
 
   const updateRowState = (type, index, field, value) => {
     const getUpdater = (setter) => (prevState) => prevState.map((item, i) => i === index ? { ...item, [field]: value } : item);
@@ -297,6 +324,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
 
         if (standardSuggestionTypes.includes(type)) {
           if (field === "chemicalName") {
+            fetchChemicalSuggestions(value, medicineFormValue, type, index); // UPDATED: Fetch chemical suggestions as user types
             fetchBrandSuggestions(value, medicineFormValue, type, index);
             if (brandName) fetchDoseSuggestions(brandName, value, medicineFormValue, type, index);
             setDoseManuallyEntered((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
@@ -353,8 +381,9 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       const standardSuggestionTypes = [ "tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"];
 
       if (standardSuggestionTypes.includes(type)) {
-        if (field === "brandName" && chemicalName) fetchDoseSuggestions(suggestion, chemicalName, medicineFormValue, type, index);
-        else if (field === "chemicalName") {
+        if (field === "brandName" && chemicalName) {
+            fetchDoseSuggestions(suggestion, chemicalName, medicineFormValue, type, index);
+        } else if (field === "chemicalName") {
           fetchBrandSuggestions(suggestion, medicineFormValue, type, index);
           if (brandName) fetchDoseSuggestions(brandName, suggestion, medicineFormValue, type, index);
         }
@@ -362,11 +391,15 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
             fetchQtySuggestions(chemicalName, brandName, expiryDate, type, index);
         }
       }
+      // UPDATED: Hide the correct suggestion box after click
       const hideMap = { brandName: setShowBrandSuggestions, chemicalName: setShowChemicalSuggestions };
-      if (hideMap[field]) hideMap[field]((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+      if (hideMap[field]) {
+        hideMap[field]((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
+      }
     }, 150);
   };
-
+  
+  // ... (other handle...Click functions remain the same)
   const handleDoseSuggestionClick = (suggestion, type, index) => {
     if (!isDoctor && !isNurseWithOverride) return;
     setDoseManuallyEntered((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
@@ -394,35 +427,50 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     setShowDoctorSuggestions(false);
   };
 
-  const renderSuggestions = (type, index, field) => {
-    let suggestionsList, showSuggestionsState;
-    const hasBrandChemicalSuggestions = [ "tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
-    if (!hasBrandChemicalSuggestions) return null;
 
-    if (field === "brandName") {
-        const currentItem = getCurrentItemState(type, index);
-        if (currentItem?.chemicalName) { suggestionsList = brandSuggestions; showSuggestionsState = showBrandSuggestions; }
-        else { suggestionsList = {}; showSuggestionsState = {}; }
-    } else if (field === "chemicalName") { suggestionsList = brandSuggestions; showSuggestionsState = showBrandSuggestions; }
-    else return null;
-
-    const suggestions = suggestionsList?.[type]?.[index] || [];
-    const showSuggestions = showSuggestionsState?.[type]?.[index] || false;
-
-    if ((isDoctor || isNurseWithOverride) && showSuggestions && suggestions.length > 0) {
+  // NEW: Render function for chemical name suggestions
+  const renderChemicalSuggestions = (type, index) => {
+    const suggestions = chemicalSuggestions?.[type]?.[index] || [];
+    const show = showChemicalSuggestions?.[type]?.[index] || false;
+    if ((isDoctor || isNurseWithOverride) && show && suggestions.length > 0) {
       return (
         <div className="absolute z-20 bg-white border border-gray-300 rounded-md shadow-lg mt-1 w-full max-h-48 overflow-y-auto">
           {suggestions.map((suggestion, i) => (
-            <div key={`${type}-${index}-${field}-sugg-${i}`} className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm"
-              onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(suggestion, type, index, field); }}>
+            <div key={`${type}-${index}-chem-sugg-${i}`} className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+              onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(suggestion, type, index, "chemicalName"); }}>
               {suggestion}
             </div>
           ))}
         </div>
       );
-    } return null;
+    }
+    return null;
   };
 
+  // REFACTORED: Renamed from renderSuggestions to be specific to brands
+  const renderBrandSuggestions = (type, index) => {
+    const hasBrandSuggestions = ["tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
+    if (!hasBrandSuggestions) return null;
+
+    const suggestions = brandSuggestions?.[type]?.[index] || [];
+    const show = showBrandSuggestions?.[type]?.[index] || false;
+
+    if ((isDoctor || isNurseWithOverride) && show && suggestions.length > 0) {
+      return (
+        <div className="absolute z-20 bg-white border border-gray-300 rounded-md shadow-lg mt-1 w-full max-h-48 overflow-y-auto">
+          {suggestions.map((suggestion, i) => (
+            <div key={`${type}-${index}-brand-sugg-${i}`} className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-sm"
+              onMouseDown={(e) => { e.preventDefault(); handleSuggestionClick(suggestion, type, index, "brandName"); }}>
+              {suggestion}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // ... (other render...Suggestions functions remain the same)
   const renderDoseVolumeSuggestions = (type, index) => {
     const requiresDose = [ "tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
     if (!requiresDose) return null;
@@ -476,6 +524,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     } return null;
   };
 
+
   const renderInputFields = (type, items, index) => {
     const item = items[index];
     if (!item) return null;
@@ -504,16 +553,19 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       placeholder: (provided) => ({ ...provided, color: "#9ca3af" }),
     };
 
+    // UPDATED: Chemical input now renders its own suggestions
     const renderChemicalInput = () => (
       <div className="relative">
         <input type="text" placeholder="Chemical Name" value={item.chemicalName || ""}
           onChange={(e) => handleInputChange(e, type, index, "chemicalName")}
-          onFocus={() => { if (item.chemicalName?.length >= 3 && (isDoctor || isNurseWithOverride)) { fetchBrandSuggestions(item.chemicalName, medicineForms[type], type, index); } }}
-          onBlur={() => setTimeout(() => setShowBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } })), 200)}
+          onFocus={() => { if (item.chemicalName?.length >= 2 && (isDoctor || isNurseWithOverride)) { fetchChemicalSuggestions(item.chemicalName, medicineForms[type], type, index); } }}
+          onBlur={() => setTimeout(() => setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } })), 200)}
           className={`${inputBaseClass} ${fieldDisabledClass}`} disabled={isFieldDisabledForCurrentUser} autoComplete="off" />
-        {renderSuggestions(type, index, "chemicalName")}
+        {renderChemicalSuggestions(type, index)}
       </div>
     );
+
+    // UPDATED: Brand input now renders brand-specific suggestions
     const renderBrandInput = () => {
       const showField = ["tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
       if (!showField) return null;
@@ -522,12 +574,14 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
           <input type="text" placeholder="Brand Name" value={item.brandName || ""}
             onChange={(e) => handleInputChange(e, type, index, "brandName")}
             onFocus={() => { if (item.chemicalName && (isDoctor || isNurseWithOverride)) { fetchBrandSuggestions(item.chemicalName, medicineForms[type], type, index); } }}
-            onBlur={() => setTimeout(() => setShowBrandSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } })), 200)}
+            onBlur={() => setTimeout(() => setShowBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } })), 200)}
             className={`${inputBaseClass} ${fieldDisabledClass}`} disabled={isFieldDisabledForCurrentUser} autoComplete="off" />
-          {renderSuggestions(type, index, "brandName")}
+          {renderBrandSuggestions(type, index)}
         </div>
       );
     };
+
+    // ... (other render...Input functions remain the same)
     const renderDoseInput = () => {
       const showField = ["tablets", "syrups", "drops", "creams", "lotions", "powder", "others", "injections", "respules", "fluids"].includes(type);
       if (!showField) return null;
@@ -578,7 +632,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     };
     const renderExpiryDateInput = () => (
         <div className="relative">
-            <input type="date" placeholder="Expiry Date" value={item.expiryDate || ""}
+            <input type="text" placeholder="Expiry Date" value={item.expiryDate || ""}
                 onChange={(e) => handleInputChange(e, type, index, "expiryDate")}
                 onFocus={() => { if (item.chemicalName && item.brandName && item.doseVolume && (isDoctor || isNurseWithOverride)) { fetchExpiryDateSuggestions(item.chemicalName, item.brandName, item.doseVolume, type, index); } }}
                 onBlur={() => setTimeout(() => setShowExpiryDateSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: false } })), 200)}
@@ -610,7 +664,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       default: return null;
     }
   };
-
+  
+  // ... (handleSubmit and handleGeneratePrescription remain the same)
   const filterEmptyRows = (items) => {
     if (!Array.isArray(items) || items.length === 0) return [];
     return items.filter(item => (item?.chemicalName?.trim() !== "") || (item?.qty != null && String(item.qty).trim() !== "") || (item?.expiryDate?.trim() !== "") || (item?.issuedIn?.trim() !== "") || (item?.issuedOut?.trim() !== "") || (item?.prescriptionOut?.trim() !== ""));
@@ -618,6 +673,10 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
 
   const handleSubmit = async () => {
     try {
+      if (mrdNo === "") {
+      alert("Please submit the entries first to get MRD Number");
+      return;
+    }
       if (!mrdNo) { setError("MRD number is required"); alert("Please ensure MRD number is available."); return; }
 
       const allMedicineTypes = { tablets, injections, syrups, drops, creams, respules, lotions, fluids, powder, suture_procedure: sutureProcedureItems, dressing: dressingItems, others };
@@ -731,7 +790,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     addText("Doctor's Signature", signatureX, signatureY + lineHeight / 2, { fontSize: 9 });
     const filename = `prescription-${emp_no}-${new Date().toISOString().split("T")[0]}.pdf`; doc.save(filename);
   };
-
+  
+  // ... (rest of the component, ActionButton, RemoveButton, toggleSection, etc. remain the same)
   const ActionButton = ({ onClick, disabled = false, children, color = "blue", title = "", className = "" }) => (
     <button type="button" onClick={onClick} disabled={disabled} title={title}
       className={`bg-${color}-600 hover:bg-${color}-700 text-white font-bold py-2 px-4 rounded transition duration-150 ease-in-out text-sm focus:outline-none focus:ring-2 focus:ring-${color}-500 focus:ring-opacity-50 ${disabled ? "cursor-not-allowed opacity-50" : ""} ${className}`}>
@@ -819,7 +879,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
   if (!aadhar && !existingPrescription) {
     return <div className="p-6 text-center text-gray-500">Please select an employee to view or create a prescription.</div>;
   }
-
+  
+  // The final JSX return remains the same, as the changes were in the functions it calls.
   return (
     <div className="bg-gray-50 min-h-screen p-4 md:p-6 space-y-6">
       <h1 className="text-xl md:text-2xl font-bold text-gray-800 border-b pb-2 mb-6">
@@ -899,4 +960,5 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     </div>
   );
 };
+
 export default Prescription;

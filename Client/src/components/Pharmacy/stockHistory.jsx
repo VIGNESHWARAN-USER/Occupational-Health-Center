@@ -36,7 +36,7 @@ const StockHistory = () => {
 
       const stockHistory = (historyRes.data.stock_history || []).map(item => ({
         ...item,
-        dataType: 'History',
+        dataType: 'Expired',
         // Ensure field name matches backend response (total_quantity_recorded or total_quantity_sum)
         displayQuantity: item.total_quantity_recorded || item.total_quantity_sum
       }));

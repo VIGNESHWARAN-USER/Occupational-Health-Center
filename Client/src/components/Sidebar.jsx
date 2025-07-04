@@ -90,7 +90,7 @@ const Sidebar = () => {
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
-      { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
       { name: "Data Upload", to: "../dataupload", icon: <FaUpload /> },
       { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' }, // Added badge identifier
     ],
@@ -102,7 +102,7 @@ const Sidebar = () => {
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
-      { name: "Appointments and Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
       { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' }, // Added badge identifier
     ],
     admin: [
@@ -114,7 +114,7 @@ const Sidebar = () => {
       { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
       { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
       { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
-      { name: "Prescription In", to: "../prescriptionin", icon: <MdReceipt /> }, // Re-added based on previous version logic might imply it's needed
+      { name: "Daily Usage", to: "../prescriptionin", icon: <MdReceipt /> }, // Re-added based on previous version logic might imply it's needed
       { name: "Current Expiry", to: "../currentexpiry", icon: <MdWarning />, badgeName: 'expiry' }, // Added badge identifier
       { name: "Expiry Register", to: "../expiryregister", icon: <MdWarning /> },
       { name: "Discard/Damaged", to: "../discarddamaged", icon: <MdDelete /> },
