@@ -60,7 +60,17 @@ urlpatterns = [
     path("vaccination/", views.insert_vaccination, name="insert_vaccination"),
     path("getvaccinations/<str:aadhar>", views.fetch_vaccinations, name="get_vaccination"),
     path("fitness-tests/", views.fitness_test, name="fitness_test"),
+    path('medical-certificate/submit/', views.add_or_update_medical_certificate, name='add-medical-certificate'),
+    #path('personal-leave-certificate/add/', views.add_personal_leave_certificate, name='add-personal-leave-certificate'),
+    path('medical-certificate/get/', views.get_medical_certificate_data, name='get_medical_certificate_data'),
+    path('add_alcohol_form_data/', views.add_alcohol_form_data, name='add_alcohol_form_data'),             ################################################################
     path('consultations/add/', views.add_consultation, name='add_consultation'),
+    path('get_alcohol_form_data/', views.get_alcohol_form_data, name='get_alcohol_form_data'),
+    path('personal-leave/get/', views.get_personal_leave_data, name='get_personal_leave_data'),
+    path('personal-leave/save/', views.save_personal_leave_data, name='save_personal_leave_data'),
+
+
+
     path('significant_notes/add/', views.add_significant_notes, name='add_significant_note'),
     path('get_notes/<str:aadhar>', views.get_notes, name='get_notes_by_aadhar'),
     path('get_notes/', views.get_notes_all, name='get_notes_all'),
@@ -131,7 +141,7 @@ urlpatterns = [
     path('get_current_expiry_count/', views.get_current_expiry_count, name='get_current_expiry_count'),
     path('get_red_status_count/', views.get_red_status_count, name='get_red_status_count'),
     path('hrupload', views.hrupload, name='hrupload'),
-
+    path('medicalupload', views.MedicalDataUploadView.as_view(), name='medical_upload'),
     path('get_investigation_details/<str:aadhar>', views.get_investigation_details, name = 'get_investigations-details'),
     path('update-pharmacy-stock/', views.update_pharmacy_stock, name='update_pharmacy_stock'),
     path(

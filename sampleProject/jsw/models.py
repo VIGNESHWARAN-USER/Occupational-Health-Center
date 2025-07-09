@@ -1,6 +1,7 @@
 from django.db import models, transaction
 from datetime import date, datetime
 from django.utils import timezone # Import timezone
+from django.utils.translation import gettext_lazy as _
 
 # --- Abstract Base Model ---
 class BaseModel(models.Model):
@@ -83,6 +84,7 @@ class employee_details(BaseModel):
     addressOrganization = models.CharField(max_length=255, blank=True)
     visiting_department = models.CharField(max_length=255, blank=True)
     visiting_date_from = models.DateField(null=True, blank=True)
+    visiting_date_to = models.DateField(null=True, blank=True)
     stay_in_guest_house = models.CharField(max_length=50, blank=True)
     visiting_purpose = models.CharField(max_length=255, blank=True)
     year = models.CharField(max_length=4, blank=True)
@@ -101,6 +103,8 @@ class employee_details(BaseModel):
     mrdNo = models.CharField(max_length=255, blank=True)
     guardian = models.CharField(max_length=255, blank=True)
     otherRegister = models.CharField(max_length=255, blank=True)
+    previousemployer=models.CharField(max_length=255,blank=True)
+    previouslocation=models.CharField(max_length=255,blank=True)
 
     def __str__(self):
         return self.emp_no if self.emp_no else f"Employee {self.id}" # Handle missing emp_no
@@ -1689,6 +1693,165 @@ class Form27(BaseModel):
 
     def __str__(self):
         return f"Form 27 - {self.nameOfWorks or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
+    
+
+
+# your_app/models.py
+
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+# from .base import BaseModel  # Assuming your BaseModel is in base.py
+# from .models import employee_details # Assuming employee_details is in the same models.py
+
+# It's better to explicitly import what you need
+# from your_app.base import BaseModel
+# from your_app.models import employee_details
+
+class alcohol_form(BaseModel): # Or models.Model if you don't have a BaseModel
+    # --- Link to Employee and Date (Recommended for uniqueness) ---
+    employee = models.ForeignKey('employee_details', on_delete=models.CASCADE, related_name='alcohol_forms')
+    date = models.DateField(_("Date of Test"), null=True)
+    mrdNo = models.CharField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+
+    # --- CORRECTED FIELDS: Using standard Python/Django snake_case ---
+    alcohol_breath_smell = models.CharField(max_length=255, blank=True, null=True)
+    speech = models.CharField(max_length=255, blank=True, null=True)
+    dryness_of_mouth = models.CharField(max_length=255, blank=True, null=True)
+    dryness_of_lips = models.CharField(max_length=255, blank=True, null=True)
+    cns_pupil_reaction = models.CharField(max_length=255, blank=True, null=True)
+    hand_tremors = models.CharField(max_length=255, blank=True, null=True)
+    alcohol_analyzer_study = models.CharField(max_length=255, blank=True, null=True)
+    remarks = models.TextField(blank=True, null=True)
+    advice = models.TextField(blank=True, null=True)
+
+    class Meta:
+        # This ensures one employee can only have one alcohol form per day
+        unique_together = ('employee', 'date')
+        ordering = ['-date']
+
+    def __str__(self):
+        # Assuming your employee_details model has a 'name' field
+        return f"Alcohol Form for {self.employee.name} on {self.date}"
+
+class PersonalLeaveCertificate(models.Model):
+    YES_NO_CHOICES = [('Yes', 'Yes'),('No', 'No'),]
+    SEX_CHOICES = [('Male', 'Male'),('Female', 'Female'), ('Other', 'Other'),]
+    mrdNo = models.CharField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    employeeName = models.CharField(_("Employee Name"), max_length=255, blank=True)
+    age = models.PositiveIntegerField(_("Age"), null=True, blank=True)
+    sex = models.CharField(_("Sex"), max_length=10, choices=SEX_CHOICES, blank=True)
+    empNo = models.CharField(_("Employee Number"), max_length=50, blank=True)
+    department = models.CharField(_("Department"), max_length=100, blank=True)
+    date = models.DateField(_("Date of Certificate"), null=True, blank=True)
+    jswContract = models.CharField(_("JSW / Contract"), max_length=100, blank=True)
+    natureOfWork = models.CharField(_("Nature of Work"), max_length=255, blank=True)
+
+    hasSurgicalHistory = models.CharField( _("Surgical & Medical History"),  max_length=3,  choices=YES_NO_CHOICES, blank=True)
+    covidVaccination = models.CharField( _("Covid Vaccination"),  max_length=3,  choices=YES_NO_CHOICES,  blank=True )
+    personalLeaveDescription = models.TextField(_("Personal Leave Description"), blank=True)
+    leaveFrom = models.DateField(_("Leave From"), null=True, blank=True)
+    leaveUpTo = models.DateField(_("Leave Up To"), null=True, blank=True)
+    daysLeave = models.PositiveIntegerField(_("Number of Days Leave"), null=True, blank=True)
+    rejoiningDate = models.DateField(_("Re-joining Duty On"), null=True, blank=True)
+
+    bp = models.CharField(_("Blood Pressure (BP)"), max_length=20, blank=True)
+    pr = models.CharField(_("Pulse Rate (PR)"), max_length=20, blank=True)
+    spo2 = models.CharField(_("SPO2"), max_length=20, blank=True)
+    temp = models.CharField(_("Temperature"), max_length=20, blank=True)
+
+    
+    
+    note = models.TextField(_("Note"), blank=True)
+    ohcStaffSignature = models.CharField(_("OHC Staff Signature"), max_length=255, blank=True)
+    individualSignature = models.CharField(_("Individual Signature"), max_length=255, blank=True)
+    
+    
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        """String representation of the model instance."""
+        return f"Leave Certificate for {self.employeeName or 'N/A'} on {self.date or 'Unknown Date'}"
+
+    class Meta:
+        verbose_name = _("Personal Leave Certificate")
+        verbose_name_plural = _("Personal Leave Certificates")
+        ordering = ['-date', '-created_at']
+
+class MedicalCertificate(models.Model):
+    # --- Choices for specific fields ---
+    
+    SEX_CHOICES = [('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other'),]
+    VACCINATION_CHOICES = [ ('Yes', 'Yes'), ('No', 'No'), ('Partial', 'Partial'),]
+    SHIFT_CHOICES = [('G', 'G Shift'), ('A', 'A Shift'), ('B', 'B Shift'), ('C', 'C Shift'),]
+    CERTIFICATE_SOURCE_CHOICES = [('Govt Hospital', 'Govt Hospital'),('ESI Hospital', 'ESI Hospital'),('Private Hospital', 'Private Hospital'),]
+    mrdNo = models.CharField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    employeeName = models.CharField(_("Employee Name"), max_length=255, blank=True)
+    age = models.PositiveIntegerField(_("Age"), null=True, blank=True)
+    sex = models.CharField(_("Sex"), max_length=10, choices=SEX_CHOICES, blank=True)
+    empNo = models.CharField(_("Employee Number"), max_length=50, blank=True)
+    department = models.CharField(_("Department"), max_length=100, blank=True)
+    date = models.DateField(_("Date of Certificate"), null=True, blank=True)
+    jswContract = models.CharField(_("JSW Contract"), max_length=100, blank=True)
+    natureOfWork = models.CharField(_("Nature of Work"), max_length=255, blank=True)
+    covidVaccination = models.CharField(
+        _("Covid Vaccination"),
+        max_length=10,
+        choices=VACCINATION_CHOICES,
+        blank=True
+    )
+
+    # --- Section: Medical Leave Information ---
+    
+    diagnosis = models.TextField(_("Diagnosis (Disease/Condition)"), blank=True)
+    leaveFrom = models.DateField(_("Leave From"), null=True, blank=True)
+    leaveUpTo = models.DateField(_("Leave Up To"), null=True, blank=True)
+    daysLeave = models.PositiveIntegerField(_("Number of Days Leave"), null=True, blank=True)
+
+    # --- Section: Return to Duty Details ---
+    
+    rejoiningDate = models.DateField(_("Rejoining Duty On"), null=True, blank=True)
+    shift = models.CharField(_("Shift"), max_length=5, choices=SHIFT_CHOICES, blank=True)
+    
+    # Vitals are CharFields to accommodate units or special formats (e.g., "120/80").
+    bp = models.CharField(_("Blood Pressure (BP)"), max_length=20, blank=True)
+    pr = models.CharField(_("Pulse Rate (PR)"), max_length=20, blank=True)
+    # Note: React state has 'sp02'. Using 'spo2' as the standard field name.
+    spo2 = models.CharField(_("SPO2"), max_length=20, blank=True)
+    temp = models.CharField(_("Temperature"), max_length=20, blank=True)
+
+    certificateFrom = models.CharField(
+        _("Certificate Issued From"),
+        max_length=50,
+        choices=CERTIFICATE_SOURCE_CHOICES,
+        blank=True
+    )
+
+    # --- Section: Notes & Signatures ---
+    
+    note = models.TextField(_("Note / Remarks"), blank=True)
+    ohcStaffSignature = models.CharField(_("OHC Staff Signature"), max_length=255, blank=True)
+    individualSignature = models.CharField(_("Individual Signature"), max_length=255, blank=True)
+
+    # --- Auto-managed fields for tracking ---
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        """String representation of the model instance."""
+        return f"Medical Certificate for {self.employeeName or 'N/A'} on {self.date or 'Unknown Date'}"
+
+    class Meta:
+        verbose_name = _("Medical Certificate of Fitness")
+        verbose_name_plural = _("Medical Certificates of Fitness")
+        ordering = ['-date', '-created_at']
+
+
 
 # --- Significant Notes Model --- *MODIFIED*
 class SignificantNotes(BaseModel):
@@ -1731,6 +1894,8 @@ class PharmacyStockHistory(models.Model):
 
     def __str__(self): # Corrected from _str_
         return f"{self.brand_name} ({self.chemical_name}) - Archived History"
+    
+
 
 
 class DailyQuantity(models.Model):

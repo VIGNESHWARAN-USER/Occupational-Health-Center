@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import moment from 'moment';
 import jsPDF from 'jspdf'; // Ensure jspdf is installed: npm install jspdf
 import SignificantNotes from "./SignificantNotes"; // Assuming this component exists
+import MedicalCertificateForm from "./MedicalCertificateForm";
+import PersonalLeaveCertificateForm from "./PersonalLeaveCertificateForm";
 
 // URLs (Keep as is)
 const FITNESS_ASSESSMENT_URL = "https://occupational-health-center-1.onrender.com/fitness-tests/";
@@ -15,6 +17,55 @@ const FORM27_URL = "https://occupational-health-center-1.onrender.com/form27/";
 const inputClass = "form-input block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";
 const selectClass = "form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";
 const labelClass = "block text-sm font-medium text-gray-700";
+
+// --- Reusable Form Components for Medical Certificate ---
+const FormInput = ({ label, name, type = 'text', value, onChange, className = '' }) => (
+    <div className={className}>
+        <label htmlFor={name} className={labelClass}>{label}</label>
+        <input type={type} id={name} name={name} value={value} onChange={onChange} className={inputClass} />
+    </div>
+);
+
+const FormTextarea = ({ label, name, value, onChange, className = '' }) => (
+    <div className={className}>
+        <label htmlFor={name} className={labelClass}>{label}</label>
+        <textarea id={name} name={name} value={value} onChange={onChange} rows="3" className={inputClass}></textarea>
+    </div>
+);
+
+const FormSelect = ({ label, name, value, onChange, options, placeholder, className = '' }) => (
+    <div className={className}>
+        <label htmlFor={name} className={labelClass}>{label}</label>
+        <select id={name} name={name} value={value} onChange={onChange} className={selectClass}>
+            {placeholder && <option value="">{placeholder}</option>}
+            {options.map(option => (
+                <option key={option} value={option}>{option}</option>
+            ))}
+        </select>
+    </div>
+);
+
+const FormRadioGroup = ({ label, name, value, onChange, options, className = '' }) => (
+    <div className={className}>
+        <label className={labelClass}>{label}</label>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+            {options.map(option => (
+                <label key={option} className="inline-flex items-center">
+                    <input
+                        type="radio"
+                        name={name}
+                        value={option}
+                        checked={value === option}
+                        onChange={onChange}
+                        className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">{option}</span>
+                </label>
+            ))}
+        </div>
+    </div>
+);
+
 
 // --- Label Mappings (EXPANDED - Keep as is, fill these for PDF generation) ---
 const FORM17_LABELS = { /* emp_no: 'Employee No', dept: 'Department', ... */ };
@@ -137,7 +188,7 @@ const allFitnessTestsConfig = [
     { key: "Psychological_zollingar", displayName: "Psychological - Zollinger", options: ["Normal", "Abnormal"] }
 ];
 
-const FitnessPage = ({ data,mrdNo }) => {
+const FitnessPage = ({ data, mrdNo, register }) => {
     const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
     const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
@@ -149,6 +200,13 @@ const FitnessPage = ({ data,mrdNo }) => {
         CO_dizziness: "", musculoskeletal_movements: "", claustrophobia: "",
         tandem_walking: "", nystagmus_test: "", dysdiadochokinesia: "",
         Finger_nose_test: "", psychological_pmk: "", psychological_zollinger: ""
+    };
+
+    const initialMedicalCertificateState = {
+        employeeName: '', age: '', sex: '', date: '', empNo: '', department: '', jswContract: '',
+        natureOfWork: '', covidVaccination: '', diagnosis: '', leaveFrom: '', leaveUpTo: '',
+        daysLeave: '', rejoiningDate: '', shift: '', pr: '', sp02: '', temp: '',
+        certificateFrom: '', note: '', ohcStaffSignature: '', individualSignature: '',
     };
 
     const [fitnessFormData, setFitnessFormData] = useState(initialFitnessFormData);
@@ -165,6 +223,11 @@ const FitnessPage = ({ data,mrdNo }) => {
     const [specialCases, setSpecialCases] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // --- State for Medical Certificate Tab ---
+    const [showMedicalCertificate, setShowMedicalCertificate] = useState(false);
+    const [logoSrc, setLogoSrc] = useState('https://via.placeholder.com/150x60.png?text=Company+Logo'); // Placeholder logo
+    const [medicalCertificateData, setMedicalCertificateData] = useState(initialMedicalCertificateState);
+
     const initialForm17State = { emp_no: '', dept: '', worksNumber: '', workerName: '', sex: 'male', dob: '', age: '', employmentDate: '', leavingDate: '', reason: '', transferredTo: '', jobNature: '', rawMaterial: '', medicalExamDate: '', medicalExamResult: '', suspensionDetails: '', recertifiedDate: '', unfitnessCertificate: '', surgeonSignature: '', fmoSignature: '' };
     const initialForm38State = { emp_no: '', serialNumber: '', department: '', workerName: '', sex: 'male', age: '', jobNature: '', employmentDate: '', eyeExamDate: '', result: '', opthamologistSignature: '', fmoSignature: '', remarks: '' };
     const initialForm39State = { emp_no: '', serialNumber: '', workerName: '', sex: 'male', age: '', proposedEmploymentDate: '', jobOccupation: '', rawMaterialHandled: '', medicalExamDate: '', medicalExamResult: '', certifiedFit: '', certifyingSurgeonSignature: '', departmentSection: '' };
@@ -179,6 +242,7 @@ const FitnessPage = ({ data,mrdNo }) => {
     const [selectedStatutoryForms, setSelectedStatutoryForms] = useState([]);
 
     const accessLevel = localStorage.getItem("accessLevel");
+    const isDoctor = accessLevel === 'doctor';
 
     const parseJsonArray = (jsonString) => {
         if (!jsonString || typeof jsonString !== 'string') return [];
@@ -236,6 +300,18 @@ const FitnessPage = ({ data,mrdNo }) => {
                 setEyeExamResult(""); setEyeExamFitStatus(""); setSpecialCases("");
                 setOtherJobNature(""); setconditionalOtherJobNature("");
             }
+
+            // Pre-fill Medical Certificate data
+            setMedicalCertificateData({
+                ...initialMedicalCertificateState, // Start with a clean slate to avoid carry-over
+                employeeName: data[0].name || '',
+                age: data[0].dob ? moment().diff(moment(data[0].dob), 'years').toString() : '',
+                sex: data[0].gender || '',
+                empNo: currentEmpNo,
+                department: data[0].department || '',
+                natureOfWork: data[0].designation || ''
+            });
+
             loadOrCreateFormState(data[0].form17, setForm17Data, initialForm17State, currentEmpNo);
             loadOrCreateFormState(data[0].form38, setForm38Data, initialForm38State, currentEmpNo);
             loadOrCreateFormState(data[0].form39, setForm39Data, initialForm39State, currentEmpNo);
@@ -248,6 +324,7 @@ const FitnessPage = ({ data,mrdNo }) => {
             setSystematicExamination(""); setGeneralExamination("");
             setEyeExamResult(""); setEyeExamFitStatus(""); setSpecialCases("");
             setOtherJobNature(""); setconditionalOtherJobNature("");
+            setMedicalCertificateData(initialMedicalCertificateState);
             const emptyEmpNo = '';
             setForm17Data({ ...initialForm17State, emp_no: emptyEmpNo });
             setForm38Data({ ...initialForm38State, emp_no: emptyEmpNo });
@@ -315,6 +392,11 @@ const FitnessPage = ({ data,mrdNo }) => {
     const handleForm40InputChange = (e) => handleFormInputChange(setForm40Data, e.target.name, e.target.value, 'dob'); // Assuming Form 40 might use 'dob' for age
     const handleForm27InputChange = (e) => handleFormInputChange(setForm27Data, e.target.name, e.target.value, 'dateOfBirth');
 
+    // --- Handler for Medical Certificate Form ---
+    const handleMedicalCertificateChange = (e) => {
+        const { name, value } = e.target;
+        setMedicalCertificateData(prevData => ({ ...prevData, [name]: value }));
+    };
 
     function getCookie(name) {
         let cookieValue = null;
@@ -366,57 +448,53 @@ const FitnessPage = ({ data,mrdNo }) => {
     };
 
     // --- AFTER (Corrected Code) ---
-const handleFitnessSubmit = async () => {
-    const currentEmpNo = data?.[0]?.emp_no;
+    const handleFitnessSubmit = async () => {
+        const currentEmpNo = data?.[0]?.emp_no;
 
-    // This check is sufficient and uses the prop correctly.
-    if (!mrdNo) { // Simplified this check to catch null/empty string
-        alert("Please submit the entries first to get MRD Number");
-        return;
-    }
-    if (!currentEmpNo) {
-        alert("No employee selected.");
-        return;
-    }
-    if (!overallFitness) {
-        alert("Please select Overall Fitness status before submitting.");
-        return;
-    }
-    const aadharNo = data?.[0]?.aadhar || '';
-    if (!aadharNo) {
-        alert("Aadhar number is required.");
-        return;
-    }
-    // The redundant mrdNo declaration and check have been REMOVED.
+        if (!mrdNo) {
+            alert("Please submit the entries first to get MRD Number");
+            return;
+        }
+        if (!currentEmpNo) {
+            alert("No employee selected.");
+            return;
+        }
+        if (!overallFitness) {
+            alert("Please select Overall Fitness status before submitting.");
+            return;
+        }
+        const aadharNo = data?.[0]?.aadhar || '';
+        if (!aadharNo) {
+            alert("Aadhar number is required.");
+            return;
+        }
+        const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false;
+        const method = existingAssessment ? 'PUT' : 'POST';
+        const url = FITNESS_ASSESSMENT_URL;
+        const employer = data?.[0]?.type || '';
+        const submittedDoctor = localStorage.getItem("userData") || '';
 
-    const existingAssessment = data?.[0]?.fitnessassessment?.fitness_assessment || false;
-    const method = existingAssessment ? 'PUT' : 'POST';
-    const url = FITNESS_ASSESSMENT_URL;
-    const employer = data?.[0]?.type || '';
-    const submittedDoctor = localStorage.getItem("userData") || '';
-
-    const payload = {
-        ...fitnessFormData,
-        // This now unambiguously uses the mrdNo from the component's props.
-        mrdNo: mrdNo,
-        job_nature: JSON.stringify(selectedOptions),
-        submittedDoctor: submittedDoctor,
-        conditional_fit_feilds: JSON.stringify(conditionalOptions),
-        overall_fitness: overallFitness,
-        systematic_examination: systematicExamination,
-        general_examination: generalExamination,
-        eye_exam_result: eyeExamResult,
-        eye_exam_fit_status: eyeExamFitStatus,
-        comments: comments,
-        aadhar: aadharNo,
-        employer: employer,
-        special_cases: specialCases,
-        emp_no: currentEmpNo,
-        other_job_nature: otherJobNature,
-        conditional_other_job_nature: conditionalotherJobNature,
+        const payload = {
+            ...fitnessFormData,
+            mrdNo: mrdNo,
+            job_nature: JSON.stringify(selectedOptions),
+            submittedDoctor: submittedDoctor,
+            conditional_fit_feilds: JSON.stringify(conditionalOptions),
+            overall_fitness: overallFitness,
+            systematic_examination: systematicExamination,
+            general_examination: generalExamination,
+            eye_exam_result: eyeExamResult,
+            eye_exam_fit_status: eyeExamFitStatus,
+            comments: comments,
+            aadhar: aadharNo,
+            employer: employer,
+            special_cases: specialCases,
+            emp_no: currentEmpNo,
+            other_job_nature: otherJobNature,
+            conditional_other_job_nature: conditionalotherJobNature,
+        };
+        await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
     };
-    await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
-};
 
     const submitStatutoryForm = async (baseUrl, formData, formName, setDataState, defaultState, removeFormCallback) => {
         const currentEmpNo = data?.[0]?.emp_no;
@@ -426,9 +504,9 @@ const handleFitnessSubmit = async () => {
             alert(`Cannot submit ${formName}. Aadhar number is missing.`);
             return;
         }
-        const method = 'POST'; // Always POST for statutory forms, backend handles upsert
+        const method = 'POST';
         const url = baseUrl;
-        const payload = { ...formData, aadhar: aadharNo, employer: employer, emp_no: currentEmpNo }; // Ensure emp_no from current context
+        const payload = { ...formData, aadhar: aadharNo, employer: employer, emp_no: currentEmpNo };
         const result = await submitData(url, method, payload, `${formName} submitted successfully!`, `${formName} Submission`);
         if (result.success && result.data) {
             loadOrCreateFormState(result.data, setDataState, defaultState, currentEmpNo);
@@ -448,22 +526,22 @@ const handleFitnessSubmit = async () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {/* Fields... (same as primary) */}
                 <div><label htmlFor="form17_dept" className={labelClass}>Dept</label><input type="text" id="form17_dept" name="dept" placeholder="Department" className={inputClass} value={form17Data.dept || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
-                <div><label htmlFor="form17_worksNumber" className={labelClass}>Works Number</label><input type="text" id="form17_worksNumber" name="worksNumber" placeholder="Works Number" className={inputClass} value={form17Data.worksNumber || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
+                <div><label htmlFor="form17_worksNumber" className={labelClass}>Works Number</label><input type="text" id="form17_worksNumber" name="worksNumber" placeholder="Works Number" className={inputClass} value={form17Data.worksNumber || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
                 <div><label htmlFor="form17_workerName" className={labelClass}>Worker Name</label><input type="text" id="form17_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form17Data.workerName || data?.[0]?.name || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
                 <div><label htmlFor="form17_sex" className={labelClass}>Sex</label><select id="form17_sex" name="sex" className={selectClass} value={form17Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm17InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                <div><label htmlFor="form17_dob" className={labelClass}>Date of Birth</label><input type="date" id="form17_dob" name="dob" className={inputClass} value={form17Data.dob || data?.[0]?.dob || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
+                <div><label htmlFor="form17_dob" className={labelClass}>Date of Birth</label><input type="date" id="form17_dob" name="dob" className={inputClass} value={form17Data.dob || data?.[0]?.dob || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
                 <div><label htmlFor="form17_age" className={labelClass}>Age</label><input type="text" id="form17_age" name="age" placeholder="Age (auto)" className={`${inputClass} bg-gray-100`} value={form17Data.age || ''} readOnly /></div>
-                <div><label htmlFor="form17_employmentDate" className={labelClass}>Employment Date</label><input type="date" id="form17_employmentDate" name="employmentDate" className={inputClass} value={form17Data.employmentDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_leavingDate" className={labelClass}>Leaving Date</label><input type="date" id="form17_leavingDate" name="leavingDate" className={inputClass} value={form17Data.leavingDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_reason" className={labelClass}>Reason for Leaving</label><input type="text" id="form17_reason" name="reason" placeholder="Reason" className={inputClass} value={form17Data.reason || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_transferredTo" className={labelClass}>Transferred To</label><input type="text" id="form17_transferredTo" name="transferredTo" placeholder="Transfer Location" className={inputClass} value={form17Data.transferredTo || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_jobNature" className={labelClass}>Nature of Job</label><input type="text" id="form17_jobNature" name="jobNature" placeholder="Job Nature" className={inputClass} value={form17Data.jobNature || data?.[0]?.designation || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_rawMaterial" className={labelClass}>Raw Material/Product Handled</label><input type="text" id="form17_rawMaterial" name="rawMaterial" placeholder="Raw Material" className={inputClass} value={form17Data.rawMaterial || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_medicalExamDate" className={labelClass}>Medical Exam Date</label><input type="date" id="form17_medicalExamDate" name="medicalExamDate" className={inputClass} value={form17Data.medicalExamDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_medicalExamResult" className={labelClass}>Medical Exam Result</label><input type="text" id="form17_medicalExamResult" name="medicalExamResult" placeholder="Result" className={inputClass} value={form17Data.medicalExamResult || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_suspensionDetails" className={labelClass}>Details of Suspension</label><input type="text" id="form17_suspensionDetails" name="suspensionDetails" placeholder="Suspension Details" className={inputClass} value={form17Data.suspensionDetails || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div><label htmlFor="form17_recertifiedDate" className={labelClass}>Recertified Date</label><input type="date" id="form17_recertifiedDate" name="recertifiedDate" className={inputClass} value={form17Data.recertifiedDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
-                <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form17_unfitnessCertificate" className={labelClass}>Certificate of Unfitness</label><input type="text" id="form17_unfitnessCertificate" name="unfitnessCertificate" placeholder="Unfitness Certificate Details" className={inputClass} value={form17Data.unfitnessCertificate || ''} onChange={handleForm17InputChange} disabled={isSubmitting}/></div>
+                <div><label htmlFor="form17_employmentDate" className={labelClass}>Employment Date</label><input type="date" id="form17_employmentDate" name="employmentDate" className={inputClass} value={form17Data.employmentDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_leavingDate" className={labelClass}>Leaving Date</label><input type="date" id="form17_leavingDate" name="leavingDate" className={inputClass} value={form17Data.leavingDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_reason" className={labelClass}>Reason for Leaving</label><input type="text" id="form17_reason" name="reason" placeholder="Reason" className={inputClass} value={form17Data.reason || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_transferredTo" className={labelClass}>Transferred To</label><input type="text" id="form17_transferredTo" name="transferredTo" placeholder="Transfer Location" className={inputClass} value={form17Data.transferredTo || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_jobNature" className={labelClass}>Nature of Job</label><input type="text" id="form17_jobNature" name="jobNature" placeholder="Job Nature" className={inputClass} value={form17Data.jobNature || data?.[0]?.designation || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_rawMaterial" className={labelClass}>Raw Material/Product Handled</label><input type="text" id="form17_rawMaterial" name="rawMaterial" placeholder="Raw Material" className={inputClass} value={form17Data.rawMaterial || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_medicalExamDate" className={labelClass}>Medical Exam Date</label><input type="date" id="form17_medicalExamDate" name="medicalExamDate" className={inputClass} value={form17Data.medicalExamDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_medicalExamResult" className={labelClass}>Medical Exam Result</label><input type="text" id="form17_medicalExamResult" name="medicalExamResult" placeholder="Result" className={inputClass} value={form17Data.medicalExamResult || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_suspensionDetails" className={labelClass}>Details of Suspension</label><input type="text" id="form17_suspensionDetails" name="suspensionDetails" placeholder="Suspension Details" className={inputClass} value={form17Data.suspensionDetails || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form17_recertifiedDate" className={labelClass}>Recertified Date</label><input type="date" id="form17_recertifiedDate" name="recertifiedDate" className={inputClass} value={form17Data.recertifiedDate || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
+                <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form17_unfitnessCertificate" className={labelClass}>Certificate of Unfitness</label><input type="text" id="form17_unfitnessCertificate" name="unfitnessCertificate" placeholder="Unfitness Certificate Details" className={inputClass} value={form17Data.unfitnessCertificate || ''} onChange={handleForm17InputChange} disabled={isSubmitting} /></div>
             </div>
             <div className="mt-4 flex justify-between items-center">
                 <button onClick={submitForm17} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
@@ -471,126 +549,127 @@ const handleFitnessSubmit = async () => {
                 </button>
                 <button onClick={() => generateFormPdf(form17Data, "Form 17", data?.[0]?.emp_no, data?.[0]?.name, FORM17_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
                     Generate PDF
-                 </button>
+                </button>
             </div>
         </div>
     );
     const renderForm38 = () => (
         <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
-             <h3 className="text-md font-semibold mb-3 text-gray-600">Form 38 Details</h3>
-             <input type="hidden" name="emp_no" value={form38Data.emp_no || data?.[0]?.emp_no || ''} />
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                 {/* Fields... (same as primary) */}
-                 <div><label htmlFor="form38_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form38_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form38Data.serialNumber || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_department" className={labelClass}>Department/Workers</label><input type="text" id="form38_department" name="department" placeholder="Department" className={inputClass} value={form38Data.department || data?.[0]?.department || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form38_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form38Data.workerName || data?.[0]?.name || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_sex" className={labelClass}>Sex</label><select id="form38_sex" name="sex" className={selectClass} value={form38Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm38InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                 <div><label htmlFor="form38_age" className={labelClass}>Age</label><input type="number" id="form38_age" name="age" placeholder="Age" className={inputClass} value={form38Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_jobNature" className={labelClass}>Nature of Job</label><input type="text" id="form38_jobNature" name="jobNature" placeholder="Job Nature" className={inputClass} value={form38Data.jobNature || data?.[0]?.designation || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_employmentDate" className={labelClass}>Date of Employment</label><input type="date" id="form38_employmentDate" name="employmentDate" className={inputClass} value={form38Data.employmentDate || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_eyeExamDate" className={labelClass}>Date of Eye Exam</label><input type="date" id="form38_eyeExamDate" name="eyeExamDate" className={inputClass} value={form38Data.eyeExamDate || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form38_result" className={labelClass}>Result</label><input type="text" id="form38_result" name="result" placeholder="Result" className={inputClass} value={form38Data.result || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
-                 <div className="sm:col-span-2 md:col-span-3"><label htmlFor="form38_remarks" className={labelClass}>Remarks</label><textarea id="form38_remarks" name="remarks" placeholder="Enter remarks" rows="2" className={inputClass} value={form38Data.remarks || ''} onChange={handleForm38InputChange} disabled={isSubmitting}></textarea></div>
-             </div>
-             <div className="mt-4 flex justify-between items-center">
-                 <button onClick={submitForm38} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                     {isSubmitting ? 'Submitting...' : 'Submit Form 38'}
-                 </button>
-                 <button onClick={() => generateFormPdf(form38Data, "Form 38", data?.[0]?.emp_no, data?.[0]?.name, FORM38_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
-                     Generate PDF
-                 </button>
-             </div>
-         </div>
-     );
-     const renderForm39 = () => (
-         <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
-              <h3 className="text-md font-semibold mb-3 text-gray-600">Form 39 Details</h3>
-              <input type="hidden" name="emp_no" value={form39Data.emp_no || data?.[0]?.emp_no || ''} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                 {/* Fields... (same as primary) */}
-                 <div><label htmlFor="form39_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form39_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form39Data.serialNumber || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form39_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form39Data.workerName || data?.[0]?.name || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_sex" className={labelClass}>Sex</label><select id="form39_sex" name="sex" className={selectClass} value={form39Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm39InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                 <div><label htmlFor="form39_age" className={labelClass}>Age</label><input type="number" id="form39_age" name="age" placeholder="Age" className={inputClass} value={form39Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_proposedEmploymentDate" className={labelClass}>Date of Proposed Employment</label><input type="date" id="form39_proposedEmploymentDate" name="proposedEmploymentDate" className={inputClass} value={form39Data.proposedEmploymentDate || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_jobOccupation" className={labelClass}>Job Occupation</label><input type="text" id="form39_jobOccupation" name="jobOccupation" placeholder="Job Occupation" className={inputClass} value={form39Data.jobOccupation || data?.[0]?.designation || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_rawMaterialHandled" className={labelClass}>Raw Material Handled</label><input type="text" id="form39_rawMaterialHandled" name="rawMaterialHandled" placeholder="Raw Material" className={inputClass} value={form39Data.rawMaterialHandled || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_medicalExamDate" className={labelClass}>Date of Medical Examination</label><input type="date" id="form39_medicalExamDate" name="medicalExamDate" className={inputClass} value={form39Data.medicalExamDate || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_medicalExamResult" className={labelClass}>Result of Medical Examination</label><input type="text" id="form39_medicalExamResult" name="medicalExamResult" placeholder="Result" className={inputClass} value={form39Data.medicalExamResult || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form39_certifiedFit" className={labelClass}>Certified Fit/Unfit</label><select id="form39_certifiedFit" name="certifiedFit" className={selectClass} value={form39Data.certifiedFit || ''} onChange={handleForm39InputChange} disabled={isSubmitting}><option value="" disabled>Select Status</option><option value="fit">Fit</option><option value="unfit">Unfit</option><option value="conditional">Conditional</option></select></div>
-                 <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form39_departmentSection" className={labelClass}>Department/Section/Works No.</label><input type="text" id="form39_departmentSection" name="departmentSection" placeholder="Dept/Section" className={inputClass} value={form39Data.departmentSection || data?.[0]?.department || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                  <button onClick={submitForm39} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                      {isSubmitting ? 'Submitting...' : 'Submit Form 39'}
-                  </button>
-                  <button onClick={() => generateFormPdf(form39Data, "Form 39", data?.[0]?.emp_no, data?.[0]?.name, FORM39_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
-                      Generate PDF
-                  </button>
-              </div>
-          </div>
-     );
-     const renderForm40 = () => (
-          <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
-              <h3 className="text-md font-semibold mb-3 text-gray-600">Form 40 Details</h3>
-              <input type="hidden" name="emp_no" value={form40Data.emp_no || data?.[0]?.emp_no || ''} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {/* Fields... (same as primary) */}
-                  <div><label htmlFor="form40_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form40_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form40Data.serialNumber || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_dateOfEmployment" className={labelClass}>Date of Employment</label><input type="date" id="form40_dateOfEmployment" name="dateOfEmployment" className={inputClass} value={form40Data.dateOfEmployment || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form40_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form40Data.workerName || data?.[0]?.name || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_sex" className={labelClass}>Sex</label><select id="form40_sex" name="sex" className={selectClass} value={form40Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm40InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                  <div><label htmlFor="form40_age" className={labelClass}>Age</label><input type="number" id="form40_age" name="age" placeholder="Age" className={inputClass} value={form40Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_sonWifeDaughterOf" className={labelClass}>Son/Wife/Daughter Of</label><input type="text" id="form40_sonWifeDaughterOf" name="sonWifeDaughterOf" placeholder="Parent/Spouse Name" className={inputClass} value={form40Data.sonWifeDaughterOf || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_natureOfJob" className={labelClass}>Nature of Job</label><input type="text" id="form40_natureOfJob" name="natureOfJob" placeholder="Job Nature" className={inputClass} value={form40Data.natureOfJob || data?.[0]?.designation || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_urineResult" className={labelClass}>Urine Result</label><input type="text" id="form40_urineResult" name="urineResult" placeholder="Urine Result" className={inputClass} value={form40Data.urineResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_bloodResult" className={labelClass}>Blood Result</label><input type="text" id="form40_bloodResult" name="bloodResult" placeholder="Blood Result" className={inputClass} value={form40Data.bloodResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_fecesResult" className={labelClass}>Feces Result</label><input type="text" id="form40_fecesResult" name="fecesResult" placeholder="Feces Result" className={inputClass} value={form40Data.fecesResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_xrayResult" className={labelClass}>X-Ray Result</label><input type="text" id="form40_xrayResult" name="xrayResult" placeholder="X-Ray Result" className={inputClass} value={form40Data.xrayResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_otherExamResult" className={labelClass}>Other Examination Result</label><input type="text" id="form40_otherExamResult" name="otherExamResult" placeholder="Other Result" className={inputClass} value={form40Data.otherExamResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_deworming" className={labelClass}>Deworming Details</label><input type="text" id="form40_deworming" name="deworming" placeholder="Deworming" className={inputClass} value={form40Data.deworming || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div><label htmlFor="form40_typhoidVaccinationDate" className={labelClass}>Typhoid Vaccination Date</label><input type="date" id="form40_typhoidVaccinationDate" name="typhoidVaccinationDate" className={inputClass} value={form40Data.typhoidVaccinationDate || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-                  <div className="sm:col-span-2"><label htmlFor="form40_remarks" className={labelClass}>Remarks</label><input type="text" id="form40_remarks" name="remarks" placeholder="Remarks" className={inputClass} value={form40Data.remarks || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                  <button onClick={submitForm40} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                      {isSubmitting ? 'Submitting...' : 'Submit Form 40'}
-                  </button>
-                  <button onClick={() => generateFormPdf(form40Data, "Form 40", data?.[0]?.emp_no, data?.[0]?.name, FORM40_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
-                      Generate PDF
-                  </button>
-              </div>
-          </div>
-     );
-     const renderForm27 = () => (
-          <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
-              <h3 className="text-md font-semibold mb-3 text-gray-600">Form 27 Details</h3>
-              <input type="hidden" name="emp_no" value={form27Data.emp_no || data?.[0]?.emp_no || ''} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                 {/* Fields... (same as primary) */}
-                 <div><label htmlFor="form27_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form27_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form27Data.serialNumber || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_date" className={labelClass}>Date</label><input type="date" id="form27_date" name="date" className={inputClass} value={form27Data.date || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_department" className={labelClass}>Department</label><input type="text" id="form27_department" name="department" placeholder="Department" className={inputClass} value={form27Data.department || data?.[0]?.department || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_nameOfWorks" className={labelClass}>Name of Works</label><input type="text" id="form27_nameOfWorks" name="nameOfWorks" placeholder="Name of Works" className={inputClass} value={form27Data.nameOfWorks || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_sex" className={labelClass}>Sex</label><select id="form27_sex" name="sex" className={selectClass} value={form27Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm27InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
-                 <div><label htmlFor="form27_age" className={labelClass}>Age</label><input type="number" id="form27_age" name="age" placeholder="Age" className={inputClass} value={form27Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_dateOfBirth" className={labelClass}>Date of Birth</label><input type="date" id="form27_dateOfBirth" name="dateOfBirth" className={inputClass} value={form27Data.dateOfBirth || data?.[0]?.dob || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_nameOfTheFather" className={labelClass}>Father's Name</label><input type="text" id="form27_nameOfTheFather" name="nameOfTheFather" placeholder="Father's Name" className={inputClass} value={form27Data.nameOfTheFather || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div><label htmlFor="form27_natureOfJobOrOccupation" className={labelClass}>Nature of Job/Occupation</label><input type="text" id="form27_natureOfJobOrOccupation" name="natureOfJobOrOccupation" placeholder="Job/Occupation" className={inputClass} value={form27Data.natureOfJobOrOccupation || data?.[0]?.designation || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-                 <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form27_descriptiveMarks" className={labelClass}>Descriptive Marks</label><input type="text" id="form27_descriptiveMarks" name="descriptiveMarks" placeholder="Descriptive Marks" className={inputClass} value={form27Data.descriptiveMarks || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
-              </div>
-              <div className="mt-4 flex justify-between items-center">
-                  <button onClick={submitForm27} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
-                     {isSubmitting ? 'Submitting...' : 'Submit Form 27'}
-                  </button>
-                  <button onClick={() => generateFormPdf(form27Data, "Form 27", data?.[0]?.emp_no, data?.[0]?.name, FORM27_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
-                     Generate PDF
-                  </button>
-              </div>
-          </div>
-     );
+            <h3 className="text-md font-semibold mb-3 text-gray-600">Form 38 Details</h3>
+            <input type="hidden" name="emp_no" value={form38Data.emp_no || data?.[0]?.emp_no || ''} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Fields... (same as primary) */}
+                <div><label htmlFor="form38_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form38_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form38Data.serialNumber || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_department" className={labelClass}>Department/Workers</label><input type="text" id="form38_department" name="department" placeholder="Department" className={inputClass} value={form38Data.department || data?.[0]?.department || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form38_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form38Data.workerName || data?.[0]?.name || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_sex" className={labelClass}>Sex</label><select id="form38_sex" name="sex" className={selectClass} value={form38Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm38InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                <div><label htmlFor="form38_age" className={labelClass}>Age</label><input type="number" id="form38_age" name="age" placeholder="Age" className={inputClass} value={form38Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_jobNature" className={labelClass}>Nature of Job</label><input type="text" id="form38_jobNature" name="jobNature" placeholder="Job Nature" className={inputClass} value={form38Data.jobNature || data?.[0]?.designation || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_employmentDate" className={labelClass}>Date of Employment</label><input type="date" id="form38_employmentDate" name="employmentDate" className={inputClass} value={form38Data.employmentDate || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_eyeExamDate" className={labelClass}>Date of Eye Exam</label><input type="date" id="form38_eyeExamDate" name="eyeExamDate" className={inputClass} value={form38Data.eyeExamDate || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form38_result" className={labelClass}>Result</label><input type="text" id="form38_result" name="result" placeholder="Result" className={inputClass} value={form38Data.result || ''} onChange={handleForm38InputChange} disabled={isSubmitting} /></div>
+                <div className="sm:col-span-2 md:col-span-3"><label htmlFor="form38_remarks" className={labelClass}>Remarks</label><textarea id="form38_remarks" name="remarks" placeholder="Enter remarks" rows="2" className={inputClass} value={form38Data.remarks || ''} onChange={handleForm38InputChange} disabled={isSubmitting}></textarea></div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+                <button onClick={submitForm38} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Submit Form 38'}
+                </button>
+                <button onClick={() => generateFormPdf(form38Data, "Form 38", data?.[0]?.emp_no, data?.[0]?.name, FORM38_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                    Generate PDF
+                </button>
+            </div>
+        </div>
+    );
+    const renderForm39 = () => (
+        <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
+            <h3 className="text-md font-semibold mb-3 text-gray-600">Form 39 Details</h3>
+            <input type="hidden" name="emp_no" value={form39Data.emp_no || data?.[0]?.emp_no || ''} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Fields... (same as primary) */}
+                <div><label htmlFor="form39_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form39_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form39Data.serialNumber || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form39_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form39Data.workerName || data?.[0]?.name || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_sex" className={labelClass}>Sex</label><select id="form39_sex" name="sex" className={selectClass} value={form39Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm39InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                <div><label htmlFor="form39_age" className={labelClass}>Age</label><input type="number" id="form39_age" name="age" placeholder="Age" className={inputClass} value={form39Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_proposedEmploymentDate" className={labelClass}>Date of Proposed Employment</label><input type="date" id="form39_proposedEmploymentDate" name="proposedEmploymentDate" className={inputClass} value={form39Data.proposedEmploymentDate || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_jobOccupation" className={labelClass}>Job Occupation</label><input type="text" id="form39_jobOccupation" name="jobOccupation" placeholder="Job Occupation" className={inputClass} value={form39Data.jobOccupation || data?.[0]?.designation || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_rawMaterialHandled" className={labelClass}>Raw Material Handled</label><input type="text" id="form39_rawMaterialHandled" name="rawMaterialHandled" placeholder="Raw Material" className={inputClass} value={form39Data.rawMaterialHandled || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_medicalExamDate" className={labelClass}>Date of Medical Examination</label><input type="date" id="form39_medicalExamDate" name="medicalExamDate" className={inputClass} value={form39Data.medicalExamDate || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_medicalExamResult" className={labelClass}>Result of Medical Examination</label><input type="text" id="form39_medicalExamResult" name="medicalExamResult" placeholder="Result" className={inputClass} value={form39Data.medicalExamResult || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form39_certifiedFit" className={labelClass}>Certified Fit/Unfit</label><select id="form39_certifiedFit" name="certifiedFit" className={selectClass} value={form39Data.certifiedFit || ''} onChange={handleForm39InputChange} disabled={isSubmitting}><option value="" disabled>Select Status</option><option value="fit">Fit</option><option value="unfit">Unfit</option><option value="conditional">Conditional</option></select></div>
+                <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form39_departmentSection" className={labelClass}>Department/Section/Works No.</label><input type="text" id="form39_departmentSection" name="departmentSection" placeholder="Dept/Section" className={inputClass} value={form39Data.departmentSection || data?.[0]?.department || ''} onChange={handleForm39InputChange} disabled={isSubmitting} /></div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+                <button onClick={submitForm39} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Submit Form 39'}
+                </button>
+                <button onClick={() => generateFormPdf(form39Data, "Form 39", data?.[0]?.emp_no, data?.[0]?.name, FORM39_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                    Generate PDF
+                </button>
+            </div>
+        </div>
+    );
+    const renderForm40 = () => (
+        <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
+            <h3 className="text-md font-semibold mb-3 text-gray-600">Form 40 Details</h3>
+            <input type="hidden" name="emp_no" value={form40Data.emp_no || data?.[0]?.emp_no || ''} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Fields... (same as primary) */}
+                <div><label htmlFor="form40_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form40_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form40Data.serialNumber || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_dateOfEmployment" className={labelClass}>Date of Employment</label><input type="date" id="form40_dateOfEmployment" name="dateOfEmployment" className={inputClass} value={form40Data.dateOfEmployment || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_workerName" className={labelClass}>Name of Worker</label><input type="text" id="form40_workerName" name="workerName" placeholder="Worker Name" className={inputClass} value={form40Data.workerName || data?.[0]?.name || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_sex" className={labelClass}>Sex</label><select id="form40_sex" name="sex" className={selectClass} value={form40Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm40InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                <div><label htmlFor="form40_age" className={labelClass}>Age</label><input type="number" id="form40_age" name="age" placeholder="Age" className={inputClass} value={form40Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_sonWifeDaughterOf" className={labelClass}>Son/Wife/Daughter Of</label><input type="text" id="form40_sonWifeDaughterOf" name="sonWifeDaughterOf" placeholder="Parent/Spouse Name" className={inputClass} value={form40Data.sonWifeDaughterOf || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_natureOfJob" className={labelClass}>Nature of Job</label><input type="text" id="form40_natureOfJob" name="natureOfJob" placeholder="Job Nature" className={inputClass} value={form40Data.natureOfJob || data?.[0]?.designation || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_urineResult" className={labelClass}>Urine Result</label><input type="text" id="form40_urineResult" name="urineResult" placeholder="Urine Result" className={inputClass} value={form40Data.urineResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_bloodResult" className={labelClass}>Blood Result</label><input type="text" id="form40_bloodResult" name="bloodResult" placeholder="Blood Result" className={inputClass} value={form40Data.bloodResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_fecesResult" className={labelClass}>Feces Result</label><input type="text" id="form40_fecesResult" name="fecesResult" placeholder="Feces Result" className={inputClass} value={form40Data.fecesResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_xrayResult" className={labelClass}>X-Ray Result</label><input type="text" id="form40_xrayResult" name="xrayResult" placeholder="X-Ray Result" className={inputClass} value={form40Data.xrayResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_otherExamResult" className={labelClass}>Other Examination Result</label><input type="text" id="form40_otherExamResult" name="otherExamResult" placeholder="Other Result" className={inputClass} value={form40Data.otherExamResult || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_deworming" className={labelClass}>Deworming Details</label><input type="text" id="form40_deworming" name="deworming" placeholder="Deworming" className={inputClass} value={form40Data.deworming || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form40_typhoidVaccinationDate" className={labelClass}>Typhoid Vaccination Date</label><input type="date" id="form40_typhoidVaccinationDate" name="typhoidVaccinationDate" className={inputClass} value={form40Data.typhoidVaccinationDate || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+                <div className="sm:col-span-2"><label htmlFor="form40_remarks" className={labelClass}>Remarks</label><input type="text" id="form40_remarks" name="remarks" placeholder="Remarks" className={inputClass} value={form40Data.remarks || ''} onChange={handleForm40InputChange} disabled={isSubmitting} /></div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+                <button onClick={submitForm40} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Submit Form 40'}
+                </button>
+                <button onClick={() => generateFormPdf(form40Data, "Form 40", data?.[0]?.emp_no, data?.[0]?.name, FORM40_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                    Generate PDF
+                </button>
+            </div>
+        </div>
+    );
+    const renderForm27 = () => (
+        <div className="border p-4 rounded-md bg-gray-50 shadow-inner">
+            <h3 className="text-md font-semibold mb-3 text-gray-600">Form 27 Details</h3>
+            <input type="hidden" name="emp_no" value={form27Data.emp_no || data?.[0]?.emp_no || ''} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Fields... (same as primary) */}
+                <div><label htmlFor="form27_serialNumber" className={labelClass}>Serial Number</label><input type="text" id="form27_serialNumber" name="serialNumber" placeholder="Serial Number" className={inputClass} value={form27Data.serialNumber || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_date" className={labelClass}>Date</label><input type="date" id="form27_date" name="date" className={inputClass} value={form27Data.date || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_department" className={labelClass}>Department</label><input type="text" id="form27_department" name="department" placeholder="Department" className={inputClass} value={form27Data.department || data?.[0]?.department || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_nameOfWorks" className={labelClass}>Name of Works</label><input type="text" id="form27_nameOfWorks" name="nameOfWorks" placeholder="Name of Works" className={inputClass} value={form27Data.nameOfWorks || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_sex" className={labelClass}>Sex</label><select id="form27_sex" name="sex" className={selectClass} value={form27Data.sex || data?.[0]?.gender || 'male'} onChange={handleForm27InputChange} disabled={isSubmitting}><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option></select></div>
+                <div><label htmlFor="form27_age" className={labelClass}>Age</label><input type="number" id="form27_age" name="age" placeholder="Age" className={inputClass} value={form27Data.age || (data?.[0]?.dob ? moment().diff(moment(data[0].dob), 'years') : '') || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_dateOfBirth" className={labelClass}>Date of Birth</label><input type="date" id="form27_dateOfBirth" name="dateOfBirth" className={inputClass} value={form27Data.dateOfBirth || data?.[0]?.dob || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_nameOfTheFather" className={labelClass}>Father's Name</label><input type="text" id="form27_nameOfTheFather" name="nameOfTheFather" placeholder="Father's Name" className={inputClass} value={form27Data.nameOfTheFather || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div><label htmlFor="form27_natureOfJobOrOccupation" className={labelClass}>Nature of Job/Occupation</label><input type="text" id="form27_natureOfJobOrOccupation" name="natureOfJobOrOccupation" placeholder="Job/Occupation" className={inputClass} value={form27Data.natureOfJobOrOccupation || data?.[0]?.designation || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+                <div className="sm:col-span-2 md:col-span-1"><label htmlFor="form27_descriptiveMarks" className={labelClass}>Descriptive Marks</label><input type="text" id="form27_descriptiveMarks" name="descriptiveMarks" placeholder="Descriptive Marks" className={inputClass} value={form27Data.descriptiveMarks || ''} onChange={handleForm27InputChange} disabled={isSubmitting} /></div>
+            </div>
+            <div className="mt-4 flex justify-between items-center">
+                <button onClick={submitForm27} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
+                    {isSubmitting ? 'Submitting...' : 'Submit Form 27'}
+                </button>
+                <button onClick={() => generateFormPdf(form27Data, "Form 27", data?.[0]?.emp_no, data?.[0]?.name, FORM27_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                    Generate PDF
+                </button>
+            </div>
+        </div>
+    );
 
     const toggleTests = () => { setShowAllTests(!showAllTests); };
+    const toggleMedicalCertificate = () => setShowMedicalCertificate(!showMedicalCertificate);
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 md:p-6 relative">
@@ -602,10 +681,26 @@ const handleFitnessSubmit = async () => {
                 </div>
             )}
 
+            { register === "Fitness After Medical Leave" && (
+                <MedicalCertificateForm 
+                    mrdNo={mrdNo} 
+                    aadhar={data?.[0]?.aadhar}
+                    isDoctor={isDoctor} // Good to add this here too
+                />
+              )}
+
+        { register === "Fitness After Personal Long Leave" && (
+            <PersonalLeaveCertificateForm
+                mrdNo={mrdNo}
+                aadhar={data?.[0]?.aadhar}
+                isDoctor={isDoctor} // <-- THIS IS THE CRUCIAL FIX
+            />
+        )}
+
             <div className="mb-6">
                 <button
                     onClick={toggleTests}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 text-sm"
+                    className="bg-blue-500 mt-10 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 text-sm"
                     disabled={!data?.[0]?.emp_no || isSubmitting}
                     title={!data?.[0]?.emp_no ? "Select an employee first" : (showAllTests ? 'Hide All Tests' : 'Show All Tests')}
                 >
@@ -639,7 +734,7 @@ const handleFitnessSubmit = async () => {
 
             {/* Eye Examination Section */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
-               
+
                 <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
                     <label htmlFor="eyeExamFitStatus" className="block text-base md:text-lg font-semibold mb-3 text-gray-700">Eye Exam Fitness Status by OPHTHALMOLOGIST</label>
                     <select id="eyeExamFitStatus" name="eyeExamFitStatus" value={eyeExamFitStatus} onChange={handleEyeExamFitStatusChange}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 const getDefaultFormData = (formType) => {
+    console.log(formType)
     switch (formType) {
         case 'ophthalmicReport':
             return {
@@ -13,10 +14,10 @@ const getDefaultFormData = (formType) => {
             return {
                 dept: "", name: "", dob: "", ageSex: "", natureOfWork: "",
                 dateOfEmployment: "", dateOfEyeExam: "", colorVision: "",
-                result: "", // Radio button state
+                result: "", 
                 remarks: "", ophthalmologistSign: ""
             };
-        case 'alcoholCheck':
+        case 'alcoholPage':
             return {
                 alcoholBreathSmell: "", speech: "", drynessOfMouth: "",
                 drynessOfLips: "", cnsPupilReaction: "", handTremors: "",
@@ -54,7 +55,7 @@ const getFormTitle = (formType) => {
      switch (formType) {
         case 'ophthalmicReport': return "Ophthalmic Report";
         case 'eyeFitness': return "Eye Fitness Certificate";
-        case 'alcoholCheck': return "Alcohol Consumption Check"; // Changed title slightly
+        case 'alcoholPage': return "Alcohol Consumption Check"; // Changed title slightly
         case 'medicalCertificate': return "Medical Certificate of Fitness to Return Duty";
         case 'canteenWorker': return "Medical Examination Report (Canteen Workers)";
         default: return "Form";
@@ -295,7 +296,7 @@ const FormFields = ({ formType, initialData = null, logoSrc = null, apiUrlBase =
                     </>
                  );
 
-            case 'alcoholCheck':
+            case 'alcoholPage':
                  return (
                      <>
 

@@ -582,7 +582,7 @@ def fetchdata(request):
                     # Ensure dates within fetched data are serialized
                     if isinstance(merged_emp[key_name], dict):
                         for sub_key, sub_value in merged_emp[key_name].items():
-                            if isinstance(sub_value, (datetime.date, datetime.datetime)):
+                            if isinstance(sub_value, (datetime, date)):
                                 merged_emp[key_name][sub_key] = sub_value.isoformat()
 
                 merged_data.append(merged_emp)
@@ -606,7 +606,7 @@ from django.db.models import Max
 from .models import employee_details, Dashboard
 #from .views_helpers import parse_date_internal # Assuming views_helpers.py or adjust import
 import json
-from datetime import date
+from datetime import datetime, date
 import logging
 
 logger = logging.getLogger(__name__)
@@ -714,6 +714,7 @@ def addEntries(request):
             'addressOrganization': employee_data.get('addressOrganization', ''),
             'visiting_department': employee_data.get('visiting_department', ''),
             'visiting_date_from': parse_date_internal(employee_data.get('visiting_date_from')),
+            'visiting_date_to': parse_date_internal(employee_data.get('visiting_date_')),
             'stay_in_guest_house': employee_data.get('stay_in_guest_house', ''),
             'visiting_purpose': employee_data.get('visiting_purpose', ''),
             'type': dashboard_data.get('category', 'Employee'),
@@ -818,11 +819,13 @@ def add_basic_details(request):
             'country_id': data.get('country_id'), 'role': data.get('role'),
             'employee_status': data.get('employee_status'), 'since_date': parse_date_internal(data.get('since_date')),
             'transfer_details': data.get('transfer_details'), 'other_reason_details': data.get('other_reason_details'),
+            'previousemployer':data.get('previousemployer'),'previouslocation':data.get('previouslocation'),
             
             # Visitor Fields
             'other_site_id': data.get('other_site_id'), 'organization': data.get('organization'),
             'addressOrganization': data.get('addressOrganization'), 'visiting_department': data.get('visiting_department'),
             'visiting_date_from': parse_date_internal(data.get('visiting_date_from')),
+            'visiting_date_to': parse_date_internal(data.get('visiting_date_to')),
             'stay_in_guest_house': data.get('stay_in_guest_house'), 'visiting_purpose': data.get('visiting_purpose'),
             # Set 'type' based on role
             'type': data.get('role', 'Employee'), # Default type if role missing
@@ -1924,6 +1927,529 @@ def create_form27(request):
 
 
 # --- Appointments ---
+#---  MedicalCertificate ---
+from .models import MedicalCertificate
+logger = logging.getLogger(__name__)
+
+# --- Helper Function for Parsing Dates ---
+# This is a robust way to handle dates that might be missing or in the wrong format.
+def parse_date_internal(date_str):
+    """Safely parses a date string (YYYY-MM-DD) into a date object."""
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        logger.warning(f"Could not parse date string: '{date_str}'")
+        return None
+
+
+
+
+#---  alcohol_form  ---
+
+from .models import alcohol_form, employee_details # Import the necessary models
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import alcohol_form, employee_details # Import your models
+
+# Set up a logger
+logger = logging.getLogger(__name__)
+
+def parse_date_internal(date_str):
+    if not date_str: return None
+    try: return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError): return None
+
+@csrf_exempt
+def add_alcohol_form_data(request):
+   
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
+
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Received data for add_alcohol_form_data: {json.dumps(data)[:500]}...")
+        print(data)
+        mrdNo = data.get('mrdNo')
+        form_date_str = data.get('date')
+        aadhar = data.get('aadhar')
+
+        if not mrdNo or not form_date_str:
+            return JsonResponse({"error": "MRD Number (mrdNo) and form date (date) are required."}, status=400)
+
+        form_date = parse_date_internal(form_date_str)
+        if not form_date:
+            return JsonResponse({"error": "Invalid format for date. Use YYYY-MM-DD."}, status=400)
+
+        try:
+            employee_instance = employee_details.objects.filter(aadhar=aadhar).first()        
+        except employee_details.DoesNotExist:
+            logger.warning(f"Employee with aadhar no. '{aadhar}' not found.")
+            return JsonResponse({"error": f"Employee with aadhar '{aadhar}' not found."}, status=404)
+
+        # --- THE KEY FIX: Map frontend camelCase keys to backend snake_case model fields ---
+        key_map = {
+            'alcoholBreathSmell': 'alcohol_breath_smell',
+            'speech': 'speech',
+            'drynessOfMouth': 'dryness_of_mouth',
+            'drynessOfLips': 'dryness_of_lips',
+            'cnsPupilReaction': 'cns_pupil_reaction',
+            'handTremors': 'hand_tremors',
+            'alcoholAnalyzerStudy': 'alcohol_analyzer_study',
+            'remarks': 'remarks',
+            'advice': 'advice',
+            'aadhar': 'aadhar',
+            'mrdNo' : 'mrdNo'
+        }
+
+        # Build the defaults dictionary for the database using the map
+        form_defaults = {}
+        for frontend_key, backend_key in key_map.items():
+            value = data.get(frontend_key)
+            # Only add the key if the value is present and not an empty string
+            if value is not None and str(value).strip() != '':
+                form_defaults[backend_key] = value
+
+        # If no data fields were provided, there's nothing to update.
+        if not form_defaults:
+             return JsonResponse({"error": "No data provided to save."}, status=400)
+
+        # Use update_or_create with the correctly mapped data
+        record, created = alcohol_form.objects.update_or_create(
+            employee=employee_instance,
+            entry_date = timezone.now().date(),
+            mrdNo = mrdNo,
+            defaults=form_defaults
+        )
+
+        message = "Alcohol Form data added successfully" if created else "Alcohol Form data updated successfully"
+        logger.info(f"{message} for aadhar: {aadhar} on date: {form_date}")
+
+        return JsonResponse({
+            "message": message,
+            "id": record.id,
+            "aadhar": aadhar,
+            "date": form_date.isoformat(),
+        }, status=201 if created else 200)
+
+    except json.JSONDecodeError:
+        logger.error("add_alcohol_form_data failed: Invalid JSON received.", exc_info=True)
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        logger.exception(f"add_alcohol_form_data failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+        return JsonResponse({"error": "An internal server error occurred."}, status=500)
+#---  alcohol_form end ---
+
+#-- getting alcohol abuse form 
+# Add this import at the top of your views.py if it's not already there
+from django.utils import timezone
+from .models import alcohol_form # Make sure this is imported
+
+# ... keep your existing add_alcohol_form_data view ...
+
+@csrf_exempt
+def get_alcohol_form_data(request):
+    """
+    Fetches the most recent alcohol form data for a given patient (by Aadhar).
+    """
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method. Only GET is allowed."}, status=405)
+
+    aadhar = request.GET.get('aadhar')
+    if not aadhar:
+        return JsonResponse({"error": "Aadhar number parameter is required."}, status=400)
+
+    try:
+        # Find the most recent record for this patient
+        # We assume the latest entry by 'entry_date' is the one to show
+        latest_record = alcohol_form.objects.filter(aadhar=aadhar).order_by('-entry_date').first()
+
+        if not latest_record:
+            # It's not an error if no record exists, just return an empty object
+            # The frontend will interpret this as "no data to show".
+            return JsonResponse({}, status=200)
+
+        # IMPORTANT: Convert backend snake_case fields to frontend camelCase keys
+        data_to_return = {
+            'alcoholBreathSmell': latest_record.alcohol_breath_smell,
+            'speech': latest_record.speech,
+            'drynessOfMouth': latest_record.dryness_of_mouth,
+            'drynessOfLips': latest_record.dryness_of_lips,
+            'cnsPupilReaction': latest_record.cns_pupil_reaction,
+            'handTremors': latest_record.hand_tremors,
+            'alcoholAnalyzerStudy': latest_record.alcohol_analyzer_study,
+            'remarks': latest_record.remarks,
+            'advice': latest_record.advice,
+        }
+        
+        # Filter out any keys that have None or empty values if you prefer
+        # a cleaner response, but returning them is fine too.
+        # data_to_return = {k: v for k, v in data_to_return.items() if v is not None and v != ''}
+
+        return JsonResponse(data_to_return, status=200)
+
+    except Exception as e:
+        logger.exception(f"get_alcohol_form_data failed for aadhar {aadhar}: {e}")
+        return JsonResponse({"error": "An internal server error occurred while fetching alcohol data."}, status=500)
+
+
+# medical certificate form
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import MedicalCertificate # Make sure to import your model
+
+# It's good practice to get the logger for the current module
+logger = logging.getLogger(__name__)
+
+def parse_date_internal(date_str):
+    """Helper to safely parse date strings from frontend."""
+    if not date_str:
+        return None
+    try:
+        # Assumes YYYY-MM-DD format from HTML date inputs
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+@csrf_exempt
+def add_or_update_medical_certificate(request):
+    """
+    View to create or update a MedicalCertificate record from a JSON payload.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Received data for medical certificate: {json.dumps(data)[:500]}...")
+        print(data)
+        mrdNo = data.get('mrdNo')
+        
+        # --- Essential validation ---
+        if not mrdNo:
+            return JsonResponse({"error": "MRD Number (mrdNo) is required."}, status=400)
+
+            
+        # This map translates frontend camelCase keys to backend model field names.
+        # It's crucial for fields that don't match, like 'sp02' vs 'spo2'.
+        key_map = {
+            'mrdNo': 'mrdNo',
+            'aadhar': 'aadhar',
+            'employeeName': 'employeeName',
+            'age': 'age',
+            'sex': 'sex',
+            'empNo': 'empNo',
+            'department': 'department',
+            'date': 'date', # This will be replaced by the parsed date object
+            'jswContract': 'jswContract',
+            'natureOfWork': 'natureOfWork',
+            'covidVaccination': 'covidVaccination',
+            'diagnosis': 'diagnosis',
+            'leaveFrom': 'leaveFrom',
+            'leaveUpTo': 'leaveUpTo',
+            'daysLeave': 'daysLeave',
+            'rejoiningDate': 'rejoiningDate',
+            'shift': 'shift',
+            'pr': 'pr',
+            'sp02': 'spo2',  # Key translation: frontend 'sp02' maps to model 'spo2'
+            'temp': 'temp',
+            'certificateFrom': 'certificateFrom',
+            'note': 'note',
+            'ohcStaffSignature': 'ohcStaffSignature',
+            'individualSignature': 'individualSignature',
+        }
+
+        form_defaults = {}
+        for frontend_key, backend_key in key_map.items():
+            value = data.get(frontend_key)
+            # Only add the key if the value is not None and not an empty string
+            # This prevents overwriting existing data with empty values
+            if value is not None and str(value).strip() != '':
+                # Handle date fields specifically
+                if backend_key in ['date', 'leaveFrom', 'leaveUpTo', 'rejoiningDate']:
+                    parsed_value = parse_date_internal(value)
+                    if parsed_value:
+                        form_defaults[backend_key] = parsed_value
+                else:
+                    form_defaults[backend_key] = value
+        
+        # The main date for the record must be present
+        form_defaults['date'] = timezone.now().date()
+
+        if not form_defaults:
+             return JsonResponse({"error": "No data provided to save."}, status=400)
+             
+        # Use update_or_create to find a record by mrdNo and date,
+        # then either update it with new data or create it if it doesn't exist.
+        record, created = MedicalCertificate.objects.update_or_create(
+            mrdNo=mrdNo,
+            date=timezone.now().date(),
+            defaults=form_defaults
+        )
+
+        message = "Medical Certificate added successfully" if created else "Medical Certificate updated successfully"
+        logger.info(f"{message} for mrdNo: {mrdNo} on date: {timezone.now().date()}")
+
+        return JsonResponse({
+            "message": message,
+            "id": record.id,
+            "mrdNo": mrdNo,
+            "date": timezone.now().date().isoformat(),
+        }, status=201 if created else 200)
+
+    except json.JSONDecodeError:
+        logger.error("add_or_update_medical_certificate failed: Invalid JSON received.", exc_info=True)
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    except Exception as e:
+        logger.exception(f"add_or_update_medical_certificate failed for data: {data.get('mrdNo', 'Unknown')}. Error: {str(e)}")
+        return JsonResponse({"error": "An internal server error occurred."}, status=500)
+
+# getting medical certificate form 
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import MedicalCertificate # Import your model
+
+# personal leave certificate form getting and storing
+
+import json
+import logging
+from datetime import datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from .models import PersonalLeaveCertificate
+
+# --- Setup (no changes needed here) ---
+logger = logging.getLogger(__name__)
+
+def parse_date_internal(date_str):
+    if not date_str:
+        return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
+# --- VIEW 1: Get Existing Data (This view is correct) ---
+@csrf_exempt
+def get_personal_leave_data(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method. Only GET is allowed."}, status=405)
+    aadhar = request.GET.get('aadhar')
+    if not aadhar:
+        return JsonResponse({"error": "Aadhar parameter is required."}, status=400)
+    try:
+        latest_record = PersonalLeaveCertificate.objects.filter(aadhar=aadhar).order_by('-id').first()
+        if not latest_record:
+            return JsonResponse({}, status=200)
+        data_to_return = {
+            'employeeName': latest_record.employeeName, 'age': latest_record.age,
+            'sex': latest_record.sex, 'date': latest_record.date.isoformat() if latest_record.date else None,
+            'empNo': latest_record.empNo, 'department': latest_record.department,
+            'jswContract': latest_record.jswContract, 'natureOfWork': latest_record.natureOfWork,
+            'hasSurgicalHistory': latest_record.hasSurgicalHistory, 'covidVaccination': latest_record.covidVaccination,
+            'personalLeaveDescription': latest_record.personalLeaveDescription,
+            'leaveFrom': latest_record.leaveFrom.isoformat() if latest_record.leaveFrom else None,
+            'leaveUpTo': latest_record.leaveUpTo.isoformat() if latest_record.leaveUpTo else None,
+            'daysLeave': latest_record.daysLeave,
+            'rejoiningDate': latest_record.rejoiningDate.isoformat() if latest_record.rejoiningDate else None,
+            'bp': latest_record.bp, 'pr': latest_record.pr, 'spo2': latest_record.spo2,
+            'temp': latest_record.temp, 'note': latest_record.note,
+            'ohcStaffSignature': latest_record.ohcStaffSignature, 'individualSignature': latest_record.individualSignature,
+        }
+        return JsonResponse(data_to_return, status=200)
+    except Exception as e:
+        logger.exception(f"get_personal_leave_data failed for aadhar {aadhar}: {e}")
+        return JsonResponse({"error": "An internal server error occurred."}, status=500)
+
+
+# --- VIEW 2: Save Data (This is the corrected version) ---
+@csrf_exempt
+def save_personal_leave_data(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        mrdNo = data.get('mrdNo')
+        aadhar = data.get('aadhar')
+
+        if not mrdNo or not aadhar:
+            return JsonResponse({"error": "MRD Number and Aadhar are required."}, status=400)
+            
+        certificate_date = parse_date_internal(data.get('date')) or timezone.now().date()
+
+        # Prepare a dictionary of defaults from the payload
+        defaults = {
+            'mrdNo': mrdNo, 'aadhar': aadhar, 'employeeName': data.get('employeeName'),
+            'sex': data.get('sex'), 'empNo': data.get('empNo'),
+            'department': data.get('department'), 'jswContract': data.get('jswContract'),
+            'natureOfWork': data.get('natureOfWork'), 'hasSurgicalHistory': data.get('hasSurgicalHistory'),
+            'covidVaccination': data.get('covidVaccination'), 'personalLeaveDescription': data.get('personalLeaveDescription'),
+            'bp': data.get('bp'), 'pr': data.get('pr'), 'spo2': data.get('spo2'),
+            'temp': data.get('temp'), 'note': data.get('note'),
+            'ohcStaffSignature': data.get('ohcStaffSignature'), 'individualSignature': data.get('individualSignature'),
+        }
+
+        # --- THE KEY FIX IS HERE ---
+        # Handle integer fields safely: convert only if they are not empty strings.
+        age_val = data.get('age')
+        if age_val: # This checks for both not None and not empty string
+            defaults['age'] = age_val
+
+        daysLeave_val = data.get('daysLeave')
+        if daysLeave_val:
+            defaults['daysLeave'] = daysLeave_val
+            
+        # Handle date fields safely
+        defaults['date'] = parse_date_internal(data.get('date'))
+        defaults['leaveFrom'] = parse_date_internal(data.get('leaveFrom'))
+        defaults['leaveUpTo'] = parse_date_internal(data.get('leaveUpTo'))
+        defaults['rejoiningDate'] = parse_date_internal(data.get('rejoiningDate'))
+        
+        # Filter out any keys that have a value of None.
+        # Now, empty strings for integer fields are already excluded.
+        defaults = {k: v for k, v in defaults.items() if v is not None}
+
+        # Use update_or_create to handle both new and existing records
+        record, created = PersonalLeaveCertificate.objects.update_or_create(
+            aadhar=aadhar,
+            date=certificate_date,
+            defaults=defaults
+        )
+
+        message = "Personal Leave Certificate saved successfully" if created else "Personal Leave Certificate updated successfully"
+        return JsonResponse({"message": message, "id": record.id}, status=201 if created else 200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON data received."}, status=400)
+    except Exception as e:
+        # This will log the exact error to your Django console for future debugging.
+        logger.exception(f"Error saving personal leave certificate for aadhar {data.get('aadhar', 'Unknown')}")
+        return JsonResponse({"error": "An internal server error occurred. Check server logs for details."}, status=500)
+
+# --- VIEW 1: Get Existing Data ---
+# This view is called by the frontend's useEffect hook to pre-fill the form.
+@csrf_exempt
+def get_medical_certificate_data(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "Invalid request method. Only GET is allowed."}, status=405)
+
+    aadhar = request.GET.get('aadhar')
+    if not aadhar:
+        return JsonResponse({"error": "Aadhar parameter is required."}, status=400)
+
+    try:
+        # Find the most recent certificate for this patient.
+        # Ordering by '-id' is a reliable way to get the last one created.
+        latest_record = MedicalCertificate.objects.filter(aadhar=aadhar).order_by('-id').first()
+
+        if not latest_record:
+            # It's not an error if none exists. Return an empty object.
+            return JsonResponse({}, status=200)
+
+        # --- IMPORTANT: Translate backend snake_case to frontend camelCase ---
+        # This dictionary must match the state in your React component.
+        data_to_return = {
+            'employeeName': latest_record.employeeName,
+            'age': latest_record.age,
+            'sex': latest_record.sex,
+            'date': latest_record.date.isoformat() if latest_record.date else None,
+            'empNo': latest_record.empNo,
+            'department': latest_record.department,
+            'jswContract': latest_record.jswContract,
+            'natureOfWork': latest_record.natureOfWork,
+            'covidVaccination': latest_record.covidVaccination,
+            'diagnosis': latest_record.diagnosis,
+            'leaveFrom': latest_record.leaveFrom.isoformat() if latest_record.leaveFrom else None,
+            'leaveUpTo': latest_record.leaveUpTo.isoformat() if latest_record.leaveUpTo else None,
+            'daysLeave': latest_record.daysLeave,
+            'rejoiningDate': latest_record.rejoiningDate.isoformat() if latest_record.rejoiningDate else None,
+            'shift': latest_record.shift,
+            'pr': latest_record.pr,
+            'sp02': latest_record.spo2,  # Note the translation from model `spo2` to frontend `sp02`
+            'temp': latest_record.temp,
+            'certificateFrom': latest_record.certificateFrom,
+            'note': latest_record.note,
+            'ohcStaffSignature': latest_record.ohcStaffSignature,
+            'individualSignature': latest_record.individualSignature,
+        }
+        
+        return JsonResponse(data_to_return, status=200)
+
+    except Exception as e:
+        logger.exception(f"get_medical_certificate_data failed for aadhar {aadhar}: {e}")
+        return JsonResponse({"error": "An internal server error occurred."}, status=500)
+
+
+# --- VIEW 2: Submit/Save Data ---
+# This is the view you already had, which handles the form submission.
+@csrf_exempt
+def add_or_update_medical_certificate(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Received medical certificate data: {json.dumps(data)[:500]}")
+        
+        mrdNo = data.get('mrdNo')
+        aadhar = data.get('aadhar')
+
+        if not mrdNo or not aadhar:
+            return JsonResponse({"error": "MRD Number (mrdNo) and Aadhar are required."}, status=400)
+        
+        key_map = {
+            'mrdNo': 'mrdNo', 'aadhar': 'aadhar', 'employeeName': 'employeeName',
+            'age': 'age', 'sex': 'sex', 'empNo': 'empNo', 'department': 'department',
+            'jswContract': 'jswContract', 'natureOfWork': 'natureOfWork',
+            'covidVaccination': 'covidVaccination', 'diagnosis': 'diagnosis',
+            'daysLeave': 'daysLeave', 'shift': 'shift', 'pr': 'pr', 'sp02': 'spo2',
+            'temp': 'temp', 'certificateFrom': 'certificateFrom', 'note': 'note',
+            'ohcStaffSignature': 'ohcStaffSignature', 'individualSignature': 'individualSignature',
+        }
+
+        form_defaults = {}
+        for frontend_key, backend_key in key_map.items():
+            value = data.get(frontend_key)
+            if value is not None and str(value).strip() != '':
+                form_defaults[backend_key] = value
+        
+        # Handle date fields separately
+        form_defaults['date'] = parse_date_internal(data.get('date'))
+        form_defaults['leaveFrom'] = parse_date_internal(data.get('leaveFrom'))
+        form_defaults['leaveUpTo'] = parse_date_internal(data.get('leaveUpTo'))
+        form_defaults['rejoiningDate'] = parse_date_internal(data.get('rejoiningDate'))
+
+        # Use update_or_create to prevent duplicate entries for the same patient on the same day.
+        # It finds a record matching the keys (mrdNo, date) and updates it with `defaults`.
+        # If not found, it creates a new one.
+        record, created = MedicalCertificate.objects.update_or_create(
+            mrdNo=mrdNo,
+            date=timezone.now().date(),  # Use the current date as the unique identifier for the day's record
+            defaults=form_defaults
+        )
+
+        message = "Medical Certificate saved successfully" if created else "Medical Certificate updated successfully"
+        return JsonResponse({"message": message, "id": record.id}, status=201 if created else 200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON data received."}, status=400)
+    except Exception as e:
+        logger.exception(f"Error saving medical certificate for MRD {data.get('mrdNo', 'Unknown')}")
+        return JsonResponse({"error": f"An internal server error occurred: {str(e)}"}, status=500)
 
 @csrf_exempt
 def BookAppointment(request):
@@ -4557,6 +5083,29 @@ def hrupload(request):
          response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
          response['Allow'] = 'POST'
          return response
+    
+
+@csrf_exempt
+def medicalupload(request):
+    if request.method == 'POST':
+        try:
+            # It's better practice to decode and load JSON safely
+            data = json.loads(request.body.decode('utf-8'))
+            
+            logger.info(f"medicalupload Received Data: {data.get('data')}") # Log received data
+            # Add actual processing logic here if needed
+            return JsonResponse({"message":"HR data received successfully"}, status = 200)
+        except json.JSONDecodeError:
+            logger.error("medicalupload failed: Invalid JSON")
+            return JsonResponse({"message":"Invalid JSON format"}, status = 400)
+        except Exception as e:
+            logger.exception("Error processing medicalupload")
+            return JsonResponse({"message":"Error processing data", "detail": str(e)} ,status = 500)
+    else:
+         response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+         response['Allow'] = 'POST'
+         return response
+
 
 @csrf_exempt # Should be GET
 def view_prescription_by_id(request, prescription_id):
@@ -4664,3 +5213,453 @@ def get_chemical_name_suggestions(request):
             {"error": "An internal server error occurred."},
             status=500
         )
+
+
+"""
+This view handles the bulk upload of medical data from a structured Excel file.
+
+Key Features:
+- Handles raw file uploads to avoid request size limits.
+- Uses `openpyxl` for efficient, server-side Excel parsing.
+- Parses a 3-level hierarchical header structure into meaningful data.
+- Uses a modular design with mapping dictionaries and helper functions for each data model.
+- Enforces data integrity using atomic transactions: the entire file upload succeeds or fails as a single unit.
+- Provides detailed error reporting back to the client if the upload fails.
+"""
+
+# ==============================================================================
+# IMPORTS
+# ==============================================================================
+import openpyxl
+from datetime import datetime
+from django.db import transaction
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+
+# Import all your models
+from .models import (
+    employee_details, vitals, heamatalogy, RoutineSugarTests,
+    RenalFunctionTest, LipidProfile, LiverFunctionTest, ThyroidFunctionTest,
+    AutoimmuneTest, CoagulationTest, EnzymesCardiacProfile, UrineRoutineTest,
+    SerologyTest, MotionTest, CultureSensitivityTest, MensPack, WomensPack,
+    OccupationalProfile, OthersTest, OphthalmicReport, XRay, USGReport,
+    CTReport, MRIReport
+)
+
+# ==============================================================================
+# MAPPING DICTIONARIES (Excel Headers -> Django Model Fields)
+#
+# CRITICAL: The string values MUST EXACTLY match the headers generated by the
+# parser. Pay close attention to spaces, special characters, and capitalization.
+# ==============================================================================
+
+# --- Basic Info ---
+BASIC_DETAILS_MAP = {
+    'emp_no': 'Details_Basic detail_EMP NO',
+    'name': 'Details_Basic detail_NAME',
+    'year': 'Details_Basic detail_Year',
+    'batch': 'Details_Basic detail_Batch',
+    'hospitalName': 'Details_Basic detail_Hospital',
+    'date': 'Details_Basic detail_Date',
+    # NOTE: Assuming an 'Aadhar' column exists in your Excel file
+    'aadhar': 'Details_Basic detail_Aadhar',
+}
+
+# --- Vitals ---
+VITALS_MAP = {
+    'height': 'General Test_Vitals_Height',
+    'weight': 'General Test_Vitals_weight',
+    'bmi': 'General Test_Vitals_BMI',
+    'systolic': 'General Test_Vitals_Systolic BP',
+    'diastolic': 'General Test_Vitals_Diastolic BP',
+    'pulse': 'General Test_Vitals_Pulse Rate',
+    'spO2': 'General Test_Vitals_sp O2',
+    'respiratory_rate': 'General Test_Vitals_Respiratory Rate',
+    'temperature': 'General Test_Vitals_Temperature',
+}
+
+# --- Test-specific Maps ---
+HAEMATOLOGY_MAP = {
+    'hemoglobin': 'HAEMATALOGY_Haemoglobin_RESULT',
+    'total_rbc': 'HAEMATALOGY_Red Blood Cell (RBC) Count_RESULT',
+    'total_wbc': 'HAEMATALOGY_WBC Count (TC)_RESULT',
+    'Haemotocrit': 'HAEMATALOGY_Haemotocrit (PCV)_RESULT',
+    'mcv': 'HAEMATALOGY_MCV_RESULT',
+    'mch': 'HAEMATALOGY_MCH_RESULT',
+    'mchc': 'HAEMATALOGY_MCHC_RESULT',
+    'platelet_count': 'HAEMATALOGY_Platelet Count_RESULT',
+    'rdw': 'HAEMATALOGY_RDW (CV)_RESULT',
+    'neutrophil': 'HAEMATALOGY_Neutrophil_RESULT',
+    'lymphocyte': 'HAEMATALOGY_Lymphocyte_RESULT',
+    'eosinophil': 'HAEMATALOGY_Eosinophil_RESULT',
+    'monocyte': 'HAEMATALOGY_Monocyte_RESULT',
+    'basophil': 'HAEMATALOGY_Basophils_RESULT',
+    'esr': 'HAEMATALOGY_Erythrocyte Sedimentation Rate (ESR)_RESULT',
+    'peripheral_blood_smear_rbc_morphology': 'HAEMATALOGY_Peripheral Blood Smear - RBC Morphology_RESULT',
+    'peripheral_blood_smear_parasites': 'HAEMATALOGY_Peripheral Blood Smear - Parasites_RESULT',
+    'peripheral_blood_smear_others': 'HAEMATALOGY_Peripheral Blood Smear - Others_RESULT',
+}
+
+SUGAR_TESTS_MAP = {
+    'glucose_f': 'ROUTINE SUGAR TESTS_Glucose (F)_RESULT',
+    'glucose_pp': 'ROUTINE SUGAR TESTS_Glucose (PP)_RESULT',
+    'random_blood_sugar': 'ROUTINE SUGAR TESTS_Random Blood sugar_RESULT',
+    'estimated_average_glucose': 'ROUTINE SUGAR TESTS_Estimated Average Glucose_RESULT',
+    'hba1c': 'ROUTINE SUGAR TESTS_HbA1c_RESULT',
+}
+
+RENAL_FUNCTION_MAP = {
+    'urea': 'RENAL FUNCTION TEST & ELECTROLYTES_Urea_RESULT',
+    'bun': 'RENAL FUNCTION TEST & ELECTROLYTES_Blood urea nitrogen (BUN)_RESULT',
+    'serum_creatinine': 'RENAL FUNCTION TEST & ELECTROLYTES_Sr.Creatinine_RESULT',
+    'eGFR': 'RENAL FUNCTION TEST & ELECTROLYTES_e GFR_RESULT',
+    'uric_acid': 'RENAL FUNCTION TEST & ELECTROLYTES_Uric acid_RESULT',
+    'sodium': 'RENAL FUNCTION TEST & ELECTROLYTES_Sodium_RESULT',
+    'potassium': 'RENAL FUNCTION TEST & ELECTROLYTES_Potassium_RESULT',
+    'calcium': 'RENAL FUNCTION TEST & ELECTROLYTES_Calcium_RESULT',
+    'phosphorus': 'RENAL FUNCTION TEST & ELECTROLYTES_Phosphorus_RESULT',
+    'chloride': 'RENAL FUNCTION TEST & ELECTROLYTES_Chloride_RESULT',
+    'bicarbonate': 'RENAL FUNCTION TEST & ELECTROLYTES_Bicarbonate_RESULT',
+}
+
+LIPID_PROFILE_MAP = {
+    'Total_Cholesterol': 'LIPID PROFILE_Total Cholesterol_RESULT',
+    'triglycerides': 'LIPID PROFILE_Triglycerides_RESULT',
+    'hdl_cholesterol': 'LIPID PROFILE_HDL - Cholesterol_RESULT',
+    'ldl_cholesterol': 'LIPID PROFILE_LDL- Cholesterol_RESULT',
+    'vldl_cholesterol': 'LIPID PROFILE_VLDL -Choleserol_RESULT',
+    'chol_hdl_ratio': 'LIPID PROFILE_CHOL:HDL ratio_RESULT',
+    'ldl_hdl_ratio': 'LIPID PROFILE_LDL.CHOL/HDL.CHOL Ratio_RESULT',
+}
+
+LIVER_FUNCTION_MAP = {
+    'bilirubin_total': 'LIVER FUNCTION TEST_Bilirubin -Total_RESULT',
+    'bilirubin_direct': 'LIVER FUNCTION TEST_Bilirubin -Direct_RESULT',
+    'bilirubin_indirect': 'LIVER FUNCTION TEST_Bilirubin -indirect_RESULT',
+    'sgot_ast': 'LIVER FUNCTION TEST_SGOT /AST_RESULT',
+    'sgpt_alt': 'LIVER FUNCTION TEST_SGPT /ALT_RESULT',
+    'alkaline_phosphatase': 'LIVER FUNCTION TEST_Alkaline phosphatase_RESULT',
+    'total_protein': 'LIVER FUNCTION TEST_Total Protein_RESULT',
+    'albumin_serum': 'LIVER FUNCTION TEST_Albumin (Serum )_RESULT',
+    'globulin_serum': 'LIVER FUNCTION TEST_Globulin(Serum)_RESULT',
+    'alb_glob_ratio': 'LIVER FUNCTION TEST_Alb/Glob Ratio_RESULT',
+    'gamma_glutamyl_transferase': 'LIVER FUNCTION TEST_Gamma Glutamyl transferase_RESULT',
+}
+
+THYROID_FUNCTION_MAP = {
+    't3_triiodothyronine': 'THYROID FUNCTION TEST_T3- Triiodothyroine_RESULT',
+    't4_thyroxine': 'THYROID FUNCTION TEST_T4 - Thyroxine_RESULT',
+    'tsh_thyroid_stimulating_hormone': 'THYROID FUNCTION TEST_TSH- Thyroid Stimulating Hormone_RESULT',
+}
+
+AUTOIMMUNE_MAP = {
+    'ANA': 'AUTOIMMUNE TEST_ANA (Antinuclear Antibody)_RESULT',
+    'Anti_ds_dna': 'AUTOIMMUNE TEST_Anti ds DNA_RESULT',
+    'Anticardiolipin_Antibodies': 'AUTOIMMUNE TEST_Anticardiolipin Antibodies (IgG & IgM)_RESULT',
+    'Rheumatoid_factor': 'AUTOIMMUNE TEST_Rheumatoid factor_RESULT',
+}
+
+COAGULATION_MAP = {
+    'prothrombin_time': 'COAGULATION TEST_Prothrombin Time (PT)_RESULT',
+    'pt_inr': 'COAGULATION TEST_PT INR_RESULT',
+    'bleeding_time': 'COAGULATION TEST_Bleeding Time (BT)_RESULT',
+    'clotting_time': 'COAGULATION TEST_Clotting Time (CT)_RESULT',
+}
+
+ENZYMES_CARDIAC_MAP = {
+    'acid_phosphatase': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_RESULT',
+    'adenosine_deaminase': 'ENZYMES & CARDIAC Profile_Adenosine Deaminase_RESULT',
+    'amylase': 'ENZYMES & CARDIAC Profile_Amylase_RESULT',
+    'lipase': 'ENZYMES & CARDIAC Profile_Lipase_RESULT',
+    'troponin_t': 'ENZYMES & CARDIAC Profile_Troponin- T_RESULT',
+    'troponin_i': 'ENZYMES & CARDIAC Profile_Troponin- I_RESULT',
+    'cpk_total': 'ENZYMES & CARDIAC Profile_CPK - TOTAL_RESULT',
+    'cpk_mb': 'ENZYMES & CARDIAC Profile_CPK - MB_RESULT',
+    'ecg': 'ENZYMES & CARDIAC Profile_ECG_RESULT',
+    'echo': 'ENZYMES & CARDIAC Profile_ECHO_RESULT',
+    'tmt_normal': 'ENZYMES & CARDIAC Profile_TMT_RESULT',
+}
+
+URINE_ROUTINE_MAP = {
+    'colour': 'URINE ROUTINE_Colour_RESULT',
+    'appearance': 'URINE ROUTINE_Appearance_RESULT',
+    'reaction_ph': 'URINE ROUTINE_Reaction (pH)_RESULT',
+    'specific_gravity': 'URINE ROUTINE_Specific gravity_RESULT',
+    'protein_albumin': 'URINE ROUTINE_Protein/Albumin_RESULT',
+    'glucose_urine': 'URINE ROUTINE_Glucose (Urine)_RESULT',
+    'ketone_bodies': 'URINE ROUTINE_Ketone Bodies_RESULT',
+    'urobilinogen': 'URINE ROUTINE_Urobilinogen_RESULT',
+    'bile_salts': 'URINE ROUTINE_Bile Salts_RESULT',
+    'bile_pigments': 'URINE ROUTINE_Bile Pigments_RESULT',
+    'wbc_pus_cells': 'URINE ROUTINE_WBC / Pus cells_RESULT',
+    'red_blood_cells': 'URINE ROUTINE_Red Blood Cells_RESULT',
+    'epithelial_cells': 'URINE ROUTINE_Epithelial celss_RESULT',
+    'casts': 'URINE ROUTINE_Casts_RESULT',
+    'crystals': 'URINE ROUTINE_Crystals_RESULT',
+    'bacteria': 'URINE ROUTINE_Bacteria_RESULT',
+}
+
+SEROLOGY_MAP = {
+    'screening_hiv': 'SEROLOGY_Screening For HIV I & II_RESULT', # Assuming this covers both
+    'HBsAG': 'SEROLOGY_HBsAg_RESULT',
+    'HCV': 'SEROLOGY_HCV_RESULT',
+    'WIDAL': 'SEROLOGY_WIDAL_RESULT',
+    'VDRL': 'SEROLOGY_VDRL_RESULT',
+    'Dengue_NS1Ag': 'SEROLOGY_Dengue NS1Ag_RESULT',
+    'Dengue_IgG': 'SEROLOGY_Dengue IgG_RESULT',
+    'Dengue_IgM': 'SEROLOGY_Dengue IgM_RESULT',
+}
+
+MOTION_TEST_MAP = {
+    'colour_motion': 'MOTION_Colour_RESULT',
+    'appearance_motion': 'MOTION_Appearance_RESULT',
+    'occult_blood': 'MOTION_Occult Blood_RESULT',
+    'ova': 'MOTION_Ova_RESULT',
+    'cyst': 'MOTION_Cyst_RESULT',
+    'mucus': 'MOTION_Mucus_RESULT',
+    'pus_cells': 'MOTION_Pus Cells_RESULT',
+    'rbcs': 'MOTION_RBCs_RESULT',
+    'others': 'MOTION_Others_RESULT',
+}
+
+CULTURE_SENSITIVITY_MAP = {
+    'urine': 'ROUTINE CULTURE & SENSITIVITY TEST_Urine_RESULT',
+    'motion': 'ROUTINE CULTURE & SENSITIVITY TEST_Motion_RESULT',
+    'sputum': 'ROUTINE CULTURE & SENSITIVITY TEST_Sputum_RESULT',
+    'blood': 'ROUTINE CULTURE & SENSITIVITY TEST_Blood_RESULT',
+}
+
+MENS_PACK_MAP = {
+    'psa': "Men's Pack_PSA (Prostate specific Antigen)_RESULT",
+}
+
+WOMENS_PACK_MAP = {
+    'Mammogaram': "Women's Pack_Mammogram_RESULT",
+    'PAP_Smear': "Women's Pack_PAP Smear_RESULT",
+}
+
+OCCUPATIONAL_PROFILE_MAP = {
+    'Audiometry': "Occupational Profile_Audiometry_RESULT",
+    'PFT': "Occupational Profile_PFT_RESULT",
+}
+
+OTHERS_TEST_MAP = {
+    'Bone_Densitometry': "Others TEST_Bone Densitometry_RESULT",
+    'Dental': "Others TEST_Dental_RESULT",
+    'Pathology': "Others TEST_Pathology_RESULT",
+}
+
+OPHTHALMIC_MAP = {
+    'vision': 'OPHTHALMIC REPORT_Vision_RESULT',
+    'color_vision': 'OPHTHALMIC REPORT_Color Vision_RESULT',
+    'Cataract_glaucoma': 'OPHTHALMIC REPORT_Cataract/ glaucoma_RESULT',
+}
+
+XRAY_MAP = {
+    'Chest': 'X-RAY_Chest_RESULT',
+    'Spine': 'X-RAY_Spine_RESULT',
+    'Abdomen': 'X-RAY_Abdomen_RESULT',
+    'KUB': 'X-RAY_KUB_RESULT',
+    'Pelvis': 'X-RAY_Pelvis_RESULT',
+}
+
+USG_MAP = {
+    'usg_abdomen': 'USG_ABDOMEN_RESULT',
+    'usg_kub': 'USG_KUB_RESULT',
+    'usg_pelvis': 'USG_Pelvis_RESULT',
+    'usg_neck': 'USG_Neck_RESULT',
+}
+
+CT_MAP = {
+    'CT_brain': 'CT_Brain_RESULT',
+    'CT_lungs': 'CT_Lungs_RESULT',
+    'CT_abdomen': 'CT_Abdomen_RESULT',
+    'CT_spine': 'CT_Spine_RESULT',
+    'CT_pelvis': 'CT_Pelvis_RESULT',
+}
+
+MRI_MAP = {
+    'mri_brain': 'MRI_Brain_RESULT',
+    'mri_lungs': 'MRI_Lungs_RESULT',
+    'mri_abdomen': 'MRI_Abdomen_RESULT',
+    'mri_spine': 'MRI_Spine_RESULT',
+    'mri_pelvis': 'MRI_Pelvis_RESULT',
+}
+
+
+# ==============================================================================
+# PYTHON-BASED EXCEL PARSER
+# ==============================================================================
+def parse_hierarchical_excel_py(worksheet):
+
+    header_row1 = [cell.value for cell in worksheet[1]]
+    header_row2 = [cell.value for cell in worksheet[2]]
+    header_row3 = [cell.value for cell in worksheet[3]]
+
+    combined_headers = []
+    last_l1_header = ''
+    last_l2_header = ''
+
+    for i in range(len(header_row3)):
+        l1_header = header_row1[i] if header_row1[i] is not None else last_l1_header
+        l2_header = header_row2[i] if header_row2[i] is not None else last_l2_header
+        l3_header = header_row3[i] if header_row3[i] is not None else ''
+        
+        last_l1_header = l1_header
+        last_l2_header = l2_header
+
+        full_header = '_'.join(filter(None, [str(h).strip() for h in [l1_header, l2_header, l3_header]]))
+        combined_headers.append(full_header)
+    
+    json_data = []
+    for row_cells in worksheet.iter_rows(min_row=4):
+        row_data = {}
+        for i, cell in enumerate(row_cells):
+            if i < len(combined_headers):
+                cell_value = cell.value
+                if isinstance(cell_value, datetime):
+                    cell_value = cell_value.strftime('%Y-%m-%d')
+                row_data[combined_headers[i]] = cell_value
+
+        if any(val is not None and str(val).strip() != '' for val in row_data.values()):
+            json_data.append(row_data)
+            
+    return json_data
+
+# ==============================================================================
+# DATA PROCESSING HELPER FUNCTIONS
+# ==============================================================================
+def _populate_data(model_map, row_data):
+    """Generic helper to populate a dictionary from row_data based on a map."""
+    instance_data = {}
+    for model_field, excel_key in model_map.items():
+        if excel_key in row_data and row_data[excel_key] is not None:
+            instance_data[model_field] = row_data[excel_key]
+    return instance_data
+
+def process_model_data(model, model_map, row_data, employee, entry_date):
+    """A generic function to process any model."""
+    data = _populate_data(model_map, row_data)
+    if data:
+        model.objects.update_or_create(
+            emp_no=employee.emp_no,
+            aadhar=employee.aadhar,
+            entry_date=entry_date,
+            mrdNo = employee.mrdNo,
+            defaults=data
+        )
+
+# ==============================================================================
+# MAIN UPLOAD VIEW (HANDLES FILE UPLOAD)
+# ==============================================================================
+@method_decorator(csrf_exempt, name='dispatch')
+class MedicalDataUploadView(View):
+    def post(self, request, *args, **kwargs):
+        uploaded_file = request.FILES.get('medical_file')
+        if not uploaded_file:
+            return JsonResponse({'status': 'error', 'message': 'No file was uploaded.'}, status=400)
+
+        try:
+            workbook = openpyxl.load_workbook(uploaded_file, data_only=True)
+            worksheet = workbook.active
+            json_data = parse_hierarchical_excel_py(worksheet)
+
+            if not json_data:
+                return JsonResponse({'status': 'error', 'message': 'Excel file is empty or has an unsupported format.'}, status=400)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Failed to parse Excel file: {e}'}, status=400)
+            
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        try:
+            with transaction.atomic():
+                for i, row in enumerate(json_data):
+                    s_no_key = 'Details_Basic detail_S.NO'
+                    row_identifier = f"Row (S.No: {row.get(s_no_key, i + 4)})"
+
+                    try:
+                        hospital = row.get(BASIC_DETAILS_MAP['hospitalName'])
+                        batch = row.get(BASIC_DETAILS_MAP['batch'])
+                        aadhar = str(row.get(BASIC_DETAILS_MAP['aadhar'])).strip() if row.get(BASIC_DETAILS_MAP['aadhar']) else None
+                        date_str = row.get(BASIC_DETAILS_MAP['date'])
+                        print(hospital, batch, aadhar, date_str)
+                        if not all([hospital, batch, aadhar, date_str]):
+                            errors.append(f"{row_identifier}: Missing required lookup fields (Hospital, Batch, Aadhar, or Date).")
+                            error_count += 1
+                            continue
+
+                        entry_date = datetime.strptime(str(date_str), '%Y-%m-%d').date()
+                        
+                    except (ValueError, TypeError) as e:
+                        errors.append(f"{row_identifier}: Invalid date format or missing key. Details: {e}.")
+                        error_count += 1
+                        continue
+
+                    try:
+                        
+                        employee = employee_details.objects.get(
+                            hospitalName=hospital,
+                            batch=batch,
+                            aadhar=aadhar,
+                            entry_date = date_str
+                        )
+                        print(employee)
+                    except employee_details.DoesNotExist:
+                        errors.append(f"{row_identifier}: Employee with Aadhar '{aadhar}', Hospital '{hospital}', and Batch '{batch}' not found.")
+                        error_count += 1
+                        continue
+                    except employee_details.MultipleObjectsReturned:
+                        errors.append(f"{row_identifier}: Found multiple employees for Aadhar '{aadhar}'. Data is ambiguous.")
+                        error_count += 1
+                        continue
+
+                    # --- Call all processing functions ---
+                    process_model_data(vitals, VITALS_MAP, row, employee, entry_date)
+                    process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, entry_date)
+                    process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, entry_date)
+                    process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, entry_date)
+                    process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, entry_date)
+                    process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, entry_date)
+                    process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, entry_date)
+                    process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, entry_date)
+                    process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, entry_date)
+                    process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, entry_date)
+                    process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, entry_date)
+                    process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, entry_date)
+                    process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, entry_date)
+                    process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, entry_date)
+                    process_model_data(MensPack, MENS_PACK_MAP, row, employee, entry_date)
+                    process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, entry_date)
+                    process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, entry_date)
+                    process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, entry_date)
+                    process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, entry_date)
+                    process_model_data(XRay, XRAY_MAP, row, employee, entry_date)
+                    process_model_data(USGReport, USG_MAP, row, employee, entry_date)
+                    process_model_data(CTReport, CT_MAP, row, employee, entry_date)
+                    process_model_data(MRIReport, MRI_MAP, row, employee, entry_date)
+                    
+                    success_count += 1
+                
+                if error_count > 0:
+                    raise Exception(f"Validation failed for {error_count} row(s). Rolling back all changes.")
+
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': str(e),
+                'success_count': 0,
+                'error_count': error_count or len(json_data),
+                'errors': errors,
+            }, status=400)
+
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Successfully processed {success_count} records.',
+            'success_count': success_count,
+            'error_count': 0,
+            'errors': []
+        }, status=201)

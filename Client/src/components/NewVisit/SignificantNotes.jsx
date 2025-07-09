@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { FaCircleInfo } from "react-icons/fa6";
+import { FaInfoCircle } from 'react-icons/fa';
 
 // Helper component to display historical entries (remains the same)
 const HistoryList = ({ title, notes, fieldKey, isLoading, error }) => {
@@ -374,17 +376,36 @@ const SignificantNotes = ({ data, type }) => {
                      {/* TODO: Add HistoryList for incident if needed */}
                  </div>
                  {/* Illness Type */}
-                 <div>
-                    <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1">
-                        Illness Type
-                    </label>
-                    
-                    <select id="illnessType" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={illnessType} onChange={(e) => setIllnessType(e.target.value)} disabled={!isDoctor}>
-                       {/* <option value="">Select...</option> // Included in options array */}
-                       {illnessTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                    </select>
-                     {/* TODO: Add HistoryList for illness_type if needed */}
-                </div>
+                <div>
+    <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+        <span>Illness Type</span>
+        
+        
+        <a 
+            href="https://www.google.com/search?q=notifiable+disease+3rd+schedule+indian+factories+act+1948&oq=notifiable+disease+3rd+schedule+indian+factories+act+1948&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIKCAEQABiABBiiBDIKCAIQABiABBiiBDIHCAMQABjvBdIBCDE4OTBqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8"
+            target="_blank" // This opens the link in a new tab
+            rel="noopener noreferrer" // Security best practice for target="_blank"
+            className="ml-2 text-blue-500 hover:text-blue-700" // Margin-left for spacing and color for affordance
+            title="Click for more information on notifiable diseases" // Adds a helpful tooltip on hover
+        >
+            <FaInfoCircle size={16} /> 
+        </a>
+    </label>
+    
+    <select 
+        id="illnessType" 
+        className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" 
+        value={illnessType} 
+        onChange={(e) => setIllnessType(e.target.value)} 
+        disabled={!isDoctor}
+    >
+       {illnessTypeOptions.map(option => (
+           <option key={option.value} value={option.value}>{option.label}</option>
+       ))}
+    </select>
+    
+    {/* TODO: Add HistoryList for illness_type if needed */}
+</div>
             </div>
         )}
 

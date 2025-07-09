@@ -89,104 +89,117 @@ const DataUpload = () => {
     };
 
 
-    // Handle upload submission
-    const handleUpload = useCallback(async () => {
-        // No event needed here as it's triggered by button click
-        if (!selectedFile) {
-            setError("Please select an Excel file to upload.");
-            return;
+    /**
+ * Parses an Excel worksheet with 3-level hierarchical headers.
+ * @param {object} worksheet The worksheet object from the 'xlsx' library.
+ * @returns {Array<object>} An array of objects representing the data rows.
+ */
+function parseHierarchicalExcel(worksheet) {
+    // 1. Convert the sheet to an array of arrays, preserving blank cells.
+    const rawData = XLSX.utils.sheet_to_json(worksheet, {
+        header: 1,
+        defval: '' // Use empty string for blank cells
+    });
+
+    if (rawData.length < 4) {
+        // Not enough rows for headers and data
+        return [];
+    }
+
+    // 2. Extract header rows and data rows.
+    const headerRow1 = rawData[0]; // Top-level categories (e.g., "General Test")
+    const headerRow2 = rawData[1]; // Sub-categories (e.g., "Vitals")
+    const headerRow3 = rawData[2]; // Final headers (e.g., "Pulse Rate", "RESULT")
+    const dataRows = rawData.slice(3); // The rest is data
+
+    const combinedHeaders = [];
+    let lastL1Header = '';
+    let lastL2Header = '';
+
+    // 3. Build the combined headers for each column
+    for (let i = 0; i < headerRow3.length; i++) {
+        // For merged cells, the value is only in the first cell.
+        // We carry forward the last seen value.
+        if (headerRow1[i]) {
+            lastL1Header = headerRow1[i];
+        }
+        if (headerRow2[i]) {
+            lastL2Header = headerRow2[i];
         }
 
-        setIsSubmitting(true); // Indicate processing start
-        setError(null);
-        setSuccessMessage(null);
+        const l3Header = headerRow3[i] || '';
 
-        const reader = new FileReader();
+        // Combine the headers. Using a separator like '_' is common.
+        // The .filter(Boolean) removes any empty parts (e.g., if a level is missing)
+        const fullHeader = [lastL1Header, lastL2Header, l3Header]
+            .map(s => String(s).trim()) // Trim whitespace
+            .filter(Boolean) // Remove empty strings
+            .join('_'); // e.g., "General Test_Vitals_Pulse Rate"
 
-        reader.onload = async (e) => {
-            try {
-                const data = e.target.result;
-                const workbook = XLSX.read(data, { type: 'array' });
-                const sheetName = workbook.SheetNames[0]; // Assuming data is in the first sheet
-                const worksheet = workbook.Sheets[sheetName];
-                // Use { raw: false, dateNF: 'yyyy-mm-dd' } or other formats if needed for dates
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: true }); // Keep raw values
-
-                if (jsonData.length === 0) {
-                    setError("The selected Excel file is empty or data could not be parsed correctly.");
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                // *** Backend API Endpoint Configuration ***
-                let uploadUrl = '';
-                // Make sure base URL is configured (e.g., using environment variables or an axios instance)
-                const baseURL = 'https://occupational-health-center-1.onrender.com'; 
-                if (formVal === "HR Data") {
-                    // uploadUrl = '/api/upload/hr-data'; // Relative path
-                    uploadUrl = `${baseURL}/hrupload`; // <--- SET YOUR FULL HR DATA UPLOAD URL HERE
-                } else if (formVal === "Medical Data") {
-                    // uploadUrl = '/api/upload/medical-data'; // Relative path
-                    uploadUrl = `${baseURL}/medicalupload`; // <--- SET YOUR FULL MEDICAL DATA UPLOAD URL HERE
-                } else {
-                    throw new Error("Invalid data type selected.");
-                }
-
-                console.log(`Uploading ${formVal} to ${uploadUrl}`);
-                // console.log("Parsed JSON Data:", jsonData); // Keep for debugging if needed
-
-                // Send data to backend
-                const response = await axios.post(uploadUrl, { data: jsonData }, {
-                    headers: {
-                        // Example: Retrieve token if needed
-                        // 'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                        'Content-Type': 'application/json'
-                    },
-                    // Optional: Add timeout
-                    // timeout: 30000 // 30 seconds
-                });
-
-                // Assuming backend sends back a success message
-                setSuccessMessage(response.data?.message || `${formVal} uploaded successfully! (${jsonData.length} records)`);
-                resetState(); // Clear file and messages on success
-
-            } catch (err) {
-                console.error("Error processing or uploading file:", err);
-                let errorMessage = "An error occurred during file upload.";
-                if (axios.isAxiosError(err)) { // More specific Axios error handling
-                    if (err.response) {
-                        // Error from backend (e.g., validation errors, server errors)
-                        errorMessage = `Server Error (${err.response.status}): ${err.response.data?.message || err.response.data || 'Unknown error'}`;
-                        if (typeof err.response.data === 'string') {
-                           errorMessage = `Server Error (${err.response.status}): ${err.response.data}`;
-                        }
-                    } else if (err.request) {
-                        // No response received (network error, timeout)
-                        errorMessage = "Upload failed: Could not connect to the server or request timed out.";
-                    } else {
-                         // Error setting up the request
-                         errorMessage = `Upload failed: ${err.message}`;
-                    }
-                } else if (err instanceof Error) {
-                    // Error during file reading/parsing or other non-Axios errors
-                     errorMessage = `Processing Error: ${err.message}`;
-                 }
-                 setError(errorMessage);
-            } finally {
-                setIsSubmitting(false); // Indicate processing end
+        combinedHeaders.push(fullHeader);
+    }
+    
+    // 4. Map the data rows to the new combined headers
+    const jsonData = dataRows.map(row => {
+        const rowObject = {};
+        row.forEach((cellValue, index) => {
+            if (combinedHeaders[index]) { // Only add if there's a header
+                rowObject[combinedHeaders[index]] = cellValue;
             }
-        };
+        });
+        return rowObject;
+    }).filter(obj => Object.keys(obj).length > 1); // Filter out potentially empty rows
 
-        reader.onerror = (errorEvent) => {
-            console.error("Error reading file:", errorEvent);
-            // Access specific error if available: errorEvent.target.error
-            setError(`Failed to read the selected file: ${errorEvent.target?.error?.message || 'Unknown read error'}`);
-            setIsSubmitting(false);
-        };
+    return jsonData;
+}
 
-        reader.readAsArrayBuffer(selectedFile); // Read file as ArrayBuffer for xlsx library
 
-    }, [selectedFile, formVal, resetState]); // Dependencies for useCallback
+
+   const handleUpload = useCallback(async () => {
+    if (!selectedFile) {
+        setError("Please select an Excel file to upload.");
+        return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    // *** THIS IS THE KEY CHANGE ***
+    // Create a FormData object to send the file directly.
+    const formData = new FormData();
+    formData.append('medical_file', selectedFile); // 'medical_file' is the key the backend will look for.
+    // You can also append other data if needed
+    // formData.append('formVal', formVal); 
+
+    try {
+        let uploadUrl = '';
+        const baseURL = 'https://occupational-health-center-1.onrender.com'; 
+        if (formVal === "HR Data") {
+            uploadUrl = `${baseURL}/hrupload`; 
+        } else if (formVal === "Medical Data") {
+            uploadUrl = `${baseURL}/medicalupload`; 
+        } else {
+            throw new Error("Invalid data type selected.");
+        }
+
+        console.log(`Uploading ${formVal} file to ${uploadUrl}`);
+
+        // Send FormData instead of JSON.
+        // Let axios handle the 'Content-Type' header.
+        const response = await axios.post(uploadUrl, formData);
+
+        setSuccessMessage(response.data?.message || `${formVal} uploaded successfully!`);
+        resetState();
+
+    } catch (err) {
+        // Your existing error handling logic here...
+        console.error("Error uploading file:", err);
+        // ...
+    } finally {
+        setIsSubmitting(false);
+    }
+}, [selectedFile, formVal, resetState]);
 
     // --- Access Control Logic ---
     // Keep your existing access control logic here...

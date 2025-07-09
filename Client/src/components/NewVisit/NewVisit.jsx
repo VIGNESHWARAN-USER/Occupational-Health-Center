@@ -709,15 +709,14 @@ const NewVisit = () => {
   const tabs = [
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
-    register !== "Alcohol Abuse" && { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    register !== "Alcohol Abuse" && purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
-    register !== "Alcohol Abuse" && { id: "Vaccination", label: "Vaccination" },
-    register !== "Alcohol Abuse" && visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
-    register !== "Alcohol Abuse" && visit === "Curative" && { id: "Consultation", label: "Consultation and Referral" },
-     visit === "Curative" && { id: "Prescription", label: "Prescription" },
-    register === "Alcohol Abuse" &&   { id: "formFields", label: "Form Fields" },
-
-  ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering)
+    { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
+    purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
+    { id: "Vaccination", label: "Vaccination" },
+    visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
+    visit === "Curative" && { id: "Consultation", label: "Consultation and Referral" },
+    visit === "Curative" && { id: "Prescription", label: "Prescription" },
+    
+  ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering) 
 
 
   const handleProfileIconClick = () => {
@@ -754,7 +753,7 @@ const NewVisit = () => {
       case "BasicDetails":
         return (
           <div className="mt-8 p-4">
-            <h2 className="text-lg font-medium mb-4">Basic Details</h2>
+            <h2 className="text-lg font-medium mb-4">Personal Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
 
               <div>
@@ -764,7 +763,7 @@ const NewVisit = () => {
                   value={formData.name || ''} // Ensure default value to avoid uncontrolled component warning
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter your full name"
+                  placeholder="as in Aadhar/Doc(Forgn)-in Capital"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -775,7 +774,7 @@ const NewVisit = () => {
                   value={formData.guardian || ''} // Ensure default value to avoid uncontrolled component warning
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter guardian name"
+                  placeholder="as in Aadhar/Doc(Forgn)-in Capital"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -796,7 +795,7 @@ const NewVisit = () => {
                   type="text"
                   value={age}
                   readOnly
-                  className="px-4 py-2 w-full bg-gray-200 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-4 py-2 w-full bg-blue-200 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -814,17 +813,20 @@ const NewVisit = () => {
                 </select>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 ">Blood Group</label>
-                <input
-                  name="bloodgrp"
-                  value={formData.bloodgrp || ''}
-                  onChange={handleChange}
-                  type="text"
-                  placeholder="e.g., A+, O-"
-                  className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              <div> 
+    <label htmlFor="bloodgrp" className="block text-sm font-medium text-gray-700 ">Blood Group</label> 
+    <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} 
+    className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"> 
+    <option value="">--Select Option--</option> 
+    <option value="A+">A+</option>
+     <option value="A-">A-</option> 
+     <option value="B+">B+</option> 
+     <option value="B-">B-</option> 
+     <option value="AB+">AB+</option> 
+     <option value="AB-">AB-</option> 
+     <option value="O+">O+</option> 
+     <option value="O-">O-</option> 
+     </select> </div>
               <div>
                   <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
                   <select
@@ -849,7 +851,7 @@ const NewVisit = () => {
                   value={formData.identification_marks1 || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter any visible identification marks"
+                  placeholder="eg, A BM on Rt wrist"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -860,7 +862,7 @@ const NewVisit = () => {
                   value={formData.identification_marks2 || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter any visible identification marks"
+                  placeholder="eg, A Healed scar on Rt Eye Brow"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -877,10 +879,11 @@ const NewVisit = () => {
                 </select>
               </div>
               {(formData.nationality === "Foreign") && (<div>
-                <label htmlFor="docName" className="block text-sm font-medium text-gray-700 ">Document Name</label>
+                <label htmlFor="docName" className="block text-sm font-medium text-gray-700 ">Foreigner Document Name</label>
                 <input name="docName" id="docName"
                   value={formData.docName || ''}
                   onChange={handleChange}
+                  placeholder="Foreigner Document Number"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                 </input>
@@ -898,17 +901,7 @@ const NewVisit = () => {
                     className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 ">Country ID</label>
-                  <input
-                    name="country_id"
-                    value={formData.country_id || ''}
-                    onChange={handleChange}
-                    type="text"
-                    placeholder="Enter Other Site ID"
-                    className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                
                 </>
               ) : (
                 <div></div>
@@ -927,7 +920,7 @@ const NewVisit = () => {
                       value={formData.organization || ''}
                       onChange={handleChange}
                       type="text"
-                      placeholder="Enter organization name"
+                      placeholder="eg,JSW Cement, TATA POWER"
                       className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -964,6 +957,16 @@ const NewVisit = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 ">Visiting Date To</label>
+                    <input
+                      name="visiting_date_to"
+                      value={formData.visiting_date_to || ''}
+                      onChange={handleChange}
+                      type="date"
+                      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 ">Stay in Guest House</label>
                     <select
                       name="stay_in_guest_house"
@@ -982,7 +985,7 @@ const NewVisit = () => {
                       value={formData.visiting_purpose || ''}
                       onChange={handleChange}
                       id="visiting_purpose"
-                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                      className="mt-1 block w-full p-2 bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                       <option value="">Select</option>
                       <option>Meeting</option>
                       <option>Audit</option>
@@ -1014,28 +1017,28 @@ const NewVisit = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      {type === "Contractor" ? "Contract Employer" : "Employer"}
+                      {type === "Contractor" ? "Contract Employer" : "Current Employer"}
                     </label>
                     <input
                       name="employer"
                       value={formData.employer || ""}
                       onChange={handleChange}
                       type="text"
-                      placeholder={type === "Contractor" ? "Enter contract employer name" : "Enter employer name"}
+                      placeholder={type === "Contractor" ? "Enter contract employer name" : "eg, JSW steel , JSW Cement"}
                       className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                   {type === "Employee" &&
                     (<div>
                       <label className="block text-sm font-medium text-gray-700">
-                        Location
+                        Current Location
                       </label>
                       <input
                         name="location"
                         value={formData.location || ""}
                         onChange={handleChange}
                         type="text"
-                        placeholder="Enter location"
+                        placeholder="eg, Salem"
                         className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>)
@@ -1127,7 +1130,32 @@ const NewVisit = () => {
                         <option>Transfer</option>
                       </select>
                     </div>
+                    
                   )}
+                  {type !== "Contractor" && formData.moj=="Transfer" && (
+                   <div>
+                    <label className="block text-sm font-medium text-gray-700 ">Previous Employer </label>
+                    <input
+                      name="previousemployer"
+                      value={formData.previousemployer || ''}
+                      onChange={handleChange}
+                      type="text"
+                      placeholder="e.g., JSW steel , JSW Cement"
+                      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>)}
+                  {type !== "Contractor" && formData.moj=="Transfer" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 ">Previous Location</label>
+                    <input
+                      name="previouslocation"
+                      value={formData.previouslocation || ''}
+                      onChange={handleChange}
+                      type="text"
+                      placeholder="e.g., Dolvi, Mumbai "
+                      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>)}
                 </div>
               </>
             )}
@@ -1163,7 +1191,7 @@ const NewVisit = () => {
                   value={formData.emergency_contact_person || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Enter Name of Contact Person"
+                  placeholder="as in Aadhar/Doc(Forgn)-in Capital"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1196,7 +1224,7 @@ const NewVisit = () => {
                   value={formData.emergency_contact_relation || ''}
                   onChange={handleChange}
                   type="text"
-                  placeholder="e.g., Father, Spouse"
+                  placeholder="e.g., Father, Mother, Spouse"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1331,7 +1359,7 @@ const NewVisit = () => {
           </div>
         );
       case "Fitness":
-        return <Fitness data={data} type={visit} mrdNo={mrdNo} />;
+        return <Fitness data={data} register = {register} type={visit} mrdNo={mrdNo} />;
       case "Investigations":
         return <Investigation data={singleData} />;
       case "Vaccination":
@@ -1346,6 +1374,10 @@ const NewVisit = () => {
         return <Prescription data={data} condition={false} register = {register}  mrdNo={mrdNo}/>;
       case "formFields":
         return <FormFields formType={"alcoholPage"} />;
+      case "formFields1":
+        return <FormFields formType={"medicalCertificate"} />;
+      case "formFields2":
+        return <FormFields formType={"medicalCertificate"} />;
       default:
         return <div>Unknown Tab</div>;
     }
@@ -1479,19 +1511,26 @@ const NewVisit = () => {
                   </div>
                   <canvas ref={canvasRef} style={{ display: 'none' }} />
                   <div className="w-full ms-4 flex items-center mb-8 space-x-4">
+                    <div className="w-65"> {/* Adjust width as needed, e.g., w-1/2, w-full */}
+    {/* Label */}
+    <label
+      htmlFor="doc-search-input"
+      className="block mb-1 pl-7 text-sm font-medium text-gray-800"
+    >
+    <strong>Aadhar / Doc No. -Foreigner</strong>
+    </label>
                     <div className="relative flex items-center">
-
                       {/* Search Icon */}
-                      <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-6 text-gray-400" />
-
+                      <FaSearch className="absolute top-5 transform -translate-y-1/2 left-3 text-gray-400 " />
                       {/* Input Field */}
                       <input
                         type="text"
-                        placeholder="Search by Aadhar Number"
-                        className="w-full bg-white py-3 pl-12 pr-5 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out"
+                        placeholder="Enter/Search - last 12 digits"
+                        className="w-full bg-white py-2 pl-8 pr-5 pe-3  mb-4 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:outline-none focus:ring-blue-500 focus:border-indigo-400 hover:shadow-md placeholder-gray-400 text-gray-700 transition-all duration-300 ease-in-out text-base placeholder:text-sm"
                         value={searchId}
                         onChange={(e) => setSearchId(e.target.value)}
                       />
+                    </div>
                     </div>
 
                     <div className="flex flex-grow">

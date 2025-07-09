@@ -452,7 +452,7 @@ const App = () => {
                     >
                         
                         <div className='flex flex-col md:flex-row gap-4 items-start md:items-center'>
-                        <h2 className="text-2xl font-semibold mb-4  text-gray-800">Fitness Analysis</h2>
+                        
                         <div className="flex justify-around gap-4 mb-6">
                     <button
                         className={`flex items-center bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-500 hover:bg-${activeAnalysis === 'footfall' ? 'blue' : 'gray'}-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline`}
