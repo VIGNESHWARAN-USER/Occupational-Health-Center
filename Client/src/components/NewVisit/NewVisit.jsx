@@ -132,6 +132,7 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Follow Up Visits":"Follow Up Visits",
         "Other": "Other",
       },
       Curative: {
@@ -139,7 +140,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Followup Visits": "Outpatient",
+        "Follow Up Visits": "Follow Up Visits",
         "BP Sugar Chart": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -163,6 +164,7 @@ const NewVisit = () => {
         "Fitness Personal Long Leave": "Fitness Personal Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Follow Up Visits":"Follow Up Visits",
         "Other": "Other",
       },
       Curative: {
@@ -710,10 +712,15 @@ const NewVisit = () => {
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
     { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Followup Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
+    purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && (register === "Follow Up Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
     { id: "Vaccination", label: "Vaccination" },
     visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
-    visit === "Curative" && { id: "Consultation", label: "Consultation and Referral" },
+
+    // --- CORRECTED LOGIC ---
+    // Show Consultation tab if the visit is Curative OR it's a Follow Up visit
+    (visit === "Curative" || register === "Follow Up Visits") && { id: "Consultation", label: "Consultation and Referral" },
+    
+    // Show Prescription tab ONLY for Curative visits
     visit === "Curative" && { id: "Prescription", label: "Prescription" },
     
   ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering) 

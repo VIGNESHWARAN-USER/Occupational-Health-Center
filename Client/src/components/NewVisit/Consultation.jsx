@@ -135,7 +135,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
 };
 
 
-const Consultation = ({ data, type ,mrdNo, register}) => {
+const Consultation = ({ data, type, mrdNo, register }) => {
   // --- State Variables ---
   const [complaints, setComplaints] = useState('');
   const [examination, setExamination] = useState('');
@@ -162,6 +162,9 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   const [ambulanceDetails, setAmbulanceDetails] = useState('');
   const [initialAlcoholData, setInitialAlcoholData] = useState(null);
 
+  // --- NEW: State for Follow-Up MRD Reference ---
+  const [followUpMrd, setFollowUpMrd] = useState({ newMrd: "", previousMrds: [] });
+
   // --- Derived Data & Constants ---
   const emp_no = data && data[0]?.aadhar;
   const patientData = data && data[0];
@@ -169,7 +172,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   const accessLevel = localStorage.getItem('accessLevel');
   const isDoctor = accessLevel === 'doctor';
 
-  // --- useEffect for Auto-filling main consultation fields ---
+  // --- useEffect for Auto-filling all consultation fields ---
   useEffect(() => {
     if (patientData) {
         if (patientData.consultation) {
@@ -196,6 +199,12 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
             setShiftingRequired(consult.shifting_required || null);
             setShiftingNotes(consult.shifting_notes || '');
             setAmbulanceDetails(consult.ambulance_details || '');
+
+            // --- UPDATED: Populate Follow-Up MRD History from patient data ---
+            setFollowUpMrd({
+                newMrd: '', // Always start with a fresh input for a new visit
+                previousMrds: Array.isArray(consult.follow_up_mrd_history) ? consult.follow_up_mrd_history : []
+            });
         }
     } else {
       // Reset all fields if no patient data
@@ -205,24 +214,19 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
       setAdviceDetails(''); setFollowUpDate(''); setSpecialCases(''); setReferral(null);
       setHospitalName(''); setSpeciality(''); setDoctorName(''); setShiftingRequired(null);
       setShiftingNotes(''); setAmbulanceDetails('');
-      setInitialAlcoholData(null); // Also reset alcohol form data
+      setInitialAlcoholData(null);
+      // --- UPDATED: Reset MRD state ---
+      setFollowUpMrd({ newMrd: "", previousMrds: [] });
     }
   }, [patientData]);
 
   // --- useEffect to specifically fetch Alcohol Form data ---
   useEffect(() => {
-    // Only fetch if we have a patient identifier (aadhar) and the register type is correct
     if (emp_no && register === "Alcohol Abuse") {
         const fetchAlcoholData = async () => {
             try {
-                // Use the new GET endpoint
                 const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_alcohol_form_data/?aadhar=${emp_no}`);
-                if (response.data && Object.keys(response.data).length > 0) {
-                    console.log("Fetched existing Alcohol Data:", response.data);
-                    setInitialAlcoholData(response.data);
-                } else {
-                    setInitialAlcoholData(null); 
-                }
+                setInitialAlcoholData(response.data && Object.keys(response.data).length > 0 ? response.data : null);
             } catch (error) {
                 console.error("Could not fetch alcohol form data:", error);
                 setInitialAlcoholData(null);
@@ -233,6 +237,25 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
         setInitialAlcoholData(null);
     }
   }, [emp_no, register]);
+
+  // --- Handler for the Follow-Up MRD input ---
+  const handleNewMrdChange = (value) => {
+    setFollowUpMrd((prev) => ({ ...prev, newMrd: value }));
+  };
+
+  // --- NEW: useEffect to auto-fill the current MRD number for follow-up visits ---
+  // This effect listens for changes to the `mrdNo` prop. When a valid `mrdNo` is
+  // passed (after the initial entry is made), and the register is "Follow Up Visits",
+  // it automatically populates the `newMrd` state field.
+  useEffect(() => {
+      if (register === "Follow Up Visits" && mrdNo) {
+          // Auto-fill the field with the current visit's MRD number
+          handleNewMrdChange(mrdNo);
+      } else {
+          // Clear the field if conditions are not met (e.g., patient changed or not a follow-up)
+          handleNewMrdChange('');
+      }
+  }, [mrdNo, register]); // This effect runs whenever mrdNo or register type changes
 
 
   // --- Handle MAIN Consultation Submit ---
@@ -246,16 +269,25 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
       alert("Cannot submit. Ensure you are logged in as a doctor and patient data is loaded.");
       return;
     }
+
+    // --- UPDATED: Logic to process MRD History for submission ---
+    const newMrdHistory = [...followUpMrd.previousMrds];
+    // Add the new MRD from the input field if it's not empty and not already in the history
+    if (followUpMrd.newMrd.trim() !== '' && !newMrdHistory.includes(followUpMrd.newMrd.trim())) {
+        newMrdHistory.push(followUpMrd.newMrd.trim());
+    }
+
     setIsSubmitting(true);
     const consultationPayload = {
       aadhar: emp_no,
-      complaints: complaints,
-      examination: examination,
-      systematic: systematic,
-      lexamination: lexamination,
-      diagnosis: diagnosis,
+      mrdNo: mrdNo,
+      complaints,
+      examination,
+      systematic,
+      lexamination,
+      diagnosis,
       procedure_notes: procedureNotes,
-      obsnotes: obsnotes,
+      obsnotes,
       notifiable_remarks: notifiableRemarks,
       case_type: caseType,
       illness_or_injury: illnessOrInjury,
@@ -263,16 +295,17 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
       investigation_details: investigationDetails,
       advice: adviceDetails,
       special_cases: specialCases,
-      submittedDoctor: submittedDoctor,
+      submittedDoctor,
       follow_up_date: followUpDate || null,
-      mrdNo:mrdNo,
-      referral: referral,
+      referral,
       hospital_name: referral === 'yes' ? hospitalName : '',
       speciality: referral === 'yes' ? speciality : '',
       doctor_name: referral === 'yes' ? doctorName : '',
       shifting_required: shiftingRequired,
       shifting_notes: shiftingRequired === 'yes' ? shiftingNotes : '',
       ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '',
+      // --- UPDATED: Add the combined MRD history to the payload ---
+      follow_up_mrd_history: newMrdHistory,
     };
     console.log("Submitting MAIN Consultation Payload:", consultationPayload);
     try {
@@ -333,26 +366,62 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   return (
     <div className="bg-white min-h-screen p-4 md:p-6">
       <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 border-b pb-3">Consultation</h2>
-    
+
       {/* Conditionally render the self-contained Alcohol Abuse form */}
       { register === "Alcohol Abuse" && (
-        <AlcoholAbuseForm 
-            initialData={initialAlcoholData}
-            patientEmpNo={patientData?.emp_no}
-            isDoctor={isDoctor}
-            aadhar = {emp_no}
-            mrdNo = {mrdNo}
-        />
+        <div className='mb-8'>
+          <AlcoholAbuseForm
+              initialData={initialAlcoholData}
+              patientEmpNo={patientData?.emp_no}
+              isDoctor={isDoctor}
+              aadhar={emp_no}
+              mrdNo={mrdNo}
+          />
+        </div>
+      )}
+
+      {/* --- MODIFIED: Follow-Up MRD Reference Section with Auto-Filled Field --- */}
+      { register === "Follow Up Visits" && (
+        <div className="mt-6 mb-8 p-4 border rounded-lg bg-white shadow-sm">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Follow-Up MRD Reference</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label htmlFor="newFollowUpMrd" className={labelClasses}>
+                        MRD Number for This Visit:
+                    </label>
+                    <input
+                       id="newFollowUpMrd"
+                       type="text"
+                       placeholder="Current MRD will appear here..."
+                       className={`${inputClasses} bg-gray-100 cursor-default`}
+                       value={followUpMrd.newMrd}
+                       readOnly
+                       disabled={!isDoctor || isSubmitting}
+                    />
+                </div>
+                <div>
+                    <label htmlFor="previousMrdDisplay" className={labelClasses}>
+                        Previously Referenced MRDs:
+                    </label>
+                     <textarea id="previousMrdDisplay" className={`${textAreaClasses} bg-gray-100 cursor-default`}
+                                value={followUpMrd.previousMrds.join('\n')}
+                                readOnly
+                                disabled={true}
+                                placeholder="No previous MRD references found."
+                                rows={3} />
+                </div>
+            </div>
+        </div>
       )}
 
       {/* This form handles the main consultation details */}
-      <form onSubmit={handleConsultationSubmit} className=" mt-10 space-y-6">
+      <form onSubmit={handleConsultationSubmit} className="mt-4 space-y-6">
         {/* --- Input Fields --- */}
         <div>
           <label className={labelClasses} htmlFor="complaints">Complaints</label>
           <textarea id="complaints" className={textAreaClasses} rows="4"
             placeholder="Enter complaints here..." value={complaints}
-            onChange={(e) => setComplaints(e.target.value)} 
+            onChange={(e) => setComplaints(e.target.value)}
             disabled={!isDoctor || isSubmitting}
           />
         </div>
@@ -439,7 +508,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
          </div>
 
         {/* --- Shifting In Ambulance Section --- */}
-        {type !== '' && ( 
+        {type !== '' && (
           <div className="border-t pt-6 space-y-4">
             <h3 className={sectionHeadingClasses}>Shifting In Ambulance</h3>
             <div>
@@ -488,7 +557,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
         )}
 
         {/* Referral Section */}
-        {type !== '' && ( 
+        {type !== '' && (
           <div className="border-t pt-6 space-y-4">
             <h3 className={sectionHeadingClasses}>Referral</h3>
             <div>

@@ -1378,28 +1378,41 @@ class MedicalHistory(BaseModel):
 
 # --- Consultation Model --- *MODIFIED*
 # Using models.Model directly as per original, ensure BaseModel features are replicated if needed
-class Consultation(models.Model): # Changed inheritance, ensure ID/entry_date are handled
-    # id = models.AutoField(primary_key=True) # Explicitly define if not inheriting from BaseModel
-    # entry_date = models.DateField(default=timezone.now) # Add if not inheriting from BaseModel
+# your_app/models.py
 
+from django.db import models
+from django.utils import timezone
+# from django.db.models import JSONField # Import is no longer needed on Django 3.1+
+
+class Consultation(models.Model):
     # --- Identifiers ---
     emp_no = models.CharField(max_length=50, blank=True, null=True, db_index=True)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
-    entry_date = models.DateField(default=timezone.now) # Kept as per original code
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
+    entry_date = models.DateField(default=timezone.now)
 
     # --- Clinical Notes ---
     complaints = models.TextField(blank=True, null=True)
-    examination = models.TextField(blank=True, null=True)           # General Examination
-    systematic = models.TextField(blank=True, null=True)            # NEW: Systemic Examination
-    lexamination = models.TextField(blank=True, null=True)          # Local Examination
-    diagnosis = models.TextField(blank=True, null=True)             # Diagnosis Notes (clarified meaning)
-    procedure_notes = models.TextField(blank=True, null=True)       # NEW: Procedure Notes
-    obsnotes = models.TextField(blank=True, null=True)              # Observation / Ward Notes
+    examination = models.TextField(blank=True, null=True)
+    systematic = models.TextField(blank=True, null=True)
+    lexamination = models.TextField(blank=True, null=True)
+    diagnosis = models.TextField(blank=True, null=True)
+    procedure_notes = models.TextField(blank=True, null=True)
+    obsnotes = models.TextField(blank=True, null=True)
 
     # --- Investigation, Advice, Follow-up ---
-    investigation_details = models.TextField(blank=True, null=True) # Investigation suggestions
-    advice = models.TextField(blank=True, null=True)                # Advice details
-    follow_up_date = models.DateField(blank=True, null=True)        # Review Date
+    investigation_details = models.TextField(blank=True, null=True)
+    advice = models.TextField(blank=True, null=True)
+    follow_up_date = models.DateField(blank=True, null=True)
+
+    # --- NEW: Field for Follow-Up MRD History ---
+    # This field will store an array of MRD numbers, e.g., ["MRD001", "MRD002"]
+    follow_up_mrd_history = models.JSONField(
+        default=list, 
+        blank=True, 
+        null=True, 
+        help_text="A list of MRD numbers for follow-up reference."
+    )
 
     # --- Case Details ---
     case_type = models.CharField(max_length=100, blank=True, null=True)
@@ -1407,30 +1420,26 @@ class Consultation(models.Model): # Changed inheritance, ensure ID/entry_date ar
     other_case_details = models.TextField(blank=True, null=True)
     notifiable_remarks = models.TextField(blank=True, null=True)
 
-    # --- Referral Details ---
+    # --- Referral & Shifting Details ---
     referral = models.CharField(max_length=10, blank=True, null=True)
     hospital_name = models.CharField(max_length=255, blank=True, null=True)
     speciality = models.CharField(max_length=255, blank=True, null=True)
     doctor_name = models.CharField(max_length=255, blank=True, null=True)
-
-    shifting_required = models.CharField(max_length=10, blank=True, null=True) 
+    shifting_required = models.CharField(max_length=10, blank=True, null=True)
     shifting_notes = models.TextField(blank=True, null=True)
     ambulance_details = models.TextField(blank=True, null=True)
+    special_cases = models.CharField(max_length=10, blank=True, null=True)
     
-    #special cases
-    special_cases=models.CharField(max_length=10, blank=True, null=True)
-    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     # --- Submission Metadata ---
     submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        # Optional: Unique constraint if needed
-        unique_together = ('emp_no', 'entry_date')
+        unique_together = ('aadhar', 'entry_date') # Changed to aadhar for better uniqueness
         ordering = ['-entry_date', '-id']
 
     def __str__(self):
         entry_date_str = self.entry_date.strftime('%Y-%m-%d') if self.entry_date else 'N/A'
-        return f"Consultation {self.pk} - Emp: {self.emp_no or 'N/A'} on {entry_date_str}"
+        return f"Consultation {self.pk} - Aadhar: {self.aadhar or 'N/A'} on {entry_date_str}"
 
 
 # --- Pharmacy Stock Model ---
