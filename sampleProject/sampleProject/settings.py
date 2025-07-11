@@ -4,17 +4,18 @@ Django settings for sampleProject project.
 
 import os
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Correctly configure MEDIA_ROOT and MEDIA_URL
+# Media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'media'  # Add this line
+STATIC_ROOT = BASE_DIR / 'media'
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-2an=+9=g@e!k!x@al6ve@@g@fuxv&vgv%evj%6jv^l6421xojc'
@@ -23,31 +24,38 @@ SECRET_KEY = 'django-insecure-2an=+9=g@e!k!x@al6ve@@g@fuxv&vgv%evj%6jv^l6421xojc
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '*',
+    '*',  # Allow all for development
     'occupational-health-center-1.onrender.com',
     'localhost',
     '127.0.0.1'
 ]
 
-# CORS settings - allow all origins for development
-# Be SURE to restrict this in a production environment
+# CORS settings - development only
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'access-control-allow-origin',
+    'authorization',
+    'content-type',
 ]
 
+CORS_EXPOSE_HEADERS = [
+    'Content-Type',
+    'X-CSRFToken',
+    'Authorization',
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = '2k22cse163@kiot.ac.in'          # Your Gmail
-EMAIL_HOST_PASSWORD = 'pdxm ybxs aang ybjq'        # App Password, not your actual Gmail password
+EMAIL_HOST_USER = '2k22cse163@kiot.ac.in'
+EMAIL_HOST_PASSWORD = 'pdxm ybxs aang ybjq'  # App password, NOT your actual Gmail password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 # Application definition
 INSTALLED_APPS = [
     'corsheaders',
@@ -56,13 +64,12 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',  # Required for serving static files
+    'django.contrib.staticfiles',
     'jsw'
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Place as high as possible
-    'django.middleware.common.CommonMiddleware', # required for static files serving
+    'corsheaders.middleware.CorsMiddleware',  # FIRST
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,8 +100,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'sampleProject.wsgi.application'
 
-
-
+# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
