@@ -57,7 +57,7 @@ const Summary = () => {
                         <>
                         <BasicDetails  data = {visitData.employee}/>
                         <Vitals data = {visitData.vitals}/>
-                        <MedicalHistory data = {visitData}/>
+                        <MedicalHistory data = {visitData} fromSummary={true}/>
                         <Investigation data = {visitData}/>
                         <Vaccination data = {visitData.vaccination}/>
                         <ConsultationDisplay data = {visitData}/>
@@ -66,7 +66,7 @@ const Summary = () => {
                         <> 
                         <BasicDetails  data = {visitData.employee}/>
                         <Vitals data = {visitData.vitals}/>
-                        <MedicalHistory data = {visitData}/>
+                        <MedicalHistory data = {visitData} fromSummary={true}/>
                         <Investigation data = {visitData}/>
                         <Vaccination data = {visitData.vaccination}/>
                         <Fitness data = {visitData.fitnessassessment}/>

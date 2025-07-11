@@ -74,10 +74,10 @@ const FamilyMemberTable = ({ title, members, tableStyle, headerStyle, cellStyle 
 
 // --- Main  Component ---
 
-const MedicalHistory1 = ({ data }) => {
-  console.log(data.medicalhistory)
+const MedicalHistory1 = ({ data, fromSummary }) => {
+  console.log(data)
   // Check for valid data, otherwise show a message
-  if (!data  || !data?.medicalhistory) {
+  if (!data  || !data) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-xl font-semibold text-gray-700">Medical History</h2>
@@ -87,7 +87,15 @@ const MedicalHistory1 = ({ data }) => {
   }
 
   const patient = data;
-  const history = patient.medicalhistory;
+  var history = null
+  if(fromSummary)
+  {
+     history = patient.msphistory 
+  }
+  else
+  {
+     history = patient.medicalhistory
+  }
   const patientSex = patient.sex || "";
 
   // State for collapsible sections
