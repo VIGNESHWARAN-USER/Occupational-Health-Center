@@ -12,13 +12,30 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
     cnsPupilReaction: '', handTremors: '', alcoholAnalyzerStudy: '', remarks: '', advice: '',
   });
 
+  // Effect to sync with pre-fetched data and decide initial visibility
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+      if (Object.values(initialData).some(val => val && String(val).length > 0)) {
+        setShowForm(true);
+      }
+    } else {
+        setFormData({
+            alcoholBreathSmell: '', speech: '', drynessOfMouth: '', drynessOfLips: '',
+            cnsPupilReaction: '', handTremors: '', alcoholAnalyzerStudy: '', remarks: '', advice: '',
+        });
+    }
+  }, [initialData]);
 
   const toggleFormVisibility = () => setShowForm(prevState => !prevState);
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleAlcoholFormSubmit = async (e) => {
     e.preventDefault();
-    
+    if (!isDoctor || !patientEmpNo) {
+        alert("Cannot submit. Ensure you are logged in as a doctor and patient data is available.");
+        return;
+    }
     if (!Object.values(formData).some(val => val && String(val).trim() !== '')) {
         alert("Please fill in at least one field before submitting.");
         return;
@@ -135,7 +152,62 @@ const Consultation = ({ data, type, mrdNo, register }) => {
   const accessLevel = localStorage.getItem('accessLevel');
   const isDoctor = accessLevel === 'doctor';
 
-  
+  // --- useEffect for Auto-filling all consultation fields ---
+  useEffect(() => {
+    if (patientData) {
+        if (patientData.consultation) {
+            const consult = patientData.consultation;
+            setComplaints(consult.complaints || '');
+            setExamination(consult.examination || '');
+            setSystematic(consult.systematic || '');
+            setLexamination(consult.lexamination || '');
+            setDiagnosis(consult.diagnosis || '');
+            setProcedureNotes(consult.procedure_notes || '');
+            setObsnotes(consult.obsnotes || '');
+            setNotifiableRemarks(consult.notifiable_remarks || '');
+            setCaseType(consult.case_type || '');
+            setIllnessOrInjury(consult.illness_or_injury || '');
+            setOtherCaseDetails(consult.other_case_details || '');
+            setInvestigationDetails(consult.investigation_details || '');
+            setAdviceDetails(consult.advice || '');
+            setFollowUpDate(consult.follow_up_date || '');
+            setSpecialCases(consult.special_cases || '');
+            setReferral(consult.referral || null);
+            setHospitalName(consult.hospital_name || '');
+            setSpeciality(consult.speciality || '');
+            setDoctorName(consult.doctor_name || '');
+            setShiftingRequired(consult.shifting_required || null);
+            setShiftingNotes(consult.shifting_notes || '');
+            setAmbulanceDetails(consult.ambulance_details || '');
+
+            // ========================= FIX IS HERE =========================
+            // Check if follow_up_mrd_history exists and is an array
+            if (Array.isArray(consult.follow_up_mrd_history)) {
+                // Transform the array of strings into an array of objects
+                const formattedVisits = consult.follow_up_mrd_history.map((mrdString, index) => ({
+                    id: Date.now() + index, // Create a unique ID
+                    mrd: mrdString,
+                }));
+                setPreviousVisits(formattedVisits);
+            } else {
+                setPreviousVisits([]); // Otherwise, initialize as an empty array
+            }
+            // =============================================================
+
+        }
+    } else {
+      // Reset all fields if no patient data
+      setComplaints(''); setExamination(''); setSystematic(''); setLexamination('');
+      setDiagnosis(''); setProcedureNotes(''); setObsnotes(''); setNotifiableRemarks('');
+      setCaseType(''); setIllnessOrInjury(''); setOtherCaseDetails(''); setInvestigationDetails('');
+      setAdviceDetails(''); setFollowUpDate(''); setSpecialCases(''); setReferral(null);
+      setHospitalName(''); setSpeciality(''); setDoctorName(''); setShiftingRequired(null);
+      setShiftingNotes(''); setAmbulanceDetails('');
+      setInitialAlcoholData(null);
+      setPreviousVisits([]);
+    }
+  }, [patientData, mrdNo]);
+
   // --- useEffect to specifically fetch Alcohol Form data ---
   useEffect(() => {
     if (emp_no && register === "Alcohol Abuse") {
@@ -177,7 +249,6 @@ const Consultation = ({ data, type, mrdNo, register }) => {
       alert("Please submit the entries first to get MRD Number");
       return;
     }
-    
 
     // --- MODIFIED: Logic to process MRD History for submission ---
     // Get ONLY the newly added MRDs from the dynamic form fields for this session.
@@ -190,8 +261,8 @@ const Consultation = ({ data, type, mrdNo, register }) => {
     setIsSubmitting(true);
     const consultationPayload = {
       aadhar: emp_no,
-      accessLevel,
       mrdNo: mrdNo,
+      accessLevel,
       complaints,
       examination,
       systematic,
@@ -560,7 +631,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
         <div className="mt-8 flex justify-end">
           <button
             type="submit"
-            className={`min-w-[150px] bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 `}
+            className={`min-w-[150px] bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300`}
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Submitting...' : 'Submit Consultation'}

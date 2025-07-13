@@ -712,7 +712,7 @@ const NewVisit = () => {
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
     { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    purpose !== "Periodic Work Fitness" && register !== "Fitness After Medical Leave" && visit !="Preventive" && (register === "Follow Up Visits" || visit !== "Curative") && { id: "Investigations", label: "Investigations" },
+    { id: "Investigations", label: "Investigations" },
     { id: "Vaccination", label: "Vaccination" },
     visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
 
