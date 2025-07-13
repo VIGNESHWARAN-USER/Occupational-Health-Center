@@ -356,7 +356,7 @@ const SignificantNotes = ({ data, type }) => {
                  {/* Incident Type */}
                  <div>
                     <label htmlFor="incidentType" className="block text-gray-700 text-sm font-medium mb-1">
-                        Incident Type
+                        Incident Category
                     </label>
                     <select id="incidentType" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={incidentType} onChange={(e) => setIncidentType(e.target.value)} disabled={!isDoctor}>
                         {/* <option value="">Select...</option> // Included in options array */}
@@ -367,7 +367,7 @@ const SignificantNotes = ({ data, type }) => {
                  {/* Incident */}
                  <div>
                     <label htmlFor="incident" className="block text-gray-700 text-sm font-medium mb-1">
-                        Incident
+                       Incident Nature
                     </label>
                     <select id="incident" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={incident} onChange={(e) => setIncident(e.target.value)} disabled={!isDoctor}>
                         {/* <option value="">Select...</option> // Included in options array */}
@@ -378,7 +378,7 @@ const SignificantNotes = ({ data, type }) => {
                  {/* Illness Type */}
                 <div>
     <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
-        <span>Illness Type</span>
+        <span>Additional Illness register</span>
         
         
         <a 

@@ -8,50 +8,17 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    alcoholBreathSmell: '',
-    speech: '',
-    drynessOfMouth: '',
-    drynessOfLips: '',
-    cnsPupilReaction: '',
-    handTremors: '',
-    alcoholAnalyzerStudy: '',
-    remarks: '',
-    advice: '',
+    alcoholBreathSmell: '', speech: '', drynessOfMouth: '', drynessOfLips: '',
+    cnsPupilReaction: '', handTremors: '', alcoholAnalyzerStudy: '', remarks: '', advice: '',
   });
 
-  // Effect to sync with pre-fetched data and decide initial visibility
-  useEffect(() => {
-    // If we receive new initialData, update the form. If null, reset it.
-    if (initialData) {
-      setFormData(initialData);
-      // Automatically expand the form if there is any pre-existing data
-      if (Object.values(initialData).some(val => val && String(val).length > 0)) {
-        setShowForm(true);
-      }
-    } else {
-        // Reset the form if there's no initial data (e.g., patient changed)
-        setFormData({
-            alcoholBreathSmell: '', speech: '', drynessOfMouth: '', drynessOfLips: '',
-            cnsPupilReaction: '', handTremors: '', alcoholAnalyzerStudy: '', remarks: '', advice: '',
-        });
-    }
-  }, [initialData]);
 
-  const toggleFormVisibility = () => {
-    setShowForm(prevState => !prevState);
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevData => ({ ...prevData, [name]: value }));
-  };
+  const toggleFormVisibility = () => setShowForm(prevState => !prevState);
+  const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleAlcoholFormSubmit = async (e) => {
     e.preventDefault();
-    if (!isDoctor || !patientEmpNo) {
-        alert("Cannot submit. Ensure you are logged in as a doctor and patient data is available.");
-        return;
-    }
+    
     if (!Object.values(formData).some(val => val && String(val).trim() !== '')) {
         alert("Please fill in at least one field before submitting.");
         return;
@@ -62,10 +29,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
     }
     setIsSubmitting(true);
     const payload = {
-        ...formData,
-        empNo: patientEmpNo,
-        aadhar,
-        mrdNo,
+        ...formData, empNo: patientEmpNo, aadhar, mrdNo,
         date: new Date().toISOString().split('T')[0],
     };
     console.log("Submitting Alcohol Abuse Form Payload:", payload);
@@ -78,8 +42,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
         }
     } catch (error) {
         console.error("Error submitting alcohol form:", error);
-        const errorMsg = `An error occurred while submitting Alcohol Abuse details: ${error.response?.data?.error || error.message}`;
-        alert(errorMsg);
+        alert(`An error occurred while submitting Alcohol Abuse details: ${error.response?.data?.error || error.message}`);
     } finally {
         setIsSubmitting(false);
     }
@@ -135,7 +98,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
 };
 
 
-const Consultation = ({ data, type ,mrdNo, register}) => {
+const Consultation = ({ data, type, mrdNo, register }) => {
   // --- State Variables ---
   const [complaints, setComplaints] = useState('');
   const [examination, setExamination] = useState('');
@@ -162,6 +125,9 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   const [ambulanceDetails, setAmbulanceDetails] = useState('');
   const [initialAlcoholData, setInitialAlcoholData] = useState(null);
 
+  // --- NEW: State for dynamically adding previous visit MRD references ---
+  const [previousVisits, setPreviousVisits] = useState([]);
+
   // --- Derived Data & Constants ---
   const emp_no = data && data[0]?.aadhar;
   const patientData = data && data[0];
@@ -169,60 +135,14 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   const accessLevel = localStorage.getItem('accessLevel');
   const isDoctor = accessLevel === 'doctor';
 
-  // --- useEffect for Auto-filling main consultation fields ---
-  useEffect(() => {
-    if (patientData) {
-        if (patientData.consultation) {
-            const consult = patientData.consultation;
-            setComplaints(consult.complaints || '');
-            setExamination(consult.examination || '');
-            setSystematic(consult.systematic || '');
-            setLexamination(consult.lexamination || '');
-            setDiagnosis(consult.diagnosis || '');
-            setProcedureNotes(consult.procedure_notes || '');
-            setObsnotes(consult.obsnotes || '');
-            setNotifiableRemarks(consult.notifiable_remarks || '');
-            setCaseType(consult.case_type || '');
-            setIllnessOrInjury(consult.illness_or_injury || '');
-            setOtherCaseDetails(consult.other_case_details || '');
-            setInvestigationDetails(consult.investigation_details || '');
-            setAdviceDetails(consult.advice || '');
-            setFollowUpDate(consult.follow_up_date || '');
-            setSpecialCases(consult.special_cases || '');
-            setReferral(consult.referral || null);
-            setHospitalName(consult.hospital_name || '');
-            setSpeciality(consult.speciality || '');
-            setDoctorName(consult.doctor_name || '');
-            setShiftingRequired(consult.shifting_required || null);
-            setShiftingNotes(consult.shifting_notes || '');
-            setAmbulanceDetails(consult.ambulance_details || '');
-        }
-    } else {
-      // Reset all fields if no patient data
-      setComplaints(''); setExamination(''); setSystematic(''); setLexamination('');
-      setDiagnosis(''); setProcedureNotes(''); setObsnotes(''); setNotifiableRemarks('');
-      setCaseType(''); setIllnessOrInjury(''); setOtherCaseDetails(''); setInvestigationDetails('');
-      setAdviceDetails(''); setFollowUpDate(''); setSpecialCases(''); setReferral(null);
-      setHospitalName(''); setSpeciality(''); setDoctorName(''); setShiftingRequired(null);
-      setShiftingNotes(''); setAmbulanceDetails('');
-      setInitialAlcoholData(null); // Also reset alcohol form data
-    }
-  }, [patientData]);
-
+  
   // --- useEffect to specifically fetch Alcohol Form data ---
   useEffect(() => {
-    // Only fetch if we have a patient identifier (aadhar) and the register type is correct
     if (emp_no && register === "Alcohol Abuse") {
         const fetchAlcoholData = async () => {
             try {
-                // Use the new GET endpoint
                 const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_alcohol_form_data/?aadhar=${emp_no}`);
-                if (response.data && Object.keys(response.data).length > 0) {
-                    console.log("Fetched existing Alcohol Data:", response.data);
-                    setInitialAlcoholData(response.data);
-                } else {
-                    setInitialAlcoholData(null); 
-                }
+                setInitialAlcoholData(response.data && Object.keys(response.data).length > 0 ? response.data : null);
             } catch (error) {
                 console.error("Could not fetch alcohol form data:", error);
                 setInitialAlcoholData(null);
@@ -234,6 +154,21 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
     }
   }, [emp_no, register]);
 
+  // --- NEW: Handlers for managing the dynamic Previous Visit References ---
+  const handleAddPreviousVisit = () => {
+    setPreviousVisits(prev => [...prev, { id: Date.now(), mrd: '' }]);
+  };
+
+  const handleRemovePreviousVisit = (id) => {
+    setPreviousVisits(prev => prev.filter(visit => visit.id !== id));
+  };
+
+  const handlePreviousVisitChange = (id, value) => {
+    setPreviousVisits(prev =>
+      prev.map(visit => (visit.id === id ? { ...visit, mrd: value } : visit))
+    );
+  };
+
 
   // --- Handle MAIN Consultation Submit ---
   const handleConsultationSubmit = async (e) => {
@@ -242,20 +177,28 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
       alert("Please submit the entries first to get MRD Number");
       return;
     }
-    if (!emp_no || !isDoctor) {
-      alert("Cannot submit. Ensure you are logged in as a doctor and patient data is loaded.");
-      return;
-    }
+    
+
+    // --- MODIFIED: Logic to process MRD History for submission ---
+    // Get ONLY the newly added MRDs from the dynamic form fields for this session.
+    const newMrds = previousVisits.map(visit => visit.mrd.trim()).filter(Boolean);
+    // The history for THIS submission will only contain the newly entered MRDs plus the current MRD.
+    // This prevents carrying over the full history from previous consultations.
+    const currentSessionHistory = [...new Set([...newMrds, mrdNo])];
+
+
     setIsSubmitting(true);
     const consultationPayload = {
       aadhar: emp_no,
-      complaints: complaints,
-      examination: examination,
-      systematic: systematic,
-      lexamination: lexamination,
-      diagnosis: diagnosis,
+      accessLevel,
+      mrdNo: mrdNo,
+      complaints,
+      examination,
+      systematic,
+      lexamination,
+      diagnosis,
       procedure_notes: procedureNotes,
-      obsnotes: obsnotes,
+      obsnotes,
       notifiable_remarks: notifiableRemarks,
       case_type: caseType,
       illness_or_injury: illnessOrInjury,
@@ -263,16 +206,17 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
       investigation_details: investigationDetails,
       advice: adviceDetails,
       special_cases: specialCases,
-      submittedDoctor: submittedDoctor,
+      submittedDoctor,
       follow_up_date: followUpDate || null,
-      mrdNo:mrdNo,
-      referral: referral,
+      referral,
       hospital_name: referral === 'yes' ? hospitalName : '',
       speciality: referral === 'yes' ? speciality : '',
       doctor_name: referral === 'yes' ? doctorName : '',
       shifting_required: shiftingRequired,
       shifting_notes: shiftingRequired === 'yes' ? shiftingNotes : '',
       ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '',
+      // --- UPDATED: Send only the current session's MRD history in the payload ---
+      follow_up_mrd_history: currentSessionHistory,
     };
     console.log("Submitting MAIN Consultation Payload:", consultationPayload);
     try {
@@ -323,7 +267,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   if (!patientData) {
     return <div className="p-6 text-center text-gray-500">Loading patient data or no data available...</div>;
   }
-  const textAreaClasses = `w-full p-4 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
+  const textAreaClasses = `w-full p-4 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-ray-100 disabled:cursor-not-allowed`;
   const inputClasses = `w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
   const labelClasses = "block text-gray-700 mb-2 text-lg font-medium";
   const radioLabelClasses = "flex items-center gap-2 cursor-pointer";
@@ -333,26 +277,74 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
   return (
     <div className="bg-white min-h-screen p-4 md:p-6">
       <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 border-b pb-3">Consultation</h2>
-    
+
       {/* Conditionally render the self-contained Alcohol Abuse form */}
       { register === "Alcohol Abuse" && (
-        <AlcoholAbuseForm 
-            initialData={initialAlcoholData}
-            patientEmpNo={patientData?.emp_no}
-            isDoctor={isDoctor}
-            aadhar = {emp_no}
-            mrdNo = {mrdNo}
-        />
+        <div className='mb-8'>
+          <AlcoholAbuseForm
+              initialData={initialAlcoholData}
+              patientEmpNo={patientData?.emp_no}
+              isDoctor={isDoctor}
+              aadhar={emp_no}
+              mrdNo={mrdNo}
+          />
+        </div>
+      )}
+
+      {/* --- NEW: Dynamic "Previous Visit References" Section --- */}
+      { register === "Follow Up Visits" && (
+        <div className="mt-6 mb-8 p-4 border rounded-lg bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Previous Visit References</h2>
+                <button
+                    type="button"
+                    onClick={handleAddPreviousVisit}
+                    disabled={isSubmitting}
+                    className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                    + Add Previous Visit
+                </button>
+            </div>
+            <div className="space-y-3">
+                {previousVisits.map((visit, index) => (
+                    <div key={visit.id} className="flex items-center gap-4 p-2 bg-gray-50 rounded-md">
+                        <label htmlFor={`prev_mrd_${visit.id}`} className="font-medium text-gray-700">
+                           Ref ({index + 1}):
+                        </label>
+                        <input
+                            id={`prev_mrd_${visit.id}`}
+                            type="text"
+                            placeholder="Enter previous MRD number"
+                            className={inputClasses}
+                            value={visit.mrd}
+                            onChange={(e) => handlePreviousVisitChange(visit.id, e.target.value)}
+                            disabled={isSubmitting}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => handleRemovePreviousVisit(visit.id)}
+                            disabled={isSubmitting}
+                            className="bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-700 disabled:bg-gray-400"
+                        >
+                            Remove
+                        </button>
+                    </div>
+                ))}
+                {previousVisits.length === 0 && (
+                    <p className="text-center text-gray-500 p-3">No previous visit references added. Click the button to add one.</p>
+                )}
+            </div>
+        </div>
       )}
 
       {/* This form handles the main consultation details */}
-      <form onSubmit={handleConsultationSubmit} className=" mt-10 space-y-6">
+      <form onSubmit={handleConsultationSubmit} className="mt-4 space-y-6">
         {/* --- Input Fields --- */}
         <div>
           <label className={labelClasses} htmlFor="complaints">Complaints</label>
           <textarea id="complaints" className={textAreaClasses} rows="4"
             placeholder="Enter complaints here..." value={complaints}
-            onChange={(e) => setComplaints(e.target.value)} 
+            onChange={(e) => setComplaints(e.target.value)}
             disabled={!isDoctor || isSubmitting}
           />
         </div>
@@ -439,7 +431,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
          </div>
 
         {/* --- Shifting In Ambulance Section --- */}
-        {type !== '' && ( 
+        {type !== '' && (
           <div className="border-t pt-6 space-y-4">
             <h3 className={sectionHeadingClasses}>Shifting In Ambulance</h3>
             <div>
@@ -488,7 +480,7 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
         )}
 
         {/* Referral Section */}
-        {type !== '' && ( 
+        {type !== '' && (
           <div className="border-t pt-6 space-y-4">
             <h3 className={sectionHeadingClasses}>Referral</h3>
             <div>
@@ -568,8 +560,8 @@ const Consultation = ({ data, type ,mrdNo, register}) => {
         <div className="mt-8 flex justify-end">
           <button
             type="submit"
-            className={`min-w-[150px] bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ${(!isDoctor || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-            disabled={!isDoctor || isSubmitting}
+            className={`min-w-[150px] bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 `}
+            disabled={isSubmitting}
           >
             {isSubmitting ? 'Submitting...' : 'Submit Consultation'}
           </button>

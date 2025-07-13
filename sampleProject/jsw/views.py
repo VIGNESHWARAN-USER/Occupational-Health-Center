@@ -1572,13 +1572,18 @@ def fitness_test(request):
 
             # Prepare defaults
             defaults = {
-                'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
-                'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
-                'CO_dizziness':data.get("dizziness_cns_ent_causes"),'MusculoSkeletal_Movements':data.get("musculoskeletal_movements"),
-                'Claustrophobia':data.get("claustrophobia"),'Tandem':data.get("tandem_walking"),
-                'Nystagmus_Test':data.get("nystagmus_test"),'Dysdiadochokinesia':data.get("dysdiadochokinesia"),
-                'Finger_nose_test':data.get("finger_nose_test"),'Psychological_PMK':data.get("psychological_pmk"),
-                'Psychological_zollingar':data.get("psychological_zollinger"),
+                 'tremors': data.get("tremors"),'romberg_test': data.get("romberg_test"),
+                 'acrophobia': data.get("acrophobia"),
+                'trendelenberg_test': data.get("trendelenberg_test"),
+                'CO_dizziness': data.get("CO_dizziness"),
+                'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
+            'Claustrophobia': data.get("Claustrophobia"),
+        'Tandem': data.get("Tandem"),
+        'Nystagmus_Test': data.get("Nystagmus_Test"),
+        'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
+        'Finger_nose_test': data.get("Finger_nose_test"),
+        'Psychological_PMK': data.get("Psychological_PMK"),
+        'Psychological_zollingar': data.get("Psychological_zollingar"),
                 'special_cases': data.get('special_cases'),
                 'job_nature': job_nature_list,
                 'overall_fitness': data.get("overall_fitness"),
@@ -1633,79 +1638,108 @@ def fitness_test(request):
         return response
 
 
+# your_app/views.py
+
+import json
+import logging
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from .models import Consultation 
+# (Assuming parse_date_internal is a helper you have defined elsewhere)
+# from .utils import parse_date_internal 
+
+# A simple placeholder if you don't have this utility
+def parse_date_internal(date_str):
+    if not date_str:
+        return None
+    try:
+        return date.fromisoformat(date_str.split('T')[0])
+    except (ValueError, AttributeError):
+        return None
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def add_consultation(request):
     """Adds or updates consultation data based on AADHAR and today's date."""
-    model_class = Consultation
-    log_prefix = "add_consultation"
-    success_noun = "Consultation"
-
     if request.method == "POST":
         aadhar = None
         try:
             data = json.loads(request.body.decode('utf-8'))
-            logger.debug(f"Received data for {log_prefix}: {json.dumps(data)[:500]}...")
-
+            logger.debug(f"Received data for consultation: {json.dumps(data)[:500]}...")
+            
             aadhar = data.get('aadhar')
-            entry_date = date.today() # Use today's date
-
-            if not aadhar:
-                logger.warning(f"{log_prefix} failed: Aadhar required")
+            entry_date = date.today()
+            accessLevel = data.get('accessLevel') 
+            if not aadhar or not accessLevel:
+                logger.warning("add_consultation failed: Aadhar required")
                 return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
 
-            # Prepare defaults dictionary
-            defaults = {
-                'complaints': data.get('complaints'), 'examination': data.get('examination'),
-                'systematic': data.get('systematic'), 'lexamination': data.get('lexamination'),
-                'diagnosis': data.get('diagnosis'), 'procedure_notes': data.get('procedure_notes'),
-                'obsnotes': data.get('obsnotes'), 'investigation_details': data.get('investigation_details'),
-                'advice': data.get('advice'), 'follow_up_date': parse_date_internal(data.get('follow_up_date')),
-                'case_type': data.get('case_type'), 'illness_or_injury': data.get('illness_or_injury'),
-                'other_case_details': data.get('other_case_details'), 'notifiable_remarks': data.get('notifiable_remarks'),
-                'referral': data.get('referral'), # 'yes' or 'no'
-                'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else None,
-                'speciality': data.get('speciality') if data.get('referral') == 'yes' else None,
-                'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else None,
-                'shifting_required': data.get('shifting_required'), # 'yes' or 'no'
-                'shifting_notes': data.get('shifting_notes') if data.get('shifting_required') == 'yes' else None,
-                'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else None,
-                'special_cases': data.get('special_cases'),
-                'submittedDoctor': data.get("submittedDoctor"),
-                'emp_no': data.get('emp_no'), # Store if provided
-                'mrdNo':data.get('mrdNo')
-            }
+            if accessLevel == "doctor":
+                defaults = {
+                    'complaints': data.get('complaints'), 'examination': data.get('examination'),
+                    'systematic': data.get('systematic'), 'lexamination': data.get('lexamination'),
+                    'diagnosis': data.get('diagnosis'), 'procedure_notes': data.get('procedure_notes'),
+                    'obsnotes': data.get('obsnotes'), 'investigation_details': data.get('investigation_details'),
+                    'advice': data.get('advice'), 'follow_up_date': parse_date_internal(data.get('follow_up_date')),
+                    'case_type': data.get('case_type'), 'illness_or_injury': data.get('illness_or_injury'),
+                    'other_case_details': data.get('other_case_details'), 'notifiable_remarks': data.get('notifiable_remarks'),
+                    'referral': data.get('referral'),
+                    'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else None,
+                    'speciality': data.get('speciality') if data.get('referral') == 'yes' else None,
+                    'doctor_name': data.get('doctor_name') if data.get('referral') == 'yes' else None,
+                    'shifting_required': data.get('shifting_required'),
+                    'shifting_notes': data.get('shifting_notes') if data.get('shifting_required') == 'yes' else None,
+                    'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else None,
+                    'special_cases': data.get('special_cases'),
+                    'submittedDoctor': data.get("submittedDoctor"),
+                    'emp_no': data.get('emp_no'),
+                    'mrdNo': data.get('mrdNo'),
+                    'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
+                }
+            else:
+                defaults = {
+                    'submittedDoctor': data.get("submittedDoctor"),
+                    'emp_no': data.get('emp_no'),
+                    'mrdNo': data.get('mrdNo'),
+                    'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
+                }
+            
+            # The existing logic to filter out None values works perfectly here
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
-            # Use update_or_create
-            instance, created = model_class.objects.update_or_create(
+            # Use update_or_create to find a record by aadhar and today's date
+            # and update it with the new data, or create a new one.
+            instance, created = Consultation.objects.update_or_create(
                 aadhar=aadhar,
                 entry_date=entry_date,
                 defaults=filtered_defaults
             )
 
-            message = f"{success_noun} {'added' if created else 'updated'} successfully"
-            logger.info(f"{log_prefix} successful for aadhar {aadhar} on {entry_date}. Created: {created}. ID: {instance.id}")
+            message = f"Consultation {'added' if created else 'updated'} successfully"
+            logger.info(f"Consultation successful for aadhar {aadhar}. Created: {created}. ID: {instance.id}")
             return JsonResponse({
                 'status': 'success', 'message': message,
                 'consultation_id': instance.id, 'created': created
             }, status=201 if created else 200)
 
         except json.JSONDecodeError:
-            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            logger.error("add_consultation failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
         except ValidationError as e:
-            logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Validation error: {e.message_dict}", exc_info=True)
+            logger.error(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: Validation error: {e.message_dict}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'Validation Error', 'details': e.message_dict}, status=400)
         except IntegrityError as e:
-             logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Integrity error: {e}", exc_info=True)
+             logger.error(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: Integrity error: {e}", exc_info=True)
              return JsonResponse({'status': 'error', 'message': 'Database integrity error.'}, status=409)
         except Exception as e:
-            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            logger.exception(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
             return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.', 'detail': str(e)}, status=500)
 
-    response = JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
-    response['Allow'] = 'POST'
-    return response
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
 
 @csrf_exempt
 def add_significant_notes(request):
@@ -4072,21 +4106,25 @@ def get_prescription_in_data(request):
 
 
 import json
-import datetime
-from django.http import JsonResponse
-from django.forms.models import model_to_dict
-from django.views.decorators.csrf import csrf_exempt
+# =================================================================
+# === FIX 1: ADJUST THE IMPORTS FOR CLARITY AND CORRECTNESS     ===
+# =================================================================
+from datetime import datetime, time, date
 
-# --- (Your model imports go here) ---
-# from .models import employee_details, heamatalogy, ...
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
+
+# Assume your models are imported here...
 
 @csrf_exempt
 def get_investigation_details(request, aadhar):
     if request.method == "POST":
         try:
+            print(f"Request received for Aadhar: {aadhar}")
             if not employee_details.objects.filter(aadhar=aadhar).exists():
                 return JsonResponse({'error': f'No employee found with Aadhar: {aadhar}'}, status=404)
-
+            
             from_date_str = None
             to_date_str = None
             if request.body:
@@ -4100,65 +4138,53 @@ def get_investigation_details(request, aadhar):
             model_map = {
                 'heamatalogy': heamatalogy,
                 'routinesugartests': RoutineSugarTests,
-                'renalfunctiontests_and_electrolytes': RenalFunctionTest,
-                'lipidprofile': LipidProfile,
-                'liverfunctiontest': LiverFunctionTest,
-                'thyroidfunctiontest': ThyroidFunctionTest,
-                'autoimmunetest': AutoimmuneTest,
-                'coagulationtest': CoagulationTest,
-                'enzymescardiacprofile': EnzymesCardiacProfile,
-                'urineroutinetest': UrineRoutineTest,
-                'serologytest': SerologyTest,
-                'motiontest': MotionTest,
-                'culturesensitivitytest': CultureSensitivityTest,
-                'menspack': MensPack,
-                'womenspack': WomensPack,
-                'occupationalprofile': OccupationalProfile,
-                'otherstest': OthersTest,
-                'ophthalmicreport': OphthalmicReport,
-                'xray': XRay,
-                'usgreport': USGReport,
-                'ctreport': CTReport,
-                'mrireport': MRIReport,
+                # ... other models
             }
 
             response_data = {}
 
             for key, model in model_map.items():
-                query = model.objects.filter(aadhar=aadhar)
+                try:
+                    query = model.objects.filter(aadhar=aadhar)
 
-                if from_date_str and to_date_str:
-                    try:
-                        to_date_obj = datetime.datetime.strptime(to_date_str, '%Y-%m-%d').date()
-                        to_datetime_end_of_day = datetime.datetime.combine(to_date_obj, datetime.time.max)
+                    if from_date_str and to_date_str:
+                        # =================================================================
+                        # === FIX 2: CALL DATETIME METHODS CORRECTLY                  ===
+                        # =================================================================
+                        # Use datetime.strptime directly, not datetime.datetime.strptime
+                        to_date_obj = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+                        
+                        # Use datetime.combine and time.max directly
+                        to_datetime_end_of_day = datetime.combine(to_date_obj, time.max)
+                        
                         query = query.filter(entry_date__gte=from_date_str, entry_date__lte=to_datetime_end_of_day)
-                    except (ValueError, TypeError):
-                        return JsonResponse({'error': f"Invalid date format or model '{key}' is not filterable by date. Use YYYY-MM-DD."}, status=400)
-                
-                all_records = query.order_by('-entry_date')
-
-                records_list = []
-                for record_instance in all_records:
-                    record_dict = model_to_dict(record_instance)
-
-                    # =================================================================
-                    # === THIS IS THE FIX: Manually add the non-editable entry_date ===
-                    # =================================================================
-                    if hasattr(record_instance, 'entry_date'):
-                        record_dict['entry_date'] = record_instance.entry_date
-
-                    # Now, the existing loop will correctly format it
-                    for field_name, field_value in record_dict.items():
-                        if isinstance(field_value, (datetime.date, datetime.datetime)):
-                            record_dict[field_name] = field_value.isoformat()
                     
-                    records_list.append(record_dict)
+                    all_records = query.order_by('-entry_date')
 
-                response_data[key] = records_list
+                    records_list = []
+                    for record_instance in all_records:
+                        record_dict = model_to_dict(record_instance)
+
+                        if hasattr(record_instance, 'entry_date'):
+                            record_dict['entry_date'] = record_instance.entry_date
+
+                        for field_name, field_value in record_dict.items():
+                            # Use `date` and `datetime` from the import
+                            if isinstance(field_value, (date, datetime)):
+                                record_dict[field_name] = field_value.isoformat()
+                        
+                        records_list.append(record_dict)
+
+                    response_data[key] = records_list
+                
+                except Exception as e:
+                    print(f"--> NOTICE: Skipping model '{key}' due to an error. Details: {type(e).__name__}: {str(e)}")
+                    continue
 
             return JsonResponse(response_data, status=200)
 
         except Exception as e:
+            print(f"!!! CRITICAL ERROR: An unexpected error occurred in the view. Details: {str(e)}")
             return JsonResponse({'error': f'An unexpected error occurred: {str(e)}'}, status=500)
 
     return JsonResponse({'error': 'Invalid request method. Please use POST.'}, status=405)

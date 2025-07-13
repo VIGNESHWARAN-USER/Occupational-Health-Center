@@ -197,9 +197,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
     const initialFitnessFormData = {
         emp_no: data?.[0]?.emp_no || '',
         tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "",
-        CO_dizziness: "", musculoskeletal_movements: "", claustrophobia: "",
-        tandem_walking: "", nystagmus_test: "", dysdiadochokinesia: "",
-        Finger_nose_test: "", psychological_pmk: "", psychological_zollinger: ""
+        CO_dizziness: "", MusculoSkeletal_Movements: "", Claustrophobia: "",
+        Tandem: "", Nystagmus_Test: "", Dysdiadochokinesia: "",
+        Finger_nose_test: "", Psychological_PMK: "", Psychological_zollingar: ""
     };
 
     const initialMedicalCertificateState = {

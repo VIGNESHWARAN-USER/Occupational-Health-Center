@@ -1,7 +1,7 @@
 import Sidebar from '../Sidebar';
 import React, { useEffect, useState } from 'react'
 import { motion } from "framer-motion";
-import { useLoaderData, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import axios from 'axios';
 import BasicDetails from './NewVisitProf/BasicDetails';
 import Vitals from './NewVisitProf/Vitals';
@@ -16,6 +16,7 @@ const Summary = () => {
     const [visitData, setVisitData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
+
     useEffect(()=>{
         const fetchUserData = async () => {
             try {
@@ -33,7 +34,7 @@ const Summary = () => {
         }
         fetchUserData();
     }, [])
-    //console.log(visitData?.employee.name);
+
   return (
     <div className='h-screen flex bg-[#8fcadd]'>
         <Sidebar/>
@@ -45,7 +46,6 @@ const Summary = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    
                 >
                     {
                         (loading) ? (
@@ -55,24 +55,25 @@ const Summary = () => {
                         ):
                         ((visit === "Curative") ?(
                         <>
-                        <BasicDetails  data = {visitData.employee}/>
-                        <Vitals data = {visitData.vitals}/>
-                        <MedicalHistory data = {visitData}/>
-                        <Investigation data = {visitData}/>
-                        <Vaccination data = {visitData.vaccination}/>
-                        <ConsultationDisplay data = {visitData}/>
+                            <BasicDetails  data = {visitData.employee}/>
+                            <Vitals data = {visitData.vitals}/>
+                            {/* FIX: Pass an object with the correct structure */}
+                            <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
+                            <Investigation data = {visitData}/>
+                            <Vaccination data = {visitData.vaccination}/>
+                            <ConsultationDisplay data = {visitData}/>
                         </>
                         ):(
                         <> 
-                        <BasicDetails  data = {visitData.employee}/>
-                        <Vitals data = {visitData.vitals}/>
-                        <MedicalHistory data = {visitData}/>
-                        <Investigation data = {visitData}/>
-                        <Vaccination data = {visitData.vaccination}/>
-                        <Fitness data = {visitData.fitnessassessment}/>
+                            <BasicDetails  data = {visitData.employee}/>
+                            <Vitals data = {visitData.vitals}/>
+                            {/* FIX: Pass an object with the correct structure */}
+                            <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
+                            <Investigation data = {visitData}/>
+                            <Vaccination data = {visitData.vaccination}/>
+                            <Fitness data = {visitData.fitnessassessment}/>
                         </>))
                     }
-                    
                 </motion.div>
         </div>
         </div>
@@ -81,5 +82,3 @@ const Summary = () => {
 }
 
 export default Summary
-
-

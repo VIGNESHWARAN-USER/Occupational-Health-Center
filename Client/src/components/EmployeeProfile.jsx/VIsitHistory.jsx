@@ -4,11 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { parse, isValid } from 'date-fns';
 
 const VisitHistory = ({ data }) => {
+    // State for all filters
+    const [searchQuery, setSearchQuery] = useState("");
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [visitReason, setVisitReason] = useState("");
+    
+    // State for data
     const [filteredData, setFilteredData] = useState([]);
-    const [visitData, setVisitData] = useState([]);
+    const [visitData, setVisitData] = useState([]); // This will hold the original, unfiltered data
+    
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const aadhar = data.aadhar;
@@ -25,8 +30,8 @@ const VisitHistory = ({ data }) => {
                 );
                 const data = response.data.data || [];
                 console.log(data);
-                setVisitData(data);
-                setFilteredData(data);
+                setVisitData(data); // Store the original data
+                setFilteredData(data); // Initially, display all data
             } catch (error) {
                 console.error("Error fetching visit data:", error);
                 setVisitData([]);
@@ -38,8 +43,16 @@ const VisitHistory = ({ data }) => {
         fetchVisitData();
     }, [aadhar]);
 
+    // ==== MODIFICATION START: Re-introduced applyFilter function ====
+    // This function is now triggered only by the "Apply" button click.
     const applyFilter = () => {
         const filtered = visitData.filter((item) => {
+            // 1. Filter by MRD No. search query
+            const searchCondition = searchQuery
+                ? item.mrdNo && item.mrdNo.toLowerCase().includes(searchQuery.toLowerCase())
+                : true;
+
+            // 2. Filter by Date Range
             let visitDateObj;
             try {
                 visitDateObj = parse(item.date, 'yyyy-MM-dd', new Date());
@@ -64,17 +77,29 @@ const VisitHistory = ({ data }) => {
             const dateCondition =
                 (!fromDateObj || visitDateObj >= fromDateObj) &&
                 (!toDateObj || visitDateObj <= toDateObj);
-
+            
+            // 3. Filter by Visit Reason
             const reasonCondition = visitReason
                 ? item.register.toLowerCase() === visitReason.toLowerCase()
                 : true;
 
-            return dateCondition && reasonCondition;
+            // An item is included only if it meets all conditions
+            return searchCondition && dateCondition && reasonCondition;
         });
         setFilteredData(filtered);
     };
 
-    // Helper function to format field names for display
+    // Helper function to reset all filters
+    const resetFilters = () => {
+        setSearchQuery("");
+        setFromDate("");
+        setToDate("");
+        setVisitReason("");
+        setFilteredData(visitData); // Reset the table to show all original data
+    };
+    // ==== MODIFICATION END ====
+
+
     const formatFieldName = (name) => {
         return name
             .split('_')
@@ -85,7 +110,22 @@ const VisitHistory = ({ data }) => {
     return (
         <div className="p-6 bg-gray-100 min-h-screen">
             {/* Filters */}
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-3 bg-white p-6 shadow-md rounded-lg mb-6">
+            {/* ==== MODIFICATION START: Updated layout to include Apply/Reset buttons ==== */}
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-4 bg-white p-6 shadow-md rounded-lg mb-6">
+                {/* Search by MRD No. Input */}
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                        Search by MRD No.
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="Enter MRD No..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
                 {/* From Date Input */}
                 <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2">
@@ -112,55 +152,65 @@ const VisitHistory = ({ data }) => {
                     />
                 </div>
 
-                {/* Visit Reason & Apply Button */}
-                <div className="flex items-end gap-4">
-                    <div className="flex-1">
-                        <label className="block text-gray-700 text-sm font-bold mb-2">
-                            Visit Reason
-                        </label>
-                        <select
-                            value={visitReason}
-                            onChange={(e) => setVisitReason(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                        >
-                            <option value="">Select Reason</option>
-                            <option>Pre employment</option>
-                            <option>Pre employment (Food Handler)</option>
-                            <option>Pre Placement</option>
-                            <option>Annual / Periodical</option>
-                            <option>Periodical (Food Handler)</option>
-                            <option>Camps (Mandatory)</option>
-                            <option>Camps (Optional)</option>
-                            <option>Special Work Fitness</option>
-                            <option>Special Work Fitness (Renewal)</option>
-                            <option>Fitness After Medical Leave</option>
-                            <option>Mock Drill</option>
-                            <option>BP Sugar Check (Normal Value)</option>
-                            <option>Retirement Examination</option>
-                            <option>Illness</option>
-                            <option>Over Counter Illness</option>
-                            <option>Injury</option>
-                            <option>Over Counter Injury</option>
-                            <option>Follow-up Visits</option>
-                            <option>BP Sugar Chart</option>
-                            <option>Injury Outside the Premises</option>
-                            <option>Over Counter Injury Outside the Premises</option>
-                            <option>Alcohol Abuse</option>
-                        </select>
-                    </div>
-
-                    <button
-                        onClick={applyFilter}
-                        className="bg-blue-500 text-white px-6 py-2 rounded-md shadow-md hover:bg-blue-600 transition duration-300"
+                {/* Visit Reason Select */}
+                <div>
+                    <label className="block text-gray-700 text-sm font-bold mb-2">
+                        Visit Reason
+                    </label>
+                    <select
+                        value={visitReason}
+                        onChange={(e) => setVisitReason(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                     >
-                        Apply
-                    </button>
+                        <option value="">All Reasons</option>
+                        {/* Other options... */}
+                        <option>Pre employment</option>
+                        <option>Pre employment (Food Handler)</option>
+                        <option>Pre Placement</option>
+                        <option>Annual / Periodical</option>
+                        <option>Periodical (Food Handler)</option>
+                        <option>Camps (Mandatory)</option>
+                        <option>Camps (Optional)</option>
+                        <option>Special Work Fitness</option>
+                        <option>Special Work Fitness (Renewal)</option>
+                        <option>Fitness After Medical Leave</option>
+                        <option>Mock Drill</option>
+                        <option>BP Sugar Check (Normal Value)</option>
+                        <option>Retirement Examination</option>
+                        <option>Illness</option>
+                        <option>Over Counter Illness</option>
+                        <option>Injury</option>
+                        <option>Over Counter Injury</option>
+                        <option>Follow-up Visits</option>
+                        <option>BP Sugar Chart</option>
+                        <option>Injury Outside the Premises</option>
+                        <option>Over Counter Injury Outside the Premises</option>
+                        <option>Alcohol Abuse</option>
+                    </select>
                 </div>
             </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-4 mb-6">
+                 <button
+                    onClick={resetFilters}
+                    className="bg-gray-500 text-white px-6 py-2 rounded-md shadow-md hover:bg-gray-600 transition duration-300"
+                >
+                    Reset
+                </button>
+                <button
+                    onClick={applyFilter}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-md shadow-md hover:bg-blue-600 transition duration-300"
+                >
+                    Apply 
+                </button>
+            </div>
+            {/* ==== MODIFICATION END ==== */}
 
             {/* Table */}
             <div className="bg-white shadow-md rounded-lg p-6 overflow-x-auto">
                 <table className="min-w-full bg-white rounded-lg shadow-lg">
+                    {/* ... Table Head remains the same ... */}
                     <thead className="bg-blue-500 text-white">
                         <tr>
                             <th className="px-6 py-3 text-left text-sm font-medium">MRD No.</th>
@@ -180,19 +230,12 @@ const VisitHistory = ({ data }) => {
                             </tr>
                         ) : filteredData.length > 0 ? (
                             filteredData.map((visit, index) => {
-                                // ==== MODIFICATION START ====
-
-                                // Define the fields in 'vitals' you want to check for.
+                                // ... Table row mapping remains the same ...
                                 const uploadableFields = [
-                                    'application_form',
-                                    'manual',
-                                    'self_declared',
-                                    'consent',
-                                    'fc',
-                                    'report'
+                                    'application_form', 'manual', 'self_declared',
+                                    'consent', 'fc', 'report'
                                 ];
 
-                                // Check if visit.vitals exists and filter the fields that have a value.
                                 const availableUploads = visit.vitals
                                     ? uploadableFields.filter(field => visit.vitals[field])
                                     : [];
@@ -203,7 +246,6 @@ const VisitHistory = ({ data }) => {
                                         <td className="px-6 py-4 whitespace-nowrap">{visit.register}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{visit.date}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{visit.visitOutcome || "N/A"}</td>
-                                        
                                         <td className="px-6 py-4">
                                             <div className="flex flex-wrap gap-2">
                                                 {availableUploads.length > 0 ? (
@@ -220,9 +262,6 @@ const VisitHistory = ({ data }) => {
                                                 )}
                                             </div>
                                         </td>
-                                        
-                                        {/* ==== MODIFICATION END ==== */}
-
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <button
                                                 onClick={() => {
@@ -241,7 +280,7 @@ const VisitHistory = ({ data }) => {
                         ) : (
                             <tr>
                                 <td colSpan="6" className="text-center py-4 text-gray-500">
-                                    No records found
+                                    No records found for the selected filters
                                 </td>
                             </tr>
                         )}

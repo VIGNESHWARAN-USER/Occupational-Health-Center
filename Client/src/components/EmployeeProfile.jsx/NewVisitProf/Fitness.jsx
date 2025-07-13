@@ -4,17 +4,31 @@ import moment from 'moment'; // Import moment
 
 // --- Reusable Detail Item Component ---
 const DetailItem = ({ label, value, isFullWidth = false }) => (
-    <div className={isFullWidth ? "md:col-span-3" : ""}> {/* Span full width on medium screens if needed */}
+    <div className={isFullWidth ? "md:col-span-3" : ""}>
         <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
         <div className="px-3 py-2 w-full bg-gray-50 border border-gray-200 rounded-md shadow-sm text-gray-800 text-sm min-h-[38px] flex items-center">
-            {value !== null && value !== undefined && value !== '' ? value : <span className="text-gray-400 italic">N/A</span>}
+            {value !== null && value !== undefined && value !== '' ? (
+                 <span className="capitalize">{String(value)}</span>
+            ) : (
+                 <span className="text-gray-400 italic">N/A</span>
+            )}
         </div>
     </div>
 );
 
-// --- Display Component for Form 17 ---
+// --- Reusable Text Area Display Component ---
+const TextAreaDisplay = ({ label, value }) => (
+    <div className="mb-6">
+        <h3 className="text-lg font-semibold mb-2 text-gray-700">{label}</h3>
+        <div className="p-3 bg-gray-50 border border-gray-200 rounded-md shadow-sm min-h-[60px] text-sm text-gray-800 whitespace-pre-wrap">
+            {value || <span className="text-gray-400 italic">Not provided.</span>}
+        </div>
+    </div>
+);
+
+
+// --- Display Components for Statutory Forms (Unchanged) ---
 const RenderForm17Display = ({ formData }) => {
-    console.log(formData)
     if (!formData) return null;
     return (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
@@ -37,15 +51,10 @@ const RenderForm17Display = ({ formData }) => {
                 <DetailItem label="Suspension Details" value={formData.suspensionDetails} isFullWidth={true} />
                 <DetailItem label="Recertified Date" value={formData.recertifiedDate ? moment(formData.recertifiedDate).format('LL') : 'N/A'} />
                 <DetailItem label="Unfitness Certificate" value={formData.unfitnessCertificate} />
-                {/* Signatures are often just names/timestamps in digital forms */}
-                {/* <DetailItem label="Surgeon Signature Ref" value={formData.surgeonSignature} /> */}
-                {/* <DetailItem label="FMO Signature Ref" value={formData.fmoSignature} /> */}
             </div>
         </div>
     );
 };
-
-// --- Display Component for Form 38 ---
 const RenderForm38Display = ({ formData }) => {
     if (!formData) return null;
     return (
@@ -62,15 +71,10 @@ const RenderForm38Display = ({ formData }) => {
                 <DetailItem label="Date of Eye Exam" value={formData.eyeExamDate ? moment(formData.eyeExamDate).format('LL') : 'N/A'} />
                 <DetailItem label="Result" value={formData.result} />
                 <DetailItem label="Remarks" value={formData.remarks} isFullWidth={true}/>
-                {/* Signatures */}
-                {/* <DetailItem label="Opthamologist Signature Ref" value={formData.opthamologistSignature} /> */}
-                {/* <DetailItem label="FMO Signature Ref" value={formData.fmoSignature} /> */}
             </div>
         </div>
     );
 };
-
-// --- Display Component for Form 39 ---
 const RenderForm39Display = ({ formData }) => {
     if (!formData) return null;
     return (
@@ -88,14 +92,10 @@ const RenderForm39Display = ({ formData }) => {
                 <DetailItem label="Result of Medical Examination" value={formData.medicalExamResult} />
                 <DetailItem label="Certified Fit/Unfit/Conditional" value={formData.certifiedFit} />
                 <DetailItem label="Dept/Section (If employed)" value={formData.departmentSection} />
-                 {/* Signature */}
-                {/* <DetailItem label="Certifying Surgeon Signature Ref" value={formData.certifyingSurgeonSignature} /> */}
             </div>
         </div>
     );
 };
-
-// --- Display Component for Form 40 ---
 const RenderForm40Display = ({ formData }) => {
     if (!formData) return null;
     return (
@@ -117,14 +117,10 @@ const RenderForm40Display = ({ formData }) => {
                 <DetailItem label="Deworming" value={formData.deworming} />
                 <DetailItem label="Typhoid Vaccination Date" value={formData.typhoidVaccinationDate ? moment(formData.typhoidVaccinationDate).format('LL') : 'N/A'} />
                 <DetailItem label="Remarks" value={formData.remarks} isFullWidth={true}/>
-                 {/* Signature */}
-                {/* <DetailItem label="Signature of FMO Ref" value={formData.signatureOfFMO} /> */}
             </div>
         </div>
     );
 };
-
-// --- Display Component for Form 27 ---
 const RenderForm27Display = ({ formData }) => {
     if (!formData) return null;
     return (
@@ -141,30 +137,50 @@ const RenderForm27Display = ({ formData }) => {
                 <DetailItem label="Name of the Father" value={formData.nameOfTheFather} />
                 <DetailItem label="Nature of Job or Occupation" value={formData.natureOfJobOrOccupation} />
                 <DetailItem label="Descriptive Marks" value={formData.descriptiveMarks} isFullWidth={true}/>
-                 {/* Signatures */}
-                {/* <DetailItem label="Signature of FMO Ref" value={formData.signatureOfFMO} /> */}
-                {/* <DetailItem label="Signature of Certifying Surgeon Ref" value={formData.signatureOfCertifyingSurgeon} /> */}
             </div>
         </div>
     );
 };
 
 
-// --- Main Fitness Page Display Component ---
+// --- Main Fitness Page Display Component (UPDATED) ---
 const Fitness = ({ data }) => {
-  console.log(data);
   const fitnessAssessmentData = data;
+  
+  // Expanded state to hold all fitness assessment data
   const [displayData, setDisplayData] = useState({
+    // Fitness Tests
     tremors: "N/A",
     romberg_test: "N/A",
     acrophobia: "N/A",
     trendelenberg_test: "N/A",
-    jobNature: [],
-    conditionalFitFields: [],
+    CO_dizziness: "N/A",
+    MusculoSkeletal_Movements: "N/A",
+    Claustrophobia: "N/A",
+    Tandem: "N/A",
+    Nystagmus_Test: "N/A",
+    Dysdiadochokinesia: "N/A",
+    Finger_nose_test: "N/A",
+    Psychological_PMK: "N/A",
+    Psychological_zollingar: "N/A",
+
+    // Examination and Status
+    eye_exam_fit_status: "N/A",
+    general_examination: "",
+    systematic_examination: "",
     overallFitness: "N/A",
-    comments: "N/A",
+    comments: "",
+    special_cases: "N/A",
     validity: "N/A",
-    form17: null, // Add state for each form
+    
+    // Job Nature and Conditions
+    jobNature: [],
+    other_job_nature: "",
+    conditionalFitFields: [],
+    conditional_other_job_nature: "",
+
+    // Statutory Forms
+    form17: null,
     form27: null,
     form38: null,
     form39: null,
@@ -173,96 +189,115 @@ const Fitness = ({ data }) => {
 
   useEffect(() => {
     if (fitnessAssessmentData) {
-        // Safely parse jobNature
-        let parsedJobNature = [];
-        if (fitnessAssessmentData.job_nature) {
-            if (Array.isArray(fitnessAssessmentData.job_nature)) {
-                parsedJobNature = fitnessAssessmentData.job_nature;
-            } else if (typeof fitnessAssessmentData.job_nature === 'string') {
-                try {
-                    const parsed = JSON.parse(fitnessAssessmentData.job_nature);
-                    if (Array.isArray(parsed)) {
-                        parsedJobNature = parsed;
-                    }
-                } catch (error) {
-                    console.error("Error parsing job_nature JSON:", error);
-                    // Fallback: maybe split by comma if it's a simple string list?
-                    // parsedJobNature = fitnessAssessmentData.job_nature.split(',').map(s => s.trim()).filter(Boolean);
-                }
-            }
-        }
-
-        // Safely parse conditionalFitFields
-        let parsedConditionalFields = [];
-         if (fitnessAssessmentData.conditional_fit_feilds) { // Note the potential typo 'feilds' vs 'fields'
-            const fieldData = fitnessAssessmentData.conditional_fit_feilds;
-             if (Array.isArray(fieldData)) {
-                parsedConditionalFields = fieldData;
-            } else if (typeof fieldData === 'string') {
+        // Safely parse JSON string fields
+        const parseJsonField = (fieldData) => {
+            if (!fieldData) return [];
+            if (Array.isArray(fieldData)) return fieldData;
+            if (typeof fieldData === 'string') {
                 try {
                     const parsed = JSON.parse(fieldData);
-                    if (Array.isArray(parsed)) {
-                        parsedConditionalFields = parsed;
-                    }
+                    return Array.isArray(parsed) ? parsed : [];
                 } catch (error) {
-                    console.error("Error parsing conditional_fit_feilds JSON:", error);
-                    // Fallback option if needed
+                    console.error("Error parsing JSON field:", error);
+                    return [];
                 }
             }
-        }
+            return [];
+        };
 
+        const parsedJobNature = parseJsonField(fitnessAssessmentData.job_nature);
+        const parsedConditionalFields = parseJsonField(fitnessAssessmentData.conditional_fit_feilds);
 
-      setDisplayData({
-        tremors: fitnessAssessmentData.tremors || "N/A",
-        romberg_test: fitnessAssessmentData.romberg_test || "N/A",
-        acrophobia: fitnessAssessmentData.acrophobia || "N/A",
-        trendelenberg_test: fitnessAssessmentData.trendelenberg_test || "N/A",
-        jobNature: parsedJobNature,
-        conditionalFitFields: parsedConditionalFields,
-        overallFitness: fitnessAssessmentData.overall_fitness || "N/A",
-        comments: fitnessAssessmentData.comments || "N/A",
-        validity: fitnessAssessmentData.validity ? moment(fitnessAssessmentData.validity).format('LL') : "N/A",
-        // Check for nested form data
-        form17: data.form17 || null,
-        form27: data.form27 || null,
-        form38: data.form38 || null,
-        form39: data.form39 || null,
-        form40: data.form40 || null,
-      });
-    } else {
-      // Handle case where fitnessAssessmentData is null/undefined
-      setDisplayData({
-        tremors: "N/A", romberg_test: "N/A", acrophobia: "N/A", trendelenberg_test: "N/A",
-        jobNature: [], conditionalFitFields: [], overallFitness: "N/A", comments: "N/A", validity: "N/A",
-        form17: null, form27: null, form38: null, form39: null, form40: null,
-      });
+        setDisplayData({
+            // Set all fitness test fields
+            tremors: fitnessAssessmentData.tremors || "N/A",
+            romberg_test: fitnessAssessmentData.romberg_test || "N/A",
+            acrophobia: fitnessAssessmentData.acrophobia || "N/A",
+            trendelenberg_test: fitnessAssessmentData.trendelenberg_test || "N/A",
+            CO_dizziness: fitnessAssessmentData.CO_dizziness || "N/A",
+            MusculoSkeletal_Movements: fitnessAssessmentData.MusculoSkeletal_Movements || "N/A",
+            Claustrophobia: fitnessAssessmentData.Claustrophobia || "N/A",
+            Tandem: fitnessAssessmentData.Tandem || "N/A",
+            Nystagmus_Test: fitnessAssessmentData.Nystagmus_Test || "N/A",
+            Dysdiadochokinesia: fitnessAssessmentData.Dysdiadochokinesia || "N/A",
+            Finger_nose_test: fitnessAssessmentData.Finger_nose_test || "N/A",
+            Psychological_PMK: fitnessAssessmentData.Psychological_PMK || "N/A",
+            Psychological_zollingar: fitnessAssessmentData.Psychological_zollingar || "N/A",
+
+            // Set examination and status fields
+            eye_exam_fit_status: fitnessAssessmentData.eye_exam_fit_status || "N/A",
+            general_examination: fitnessAssessmentData.general_examination || "",
+            systematic_examination: fitnessAssessmentData.systematic_examination || "",
+            overallFitness: fitnessAssessmentData.overall_fitness || "N/A",
+            comments: fitnessAssessmentData.comments || "",
+            special_cases: fitnessAssessmentData.special_cases || "N/A",
+            validity: fitnessAssessmentData.validity ? moment(fitnessAssessmentData.validity).format('LL') : "N/A",
+
+            // Set job nature and conditional fields
+            jobNature: parsedJobNature,
+            other_job_nature: fitnessAssessmentData.other_job_nature || "",
+            conditionalFitFields: parsedConditionalFields,
+            conditional_other_job_nature: fitnessAssessmentData.conditional_other_job_nature || "",
+            
+            // Set form data
+            form17: data.form17 || null,
+            form27: data.form27 || null,
+            form38: data.form38 || null,
+            form39: data.form39 || null,
+            form40: data.form40 || null,
+        });
     }
-  }, [fitnessAssessmentData]); // Depend on the input prop
+  }, [data, fitnessAssessmentData]); // Depend on the full data prop
 
   return (
     <div className="mt-6 p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-3">Fitness Assessment Details</h2>
 
-      {/* Basic Tests Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6">
-        <DetailItem label="Tremors" value={displayData.tremors} />
-        <DetailItem label="Romberg Test" value={displayData.romberg_test} />
-        <DetailItem label="Acrophobia" value={displayData.acrophobia} />
-        <DetailItem label="Trendelenberg Test" value={displayData.trendelenberg_test} />
+      {/* Main Status Section */}
+      <h3 className="text-lg font-semibold mb-3 text-gray-700">Overall Status</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6 p-4 bg-gray-50 rounded-lg border">
         <DetailItem label="Overall Fitness" value={displayData.overallFitness} />
+        <DetailItem label="Ophthalmologist Status" value={displayData.eye_exam_fit_status} />
+        <DetailItem label="Special Cases" value={displayData.special_cases} />
         <DetailItem label="Validity Date" value={displayData.validity} />
       </div>
 
-       {/* Job Nature Section */}
+      {/* Fitness Tests Section */}
+      <h3 className="text-lg font-semibold mb-3 text-gray-700">Fitness Tests</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6">
+        <DetailItem label="Tremors" value={displayData.tremors} />
+        <DetailItem label="Romberg Test" value={displayData.romberg_test} />
+        <DetailItem label="Fear Of Height (Acrophobia)" value={displayData.acrophobia} />
+        <DetailItem label="Trendelenberg Test" value={displayData.trendelenberg_test} />
+        <DetailItem label="C/O Dizziness" value={displayData.CO_dizziness} />
+        <DetailItem label="MusculoSkeletal Movements" value={displayData.MusculoSkeletal_Movements} />
+        <DetailItem label="Fear in confined Space (Claustrophobia)" value={displayData.Claustrophobia} />
+        <DetailItem label="Straight Line (Tandem) Walking" value={displayData.Tandem} />
+        <DetailItem label="Nystagmus Test" value={displayData.Nystagmus_Test} />
+        <DetailItem label="Dysdiadochokinesia" value={displayData.Dysdiadochokinesia} />
+        <DetailItem label="Finger Nose Test" value={displayData.Finger_nose_test} />
+        <DetailItem label="Psychological - PMK" value={displayData.Psychological_PMK} />
+        <DetailItem label="Psychological - Zollinger" value={displayData.Psychological_zollingar} />
+      </div>
+
+      {/* Job Nature Section */}
        <div className="mb-6">
-           <h3 className="text-lg font-semibold mb-3 text-gray-700">Job Nature</h3>
+           <h3 className="text-lg font-semibold mb-3 text-gray-700">Fitness applied for (Job Nature)</h3>
            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md shadow-sm min-h-[40px]">
                {displayData.jobNature && displayData.jobNature.length > 0 ? (
-                   <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                       {displayData.jobNature.map((job, index) => (
-                           <li key={index}>{job}</li>
-                       ))}
-                   </ul>
+                   <>
+                       <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                           {displayData.jobNature.map((job, index) => (
+                               <li key={index}>{job}</li>
+                           ))}
+                       </ul>
+                       {displayData.jobNature.includes("Others") && displayData.other_job_nature && (
+                            <div className="mt-2 pt-2 border-t border-gray-300 pl-5 text-sm">
+                                <span className="font-medium text-gray-600">Other Details: </span>
+                                <span className="text-gray-800">{displayData.other_job_nature}</span>
+                            </div>
+                       )}
+                   </>
                ) : (
                    <p className="text-sm text-gray-500 italic">No job nature specified.</p>
                )}
@@ -271,15 +306,23 @@ const Fitness = ({ data }) => {
 
       {/* Conditional Fit Fields Section (Only show if relevant) */}
       {displayData.overallFitness?.toLowerCase() === "conditional" && (
-        <div className="mb-6">
-           <h3 className="text-lg font-semibold mb-3 text-gray-700">Conditional Fit For</h3>
-           <div className="p-3 bg-gray-50 border border-gray-200 rounded-md shadow-sm min-h-[40px]">
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+           <h3 className="text-lg font-semibold mb-3 text-blue-800">Conditionally Fit For</h3>
+           <div className="p-3 bg-white border border-gray-200 rounded-md shadow-sm min-h-[40px]">
                {displayData.conditionalFitFields && displayData.conditionalFitFields.length > 0 ? (
-                   <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
-                       {displayData.conditionalFitFields.map((field, index) => (
-                           <li key={index}>{field}</li>
-                       ))}
-                   </ul>
+                    <>
+                       <ul className="list-disc list-inside text-sm text-gray-800 space-y-1">
+                           {displayData.conditionalFitFields.map((field, index) => (
+                               <li key={index}>{field}</li>
+                           ))}
+                       </ul>
+                       {displayData.conditionalFitFields.includes("Others") && displayData.conditional_other_job_nature && (
+                            <div className="mt-2 pt-2 border-t border-gray-300 pl-5 text-sm">
+                                <span className="font-medium text-gray-600">Other Conditional Details: </span>
+                                <span className="text-gray-800">{displayData.conditional_other_job_nature}</span>
+                            </div>
+                       )}
+                    </>
                ) : (
                    <p className="text-sm text-gray-500 italic">No specific conditional fields listed.</p>
                )}
@@ -287,12 +330,11 @@ const Fitness = ({ data }) => {
        </div>
       )}
 
-      {/* Comments Section */}
-       <div className="mb-6">
-           <h3 className="text-lg font-semibold mb-3 text-gray-700">Comments</h3>
-            {/* Use DetailItem for consistency, allowing full width */}
-           <DetailItem label="" value={displayData.comments} isFullWidth={true} />
-       </div>
+      {/* Examination and Comments Sections */}
+      <TextAreaDisplay label="General Examination" value={displayData.general_examination} />
+      <TextAreaDisplay label="Systemic Examination (CVS, RS, GIT, CNS, etc)" value={displayData.systematic_examination} />
+      <TextAreaDisplay label="Doctor's Remarks / Comments" value={displayData.comments} />
+
 
        {/* Statutory Forms Section */}
         {(displayData.form17 || displayData.form27 || displayData.form38 || displayData.form39 || displayData.form40) && (
