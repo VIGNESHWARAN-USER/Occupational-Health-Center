@@ -718,7 +718,7 @@ const NewVisit = () => {
 
     // --- CORRECTED LOGIC ---
     // Show Consultation tab if the visit is Curative OR it's a Follow Up visit
-    (visit === "Curative" || register === "Follow Up Visits") && { id: "Consultation", label: "Consultation and Referral" },
+    (visit === "Curative") && { id: "Consultation", label: "Consultation and Referral" },
     
     // Show Prescription tab ONLY for Curative visits
     visit === "Curative" && { id: "Prescription", label: "Prescription" },
@@ -1365,12 +1365,14 @@ const NewVisit = () => {
             </button>
           </div>
         );
+    // ... inside the renderTabContent function
       case "Fitness":
         return <Fitness data={data} register = {register} type={visit} mrdNo={mrdNo} />;
       case "Investigations":
-        return <Investigation data={singleData} />;
+        return <Investigation data={singleData} mrdNo={mrdNo} />; // <<< CHANGED: Pass mrdNo as a prop
       case "Vaccination":
         return <Vaccination data={data} mrdNo={mrdNo}  />;
+// ...
       case "Vitals":
         return <Vitals data={data} type={type} mrdNo={mrdNo}/>;
       case "MedicalHistory":

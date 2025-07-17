@@ -16,6 +16,7 @@ const filterSections = [
     { id: "vitals", label: "Vitals" },
     { id: "investigations", label: "Investigations" },
     { id: "fitness", label: "Fitness" },
+    { id: "specialcases", label: "Special Cases" }, // Added Special Cases
     // { id: "prescriptions", label: "Prescriptions" },
     { id: "referrals", label: "Referrals" },
     { id: "statutoryforms", label: "Statutory Forms" },
@@ -118,8 +119,6 @@ const RecordsFilters = () => {
                 console.error("Error fetching data:", error);
                 setEmployees([]);
                 setFilteredEmployees([]);
-                setcd([]);
-                setremarks([]);
                 setSpecialityOptions([]);
                 setDoctorOptions([]);
                 setHospitalOptions([]);
@@ -191,9 +190,6 @@ const RecordsFilters = () => {
 
 
     // --- Core Filtering Logic ---
-  // In RecordsFilters.js
-
-    // --- Core Filtering Logic ---
     const applyFiltersToData = () => {
         console.log("Applying filters:", selectedFilters);
         console.log("Selected Role:", selectedRole);
@@ -210,7 +206,7 @@ const RecordsFilters = () => {
             const key = Object.keys(filter)[0]; // Use the potentially modified filterKey
             acc[key] = Object.values(filter)[0];
             return acc;
-        }, {}); 
+        }, {});
         results = results.filter(employee => {
             for (const key in filtersMap) {
                 const value = filtersMap[key];
@@ -297,9 +293,9 @@ const RecordsFilters = () => {
                 // --- Investigations ---
                 else if (key.startsWith('investigation_')) {
                     const filterData = value; // { form, param, from, to, status }
-                    
+
                     const investigationCategory = employee[filterData.form];
-                    
+
                     if (!investigationCategory) {
                         return false;
                     }
@@ -307,7 +303,7 @@ const RecordsFilters = () => {
                     if (filterData.from && filterData.to) {
                         const investigationValue = investigationCategory[filterData.param];
                         if (investigationValue === undefined || investigationValue === null || investigationValue === '') {
-                            return false; 
+                            return false;
                         }
                         const numVal = parseFloat(investigationValue);
                         const fromVal = parseFloat(filterData.from);
@@ -320,7 +316,7 @@ const RecordsFilters = () => {
                     if (filterData.status) {
                         const statusFieldKey = `${filterData.param}_status`;
                         const investigationStatus = investigationCategory[statusFieldKey];
-                        
+
                         if (!investigationStatus || investigationStatus.toLowerCase() !== filterData.status.toLowerCase()) {
                             return false;
                         }
@@ -334,6 +330,18 @@ const RecordsFilters = () => {
                         employee.fitnessassessment[fitnessKey]?.toLowerCase() === fitnessValue?.toLowerCase()
                     );
                     if (!fitnessMatch) return false;
+                }
+                // --- Special Cases ---
+                else if (key === 'specialCase') {
+                    const hasFitnessCase = employee.fitnessassessment?.special_cases?.trim();
+                    const hasConsultationCase = employee.consultation?.special_cases?.trim();
+                    const employeeHasCase = !!(hasFitnessCase || hasConsultationCase);
+
+                    if (value === 'Yes') {
+                        if (!employeeHasCase) return false;
+                    } else if (value === 'No' || value === 'NA') {
+                        if (employeeHasCase) return false;
+                    }
                 }
                 // --- Medical History ---
                  else if (['smoking', 'alcohol', 'paan', 'diet'].includes(key)) {
@@ -425,7 +433,7 @@ const RecordsFilters = () => {
                         } catch (e) { console.error("Date parsing error:", e); return false; }
                     }
                 }
-           
+
                 // --- Prescriptions ---
                 //  else if (["tablets", "injections", "creams","syrups","drops","respules","lotions","fluids", "powder","suture_procedure","dressing","others" ].includes(key)) {
                 //       if (!employee.prescription || !employee.prescription[key] || employee.prescription[key].toLowerCase() !== value.toLowerCase()) return false;
@@ -493,6 +501,7 @@ const RecordsFilters = () => {
          if (key.startsWith("param_") && typeof value === 'object') { return `Vitals: ${value.param.toUpperCase()} ${value.value ? `(${value.value})` : `[${value.from} - ${value.to}]`}`; }
          else if (key.startsWith("investigation_") && typeof value === 'object') { let d = `Invest: ${value.form.toUpperCase()} > ${value.param.toUpperCase()}`; if (value.from && value.to) d += ` [${value.from}-${value.to}]`; if (value.status) d += ` (${value.status.toUpperCase()})`; return d; }
          else if (key.startsWith("fitness_") && typeof value === 'object') { return `Fitness: ${Object.entries(value).map(([k, v]) => `${k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${v}`).join(", ")}`; }
+         else if (key === 'specialCase') { return `Special Cases: ${value}`; } // Added display for Special Cases
          else if (key.startsWith("purpose_") && typeof value === 'object') { let p = []; if(value.type_of_visit) p.push(`Type:${value.type_of_visit}`); if(value.register) p.push(`Reg:${value.register}`); if(value.specificCategory) p.push(`Cat:${value.specificCategory}`); if(value.fromDate || value.toDate) p.push(`Date:[${value.fromDate||'..'} to ${value.toDate||'..'}]`); return `Purpose: ${p.join('|')}`; }
          else if (key.startsWith("referrals_") && typeof value === 'object') { let p=[]; if (value.referred) p.push(`Referred:${value.referred}`); if (value.speciality) p.push(`Spec:${value.speciality}`); if (value.hospitalName) p.push(`Hosp:${value.hospitalName}`); if (value.doctorName) p.push(`Doc:${value.doctorName}`); return `Referral:${p.join(', ')}`; }
          else if (key.startsWith("family_") && typeof value === 'object') { return `FamilyHx: ${value.relation}-${value.condition}(${value.status})`; }
@@ -563,6 +572,7 @@ const RecordsFilters = () => {
                                 {selectedSection === "employementdetails" && <EmploymentDetails addFilter={addFilter} />}
                                 {selectedSection === "vitals" && <Vitals addFilter={addFilter} />}
                                 {selectedSection === "fitness" && <Fitness addFilter={addFilter} />}
+                                {selectedSection === "specialcases" && <SpecialCasesFilter addFilter={addFilter} />}
                                 {selectedSection === "medicalhistory" && <MedicalHistoryForm addFilter={addFilter} />}
                                 {selectedSection === "investigations" && <Investigations addFilter={addFilter} />}
                                 {selectedSection === "vaccination" && <VaccinationForm addFilter={addFilter} />}
@@ -654,10 +664,7 @@ const PersonalDetails = ({ addFilter }) => {
     };
     return (<div className="space-y-4"> <div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="ageFrom-filter">Age From</label> <input type="number" id="ageFrom-filter" name="ageFrom" value={formData.ageFrom} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 25"/> </div> <div> <label htmlFor="ageTo-filter">Age To</label> <input type="number" id="ageTo-filter" name="ageTo" value={formData.ageTo} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 40"/> </div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="sex-filter">Sex</label> <select name="sex" id="sex-filter" value={formData.sex} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any Sex</option> <option value="Male">Male</option> <option value="Female">Female</option> <option value="Other">Other</option> </select> </div> <div> <label htmlFor="bloodgrp-filter">Blood Group</label> <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="A+">A+</option> <option value="A-">A-</option> <option value="B+">B+</option> <option value="B-">B-</option> <option value="AB+">AB+</option> <option value="AB-">AB-</option> <option value="O+">O+</option> <option value="O-">O-</option> </select> </div> <div> <label htmlFor="marital_status-filter">Marital Status</label> <select name="marital_status" id="marital_status-filter" value={formData.marital_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="Single">Single</option> <option value="Married">Married</option> <option value="Separated">Separated</option> <option value="Divorced">Divorced</option> <option value="Widowed">Widowed</option> </select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Personal Details Filter</button> </div>);
 };
-// In RecordsFilters.js
-
 const EmploymentDetails = ({ addFilter }) => {
-    // 1. Add dojFrom and dojTo to state, remove the single doj
     const [formData, setFormData] = useState({
         designation: "",
         department: "",
@@ -678,8 +685,7 @@ const EmploymentDetails = ({ addFilter }) => {
 
     const handleSubmit = () => {
         const filteredData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "" && v !== null));
-        
-        // 2. Add validation for the date range
+
         if (filteredData.dojFrom && filteredData.dojTo && new Date(filteredData.dojFrom) > new Date(filteredData.dojTo)) {
             alert("'From Date' cannot be after 'To Date'.");
             return;
@@ -690,8 +696,7 @@ const EmploymentDetails = ({ addFilter }) => {
         } else {
             alert("Enter at least one detail.");
         }
-        
-        // 3. Reset the updated state
+
         setFormData({
             designation: "", department: "", moj: "", employer: "", job_nature: "", dojFrom: "", dojTo: ""
         });
@@ -708,7 +713,6 @@ const EmploymentDetails = ({ addFilter }) => {
                 <div><label htmlFor="designation-filter">Designation</label><input type="text" id="designation-filter" name="designation" value={formData.designation} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Engineer" /></div>
                 <div><label htmlFor="department-filter">Department</label><input type="text" id="department-filter" name="department" value={formData.department} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., IT" /></div>
             </div>
-            {/* 4. Add the new date range inputs and remove the old single date input */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t mt-4">
                  <div>
                     <label htmlFor="dojFrom-filter">Date of Joining (From)</label>
@@ -760,7 +764,7 @@ const Investigations = ({ addFilter }) => {
         mri: ["mri_brain", "mri_abdomen", "mri_pelvis", "mri_lungs", "mri_spine"],
         usg: ["usg_abdomen", "usg_pelvis", "usg_neck", "usg_kub",/*...*/],
     };
-    
+
     // The rest of the component logic remains the same...
     const formatLabel = (k) => k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); const [formData, setFormData] = useState({ form: "", param: "", from: "", to: "", status: "", }); const selectedFormParams = formData.form ? formOptions[formData.form] || [] : [];
     useEffect(() => { setFormData((prev) => ({ ...prev, param: "", from: "", to: "", status: "" })); }, [formData.form]); const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
@@ -948,8 +952,76 @@ const Fitness = ({ addFilter }) => {
 };
 
 // ========================================================================
-// --- Filter Component Definitions (Replace your existing component with this) ---
+// --- CORRECTED Special Cases Filter Component ---
 // ========================================================================
+const SpecialCasesFilter = ({ addFilter }) => {
+    const [selectedValue, setSelectedValue] = useState(""); // "Yes", "No", or "NA"
+
+    const handleChange = (e) => {
+        setSelectedValue(e.target.value);
+    };
+
+    const handleSubmit = () => {
+        if (!selectedValue) {
+            alert("Please select an option.");
+            return;
+        }
+        addFilter({ specialCase: selectedValue });
+        setSelectedValue(""); // Reset for next time
+    };
+
+    const isSubmitDisabled = !selectedValue;
+
+    return (
+        <div className="space-y-4">
+            <p className="block text-sm font-medium text-gray-700 mb-2">
+                Does the record contain any special cases in Fitness or Consultation notes?
+            </p>
+            <div className="flex items-center space-x-6 py-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="specialCaseOption"
+                        value="Yes"
+                        checked={selectedValue === "Yes"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">Yes</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="specialCaseOption"
+                        value="No"
+                        checked={selectedValue === "No"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">No</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="specialCaseOption"
+                        value="NA"
+                        checked={selectedValue === "NA"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-gray-400 focus:ring-gray-300"
+                    />
+                    <span className="text-gray-800 font-medium">N/A</span>
+                </label>
+            </div>
+            <button
+                onClick={handleSubmit}
+                className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                disabled={isSubmitDisabled}
+            >
+                Add Special Cases Filter
+            </button>
+        </div>
+    );
+};
 
 const MedicalHistoryForm = ({ addFilter }) => {
     // State and options remain the same
@@ -988,7 +1060,6 @@ const MedicalHistoryForm = ({ addFilter }) => {
             cf.familyCondition = familyFilter;
         }
         // --- End of UPDATED Logic ---
-
         if(Object.keys(cf).length > 0){
             addFilter(cf);
         } else {
@@ -1016,7 +1087,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Conditions</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"><div><label htmlFor="pc-c-f">Condition</label><select name="condition" id="pc-c-f" value={pc.condition} onChange={hpc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Select--'}</option>)}</select></div><div><label htmlFor="pc-s-f">Status (Y/N)</label><select name="status" id="pc-s-f" value={pc.status} onChange={hpc} disabled={!pc.condition} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Allergies</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">{Object.keys(al).map((k)=>(<div key={k}><label htmlFor={`${k}-a-f`}>{k==='drugAllergy'?'Drug':k==='foodAllergy'?'Food':'Other'}</label><select name={k} id={`${k}-a-f`} value={al[k]} onChange={hal} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset>
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Surgical History</legend><div className="grid grid-cols-1 gap-4 mt-2"><div><label htmlFor="sh-f">Any Past Surgeries?</label><select name="status" id="sh-f" value={sh.status} onChange={hsh} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
-        
+
         {/* --- THIS IS THE ONLY SECTION WITH A VISUAL CHANGE --- */}
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Family History</legend>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
@@ -1045,7 +1116,6 @@ function PurposeFilter({ addFilter }) {
     const handleSubmit = () => { const pf = {}; if (fromDate) pf.fromDate = fromDate; if (toDate) pf.toDate = toDate; if (type_of_visit) pf.type_of_visit = type_of_visit; if (register) pf.register = register; if (specificCategory) pf.specificCategory = specificCategory; if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) { alert("'From' > 'To'."); return; } if (Object.keys(pf).length > 0) { addFilter({ purpose: pf }); } else { alert("Select criterion or date range."); } setFormData({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "" }); }; const isSubmitDisabled = !fromDate && !toDate && !type_of_visit && !register && !specificCategory;
     return (<div className="space-y-4"> <fieldset className="border p-4 rounded-md"><legend>Date Range</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"> <div><label htmlFor="fD-p-f">From</label><input type="date" id="fD-p-f" name="fromDate" value={fromDate} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> <div><label htmlFor="tD-p-f">To</label><input type="date" id="tD-p-f" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> </div></fieldset> <fieldset className="border p-4 rounded-md"><legend>Visit Purpose</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"> <div><label htmlFor="tov-f">Type</label><select id="tov-f" name="type_of_visit" value={type_of_visit} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="r-p-f">Register</label><select id="r-p-f" name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="sc-p-f">Specific Reason</label><select id="sc-p-f" name="specificCategory" value={specificCategory} onChange={handleChange} disabled={!register||specificOpts.length===0} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{specificOpts.map((c, i)=>(<option key={`${c}-${i}`} value={c}>{c}</option>))}</select></div> </div></fieldset> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Purpose Filter</button> </div>);
 }
-
 // const Prescriptions = ({ addFilter }) => {
 //     const [formData, setFormData] = useState({ tablets: "", injections: "", creams: "",syrups: "",drops: "",respules: "",lotions: "",fluids: "",powder1: "",suture_procedure: "",dressing: "", others: "" });
 //     const tOpts=["","Aspirin","Ibuprofen",/*...*/]; const iOpts=["","Insulin","Adrenaline",/*...*/]; const cOpts=["","Hydrocortisone",/*...*/]; const oOpts=["","Syrup A","Inhaler B",/*...*/];
@@ -1058,12 +1128,10 @@ const Referrals = ({ addFilter, specialityOptions = [], hospitalOptions = [], do
     const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" };
     const handleChange = (e) => { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([_,v])=>v!==""&&v!==null)); if(Object.keys(fd).length>0){addFilter({referrals:fd})}else{alert("Select criterion.")} setFormData({referred:"",speciality:"",hospitalName:"",doctorName:""}); }; const isSubmitDisabled = Object.values(formData).every(v=>v==="");
-    return (<form onSubmit={handleSubmit} className="space-y-4"> <div> <label htmlFor="referred-filter">Referral Made?</label> <select name="referred" id="referred-filter" value={formData.referred} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> 
+    return (<form onSubmit={handleSubmit} className="space-y-4"> <div> <label htmlFor="referred-filter">Referral Made?</label> <select name="referred" id="referred-filter" value={formData.referred} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yesNoOptions).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                  <div> <label htmlFor="speciality-referral-filter">Speciality</label> <select id="speciality-referral-filter" name="speciality" value={formData.speciality} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{specialityOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div>
                                                                  <div> <label htmlFor="hospitalName-referral-filter">Hospital</label> <select id="hospitalName-referral-filter" name="hospitalName" value={formData.hospitalName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{hospitalOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> </div> <div> <label htmlFor="doctorName-referral-filter">Doctor</label> <select id="doctorName-referral-filter" name="doctorName" value={formData.doctorName} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{doctorOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> <button type="submit" className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Referral Filter</button> </form>);
 };
-
-
 const StatutoryForms = ({ addFilter }) => {
     const [formData, setFormData] = useState({ formType: "", from: "", to: "", });
     const formOptions = ["Form27", "Form17", "Form38", "Form39", "Form40"];
@@ -1071,7 +1139,5 @@ const StatutoryForms = ({ addFilter }) => {
     const handleSubmit = () => { if (!formData.formType) { alert("Select form type."); return; } if (formData.from && formData.to && formData.from > formData.to) { alert("'From' > 'To'."); return; } addFilter({ statutoryFormFilter: formData }); setFormData({ formType: "", from: "", to: "" }); };
     return (<div className="space-y-4 p-4 border rounded-md"> <div> <label htmlFor="statutory-form-type">Form Type *</label> <select id="statutory-form-type" name="formType" value={formData.formType} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-blue-500" required><option value="">--Select--</option>{formOptions.map(f => <option key={f} value={f}>{f}</option>)}</select> </div> <div> <label htmlFor="statutory-form-from">From Date</label> <input type="date" id="statutory-form-from" name="from" value={formData.from} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-blue-500"/> </div> <div> <label htmlFor="statutory-form-to">To Date</label> <input type="date" id="statutory-form-to" name="to" value={formData.to} onChange={handleChange} className="w-full p-2 border rounded-lg focus:ring-blue-500"/> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={!formData.formType}>Add Statutory Form Filter</button> </div>);
 }
-
-
 // --- Export ---
 export default RecordsFilters;

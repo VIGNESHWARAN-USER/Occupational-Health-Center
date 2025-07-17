@@ -362,7 +362,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
         </div>
       )}
 
-      {/* --- NEW: Dynamic "Previous Visit References" Section --- */}
+      
       { register === "Follow Up Visits" && (
         <div className="mt-6 mb-8 p-4 border rounded-lg bg-white shadow-sm">
             <div className="flex justify-between items-center mb-4">

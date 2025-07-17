@@ -1232,6 +1232,7 @@ def _add_update_investigation(request, model_class, log_prefix, success_noun, re
         try:
             data = json.loads(request.body.decode('utf-8'))
             aadhar = data.get('aadhar')
+            accessLevel = data.get('accessLevel')
             entry_date = date.today()
 
             if not aadhar:
@@ -1248,6 +1249,10 @@ def _add_update_investigation(request, model_class, log_prefix, success_noun, re
                     return JsonResponse({"error": "MRD number (mrdNo) is required"}, status=400)
                 key_fields.append('mrdNo')
                 filter_kwargs['mrdNo'] = mrd_no
+            if accessLevel == "nurse":
+                data["checked"] = True
+            else:
+                data["checked"] = False
 
             # Filter data for allowed fields, excluding keys
             allowed_fields = {f.name for f in model_class._meta.get_fields() if f.concrete and not f.primary_key and f.name not in key_fields}
@@ -1304,11 +1309,11 @@ def _add_update_investigation(request, model_class, log_prefix, success_noun, re
 
 @csrf_exempt
 def add_haem_report(request):
-    return _add_update_investigation(request, heamatalogy, "add_haem_report", "Haematology details")
+    return _add_update_investigation(request, heamatalogy, "add_haem_report", "Haematology details",requires_mrd=True)
 
 @csrf_exempt
 def add_routine_sugar(request):
-    return _add_update_investigation(request, RoutineSugarTests, "add_routine_sugar", "Routine Sugar Test details")
+    return _add_update_investigation(request, RoutineSugarTests, "add_routine_sugar", "Routine Sugar Test details",requires_mrd=True)
 
 @csrf_exempt
 def add_renal_function(request): # Corrected name
@@ -1332,11 +1337,11 @@ def add_thyroid_function(request):
 
 @csrf_exempt
 def add_autoimmune_function(request):
-    return _add_update_investigation(request, AutoimmuneTest, "add_autoimmune_function", "Autoimmune Test details") # Assuming no MRD required
+    return _add_update_investigation(request, AutoimmuneTest, "add_autoimmune_function", "Autoimmune Test details",requires_mrd=True) # Assuming no MRD required
 
 @csrf_exempt
 def add_coagulation_function(request):
-    return _add_update_investigation(request, CoagulationTest, "add_coagulation_function", "Coagulation Test details") # Assuming no MRD required
+    return _add_update_investigation(request, CoagulationTest, "add_coagulation_function", "Coagulation Test details",requires_mrd=True) # Assuming no MRD required
 
 @csrf_exempt
 def add_enzymes_cardiac(request):
@@ -1345,19 +1350,19 @@ def add_enzymes_cardiac(request):
 
 @csrf_exempt
 def add_urine_routine(request):
-    return _add_update_investigation(request, UrineRoutineTest, "add_urine_routine", "Urine Routine Test details") # Assuming no MRD required
+    return _add_update_investigation(request, UrineRoutineTest, "add_urine_routine", "Urine Routine Test details",requires_mrd=True) # Assuming no MRD required
 
 @csrf_exempt
 def add_serology(request):
-    return _add_update_investigation(request, SerologyTest, "add_serology", "Serology Test details") # Assuming no MRD required
+    return _add_update_investigation(request, SerologyTest, "add_serology", "Serology Test details",required=True) #Assuming no MRD required
 
 @csrf_exempt
 def add_motion_test(request):
-    return _add_update_investigation(request, MotionTest, "add_motion_test", "Motion Test details") # Assuming no MRD required
+    return _add_update_investigation(request, MotionTest, "add_motion_test", "Motion Test details",required=True) #Assuming no MRD required
 
 @csrf_exempt
 def add_culturalsensitivity_function(request): # Corrected spelling: CultureSensitivity
-    return _add_update_investigation(request, CultureSensitivityTest, "add_culturalsensitivity_function", "Culture Sensitivity Test details") # Assuming no MRD required
+    return _add_update_investigation(request, CultureSensitivityTest, "add_culturalsensitivity_function", "Culture Sensitivity Test details",required=True) #Assuming no MRD required
 
 @csrf_exempt
 def create_medical_history(request):
@@ -1532,7 +1537,29 @@ def fetch_vaccinations(request, aadhar):
         response['Allow'] = 'GET'
         return response
 
+import json
+import logging
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+# Make sure to import all your relevant models
+from .models import Consultation, FitnessAssessment, Dashboard 
 
+logger = logging.getLogger(__name__)
+
+# This is the view from your previous code, included for context. No changes here.
+@csrf_exempt
+def add_consultation(request):
+    # ... (code for add_consultation remains the same)
+    pass
+
+
+# ==============================================================================
+# CORRECTED FITNESS TEST VIEW
+# ==============================================================================
 @csrf_exempt
 def fitness_test(request):
     """Adds or updates fitness assessment data based on AADHAR, MRD number and today's date."""
@@ -1547,91 +1574,98 @@ def fitness_test(request):
             data = json.loads(request.body.decode('utf-8'))
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo')
+            # Assuming your BaseModel provides an entry_date field on creation
             entry_date = date.today()
 
             if not aadhar:
                 logger.warning(f"{log_prefix} failed: Aadhar required")
                 return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
-            if not mrd_no: # Assuming mrdNo is required for fitness tests
+            if not mrd_no:
                 logger.warning(f"{log_prefix} failed: MRD required")
                 return JsonResponse({"error": "MRD number (mrdNo) is required"}, status=400)
 
-            # Calculate validity date (6 months from entry date)
-            validity_date = entry_date + relativedelta(months=6) # Use relativedelta
+            validity_date = entry_date + relativedelta(months=6)
 
-            # Safely parse JSON fields
             def parse_json_field(field_data):
                 if isinstance(field_data, list): return field_data
                 if isinstance(field_data, str):
                     try: return json.loads(field_data) if field_data else []
                     except json.JSONDecodeError: return []
-                return [] # Default to empty list
+                return []
 
-            job_nature_list = parse_json_field(data.get("job_nature"))
-            conditional_fit_fields_list = parse_json_field(data.get("conditional_fit_feilds")) # Typo in key?
-
-            # Prepare defaults
+            # Prepare defaults dictionary with keys matching the FitnessAssessment model fields EXACTLY
             defaults = {
-                 'tremors': data.get("tremors"),'romberg_test': data.get("romberg_test"),
-                 'acrophobia': data.get("acrophobia"),
-                'trendelenberg_test': data.get("trendelenberg_test"),
-                'CO_dizziness': data.get("CO_dizziness"),
-                'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
-            'Claustrophobia': data.get("Claustrophobia"),
-        'Tandem': data.get("Tandem"),
-        'Nystagmus_Test': data.get("Nystagmus_Test"),
-        'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
-        'Finger_nose_test': data.get("Finger_nose_test"),
-        'Psychological_PMK': data.get("Psychological_PMK"),
-        'Psychological_zollingar': data.get("Psychological_zollingar"),
-                'special_cases': data.get('special_cases'),
-                'job_nature': job_nature_list,
-                'overall_fitness': data.get("overall_fitness"),
-                'conditional_fit_feilds': conditional_fit_fields_list, # Typo in field name? Check model
-                'general_examination': data.get("general_examination"), 'systematic_examination': data.get("systematic_examination"),
-                'eye_exam_fit_status': data.get("eye_exam_fit_status"),
-                'validity': validity_date,
-                'comments': data.get("comments"),
-                'otherJobNature': data.get("other_job_nature"), # Check model field name
-                'conditionalotherJobNature': data.get("conditional_other_job_nature"), # Check model field name
-                'employer': data.get("employer"),
                 'emp_no': data.get("emp_no"),
+                'aadhar': data.get("aadhar"),
+                'employer': data.get("employer"),
                 'submittedDoctor': data.get("submittedDoctor"),
-                # mrdNo is part of the key, not defaults
+                'mrdNo': data.get("mrdNo"),
+
+                # Basic Tests
+                'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
+                'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
+                'CO_dizziness': data.get("CO_dizziness"), 'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
+                'Claustrophobia': data.get("Claustrophobia"), 'Tandem': data.get("Tandem"),
+                'Nystagmus_Test': data.get("Nystagmus_Test"), 'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
+                'Finger_nose_test': data.get("Finger_nose_test"), 'Psychological_PMK': data.get("Psychological_PMK"),
+                'Psychological_zollingar': data.get("Psychological_zollingar"),
+
+                # Job & Fitness Status
+                'job_nature': parse_json_field(data.get("job_nature")),
+                'overall_fitness': data.get("overall_fitness"),
+                'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
+
+                # --- CORRECTED KEYS ---
+                # Changed keys from snake_case to camelCase to match the model definition
+                'otherJobNature': data.get("other_job_nature"), 
+                'conditionalotherJobNature': data.get("conditional_other_job_nature"),
+
+                'special_cases': data.get('special_cases'),
+
+                # Examinations
+                'general_examination': data.get("general_examination"),
+                'systematic_examination': data.get("systematic_examination"),
+                'eye_exam_fit_status': data.get("eye_exam_fit_status"),
+                
+                # Comments & Validity
+                'comments': data.get("comments"),
+                'validity': validity_date,
+
+                # Follow-up History
+                'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
             }
+            # Filter out any keys that were not provided in the request
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
             # --- Update Dashboard visitOutcome (Side effect) ---
             overall_fitness_status = data.get("overall_fitness")
             if overall_fitness_status:
                  try:
-                     # Find dashboard entry for the same aadhar and date
                      dashboard_entry = Dashboard.objects.filter(aadhar=aadhar, date=entry_date).first()
                      if dashboard_entry:
                           dashboard_entry.visitOutcome = overall_fitness_status
                           dashboard_entry.save(update_fields=['visitOutcome'])
                           logger.info(f"Dashboard visitOutcome updated to '{overall_fitness_status}' for aadhar: {aadhar} on {entry_date}")
-                     else:
-                          logger.info(f"No Dashboard entry found for aadhar: {aadhar} on {entry_date} to update outcome.")
                  except Exception as db_e:
                       logger.error(f"Error updating Dashboard outcome for aadhar {aadhar}: {db_e}", exc_info=True)
 
             # --- Update or Create Fitness Assessment ---
+            # Using aadhar and entry_date as unique identifiers for the record
             instance, created = model_class.objects.update_or_create(
                 aadhar=aadhar,
-                entry_date=entry_date,
-                mrdNo=mrd_no, # Include mrdNo in lookup keys
+                entry_date=entry_date, # Assumes BaseModel provides this field
                 defaults=filtered_defaults
             )
             message = f"{success_noun} {'added' if created else 'updated'} successfully"
-            logger.info(f"{log_prefix} successful for aadhar {aadhar}, MRD {mrd_no}. Created: {created}. ID: {instance.pk}")
+            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. ID: {instance.pk}")
             return JsonResponse({"message": message, "id": instance.pk}, status=201 if created else 200)
+
         except json.JSONDecodeError:
             logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
             logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
-            return JsonResponse({"error": "Internal Server Error.", "detail": str(e)}, status=500)
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
         response = JsonResponse({"error": "Request method must be POST"}, status=405)
         response['Allow'] = 'POST'

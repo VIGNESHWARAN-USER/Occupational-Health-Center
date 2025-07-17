@@ -16,14 +16,15 @@ const ChevronUpIcon = () => (
 );
 
 
-function InvestigationForm({ data }) {
+// CHANGED: Accept mrdNo as a prop
+function InvestigationForm({ data, mrdNo }) {
   console.log("Received data prop:", data);
-  // const navigate = useNavigate(); // Not currently used
+  console.log("Received mrdNo prop:", mrdNo); // Log the new prop
 
   const [formData, setFormData] = useState({});
   const [processedData, setProcessedData] = useState(null);
-  const [expandedCategories, setExpandedCategories] = useState({}); // Tracks which category is expanded
-  const [activeCategoryForForm, setActiveCategoryForForm] = useState(""); // Name of the currently active/expanded form
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [activeCategoryForForm, setActiveCategoryForForm] = useState("");
 
   const accessLevel = localStorage.getItem('accessLevel');
   console.log("Access Level:", accessLevel);
@@ -65,8 +66,6 @@ function InvestigationForm({ data }) {
       const initialData = data[0];
       setProcessedData(initialData);
       console.log("Processed Initial Data:", initialData);
-
-      // Reset expansion states and form data when new employee data comes in
       setExpandedCategories({});
       setActiveCategoryForForm("");
       setFormData({});
@@ -78,39 +77,47 @@ function InvestigationForm({ data }) {
       setFormData({});
     }
   }, [data]);
+  
+  // CHANGED: This effect will update the form's MRD number if it's generated after a form is already open.
+  useEffect(() => {
+    if (mrdNo && activeCategoryForForm) {
+      setFormData(prevData => ({ ...prevData, mrdNo: mrdNo }));
+    }
+  }, [mrdNo, activeCategoryForForm]);
+
 
   const toggleCategory = (categoryName) => {
     const isCurrentlyExpanded = expandedCategories[categoryName];
     let newActiveCategory = "";
-    const newExpandedState = {}; // Will hold the new state for all categories
+    const newExpandedState = {};
 
-    if (!isCurrentlyExpanded) { // If expanding this category
-      // Expand this one, collapse all others
+    if (!isCurrentlyExpanded) {
       allInvFormOptions.forEach(opt => {
         newExpandedState[opt] = (opt === categoryName);
       });
       newActiveCategory = categoryName;
 
-      // Populate formData for the newly expanded category
       if (processedData) {
         const categoryKey = categoryMap[categoryName];
         const categoryData = categoryKey ? getNestedData(processedData, categoryKey) : null;
         console.log(`Populating form for ${categoryName} (key: ${categoryKey}):`, categoryData);
         if (categoryData && typeof categoryData === 'object') {
-          const { id, latest_id, aadhar, entry_date, emp_no, ...initialFields } = categoryData;
-          setFormData(initialFields);
+          // CHANGED: We explicitly ignore the old mrdNo from fetched data
+          const { id, latest_id, aadhar, checked, entry_date, emp_no, mrdNo: oldMrdNo, ...initialFields } = categoryData;
+          // CHANGED: We set the form data using fields from the database BUT inject the NEW mrdNo from props
+          setFormData({ ...initialFields, mrdNo: mrdNo || "" });
         } else {
           console.log(`No data or invalid structure for ${categoryName}, resetting form.`);
-          setFormData({});
+          // CHANGED: Even for a new form, we set the new mrdNo
+          setFormData({ mrdNo: mrdNo || "" });
         }
       }
-    } else { // If collapsing the currently expanded category
-      // Collapse all (effectively collapsing the one that was clicked)
+    } else {
       allInvFormOptions.forEach(opt => {
         newExpandedState[opt] = false;
       });
-      newActiveCategory = ""; // No active category
-      setFormData({}); // Clear form data
+      newActiveCategory = "";
+      setFormData({});
     }
 
     setExpandedCategories(newExpandedState);
@@ -119,6 +126,7 @@ function InvestigationForm({ data }) {
 
 
   const handleChange = (e) => {
+    // ... (This function remains unchanged)
     const { id, value } = e.target;
     const baseName = id.split('_reference_range_')[0]
                       .replace('_unit', '')
@@ -169,7 +177,14 @@ function InvestigationForm({ data }) {
       alert("Employee details not loaded. Cannot submit.");
       return;
     }
-    if (!categoryNameToSubmit) { // Should always be provided now
+    
+    // CHANGED: Add a check for the mrdNo from props
+    if (!mrdNo) {
+      alert("MRD Number for this visit is missing. Please click 'Add Entry' first.");
+      return;
+    }
+
+    if (!categoryNameToSubmit) {
         alert("Internal error: Category to submit is not defined.");
         return;
     }
@@ -207,8 +222,15 @@ function InvestigationForm({ data }) {
     const url = `https://occupational-health-center-1.onrender.com/${endpoint}`;
 
     try {
+      // CHANGED: The payload now correctly uses formData which includes the new mrdNo.
       const { emp_no, ...formDataToSend } = formData;
-      const finalPayload = { ...formDataToSend, aadhar: processedData.aadhar };
+      const finalPayload = { 
+        ...formDataToSend, 
+        aadhar: processedData.aadhar,
+        mrdNo: mrdNo,
+        accessLevel: accessLevel
+      };
+      
       console.log(`Submitting Data for ${categoryNameToSubmit}:`, finalPayload);
 
       const response = await axios.post(url, finalPayload, {
@@ -217,9 +239,6 @@ function InvestigationForm({ data }) {
 
       if (response.status === 200 || response.status === 201) {
         alert(`${categoryNameToSubmit} data submitted successfully!`);
-        // Optionally, re-fetch data for this employee to update processedData
-        // Or, collapse the section and clear form. For now, let's just alert.
-        // toggleCategory(categoryNameToSubmit); // This would collapse it and clear form
       } else {
         alert(`Submission for ${categoryNameToSubmit} failed with status: ${response.status}`);
       }
@@ -230,23 +249,19 @@ function InvestigationForm({ data }) {
     }
   };
 
-  const getTodayDateString = () => {
-    const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  };
-
   const getDoctorOptions = () => {
+    // ... (This function remains unchanged)
     if (!processedData) return [];
-    const today = getTodayDateString();
     return allInvFormOptions.filter(option => {
         const categoryKey = categoryMap[option];
         if (!categoryKey) return false;
         const categoryData = getNestedData(processedData, categoryKey);
-        return categoryData && categoryData.entry_date === today;
+        return categoryData && categoryData.checked === true;
     });
   };
 
-  const renderFields = (category) => { // category is the display name
+  const renderFields = (category) => {
+    // ... (This function remains unchanged)
     if (!processedData || !category) return null;
 
     const categoryKey = categoryMap[category];
@@ -257,7 +272,7 @@ function InvestigationForm({ data }) {
         return <p className="text-gray-500 italic p-4">No data available or structure defined for {category}.</p>;
     }
 
-    const { id, latest_id, aadhar, entry_date, emp_no, ...filteredCategoryData } = categoryData;
+    const { id, latest_id, aadhar,checked,entry_date, emp_no, ...filteredCategoryData } = categoryData;
     const allKeys = Object.keys(filteredCategoryData);
 
     const baseKeys = allKeys.filter(key =>
@@ -265,7 +280,8 @@ function InvestigationForm({ data }) {
         !key.endsWith('_reference_range_from') &&
         !key.endsWith('_reference_range_to') &&
         !key.endsWith('_comments') &&
-        key !== 'emp_no'
+        key !== 'emp_no' && 
+        key !== 'mrdNo' // Also ignore mrdNo for rendering
     );
 
     if (baseKeys.length === 0 && allKeys.length > 0) {
@@ -294,7 +310,7 @@ function InvestigationForm({ data }) {
     }
 
     return (
-      <div className="space-y-4 p-4 border-t"> {/* Added padding and top border */}
+      <div className="space-y-4 p-4 border-t">
         {baseKeys.map((baseKey) => {
           const valueKey = baseKey;
           const unitKey = `${baseKey}_unit`;
@@ -373,15 +389,13 @@ function InvestigationForm({ data }) {
   };
 
   let displayOptions = [];
-  if (processedData) { // Only determine display options if employee data is loaded
+  if (processedData) {
     if (accessLevel === "doctor") {
       displayOptions = getDoctorOptions();
     } else if (accessLevel === "nurse") {
       displayOptions = allInvFormOptions;
     }
-    // Add other access levels if needed
   }
-
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-lg shadow-md">
@@ -403,16 +417,15 @@ function InvestigationForm({ data }) {
                   onClick={() => toggleCategory(optionName)}
                   className="w-full flex justify-between items-center text-left px-4 py-3 bg-gray-100 hover:bg-gray-200 focus:outline-none focus:bg-gray-200 transition duration-150 ease-in-out"
                 >
-                  <span className="text-sm text-gray-800"><input type="checkbox" /></span>
                   <span className="font-medium text-gray-700">{optionName}</span>
                   {expandedCategories[optionName] ? <ChevronUpIcon /> : <ChevronDownIcon />}
                 </button>
                 {expandedCategories[optionName] && (
-                  <div className="bg-white"> {/* Fields container */}
+                  <div className="bg-white">
                     {renderFields(optionName)}
                     <div className="px-4 py-4 border-t flex justify-end">
                         <button
-                            type="button" // Important: type="button" if not submitting a <form> directly
+                            type="button"
                             onClick={(e) => handleSubmit(e, optionName)}
                             className="bg-blue-600 text-white px-5 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 text-sm"
                         >
@@ -423,7 +436,6 @@ function InvestigationForm({ data }) {
                 )}
               </div>
             )) : (
-                // Message if no options are available for the current user/data
                 (accessLevel === "doctor" && <p className="text-sm text-gray-500 mt-2 italic p-4 text-center">No investigation records found with today's date for this employee.</p>) ||
                 (accessLevel !== "doctor" && accessLevel !== "nurse" && <p className="text-sm text-gray-500 mt-2 italic p-4 text-center">No investigation categories available for your role.</p>)
             )}

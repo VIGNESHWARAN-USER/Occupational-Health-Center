@@ -251,7 +251,10 @@ class eventsandcamps(BaseModel):
 
 # --- Haematology Model --- *MODIFIED*
 class heamatalogy(BaseModel):
+    
     checked = models.BooleanField(default=False)
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     hemoglobin = models.TextField(max_length=255)
@@ -364,6 +367,8 @@ class heamatalogy(BaseModel):
 class RoutineSugarTests(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     glucose_f = models.TextField(max_length=255)
     glucose_f_unit = models.TextField(max_length=255)
@@ -402,6 +407,8 @@ class RoutineSugarTests(BaseModel):
 class RenalFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     urea = models.TextField(max_length=255)
     urea_unit = models.TextField(max_length=255)
@@ -478,6 +485,7 @@ class LipidProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
     
     Total_Cholesterol= models.TextField(max_length=255) # Note: Total Cholesterol
     Total_Cholesterol_unit = models.TextField(max_length=255)
@@ -515,11 +523,11 @@ class LipidProfile(BaseModel):
     vldl_cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     vldl_cholesterol_comments = models.TextField(max_length=255)
 
-    ldl_hdl_ratio = models.TextField(max_length=255)
-    ldl_hdl_ratio_unit = models.TextField(max_length=255)
-    ldl_hdl_ratio_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ldl_hdl_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
-    ldl_hdl_ratio_comments = models.TextField(max_length=255)
+    ldl_chol_hdl_chol_ratio = models.TextField(max_length=255)
+    ldl_chol_hdl_chol_ratio_unit = models.TextField(max_length=255)
+    ldl_chol_hdl_chol_ratio_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    ldl_chol_hdl_chol_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ldl_chol_hdl_chol_ratio_comments = models.TextField(max_length=255)
 
     def _str_(self):
         return f"Lipid Profile Report {self.id} for Emp {self.emp_no}"
@@ -529,6 +537,9 @@ class LiverFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
+
     bilirubin_total = models.TextField(max_length=255)
     bilirubin_total_unit = models.TextField(max_length=255)
     bilirubin_total_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -594,6 +605,12 @@ class LiverFunctionTest(BaseModel):
     gamma_glutamyl_transferase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
     gamma_glutamyl_transferase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     gamma_glutamyl_transferase_comments = models.TextField(max_length=255)
+    
+    C_reactive_protien = models.TextField(max_length=255)
+    C_reactive_protien_unit = models.TextField(max_length=255)
+    C_reactive_protien_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    C_reactive_protien_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    C_reactive_protien_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Liver Function Test Report {self.id} for Emp {self.emp_no}"
@@ -603,6 +620,8 @@ class ThyroidFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     t3_triiodothyronine = models.TextField(max_length=255)
     t3_unit = models.TextField(max_length=255)
     t3_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -630,6 +649,8 @@ class AutoimmuneTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     ANA = models.TextField(max_length=255)
     ANA_unit = models.TextField(max_length=255)
     ANA_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -665,6 +686,8 @@ class CoagulationTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     prothrombin_time = models.TextField(max_length=255)
     prothrombin_time_unit = models.TextField(max_length=255)
     prothrombin_time_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -697,6 +720,8 @@ class EnzymesCardiacProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     acid_phosphatase = models.TextField(max_length=255)
     acid_phosphatase_unit = models.TextField(max_length=255)
     acid_phosphatase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -754,6 +779,9 @@ class EnzymesCardiacProfile(BaseModel):
 
     tmt_normal = models.TextField(max_length=255)
     tmt_normal_comments = models.TextField(max_length=255)
+    
+    angiogram = models.TextField(max_length=255)
+    angiogram_comments = models.TextField(max_length=255)
 
     def _str_(self):
         return f"Enzymes & Cardiac Profile Report {self.id} for Emp {self.emp_no}"
@@ -763,6 +791,8 @@ class UrineRoutineTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     colour = models.TextField(max_length=255)
     colour_unit = models.TextField(max_length=255)
     colour_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -867,6 +897,8 @@ class SerologyTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     screening_hiv = models.TextField(max_length=255)
     screening_hiv_unit = models.TextField(max_length=255)
     screening_hiv_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -930,6 +962,8 @@ class MotionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     colour_motion = models.TextField(max_length=255)
     colour_motion_unit = models.TextField(max_length=255)
     colour_motion_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -995,6 +1029,8 @@ class CultureSensitivityTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     urine = models.TextField(max_length=255)
     urine_unit = models.TextField(max_length=255)
     urine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -1027,6 +1063,8 @@ class MensPack(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     psa = models.TextField(max_length=255)
     psa_unit = models.TextField(max_length=255)
     psa_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
@@ -1041,6 +1079,8 @@ class WomensPack(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar 
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     Mammogaram  = models.TextField(max_length=255)
     Mammogaram_comments = models.TextField(max_length=255)
     
@@ -1054,7 +1094,9 @@ class WomensPack(BaseModel):
 class OccupationalProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar     
+    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar    
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     Audiometry  = models.TextField(max_length=255)
     Audiometry_comments = models.TextField(max_length=255)
     
@@ -1069,17 +1111,46 @@ class OthersTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar   
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     Bone_Densitometry = models.TextField(max_length=255)
     Bone_Densitometry_unit = models.TextField(max_length=255)
     Bone_Densitometry_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
     Bone_Densitometry_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
     Bone_Densitometry_comments = models.TextField(max_length=255)
     
+    Vit_D = models.TextField(max_length=255)
+    Vit_D_unit = models.TextField(max_length=255)
+    Vit_D_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Vit_D_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Vit_D_comments = models.TextField(max_length=255)
+    
+    Vit_B12 = models.TextField(max_length=255)
+    Vit_B12_unit = models.TextField(max_length=255)
+    Vit_B12_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Vit_B12_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Vit_B12_comments = models.TextField(max_length=255)
+    
+    Serum_Ferritin = models.TextField(max_length=255)
+    Serum_Ferritin_unit = models.TextField(max_length=255)
+    Serum_Ferritin_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    Serum_Ferritin_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Serum_Ferritin_comments = models.TextField(max_length=255)
+    
     Dental = models.TextField(max_length=255)
     Dental_comments = models.TextField(max_length=255)
     
     Pathology = models.TextField(max_length=255)
     Pathology_comments = models.TextField(max_length=255)
+
+    Endoscopy = models.TextField(max_length=255)
+    Endoscopy_comments = models.TextField(max_length=255)
+
+    Clonoscopy = models.TextField(max_length=255)
+    Clonoscopy_comments = models.TextField(max_length=255)
+
+    Urethroscopy = models.TextField(max_length=255)
+    Urethroscopy_comments = models.TextField(max_length=255)
     
     def _str_(self):
         return f"Others Test {self.id} for Emp {self.emp_no}"
@@ -1090,6 +1161,8 @@ class OphthalmicReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     vision = models.TextField(max_length=255)
     vision_comments = models.TextField(max_length=255)
 
@@ -1106,6 +1179,8 @@ class XRay(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     Chest = models.TextField(max_length=255)
     Chest_comments = models.TextField(max_length=255)
     
@@ -1129,6 +1204,8 @@ class USGReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     usg_abdomen = models.TextField(max_length=255)
     usg_abdomen_comments = models.TextField(max_length=255)
 
@@ -1150,6 +1227,8 @@ class CTReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     CT_brain = models.TextField(max_length=255)
     CT_brain_comments = models.TextField(max_length=255)
 
@@ -1173,6 +1252,8 @@ class MRIReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.TextField(max_length=255, blank=True)
+
     mri_brain = models.TextField(max_length=255)
     mri_brain_comments = models.TextField(max_length=255)
 
@@ -1252,6 +1333,15 @@ class FitnessAssessment(BaseModel):
     emp_no = models.CharField(max_length=50) # Consider making this non-nullable if always required
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     employer = models.TextField(blank=True, null=True)
+
+    # --- NEW: Field for Follow-Up MRD History ---
+    # This field will store an array of MRD numbers, e.g., ["MRD001", "MRD002"]
+    follow_up_mrd_history = models.JSONField(
+        default=list, 
+        blank=True, 
+        null=True, 
+        help_text="A list of MRD numbers for follow-up reference."
+    )
 
     # Basic Tests
     tremors = models.CharField(max_length=10, choices=PositiveNegativeChoices.choices, blank=True, null=True)

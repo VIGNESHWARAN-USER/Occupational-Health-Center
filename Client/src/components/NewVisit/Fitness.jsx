@@ -17,6 +17,7 @@ const FORM27_URL = "https://occupational-health-center-1.onrender.com/form27/";
 const inputClass = "form-input block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";
 const selectClass = "form-select block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";
 const labelClass = "block text-sm font-medium text-gray-700";
+const inputClasses = `w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
 
 // --- Reusable Form Components for Medical Certificate ---
 const FormInput = ({ label, name, type = 'text', value, onChange, className = '' }) => (
@@ -275,6 +276,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
         if (data && data[0]) {
             console.log(data[0].fitnessassessment)
             const assessmentData = data[0].fitnessassessment;
+            console.log(assessmentData)
             if (assessmentData) {
                 const loadedFitnessData = { emp_no: assessmentData.emp_no || currentEmpNo };
                 allFitnessTestsConfig.forEach(test => {
@@ -293,6 +295,18 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 setSpecialCases(assessmentData.special_cases || "");
                 setOtherJobNature(assessmentData.other_job_nature || "");
                 setconditionalOtherJobNature(assessmentData.conditional_other_job_nature || "");
+
+                 if (Array.isArray(assessmentData.follow_up_mrd_history)) {
+        // The incoming data is an array of objects, e.g., [{mrd: '...'}, {mrd: '...'}]
+        // We need to map it to the structure our component expects: [{id: ..., mrd: '...'}]
+        const formattedVisits = assessmentData.follow_up_mrd_history.map((visitObject, index) => ({
+            id: Date.now() + index, // Create a unique ID for React's key prop
+            mrd: visitObject.mrd,      // Extract the MRD string from the object
+        }));
+        setPreviousVisits(formattedVisits);
+    } else {
+        setPreviousVisits([]); // Otherwise, initialize as an empty array
+    }
             } else {
                 setFitnessFormData({ ...initialFitnessFormData, emp_no: currentEmpNo });
                 setSelectedOptions([]); setConditionalOptions([]); setOverallFitness(""); setComments("");
@@ -492,6 +506,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             emp_no: currentEmpNo,
             other_job_nature: otherJobNature,
             conditional_other_job_nature: conditionalotherJobNature,
+            follow_up_mrd_history:previousVisits
         };
         await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
     };
@@ -668,18 +683,30 @@ const FitnessPage = ({ data, mrdNo, register }) => {
         </div>
     );
 
+    
+
+    const [previousVisits, setPreviousVisits] = useState([]);
+    console.log(previousVisits)
+    const handleAddPreviousVisit = () => {
+    setPreviousVisits(prev => [...prev, { id: Date.now(), mrd: '' }]);
+  };
+
+  const handleRemovePreviousVisit = (id) => {
+    setPreviousVisits(prev => prev.filter(visit => visit.id !== id));
+  };
+
+  const handlePreviousVisitChange = (id, value) => {
+    setPreviousVisits(prev =>
+      prev.map(visit => (visit.id === id ? { ...visit, mrd: value } : visit))
+    );
+  };
+
     const toggleTests = () => { setShowAllTests(!showAllTests); };
     const toggleMedicalCertificate = () => setShowMedicalCertificate(!showMedicalCertificate);
 
     return (
         <div className="bg-gray-50 min-h-screen p-4 md:p-6 relative">
             <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-gray-800 border-b pb-2">Fitness Assessment</h1>
-
-            {isSubmitting && (
-                <div className="fixed inset-0 bg-white bg-opacity-75 flex items-center justify-center z-50">
-                    <p className="text-lg font-semibold animate-pulse">Processing...</p>
-                </div>
-            )}
 
             { register === "Fitness After Medical Leave" && (
                 <MedicalCertificateForm 
@@ -696,6 +723,53 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 isDoctor={isDoctor} // <-- THIS IS THE CRUCIAL FIX
             />
         )}
+
+        { register === "Follow Up Visits" && (
+    <div className="mt-6 mb-8 p-4 border rounded-lg bg-white shadow-sm">
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">Previous Visit References</h2>
+            <button
+                type="button"
+                onClick={handleAddPreviousVisit}
+                disabled={isSubmitting}
+                className="bg-blue-500 text-white font-bold py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+                + Add Previous Visit
+            </button>
+        </div>
+        <div className="space-y-3">
+            {previousVisits.map((visit, index) => (
+                <div key={visit.id} className="flex items-center gap-4 p-2 bg-gray-50 rounded-md">
+                    <label htmlFor={`prev_mrd_${visit.id}`} className="font-medium text-gray-700">
+                       Ref ({index + 1}):
+                    </label>
+                    <input
+                        id={`prev_mrd_${visit.id}`}
+                        type="text"
+                        placeholder="Enter previous MRD number"
+                        className={inputClasses}
+                        // ================== FIX IS HERE ==================
+                        value={visit.mrd} // Changed from visit.mrd.mrd to visit.mrd
+                        // ===============================================
+                        onChange={(e) => handlePreviousVisitChange(visit.id, e.target.value)}
+                        disabled={isSubmitting}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => handleRemovePreviousVisit(visit.id)}
+                        disabled={isSubmitting}
+                        className="bg-red-500 text-white font-bold py-2 px-4 rounded hover:bg-red-700 disabled:bg-gray-400"
+                    >
+                        Remove
+                    </button>
+                </div>
+            ))}
+            {previousVisits.length === 0 && (
+                <p className="text-center text-gray-500 p-3">No previous visit references added. Click the button to add one.</p>
+            )}
+        </div>
+    </div>
+)}
 
             <div className="mb-6">
                 <button
