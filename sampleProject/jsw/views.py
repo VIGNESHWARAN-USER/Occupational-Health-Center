@@ -5810,10 +5810,9 @@ from django.core.serializers.json import DjangoJSONEncoder # <-- Import this
 def get_currentfootfalls(request):
     if request.method == "POST":
         try:
-            today = date.today()
 
             # 1. Fetch all footfalls for the current day
-            todays_footfalls = list(employee_details.objects.filter(entry_date=today).values())
+            todays_footfalls = list(employee_details.objects.values())
 
             if not todays_footfalls:
                 return JsonResponse({
