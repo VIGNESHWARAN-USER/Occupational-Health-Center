@@ -61,6 +61,8 @@ const Login = () => {
               ? "../admindashboard"
               : response.data.accessLevel === "pharmacy"
               ? "../addstock"
+              : response.data.accessLevel === "doctor"
+              ? "../appointments"
               : "../dashboard"
           );
         }

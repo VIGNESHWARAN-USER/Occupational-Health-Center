@@ -7,6 +7,8 @@ const BookAppointment = () => {
   const [role, setRole] = useState("Employee");
   const [employees, setEmployees] = useState([]);
   const [employeeIds, setEmployeeIds] = useState([]); // Still fetch IDs, might be useful later (e.g., autocomplete)
+  const [nurses, setNurses] = useState([])
+  const [doctors, setdoctors] = useState([])
   // const [isEmployeeIdValid, setIsEmployeeIdValid] = useState(false); // REMOVED: No longer needed for restriction
 
   const [formData, setFormData] = useState({
@@ -19,24 +21,20 @@ const BookAppointment = () => {
     contractorName: "",
     purpose: "Pre Employment",
     appointmentDate: new Date().toISOString().slice(0, 10),
-    time: "10:00",
-    bookedBy: "A", // Default or fetch options?
-    submitted_by_nurse: "A", // Default or fetch options?
-    submitted_Dr: "A", // Default or fetch options?
-    consultedDoctor: "A", // Default or fetch options?
+    time: "",
+    bookedBy: "", 
+    submitted_by_nurse: "", 
+    submitted_Dr: "", 
+    consultedDoctor: "", 
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // REMOVED: Validation logic tied to enabling fields
-    // if (name === "employeeId") {
-    //   // Validate employee ID as it's entered
-    //   setIsEmployeeIdValid(employeeIds.includes(value));
-    // }
-
+    console.log(name, value)
     setFormData({ ...formData, [name]: value });
   };
+
+  console.log(employees)
 
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
@@ -53,34 +51,50 @@ const BookAppointment = () => {
         contractorName: "",
         purpose: "Pre Employment", // Reset purpose or keep?
         appointmentDate: new Date().toISOString().slice(0, 10),
-        time: "10:00",
-        bookedBy: "A", // Default or fetch options?
-        submitted_by_nurse: "A", // Default or fetch options?
-        submitted_Dr: "A", // Default or fetch options?
-        consultedDoctor: "A",
+        time: "",
+        bookedBy: "", // Default or fetch options?
+        submitted_by_nurse: "", // Default or fetch options?
+        submitted_Dr: "", // Default or fetch options?
+        consultedDoctor: "",
     });
     // REMOVED: Resetting validation state
     // setIsEmployeeIdValid(false);
   };
+  console.log(doctors)
 
   useEffect(() => {
     const fetchDetails = async () => {
-      try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData"); // Assuming this endpoint gives employee list
-        const fetchedEmployees = response.data.data;
-        setEmployees(fetchedEmployees);
+        try {
+            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+            const fetchedEmployees = response.data.data;
 
-        // Extract employee IDs and store them in state (still useful potentially)
-        const extractedEmployeeIds = fetchedEmployees.map(employee => employee.emp_no);
-        setEmployeeIds(extractedEmployeeIds);
-      } catch (error) {
-        console.error("Error fetching employee data:", error);
-        // Handle error appropriately, maybe show a message to the user
-      }
+            // It's better to update state with the fetched employees first
+            setEmployees(fetchedEmployees);
+
+            // Filter and map to create new arrays of nurse and doctor names
+            const nurseNames = fetchedEmployees
+                .filter(emp => emp.role === "nurse")
+                .map(emp => emp.name);
+
+            const doctorNames = fetchedEmployees
+                .filter(emp => emp.role === "doctor")
+                .map(emp => emp.name);
+
+            // Update the state with the new arrays
+            setNurses(nurseNames);
+            setdoctors(doctorNames);
+
+            // Extract employee IDs and store them in state
+            const extractedEmployeeIds = fetchedEmployees.map(employee => employee.emp_no);
+            setEmployeeIds(extractedEmployeeIds);
+
+        } catch (error) {
+            console.error("Error fetching employee data:", error);
+        }
     };
 
     fetchDetails();
-  }, []); // Fetch only once on mount
+}, []); // The empty dependency array ensures this runs only once on mount
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -90,6 +104,9 @@ const BookAppointment = () => {
     //   alert("Please enter a valid Employee ID.");
     //   return; // Prevent form submission if the employee ID is invalid
     // }
+
+    if(formData.bookedBy === "") formData.bookedBy = nurses[0];
+    if(formData.submitted_Dr === "") formData.submitted_Dr = doctors[0];
 
     console.log("Submitting form data:", formData); // Log data before sending
 
@@ -130,26 +147,25 @@ const BookAppointment = () => {
 
   // Define fields - Remove 'disabled' property tied to isEmployeeIdValid
   const employeeFields = [
-    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: false }, // Always enabled
-    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, // Always enabled
-    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false }, // Always enabled
-    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: false }, // Always enabled
+    
+    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false }, 
+    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: false }, 
+    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, 
+    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: false }, 
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
-    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)"], disabled: false }, // Always enabled
-    { label: "Date of the appointment:", name: "appointmentDate", type: "date", disabled: false }, // Always enabled
-    { label: "Time:", name: "time", type: "time", disabled: false }, // Always enabled
-    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_by_Nurse:", name: "Submitted_by_Nurse", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Consulting Doctor:", name: "consultedDoctor", type: "select", options: ["A"], disabled: false }, // Always enabled
+    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)"], disabled: false }, 
+    { label: "Date of the appointment:", name: "appointmentDate", type: "date", disabled: false }, 
+    { label: "Time:", name: "time", type: "time", disabled: false }, 
+    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
+    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: doctors, disabled: false }, 
   ];
 
   const contractorFields = [
-    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID" },
-    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, // Always enabled
     { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
+    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID" },
+    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, 
     { label: "Contractor Name:", name: "contractorName", type: "text", placeholder: "Enter contractor name" },
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical","Pre Employment Contract change", "Periodical (Food Handler)", "Camps (Mandatory)",
@@ -157,23 +173,20 @@ const BookAppointment = () => {
     "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)"] },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" },
-    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_by_Nurse:", name: "Submitted_by_Nurse", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Consulting Doctor:", name: "consultedDoctor", type: "select", options: ["A"], disabled: false }, // Always enabled
+    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
+    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: doctors, disabled: false }, 
   ];
 
   const visitorFields = [
+    
+    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
     { label: "Name:", name: "name", type: "text", placeholder: "Enter name" },
     { label: "Organization:", name: "organization", type: "text", placeholder: "Enter organization name" },
-    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Visitors Outsider Fitness", "Visitors Outsider Patient", "Followup Visits"] },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" },
-    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_by_Nurse:", name: "Submitted_by_Nurse", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: ["A"], disabled: false }, // Always enabled
-    { label: "Consulting Doctor:", name: "consultedDoctor", type: "select", options: ["A"], disabled: false }, // Always enabled
+    { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
+    { label: "Submitted_Dr:", name: "Submitted_Dr", type: "select", options: doctors, disabled: false }, 
   ];
 
   const fieldVariants = {
@@ -235,7 +248,7 @@ const BookAppointment = () => {
               <select
                 name={field.name}
                 className={`px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${field.disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} // Added text-sm
-                value={formData[field.name]}
+                value={formData[field.options[0]]}
                 onChange={handleChange}
                 disabled={field.disabled} // Use disabled from field definition
               >
@@ -266,7 +279,7 @@ const BookAppointment = () => {
             // REMOVED: disabled condition based on employee ID validity
             // disabled={role === "Employee" && !isEmployeeIdValid}
           >
-            Book the appointment
+            Book appointment
           </button>
         </div>
       </form>

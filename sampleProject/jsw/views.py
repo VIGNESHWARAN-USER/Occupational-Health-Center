@@ -1585,6 +1585,7 @@ def fitness_test(request):
             data = json.loads(request.body.decode('utf-8'))
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo')
+            accessLevel = data.get('accessLevel')
             # Assuming your BaseModel provides an entry_date field on creation
             entry_date = date.today()
 
@@ -1605,46 +1606,91 @@ def fitness_test(request):
                 return []
 
             # Prepare defaults dictionary with keys matching the FitnessAssessment model fields EXACTLY
-            defaults = {
-                'emp_no': data.get("emp_no"),
-                'aadhar': data.get("aadhar"),
-                'employer': data.get("employer"),
-                'submittedDoctor': data.get("submittedDoctor"),
-                'mrdNo': data.get("mrdNo"),
+            if accessLevel == "nurse":
+                defaults = {
+                    'emp_no': data.get("emp_no"),
+                    'aadhar': data.get("aadhar"),
+                    'employer': data.get("employer"),
+                    'submittedNurse': data.get("submittedDoctor"),
+                    'mrdNo': data.get("mrdNo"),
+                    'bookedDoctor': data.get("bookedDoctor"),
 
-                # Basic Tests
-                'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
-                'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
-                'CO_dizziness': data.get("CO_dizziness"), 'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
-                'Claustrophobia': data.get("Claustrophobia"), 'Tandem': data.get("Tandem"),
-                'Nystagmus_Test': data.get("Nystagmus_Test"), 'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
-                'Finger_nose_test': data.get("Finger_nose_test"), 'Psychological_PMK': data.get("Psychological_PMK"),
-                'Psychological_zollingar': data.get("Psychological_zollingar"),
+                    # Basic Tests
+                    'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
+                    'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
+                    'CO_dizziness': data.get("CO_dizziness"), 'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
+                    'Claustrophobia': data.get("Claustrophobia"), 'Tandem': data.get("Tandem"),
+                    'Nystagmus_Test': data.get("Nystagmus_Test"), 'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
+                    'Finger_nose_test': data.get("Finger_nose_test"), 'Psychological_PMK': data.get("Psychological_PMK"),
+                    'Psychological_zollingar': data.get("Psychological_zollingar"),
 
-                # Job & Fitness Status
-                'job_nature': parse_json_field(data.get("job_nature")),
-                'overall_fitness': data.get("overall_fitness"),
-                'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
+                    # Job & Fitness Status
+                    'job_nature': parse_json_field(data.get("job_nature")),
+                    'overall_fitness': data.get("overall_fitness"),
+                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
 
-                # --- CORRECTED KEYS ---
-                # Changed keys from snake_case to camelCase to match the model definition
-                'otherJobNature': data.get("other_job_nature"), 
-                'conditionalotherJobNature': data.get("conditional_other_job_nature"),
+                    # --- CORRECTED KEYS ---
+                    # Changed keys from snake_case to camelCase to match the model definition
+                    'otherJobNature': data.get("other_job_nature"), 
+                    'conditionalotherJobNature': data.get("conditional_other_job_nature"),
 
-                'special_cases': data.get('special_cases'),
+                    'special_cases': data.get('special_cases'),
 
-                # Examinations
-                'general_examination': data.get("general_examination"),
-                'systematic_examination': data.get("systematic_examination"),
-                'eye_exam_fit_status': data.get("eye_exam_fit_status"),
-                
-                # Comments & Validity
-                'comments': data.get("comments"),
-                'validity': validity_date,
+                    # Examinations
+                    'general_examination': data.get("general_examination"),
+                    'systematic_examination': data.get("systematic_examination"),
+                    'eye_exam_fit_status': data.get("eye_exam_fit_status"),
+                    
+                    # Comments & Validity
+                    'comments': data.get("comments"),
+                    'validity': validity_date,
 
-                # Follow-up History
-                'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
-            }
+                    # Follow-up History
+                    'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
+                }
+            elif accessLevel == "doctor":
+                defaults = {
+                    'emp_no': data.get("emp_no"),
+                    'aadhar': data.get("aadhar"),
+                    'employer': data.get("employer"),
+                    'submittedDoctor': data.get("submittedDoctor"),
+                    'mrdNo': data.get("mrdNo"),
+
+                    # Basic Tests
+                    'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
+                    'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
+                    'CO_dizziness': data.get("CO_dizziness"), 'MusculoSkeletal_Movements': data.get("MusculoSkeletal_Movements"),
+                    'Claustrophobia': data.get("Claustrophobia"), 'Tandem': data.get("Tandem"),
+                    'Nystagmus_Test': data.get("Nystagmus_Test"), 'Dysdiadochokinesia': data.get("Dysdiadochokinesia"),
+                    'Finger_nose_test': data.get("Finger_nose_test"), 'Psychological_PMK': data.get("Psychological_PMK"),
+                    'Psychological_zollingar': data.get("Psychological_zollingar"),
+
+                    # Job & Fitness Status
+                    'job_nature': parse_json_field(data.get("job_nature")),
+                    'overall_fitness': data.get("overall_fitness"),
+                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
+
+                    # --- CORRECTED KEYS ---
+                    # Changed keys from snake_case to camelCase to match the model definition
+                    'otherJobNature': data.get("other_job_nature"), 
+                    'conditionalotherJobNature': data.get("conditional_other_job_nature"),
+
+                    'special_cases': data.get('special_cases'),
+
+                    # Examinations
+                    'general_examination': data.get("general_examination"),
+                    'systematic_examination': data.get("systematic_examination"),
+                    'eye_exam_fit_status': data.get("eye_exam_fit_status"),
+                    
+                    # Comments & Validity
+                    'comments': data.get("comments"),
+                    'validity': validity_date,
+
+                    # Follow-up History
+                    'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
+                }
+
+            print(data)
             # Filter out any keys that were not provided in the request
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
@@ -1747,9 +1793,12 @@ def add_consultation(request):
                 }
             else:
                 defaults = {
-                    'submittedDoctor': data.get("submittedDoctor"),
+                    'submittedNurse': data.get("submittedDoctor"),
+                    'bookedDoctor': data.get("bookerDoctor"),
                     'emp_no': data.get('emp_no'),
                     'mrdNo': data.get('mrdNo'),
+                    'submittedNurse': data.get("submittedDoctor"),
+                    'bookedDoctor': data.get("bookedDoctor"),
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
                 }
             
@@ -2537,10 +2586,10 @@ def BookAppointment(request):
         try:
             data = json.loads(request.body.decode('utf-8')) # Decode explicitly
 
-            aadhar_no = data.get("aadharNo") # Expect Aadhar
+            aadhar = data.get("aadharNo") # Expect Aadhar
             employee_id = data.get("employeeId") # Accept emp_no if sent
 
-            if not aadhar_no:
+            if not aadhar:
                  logger.warning("BookAppointment failed: Aadhar Number (aadharNo) is required.")
                  return JsonResponse({"error": "Aadhar Number (aadharNo) is required"}, status=400)
 
@@ -2558,7 +2607,7 @@ def BookAppointment(request):
 
             appointment_data = {
                 'appointment_no': appointment_no_gen, 'booked_date': date.today(),
-                'role': data.get("role", "Unknown"), 'aadhar_no': aadhar_no, 'emp_no': employee_id,
+                'role': data.get("role", "Unknown"), 'aadhar': aadhar, 'emp_no': employee_id,
                 'name': data.get("name", "Unknown"), 'organization_name': data.get("organization", ""),
                 'contractor_name': data.get("contractorName", ""), 'purpose': data.get("purpose", "Unknown"),
                 'date': appointment_date_obj, 'time': data.get("time", ""),
@@ -2574,7 +2623,7 @@ def BookAppointment(request):
 
             appointment = Appointment.objects.create(**filtered_appointment_data)
 
-            logger.info(f"Appointment {appointment.appointment_no} booked successfully for Aadhar {appointment.aadhar_no} on {appointment.date}. ID: {appointment.id}")
+            logger.info(f"Appointment {appointment.appointment_no} booked successfully for Aadhar {appointment.aadhar} on {appointment.date}. ID: {appointment.id}")
             return JsonResponse({
                 "message": f"Appointment booked successfully for {appointment.name} on {appointment.date}.",
                 "appointment_no": appointment.appointment_no,
@@ -5734,3 +5783,86 @@ class MedicalDataUploadView(View):
             'error_count': 0,
             'errors': []
         }, status=201)
+
+
+@csrf_exempt
+def fetchadmindata(request):
+    if request.method == "POST":
+        data = list(Member.objects.all().values())
+        return JsonResponse({'message':'Successfully retrieved data', 'data':data}, status = 200)
+    else:
+        return JsonResponse({'error':'Invalid Method'}, status = 500)
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import date
+from .models import employee_details, FitnessAssessment, Consultation
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from datetime import date
+from .models import employee_details, FitnessAssessment, Consultation
+from django.core.serializers.json import DjangoJSONEncoder # <-- Import this
+
+@csrf_exempt
+def get_currentfootfalls(request):
+    if request.method == "POST":
+        try:
+            today = date.today()
+
+            # 1. Fetch all footfalls for the current day
+            todays_footfalls = list(employee_details.objects.filter(entry_date=today).values())
+
+            if not todays_footfalls:
+                return JsonResponse({
+                    'message': 'No footfalls recorded for today.',
+                    'data': []
+                }, status=200)
+
+            # 2. Collect all MRD numbers
+            preventive_mrds = [
+                f['mrdNo'] for f in todays_footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
+            ]
+            curative_mrds = [
+                f['mrdNo'] for f in todays_footfalls if f['type_of_visit'] == 'Curative' and f['mrdNo']
+            ]
+
+            # 3. Fetch all related records in bulk
+            fitness_records = FitnessAssessment.objects.filter(mrdNo__in=preventive_mrds).values()
+            consultation_records = Consultation.objects.filter(mrdNo__in=curative_mrds).values()
+
+            # 4. Create maps for quick lookups
+            fitness_map = {record['mrdNo']: record for record in fitness_records}
+            consultation_map = {record['mrdNo']: record for record in consultation_records}
+
+            # 5. Combine the data
+            response_data = []
+            for footfall in todays_footfalls:
+                mrd_number = footfall.get('mrdNo')
+                combined_record = {
+                    'details': footfall,
+                    'assessment': None,
+                    'consultation': None,
+                }
+
+                if footfall.get('type_of_visit') == 'Preventive':
+                    combined_record['assessment'] = fitness_map.get(mrd_number)
+                elif footfall.get('type_of_visit') == 'Curative':
+                    combined_record['consultation'] = consultation_map.get(mrd_number)
+                
+                response_data.append(combined_record)
+            
+            # Use the DjangoJSONEncoder to handle date/datetime objects
+            return JsonResponse(
+                {'data': response_data, 'message': 'Successfully retrieved data'},
+                encoder=DjangoJSONEncoder, # <-- Add this encoder
+                status=200
+            )
+
+        except Exception as e:
+            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+    else:
+        return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)

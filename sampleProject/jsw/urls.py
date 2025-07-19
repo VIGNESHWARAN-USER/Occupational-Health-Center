@@ -20,6 +20,7 @@ urlpatterns = [
 
     # Core Data Fetching / Entry (Using Aadhar)
     path('userData', views.fetchdata, name = 'userData'),
+    path('adminData', views.fetchadmindata, name = 'adminData'),
     path('addEntries', views.addEntries, name='add_Entries'),
     path('addbasicdetails', views.add_basic_details, name = 'addDetails'),
     path('updateProfileImage/<str:aadhar>', views.uploadImage, name='upload_image'),
@@ -86,6 +87,7 @@ urlpatterns = [
     path('bookAppointment/', views.BookAppointment, name='book_appointment'),
     path('uploadAppointment/', views.uploadAppointment, name='uploadAppointment'),
     path('appointments/', views.get_appointments, name='get_appointments'),
+    path('currentfootfalls/', views.get_currentfootfalls, name='get_currentfootfalls'),
     path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'),
 
     # Prescriptions (Using Aadhar / ID)

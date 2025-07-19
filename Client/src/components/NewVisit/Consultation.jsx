@@ -208,6 +208,8 @@ const Consultation = ({ data, type, mrdNo, register }) => {
     }
   }, [patientData, mrdNo]);
 
+  
+
   // --- useEffect to specifically fetch Alcohol Form data ---
   useEffect(() => {
     if (emp_no && register === "Alcohol Abuse") {
@@ -225,6 +227,31 @@ const Consultation = ({ data, type, mrdNo, register }) => {
         setInitialAlcoholData(null);
     }
   }, [emp_no, register]);
+    
+     const [bookedDoctor, setbookedDoctor] = useState([])
+     const [doctors, setdoctors] = useState([])
+        console.log(doctors)
+     useEffect(() => {
+        const fetchDetails = async () => {
+            try {
+                const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+                const fetchedEmployees = response.data.data;
+                console.log(fetchedEmployees)
+    
+                const doctorNames = fetchedEmployees
+                    .filter(emp => emp.role === "doctor")
+                    .map(emp => emp.name);
+    
+                setdoctors(doctorNames);
+                setbookedDoctor(doctorNames[0]);
+    
+            } catch (error) {
+                console.error("Error fetching employee data:", error);
+            }
+        };
+    
+        fetchDetails();
+    }, []); 
 
   // --- NEW: Handlers for managing the dynamic Previous Visit References ---
   const handleAddPreviousVisit = () => {
@@ -278,6 +305,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
       advice: adviceDetails,
       special_cases: specialCases,
       submittedDoctor,
+      bookedDoctor,
       follow_up_date: followUpDate || null,
       referral,
       hospital_name: referral === 'yes' ? hospitalName : '',
@@ -625,6 +653,16 @@ const Consultation = ({ data, type, mrdNo, register }) => {
               </label>
             ))}
           </div>
+        </div>
+        <div>
+            <div>
+                <label htmlFor="">Book this footfall to:</label>
+                <select className="px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="" id="" value={bookedDoctor} onChange={(e)=>{setbookedDoctor(e.target.value)}}>
+                    {doctors.map((doc,key) =>(
+                        <option key={key} value ={doc}>{doc}</option>
+                    ))}
+                </select>
+            </div>
         </div>
 
         {/* Submit Button for MAIN Consultation Form */}

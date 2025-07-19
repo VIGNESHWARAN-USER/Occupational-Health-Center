@@ -1402,6 +1402,8 @@ class FitnessAssessment(BaseModel):
     conditional_fit_feilds = models.JSONField(blank=True, null=True)
     
     submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
+    submittedNurse = models.CharField(max_length=255, blank=True, null=True)
+    bookedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     # Examinations
     general_examination = models.TextField(blank=True, null=True)
@@ -1555,6 +1557,8 @@ class Consultation(models.Model):
     
     # --- Submission Metadata ---
     submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
+    submittedNurse = models.CharField(max_length=255, blank=True, null=True)
+    bookedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         unique_together = ('aadhar', 'entry_date') # Changed to aadhar for better uniqueness

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 
-const AllAppointments = () => {
+const CurrentFootfalls = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -23,20 +23,7 @@ const AllAppointments = () => {
     "Review"
   ];
 
-  // Fetch employee data
-  useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
-        setEmployees(response.data.data || []); // Ensure employees is always an array
-      } catch (error) {
-        console.error("Error fetching employee data:", error);
-        setEmployees([]); // Set to empty array on error
-      }
-    };
-    fetchDetails();
-  }, []);
-
+ 
   // Fetch appointments based on date/purpose filters
   // This useEffect triggers the backend filtering
   useEffect(() => {
@@ -52,7 +39,7 @@ const AllAppointments = () => {
     // This prevents brief flashing of "no results" if the network is slow
     // setAppointments([]);
     try {
-      let url = "https://occupational-health-center-1.onrender.com/appointments/";
+      let url = "https://occupational-health-center-1.onrender.com/currentfootfalls/";
       const params = new URLSearchParams();
 
       if (fromDate) params.append("fromDate", fromDate);
@@ -66,16 +53,17 @@ const AllAppointments = () => {
 
       console.log("Fetching appointments from:", url); // Log the URL being hit
 
-      const response = await fetch(url);
-      if (!response.ok) {
+      const response = await axios.post(url);
+      if (response.status != 200) {
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
+      } 
+      console.log(response.data.data)
+      const data = await response.data.data;
 
       console.log("Received appointments data:", data); // Log the received data
 
-      if (data.appointments && Array.isArray(data.appointments)) {
-        setAppointments(data.appointments);
+      if (data && Array.isArray(data)) {
+        setAppointments(data);
       } else {
         console.warn("No 'appointments' array found in response or it's not an array:", data);
         setAppointments([]); // Set empty if backend response is not as expected
@@ -95,7 +83,7 @@ const AllAppointments = () => {
     setSearchQuery("");
     // fetchAppointments will be triggered by the useEffect hook reacting to state changes
   };
-
+  
   // Client-side filtering based on searchQuery (applied AFTER backend results)
   const filteredAppointments = useMemo(() => {
     const lowerCaseQuery = searchQuery.toLowerCase().trim();
@@ -103,42 +91,15 @@ const AllAppointments = () => {
       return appointments; // Return backend results if no search query
     }
     return appointments.filter(appointment => {
-      const empNoMatch = appointment.emp_no?.toString().toLowerCase().includes(lowerCaseQuery);
-      const nameMatch = appointment.name?.toLowerCase().includes(lowerCaseQuery);
+      const empNoMatch = appointment.details.emp_no?.toString().toLowerCase().includes(lowerCaseQuery);
+      const nameMatch = appointment.details.name?.toLowerCase().includes(lowerCaseQuery);
       return empNoMatch || nameMatch;
     });
   }, [appointments, searchQuery]);
-
+  console.log(appointments)
   // handleStatusChange - remains the same
   const handleStatusChange = async (appointment) => {
-    // ... (your existing handleStatusChange logic) ...
-    if (appointment.status !== "initiate") {
-      navigate("../newvisit", { state: { search: appointment.aadhar, reference: true } });
-      return;
-    }
-
-    try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/update-appointment-status/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: appointment.id }),
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setAppointments((prevAppointments) =>
-          prevAppointments.map((prevApp) =>
-            prevApp.id === appointment.id ? { ...prevApp, status: data.status } : prevApp
-          )
-        );
-          navigate("../newvisit", { state: { data: appointment.aadhar, reference: true } });
-        
-      } else {
-        console.error("Failed to update appointment:", data.message);
-      }
-    } catch (error) {
-      console.error("Error updating appointment:", error);
-    }
+      navigate("../newvisit", { state: { search: appointment.details.aadhar,mrdNumber: appointment.details.mrdNo,type1:appointment.details.type, type_of_visit1:appointment.details.type_of_visit, purpose1:appointment.details.purpose, register1:appointment.details.register, reference: true } });
   };
 
 
@@ -262,19 +223,12 @@ const AllAppointments = () => {
           <thead className="bg-blue-50 text-blue-600">
              {/* ... (keep the thead section as is) ... */}
             <tr>
-              <th className="px-3 py-2 font-semibold text-left text-xs sticky left-0 bg-blue-50 z-10">Appt No.</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Booked Date</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">MRD No.</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Role</th>
               <th className="px-3 py-2 font-semibold text-left text-xs sticky left-[70px] bg-blue-50 z-10">Emp No</th> {/* Adjust px value if needed */}
               <th className="px-3 py-2 font-semibold text-left text-xs">Aadhar No.</th>
               <th className="px-3 py-2 font-semibold text-left text-xs sticky left-[140px] bg-blue-50 z-10">Name</th> {/* Adjust px value if needed */}
-              <th className="px-3 py-2 font-semibold text-left text-xs">Organization</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Contractor</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Purpose</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Date</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Time</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Booked By</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Nurse Submit</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Dr Submit</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Consult Dr</th>
@@ -297,36 +251,22 @@ const AllAppointments = () => {
                  filteredAppointments.map((appointment) => (
                     <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition group">
                        {/* Apply sticky positioning to corresponding TD cells */}
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-0 bg-white group-hover:bg-gray-50 z-10">{appointment.appointment_no || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.booked_date || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.mrd_no || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.role || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.emp_no || '-'}</td> {/* Adjust px value if needed */}
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.aadhar || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.name || '-'}</td> {/* Adjust px value if needed */}
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.organization_name || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.contractor_name || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.purpose || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.date || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.time || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.booked_by || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.submitted_by_nurse || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.submitted_Dr || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.consultated_Dr || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.mrdNo || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.role || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.emp_no || '-'}</td> {/* Adjust px value if needed */}
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.aadhar || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.name || '-'}</td> {/* Adjust px value if needed */}
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.purpose || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedNurse || appointment?.assessment?.submittedNurse || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.assessment?.bookedDoctor||appointment?.consultation?.bookedDoctor|| '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedDoctor || appointment?.assessment?.submittedDoctor || '-'}</td>
                       
                       <td className="px-3 py-2 text-xs text-gray-700 text-center">
                         <button
-                          className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center ${
-                            appointment.status === "initiate" ? "bg-red-500 text-white hover:bg-red-600" :
-                            appointment.status === "inprogress" ? "bg-yellow-500 text-white hover:bg-yellow-600" :
-                            "bg-green-500 text-white cursor-not-allowed opacity-70" // Assuming completed means no action
-                          }`}
+                          className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center bg-green-600 text-white opacity-70`}
                           onClick={() => handleStatusChange(appointment)}
-                          disabled={appointment.status === 'completed'} // Disable if completed
                         >
-                          {appointment.status === "initiate" ? "Initiate" :
-                           appointment.status === "inprogress" ? "View" : // Or "Continue"
-                           "Completed"}
+                          Open
                         </button>
                       </td>
                     </tr>
@@ -346,4 +286,4 @@ const AllAppointments = () => {
   );
 };
 
-export default AllAppointments;
+export default CurrentFootfalls;

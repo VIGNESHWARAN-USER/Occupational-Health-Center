@@ -16,6 +16,10 @@ import FormFields from "./FormFeilds";
 const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
   const navigate = useNavigate();
+
+  const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,reference} = useLocation().state || "";
+  console.log(search,mrdNumber, reference,type1, type_of_visit1, register1, purpose1)
+
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
   const [type, setType] = useState("Employee");
@@ -455,6 +459,7 @@ const NewVisit = () => {
     }
   };
   const handleSearch = async () => {  // Make handleSearch async
+    console.log(searchId)
     if (searchId.trim() === "") {
       setFilteredEmployees(employees);
       setdata([]); // Reset data when no input
@@ -609,7 +614,7 @@ const NewVisit = () => {
     setMRDNo("");
   };
 
-  const { search, reference } = useLocation().state || {};
+  
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -633,6 +638,25 @@ const NewVisit = () => {
         if (reference && search) {
           setSearchId(search);
         }
+        
+        if (reference && mrdNumber) {
+          setMRDNo(mrdNumber);
+        }
+
+        if (reference && type1) {
+          setType(type1);
+        }
+
+        if (reference && type_of_visit1) {
+          setVisit(type_of_visit1);
+        }
+        if (reference && purpose1) {
+          setPurpose(purpose1);
+        }
+        if (reference && register1) {
+          setRegister(register1);
+        }
+        
 
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -642,8 +666,9 @@ const NewVisit = () => {
     };
 
     fetchDetails();
+    
   }, []);
-
+  
 
   // Update Register options and Purpose dynamically
   const getRegisterOptions = () => {

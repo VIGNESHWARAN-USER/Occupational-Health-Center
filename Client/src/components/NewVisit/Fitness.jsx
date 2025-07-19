@@ -4,6 +4,7 @@ import jsPDF from 'jspdf'; // Ensure jspdf is installed: npm install jspdf
 import SignificantNotes from "./SignificantNotes"; // Assuming this component exists
 import MedicalCertificateForm from "./MedicalCertificateForm";
 import PersonalLeaveCertificateForm from "./PersonalLeaveCertificateForm";
+import axios from "axios";
 
 // URLs (Keep as is)
 const FITNESS_ASSESSMENT_URL = "https://occupational-health-center-1.onrender.com/fitness-tests/";
@@ -45,6 +46,8 @@ const FormSelect = ({ label, name, value, onChange, options, placeholder, classN
         </select>
     </div>
 );
+
+
 
 const FormRadioGroup = ({ label, name, value, onChange, options, className = '' }) => (
     <div className={className}>
@@ -209,6 +212,30 @@ const FitnessPage = ({ data, mrdNo, register }) => {
         daysLeave: '', rejoiningDate: '', shift: '', pr: '', sp02: '', temp: '',
         certificateFrom: '', note: '', ohcStaffSignature: '', individualSignature: '',
     };
+
+    const [doctors, setdoctors] = useState([])
+    console.log(doctors)
+ useEffect(() => {
+    const fetchDetails = async () => {
+        try {
+            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+            const fetchedEmployees = response.data.data;
+            console.log(fetchedEmployees)
+
+            const doctorNames = fetchedEmployees
+                .filter(emp => emp.role === "doctor")
+                .map(emp => emp.name);
+
+            setdoctors(doctorNames);
+            setbookedDoctor(doctorNames[0]);
+
+        } catch (error) {
+            console.error("Error fetching employee data:", error);
+        }
+    };
+
+    fetchDetails();
+}, []); 
 
     const [fitnessFormData, setFitnessFormData] = useState(initialFitnessFormData);
     const [selectedOptions, setSelectedOptions] = useState([]);
@@ -460,6 +487,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             setIsSubmitting(false);
         }
     };
+        const [bookedDoctor, setbookedDoctor] =  useState("")
 
     // --- AFTER (Corrected Code) ---
     const handleFitnessSubmit = async () => {
@@ -506,7 +534,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             emp_no: currentEmpNo,
             other_job_nature: otherJobNature,
             conditional_other_job_nature: conditionalotherJobNature,
-            follow_up_mrd_history:previousVisits
+            follow_up_mrd_history:previousVisits,
+            bookedDoctor: bookedDoctor,
+            accessLevel
         };
         await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
     };
@@ -858,6 +888,16 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                     <label htmlFor="systematicExamination" className={labelClass}>Systemic Examination</label>
                     <textarea id="systematicExamination" name="systematicExamination" rows="3" value={systematicExamination} onChange={handleSystematicChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={inputClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add Systematic Examination details (CVS, RS, GIT, CNS, etc)"} placeholder="Enter Systematic Examination details (CVS, RS, GIT, CNS, etc)" />
                 </div>
+                <div>
+                    <div>
+                        <label htmlFor="">Book this footfall to:</label>
+                        <select className="px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="" id="" value={bookedDoctor} onChange={(e)=>{setbookedDoctor(e.target.value)}}>
+                            {doctors.map((doc,key) =>(
+                                <option key={key} value ={doc}>{doc}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
                 {accessLevel === "doctor" && (
                     <div className="border-t pt-6 mt-6 space-y-6">
@@ -912,6 +952,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                             </div>
                         </div>
                     </div>
+                    
                 )}
                 <div className="w-full flex justify-end mt-6 border-t pt-6">
                     <button

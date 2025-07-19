@@ -6,6 +6,7 @@ import AllAppointments from "./AllAppointments";
 import Sidebar from "../Sidebar";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import CurrentFootfalls from "./CuurentFootfalls";
 
 const AppointmentPage = () => {
   const [formVal, setformVal] = useState("");
@@ -13,12 +14,12 @@ const AppointmentPage = () => {
   if(accessLevel === "nurse")
   {
     return (
-      <div className="flex h-screen bg-[#8fcadd] overflow-auto">
+      <div className="h-screen flex bg-[#8fcadd]">
         <Sidebar />
   
-        <div className="w-4/5 p-6 h-screen overflow-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-4xl font-bold mb-8 text-gray-800">Appointments</h2>
+        <div className="w-4/5 p-8 overflow-y-auto">
+          <div className="flex justify-between mb-8 items-center">
+            <h2 className="text-4xl font-bold text-gray-800">Appointments</h2>
             <div>
               {["Today's Appointments", "Book Appointment", "Upload Appointment"].map(
                 (btnText, index) => (
@@ -64,8 +65,9 @@ const AppointmentPage = () => {
   
         <div className="w-4/5 p-6 h-screen overflow-auto">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-4xl font-bold mb-8 text-gray-800">Appointments</h2>
+            <h2 className="text-4xl font-bold text-gray-800">Appointments</h2>
           </div>
+          
           <motion.div
             className="bg-white p-8 rounded-lg shadow-lg"
             initial={{ opacity: 0, y: 20 }}
@@ -73,7 +75,7 @@ const AppointmentPage = () => {
             transition={{ duration: 0.5 }}
           >
             
-              <AllAppointments />
+              <CurrentFootfalls/>
           </motion.div>
         </div>
       </div>
