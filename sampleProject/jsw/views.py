@@ -5799,69 +5799,96 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from datetime import date
 from .models import employee_details, FitnessAssessment, Consultation
+from django.core.serializers.json import DjangoJSONEncoder
+import logging
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import date
-from .models import employee_details, FitnessAssessment, Consultation
-from django.core.serializers.json import DjangoJSONEncoder # <-- Import this
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def get_currentfootfalls(request):
-    if request.method == "POST":
-        try:
-
-            # 1. Fetch all footfalls for the current day
-            todays_footfalls = list(employee_details.objects.values())
-
-            if not todays_footfalls:
-                return JsonResponse({
-                    'message': 'No footfalls recorded for today.',
-                    'data': []
-                }, status=200)
-
-            # 2. Collect all MRD numbers
-            preventive_mrds = [
-                f['mrdNo'] for f in todays_footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
-            ]
-            curative_mrds = [
-                f['mrdNo'] for f in todays_footfalls if f['type_of_visit'] == 'Curative' and f['mrdNo']
-            ]
-
-            # 3. Fetch all related records in bulk
-            fitness_records = FitnessAssessment.objects.filter(mrdNo__in=preventive_mrds).values()
-            consultation_records = Consultation.objects.filter(mrdNo__in=curative_mrds).values()
-
-            # 4. Create maps for quick lookups
-            fitness_map = {record['mrdNo']: record for record in fitness_records}
-            consultation_map = {record['mrdNo']: record for record in consultation_records}
-
-            # 5. Combine the data
-            response_data = []
-            for footfall in todays_footfalls:
-                mrd_number = footfall.get('mrdNo')
-                combined_record = {
-                    'details': footfall,
-                    'assessment': None,
-                    'consultation': None,
-                }
-
-                if footfall.get('type_of_visit') == 'Preventive':
-                    combined_record['assessment'] = fitness_map.get(mrd_number)
-                elif footfall.get('type_of_visit') == 'Curative':
-                    combined_record['consultation'] = consultation_map.get(mrd_number)
-                
-                response_data.append(combined_record)
-            
-            # Use the DjangoJSONEncoder to handle date/datetime objects
-            return JsonResponse(
-                {'data': response_data, 'message': 'Successfully retrieved data'},
-                encoder=DjangoJSONEncoder, # <-- Add this encoder
-                status=200
-            )
-
-        except Exception as e:
-            return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
-
-    else:
+    if request.method != "POST":
         return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
+
+    try:
+        # --- MODIFIED SECTION: Dynamic Filtering ---
+
+        # 1. Get optional filter parameters from the URL query string
+        from_date_str = request.GET.get('fromDate')
+        to_date_str = request.GET.get('toDate')
+        purpose_str = request.GET.get('purpose')
+
+        # 2. Start with a base queryset
+        queryset = employee_details.objects.all()
+
+        # 3. Apply filters conditionally
+        if from_date_str:
+            queryset = queryset.filter(entry_date__gte=from_date_str)
+        
+        if to_date_str:
+            queryset = queryset.filter(entry_date__lte=to_date_str)
+
+        if purpose_str:
+            queryset = queryset.filter(register=purpose_str)
+            
+        # 4. If no date range is provided, default to today's footfalls.
+        #    This preserves the original behavior when no filters are applied.
+        if not from_date_str and not to_date_str:
+            today = date.today()
+            queryset = queryset.filter(entry_date=today)
+        
+        # 5. Execute the final filtered query
+        #    The .order_by() is added to ensure a consistent output order.
+        footfalls = list(queryset.order_by('-entry_date', '-id').values())
+
+        # --- END MODIFIED SECTION ---
+
+
+        if not footfalls:
+            return JsonResponse({
+                'message': 'No footfalls found for the selected criteria.',
+                'data': []
+            }, status=200)
+
+        # 6. Collect all MRD numbers from the filtered results
+        preventive_mrds = [
+            f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
+        ]
+        curative_mrds = [
+            f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Curative' and f['mrdNo']
+        ]
+
+        # 7. Fetch all related records in bulk (Efficient)
+        fitness_records = FitnessAssessment.objects.filter(mrdNo__in=preventive_mrds).values()
+        consultation_records = Consultation.objects.filter(mrdNo__in=curative_mrds).values()
+
+        # 8. Create maps for quick lookups
+        fitness_map = {record['mrdNo']: record for record in fitness_records}
+        consultation_map = {record['mrdNo']: record for record in consultation_records}
+
+        # 9. Combine the data
+        response_data = []
+        for footfall in footfalls:
+            mrd_number = footfall.get('mrdNo')
+            combined_record = {
+                'details': footfall,
+                'assessment': None,
+                'consultation': None,
+            }
+
+            if footfall.get('type_of_visit') == 'Preventive':
+                combined_record['assessment'] = fitness_map.get(mrd_number)
+            elif footfall.get('type_of_visit') == 'Curative':
+                combined_record['consultation'] = consultation_map.get(mrd_number)
+            
+            response_data.append(combined_record)
+        
+        # 10. Return the successful response
+        return JsonResponse(
+            {'data': response_data, 'message': 'Successfully retrieved data'},
+            encoder=DjangoJSONEncoder,
+            status=200
+        )
+
+    except Exception as e:
+        logger.exception("An error occurred in get_currentfootfalls") # More detailed logging
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)

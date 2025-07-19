@@ -256,7 +256,7 @@ const CurrentFootfalls = () => {
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.emp_no || '-'}</td> {/* Adjust px value if needed */}
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.aadhar || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.name || '-'}</td> {/* Adjust px value if needed */}
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.purpose || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.register || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedNurse || appointment?.assessment?.submittedNurse || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.assessment?.bookedDoctor||appointment?.consultation?.bookedDoctor|| '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedDoctor || appointment?.assessment?.submittedDoctor || '-'}</td>
