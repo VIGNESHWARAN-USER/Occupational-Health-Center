@@ -42,9 +42,14 @@ const NewVisit = () => {
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null); // New state for image upload
   const [uploadError, setUploadError] = useState(null);
-  const [isNewEmployee, setIsNewEmployee] = useState(false); // Flag to indicate a potential new employee
-  const [followupType, setFollowupType] = useState("");
-  const [followupConsultationReason, setFollowupConsultationReason] = useState(""); // State for the new dropdown
+  const [isNewEmployee, setIsNewEmployee] = useState(false);
+  
+  // States for dynamic form fields
+  const [followupConsultationReason, setFollowupConsultationReason] = useState(""); 
+  const [otherfollowupConsultationReason, setotherfollowupConsultationReason] = useState("");
+  const [bpSugarStatus, setBpSugarStatus] = useState(""); // State for BP Sugar Check
+  const [bpSugarChartReason, setBpSugarChartReason] = useState(""); // State for BP Sugar Chart
+
 
   //New states
   const [annualPeriodicalFields, setAnnualPeriodicalFields] = useState({
@@ -186,6 +191,7 @@ const NewVisit = () => {
       Preventive: {
         "Fitness": "Fitness",
         "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Follow Up Visits":"Follow Up Visits",
       },
       Curative: {
         "Illness": "Outpatient",
@@ -257,6 +263,7 @@ const NewVisit = () => {
       return;
     }
 
+    // ##### DEBUGGED VALIDATION LOGIC #####
     // Validate additional fields based on register type
     if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
       if (!annualPeriodicalFields.year || !annualPeriodicalFields.batch || !annualPeriodicalFields.hospitalName) {
@@ -291,8 +298,7 @@ const NewVisit = () => {
     }
 
     if (register.startsWith("BP Sugar Check")) {
-      const bpStatusSelect = document.getElementById("reason");
-      if (!bpStatusSelect || !bpStatusSelect.value) {
+      if (!bpSugarStatus) {
         alert("Please select Patient Status");
         setLoading1(false);
         return;
@@ -300,26 +306,24 @@ const NewVisit = () => {
     }
 
     if (register.startsWith("BP Sugar Chart")) {
-      const bpChartReasonSelect = document.getElementById("reason");
-      if (!bpChartReasonSelect || !bpChartReasonSelect.value) {
+      if (!bpSugarChartReason) {
         alert("Please select Job Nature (Reason)");
         setLoading1(false);
         return;
       }
     }
 
-    if (register.startsWith("Follow Up Visits") && purpose == "Curative" || purpose == "Preventive") {
-      const followupPurposeSelect = document.getElementById("reason");
-      if (!followupPurposeSelect || !followupPurposeSelect.value) {
-        alert("Please select Purpose");
-        setLoading1(false);
-        return;
-      }
-      if (followupPurposeSelect.value === "Others" && !purpose) {
-        alert("Please specify the purpose in Others field");
-        setLoading1(false);
-        return;
-      }
+    if (register.startsWith("Follow Up Visits")) {
+        if (!followupConsultationReason) {
+          alert("Please select a Followup Consultation reason.");
+          setLoading1(false);
+          return;
+        }
+        if (followupConsultationReason.endsWith("Others") && !otherfollowupConsultationReason.trim()) {
+          alert("Please specify the reason in the 'Other Consultation Reason' field.");
+          setLoading1(false);
+          return;
+        }
     }
 
     // Prepare the submission data
@@ -341,6 +345,7 @@ const NewVisit = () => {
       }
     };
 
+    // ##### DEBUGGED DATA SUBMISSION LOGIC #####
     // Add conditional fields based on register type
     if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
       submissionData.extraData = {
@@ -375,27 +380,24 @@ const NewVisit = () => {
     }
 
     if (register.startsWith("BP Sugar Check")) {
-      const bpStatusSelect = document.getElementById("reason");
       submissionData.extraData = {
         ...submissionData.extraData,
-        status: bpStatusSelect.value
+        status: bpSugarStatus
       };
     }
 
     if (register.startsWith("BP Sugar Chart")) {
-      const bpChartReasonSelect = document.getElementById("reason");
       submissionData.extraData = {
         ...submissionData.extraData,
-        reason: bpChartReasonSelect.value
+        reason: bpSugarChartReason
       };
     }
 
-    if (register.startsWith("Follow Up Visits") && purpose == "Curative" || purpose == "Preventive") {
-      const followupPurposeSelect = document.getElementById("reason");
+    if (register.startsWith("Follow Up Visits")) {
       submissionData.extraData = {
         ...submissionData.extraData,
-        purpose: followupPurposeSelect.value,
-        ...(followupPurposeSelect.value === "Others" && { purpose_others: purpose })
+        purpose: followupConsultationReason,
+        ...(followupConsultationReason.endsWith("Others") && { purpose_others: otherfollowupConsultationReason })
       };
     }
 
@@ -658,7 +660,10 @@ const NewVisit = () => {
       // Reset additional fields when register changes
       setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
       setCampFields({ campName: "", hospitalName: "" });
-      setFollowupConsultationReason(""); // Reset the new dropdown
+      setFollowupConsultationReason(""); 
+      setotherfollowupConsultationReason("");
+      setBpSugarStatus("");
+      setBpSugarChartReason("");
     };
     const handleOtherRegisterChange = (e) => {
       const selectedRegister = e.target.value;
@@ -1668,39 +1673,7 @@ const NewVisit = () => {
                   </div>
                 </div>
 
-                {/* Conditionally render new dropdown for 'Followup Consultation' */}
-                {register === "Followup Consultation" && (
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2">
-                        Select Followup Consultation
-                      </label>
-                      <select
-                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                        value={followupConsultationReason}
-                        onChange={(e) => setFollowupConsultationReason(e.target.value)}
-                      >
-                         <option value="">Select Reason</option>
-                        <option>Illness</option>
-                        <option>Over Counter illness</option>
-                        <option>Injury</option>
-                        <option>Over Counter Injury</option>
-                        <option>BP Sugar Chart</option>
-                        <option>Injury Outside the Premises</option>
-                        <option>Over Counter Injury Outside the Premises</option>
-                        <option>Cure Others</option>
-                        <option>Alcohol Abuse</option>
-                        <option>Annual/Periodical</option>
-                        <option>Periodical (Food Handler)</option>
-                        <option>Retirement medical examination</option>
-                        <option>Camps(Mandatory)</option>
-                        <option>Camps(Optional)</option>
-                        <option>Prev (Others)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
+                
 
                 {(register === "Other") && (
                   <div>
@@ -1814,7 +1787,13 @@ const NewVisit = () => {
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Patient Status</label>
-                      <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                      <select 
+                        name="bp_sugar_status" 
+                        id="bp_sugar_status" 
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={bpSugarStatus}
+                        onChange={(e) => setBpSugarStatus(e.target.value)}
+                      >
                         <option value="">Select</option>
                         <option value="Normal People">Normal People</option>
                         <option value="Patient under control">Patient under control</option>
@@ -1828,7 +1807,13 @@ const NewVisit = () => {
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
-                      <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                      <select 
+                        name="bp_sugar_chart_reason" 
+                        id="bp_sugar_chart_reason" 
+                        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
+                        value={bpSugarChartReason}
+                        onChange={(e) => setBpSugarChartReason(e.target.value)}
+                      >
                         <option value="">Select</option>
                         <option value="Newly detected">Newly detected</option>
                         <option value="Patient <150 <100">Patient</option>
@@ -1837,64 +1822,6 @@ const NewVisit = () => {
                   </div>
                 )}
 
-                {/* ########## MODIFICATION START ########## */}
-                {/* {register.startsWith("Follow Up Visits") && visit !== "Preventive" && (
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2">Followup Consultation</label>
-                      { type === "Visitor" ? (
-                        // Dropdown for Visitor as per the new requirement
-                        <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
-                          <option value="">Select Reason</option>
-                          <option>Illness</option>
-                          <option>Over Counter illness</option>
-                          <option>Injury</option>
-                          <option>Over Counter Injury</option>
-                          <option>BP Sugar Chart</option>
-                          <option>Injury Outside the Premises</option>
-                          <option>Over Counter Injury Outside the Premises</option>
-                          <option>Cure Others</option>
-                          <option>Fitness</option>
-                          <option>Prev Others</option>
-                        </select>
-                      ) : (
-                        // Original dropdown for Employee/Contractor
-                        <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
-                          <option value="">Select Reason</option>
-                          <option>Illness</option>
-                          <option>Over Counter illness</option>
-                          <option>Injury</option>
-                          <option>Over Counter Injury</option>
-                          <option>BP Sugar Chart</option>
-                          <option>Injury Outside the Premises</option>
-                          <option>Over Counter Injury Outside the Premises</option>
-                          <option>Cure Others</option>
-                          <option>Alcohol Abuse</option>
-                          <option>Annual/Periodical</option>
-                          <option>Periodical (Food Handler)</option>
-                          <option>Retirement medical examination</option>
-                          <option>Camps(Mandatory)</option>
-                          <option>Camps(Optional)</option>
-                          <option>Prev (Others)</option>
-                        </select>
-                      )}
-                    </div>
-                    {purpose === "others" && (
-                      <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2">Others</label>
-                        <input
-                          type="text"
-                          className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                          value={purpose}
-                          onChange={(e) => setPurpose(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )} */}
-                {/* ########## MODIFICATION END ########## */}
-                {/* ########## MODIFICATION START ########## */}
-
                 {register.startsWith("Follow Up Visits") && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
@@ -1902,7 +1829,12 @@ const NewVisit = () => {
                       {(() => {
                         if (type === "Visitor" && visit === "Curative" ) {
                           return (
-                            <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                            <select 
+                                value={followupConsultationReason}
+                                onChange={(e) => setFollowupConsultationReason(e.target.value)} 
+                                name="reason" 
+                                id="reason" 
+                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                                <option value="">Select Reason</option>
                                 <option>Illness</option>
                                 <option>Over Counter illness</option>
@@ -1918,7 +1850,12 @@ const NewVisit = () => {
                           );
                         } else if ((type ==="Employee") && visit === "Curative" ) {
                           return (
-                            <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                            <select 
+                                value={followupConsultationReason}
+                                onChange={(e) => setFollowupConsultationReason(e.target.value)} 
+                                name="reason" 
+                                id="reason" 
+                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                                 <option value="">Select Reason</option>
                                 <option>Illness</option>
                                 <option>Over Counter illness</option>
@@ -1943,13 +1880,18 @@ const NewVisit = () => {
                                 <option>Fitness After Medical Leave</option>
                                 <option>Fitness After Personal Long Leave</option>
                                 <option>Mock Drill</option>
-                                <option>Prev (Others)</option>
+                                <option>Prev Others</option>
                             </select>
                           );
                         } 
                         else if ((type === "Contractor") && visit === "Curative" ) {
                           return (
-                            <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                            <select 
+                                value={followupConsultationReason}
+                                onChange={(e) => setFollowupConsultationReason(e.target.value)} 
+                                name="reason" 
+                                id="reason" 
+                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                                 <option value="">Select Reason</option>
                                 <option>Illness</option>
                                 <option>Over Counter illness</option>
@@ -1973,42 +1915,50 @@ const NewVisit = () => {
                                 <option>Fitness After Medical Leave</option>
                                 <option>Fitness After Personal Long Leave</option>
                                 <option>Mock Drill</option>
-                                <option>Prev (Others)</option>
+                                <option>Prev Others</option>
                             </select>
                           );
                         } 
                         else if ((type ==="Employee" || type =="Contractor") && visit === "Preventive" ) {
                           return (
-                            <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                            <select 
+                                value={followupConsultationReason}
+                                onChange={(e) => setFollowupConsultationReason(e.target.value)} 
+                                name="reason" 
+                                id="reason" 
+                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                                 <option value="">Select Reason</option>                           
                                 <option>Annual/Periodical</option>
                                 <option>Periodical (Food Handler)</option>
                                 <option>Camps(Mandatory)</option>
                                 <option>Camps(Optional)</option>
+                                <option>Others</option>
                             </select>
                           );
                         } 
                          else {
-                          // Default dropdown for Employee or other types
                           return (
-                            <select name="reason" id="reason" className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
+                            <select 
+                                value={followupConsultationReason}
+                                onChange={(e) => setFollowupConsultationReason(e.target.value)} 
+                                name="reason" 
+                                id="reason" 
+                                className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm">
                               <option value="">Select Reason</option>
-                              <option>Illness</option>
-                              <option>Over Counter illness</option>
-                              {/* ... other default options */}
+                              <option>Others</option>
                             </select>
                           );
                         }
                       })()}
                     </div>
-                    {purpose === "others" && (
+                    {(followupConsultationReason.endsWith("Others")) && (
                       <div>
-                        <label className="block text-gray-700 text-sm font-bold mb-2">Others</label>
+                        <label className="block text-gray-700 text-sm font-bold mb-2">Other Consultation Reason</label>
                         <input
                           type="text"
                           className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
-                          value={purpose}
-                          onChange={(e) => setPurpose(e.target.value)}
+                          value={otherfollowupConsultationReason}
+                          onChange={(e) => setotherfollowupConsultationReason(e.target.value)}
                         />
                       </div>
                     )}

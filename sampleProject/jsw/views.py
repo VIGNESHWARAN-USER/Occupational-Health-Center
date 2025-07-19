@@ -615,13 +615,13 @@ logger = logging.getLogger(__name__)
 def addEntries(request):
     """
     Adds a new employee_details record and Dashboard record for a visit today.
-    Handles MRD number generation based on today's entries.
+    Handles MRD number generation and correctly maps dynamic frontend data to specific model fields.
     """
     if request.method != "POST":
         logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
-    aadhar = None # Initialize for logging
+    aadhar = None 
     try:
         data = json.loads(request.body.decode('utf-8'))
         logger.debug(f"Received data for addEntries: {json.dumps(data)[:500]}...")
@@ -635,23 +635,17 @@ def addEntries(request):
             logger.warning("addEntries failed: Aadhar number (aadhar) is required in formData.")
             return JsonResponse({"error": "Aadhar number (aadhar) is required"}, status=400)
 
-        entry_date = date.today() # Use current date for the visit entry
+        entry_date = date.today()
 
-        # --- MRD Number Logic ---
-        # Correction: Define 'today' before using it
-        today = date.today() # Get today's date for MRD logic
-
-        determined_mrd_no = None # Initialize
-        with transaction.atomic(): # Ensure MRD generation is atomic
-            # Get the highest sequence number used today
+        # --- MRD Number Logic (Unchanged) ---
+        determined_mrd_no = None 
+        with transaction.atomic():
             today_entries = employee_details.objects.filter(
-                entry_date=today # Now 'today' is defined
-            ).select_for_update().order_by('-mrdNo') # Lock rows for atomicity
+                entry_date=entry_date
+            ).select_for_update().order_by('-mrdNo')
 
             highest_mrd_today = today_entries.first()
-
             if highest_mrd_today and highest_mrd_today.mrdNo and len(highest_mrd_today.mrdNo) >= 6:
-                 # Extract sequence number robustly
                  try:
                       current_sequence = int(highest_mrd_today.mrdNo[:6])
                       next_sequence = current_sequence + 1
@@ -660,14 +654,15 @@ def addEntries(request):
                       next_sequence = 1
             else:
                 next_sequence = 1
-
+            
             seq_part = f"{next_sequence:06d}"
-            date_part = today.strftime('%d%m%Y')
+            date_part = entry_date.strftime('%d%m%Y')
             determined_mrd_no = f"{seq_part}{date_part}"
         logger.info(f"Generated new MRD number {determined_mrd_no} for aadhar: {aadhar}")
         # --- End MRD Number Logic ---
-
+        
         # --- Prepare combined data for employee_details ---
+        # <<< MODIFIED: All data preparation logic is updated below >>>
         employee_defaults = {
             'name': employee_data.get('name', ''),
             'dob': parse_date_internal(employee_data.get('dob')),
@@ -677,11 +672,11 @@ def addEntries(request):
             'identification_marks1': employee_data.get('identification_marks1', ''),
             'identification_marks2': employee_data.get('identification_marks2', ''),
             'marital_status': employee_data.get('marital_status', ''),
-            'emp_no': employee_data.get('emp_no', ''), # Store if provided
+            'emp_no': employee_data.get('emp_no', ''),
             'employer': employee_data.get('employer', ''),
             'designation': employee_data.get('designation', ''),
             'department': employee_data.get('department', ''),
-            'job_nature': employee_data.get('job_nature', ''), # Store as received
+            'job_nature': employee_data.get('job_nature', ''),
             'doj': parse_date_internal(employee_data.get('doj')),
             'moj': employee_data.get('moj', ''),
             'phone_Personal': employee_data.get('phone_Personal', ''),
@@ -698,41 +693,51 @@ def addEntries(request):
             'permanent_state': employee_data.get('permanent_state', ''),
             'nationality': employee_data.get('nationality', ''),
             'docName': employee_data.get('docName', ''),
-            'permanent_nationality': employee_data.get('permanent_nationality', ''),
+            'permanent_country': employee_data.get('permanent_country', ''),
             'residential_address': employee_data.get('residential_address', ''),
             'residential_area': employee_data.get('residential_area', ''),
             'residential_state': employee_data.get('residential_state', ''),
-            'residential_nationality': employee_data.get('residential_nationality', ''),
+            'residential_country': employee_data.get('residential_country', ''),
             'country_id': employee_data.get('country_id', ''),
             'role': employee_data.get('role', ''),
-            'employee_status': employee_data.get('employee_status', ''),
-            'since_date': parse_date_internal(employee_data.get('since_date')),
-            'transfer_details': employee_data.get('transfer_details', ''),
-            'other_reason_details': employee_data.get('other_reason_details', ''),
             'other_site_id': employee_data.get('other_site_id', ''),
             'organization': employee_data.get('organization', ''),
             'addressOrganization': employee_data.get('addressOrganization', ''),
             'visiting_department': employee_data.get('visiting_department', ''),
             'visiting_date_from': parse_date_internal(employee_data.get('visiting_date_from')),
-            'visiting_date_to': parse_date_internal(employee_data.get('visiting_date_')),
+            'visiting_date_to': parse_date_internal(employee_data.get('visiting_date_to')),
             'stay_in_guest_house': employee_data.get('stay_in_guest_house', ''),
             'visiting_purpose': employee_data.get('visiting_purpose', ''),
             'type': dashboard_data.get('category', 'Employee'),
             'type_of_visit': dashboard_data.get('typeofVisit', ''),
             'register': dashboard_data.get('register', ''),
             'purpose': dashboard_data.get('purpose', ''),
-            'year': extra_data.get('year', ''), 'batch': extra_data.get('batch', ''),
-            'hospitalName': extra_data.get('hospitalName', ''), 'campName': extra_data.get('campName', ''),
-            'contractName': extra_data.get('contractName', ''), 'prevcontractName': extra_data.get('prevcontractName', ''),
-            'old_emp_no': extra_data.get('old_emp_no', ''), 'reason': extra_data.get('reason', ''),
-            'status': extra_data.get('status', ''),
+            'year': extra_data.get('year', ''),
+            'batch': extra_data.get('batch', ''),
+            'hospitalName': extra_data.get('hospitalName', ''),
+            'campName': extra_data.get('campName', ''),
+            'contractName': extra_data.get('contractName', ''),
+            'prevcontractName': extra_data.get('prevcontractName', ''),
+            'old_emp_no': extra_data.get('old_emp_no', ''),
+            'otherRegister': extra_data.get('otherRegister', ''),
             'mrdNo': determined_mrd_no,
-            'otherRegister': extra_data.get('otherRegister', '')
         }
+        
+        # <<< ADDED: Conditional logic to handle dynamic data from 'extraData' >>>
+        register_type = dashboard_data.get('register', '')
+        if "BP Sugar Check" in register_type:
+            employee_defaults['status'] = extra_data.get('status', '')
+        elif "BP Sugar Chart" in register_type:
+            employee_defaults['bp_sugar_chart_reason'] = extra_data.get('reason', '')
+        elif "Follow Up Visits" in register_type:
+            employee_defaults['followup_reason'] = extra_data.get('purpose', '')
+            # The frontend sends the "other" text in 'purpose_others'
+            if extra_data.get('purpose', '').endswith("Others"):
+                employee_defaults['followup_other_reason'] = extra_data.get('purpose_others', '')
+        
         employee_defaults_filtered = {k: v for k, v in employee_defaults.items() if v is not None}
 
         # --- Create new employee_details entry ---
-        # Use transaction to ensure both records are created or neither
         with transaction.atomic():
             employee_entry = employee_details.objects.create(
                 aadhar=aadhar,
@@ -741,37 +746,43 @@ def addEntries(request):
             )
 
             # --- Prepare and save Dashboard data ---
+            # <<< MODIFIED: This now pulls data from the created employee_entry for consistency >>>
             dashboard_defaults = {
-                'type': employee_entry.type, 'type_of_visit': employee_entry.type_of_visit,
-                'register': employee_entry.register, 'purpose': employee_entry.purpose,
+                'type': employee_entry.type,
+                'type_of_visit': employee_entry.type_of_visit,
+                'register': employee_entry.register,
+                'purpose': employee_entry.purpose,
                 'otherRegister': employee_entry.otherRegister,
-                'year': employee_entry.year, 'batch': employee_entry.batch,
-                'hospitalName': employee_entry.hospitalName, 'campName': employee_entry.campName,
-                'contractName': employee_entry.contractName, 'prevcontractName': employee_entry.prevcontractName,
-                'old_emp_no': employee_entry.old_emp_no, 'reason': employee_entry.reason,
-                'status': employee_entry.status, 'mrdNo': employee_entry.mrdNo,
+                'year': employee_entry.year,
+                'batch': employee_entry.batch,
+                'hospitalName': employee_entry.hospitalName,
+                'campName': employee_entry.campName,
+                'contractName': employee_entry.contractName,
+                'prevcontractName': employee_entry.prevcontractName,
+                'old_emp_no': employee_entry.old_emp_no,
+                'mrdNo': employee_entry.mrdNo,
                 'emp_no': employee_entry.emp_no,
+                # <<< ADDED: Map specific fields to the dashboard model >>>
+                'status': employee_entry.status,
+                'bp_sugar_chart_reason': employee_entry.bp_sugar_chart_reason,
+                'followup_reason': employee_entry.followup_reason,
+                'followup_other_reason': employee_entry.followup_other_reason,
             }
             dashboard_defaults_filtered = {k: v for k, v in dashboard_defaults.items() if v is not None}
 
             dashboard_entry = Dashboard.objects.create(
                 aadhar=aadhar,
-                date=entry_date, # Use 'date' field for Dashboard
+                date=entry_date,
                 **dashboard_defaults_filtered
             )
 
         message = f"Visit Entry added (MRD: {employee_entry.mrdNo}) and Dashboard created successfully"
         logger.info(f"addEntries successful for aadhar: {aadhar} on {entry_date}. MRD: {employee_entry.mrdNo}, EmployeeEntryID: {employee_entry.id}, DashboardID: {dashboard_entry.id}")
-        # Return 201 Created status code as new resources were made
         return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": aadhar}, status=200)
 
     except json.JSONDecodeError:
         logger.error("addEntries failed: Invalid JSON data.", exc_info=True)
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
-    # Catch NameError specifically if it occurs elsewhere, though unlikely now
-    except NameError as ne:
-         logger.exception(f"addEntries failed for aadhar {aadhar or 'Unknown'}: Name Error - {ne}")
-         return JsonResponse({"error": f"A programming error occurred (NameError: {ne})."}, status=500)
     except Exception as e:
         logger.exception(f"addEntries failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
         return JsonResponse({"error": "An internal server error occurred while processing the entry.", "detail": str(e)}, status=500)

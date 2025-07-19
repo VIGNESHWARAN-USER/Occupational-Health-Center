@@ -36,19 +36,29 @@ class employee_details(BaseModel):
         ('Widowed', 'Widowed'),
         ('Separated', 'Separated'),
     ]
-    # ... (keep all existing fields from employee_details as they were) ...
+
+    # --- Visit and Identity Information ---
     type = models.CharField(max_length=50, choices=EMPLOYEE_TYPES, default='Employee')
     type_of_visit = models.CharField(max_length=255, blank=True)
     register = models.CharField(max_length=255, blank=True)
     purpose = models.CharField(max_length=255, blank=True)
+    mrdNo = models.CharField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    entry_date = models.DateField(null=True, blank=True) # Added to track entry date
+
+    # --- Personal Details ---
     name = models.CharField(max_length=225)
+    guardian = models.CharField(max_length=255, blank=True)
     dob = models.DateField(null=True, blank=True)
     sex = models.CharField(max_length=50, blank=True)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) 
     bloodgrp = models.CharField(max_length=225, blank=True)
     identification_marks1 = models.CharField(max_length=225, blank=True)
     identification_marks2 = models.CharField(max_length=225, blank=True)
     marital_status = models.CharField(max_length=50, choices=MARITAL_STATUS_CHOICES, blank=True)
+    nationality = models.CharField(max_length=50, blank=True)
+    docName = models.CharField(max_length=50, blank=True) # For Foreigner documents
+
+    # --- Employment Details ---
     emp_no = models.CharField(max_length=200,blank=True)
     employer = models.CharField(max_length=225, blank=True)
     designation = models.CharField(max_length=225, blank=True)
@@ -56,28 +66,37 @@ class employee_details(BaseModel):
     job_nature = models.CharField(max_length=225, blank=True)
     doj = models.DateField(null=True, blank=True)
     moj = models.CharField(max_length=225, blank=True)
+    location = models.CharField(max_length=50, blank=True) # Current location
+    previousemployer = models.CharField(max_length=255, blank=True)
+    previouslocation = models.CharField(max_length=255, blank=True)
+    
+    # --- Contact Details ---
     phone_Personal = models.CharField(max_length=225, blank=True)
     mail_id_Personal = models.EmailField(max_length=225, blank=True)
-    emergency_contact_person = models.CharField(max_length=225, blank=True)
     phone_Office = models.CharField(max_length=225, blank=True)
     mail_id_Office = models.EmailField(max_length=225, blank=True)
+    
+    # --- Emergency Contact Details ---
+    emergency_contact_person = models.CharField(max_length=225, blank=True)
     emergency_contact_relation = models.CharField(max_length=225, blank=True)
-    mail_id_Emergency_Contact_Person = models.EmailField(max_length=225, blank=True)
     emergency_contact_phone = models.CharField(max_length=225, blank=True)
-    role = models.CharField(max_length=50, blank=True)
+    mail_id_Emergency_Contact_Person = models.EmailField(max_length=225, blank=True)
+    
+    # --- Address Details ---
     permanent_address = models.TextField(blank=True)
     permanent_area = models.CharField(max_length=50, blank=True)
-    location = models.CharField(max_length=50, blank=True)
-    nationality = models.CharField(max_length=50, blank=True)
-    docName = models.CharField(max_length=50, blank=True)
-    permanent_nationality = models.CharField(max_length=50, blank=True)
     permanent_state = models.CharField(max_length=50, blank=True)
+    permanent_country = models.CharField(max_length=50, blank=True) # Added for completeness
     residential_address = models.TextField(blank=True)
     residential_area = models.CharField(max_length=50, blank=True)
-    residential_nationality = models.CharField(max_length=50, blank=True)
     residential_state = models.CharField(max_length=50, blank=True)
+    residential_country = models.CharField(max_length=50, blank=True) # Added for completeness
+
+    # --- Profile Picture ---
     profilepic = models.ImageField(upload_to='profilepics', blank=True, null=True)
     profilepic_url = models.URLField(max_length=255, blank=True)
+
+    # --- Visitor Specific Fields ---
     country_id = models.CharField(max_length=255, blank=True)
     other_site_id = models.CharField(max_length=255, blank=True)
     organization = models.CharField(max_length=255, blank=True)
@@ -87,6 +106,8 @@ class employee_details(BaseModel):
     visiting_date_to = models.DateField(null=True, blank=True)
     stay_in_guest_house = models.CharField(max_length=50, blank=True)
     visiting_purpose = models.CharField(max_length=255, blank=True)
+
+    # --- Register/Event Specific Dynamic Fields ---
     year = models.CharField(max_length=4, blank=True)
     batch = models.CharField(max_length=255, blank=True)
     hospitalName = models.CharField(max_length=255, blank=True)
@@ -94,37 +115,47 @@ class employee_details(BaseModel):
     contractName = models.CharField(max_length=255, blank=True)
     prevcontractName = models.CharField(max_length=255, blank=True)
     old_emp_no = models.CharField(max_length=200, blank=True)
-    reason = models.CharField(max_length=255, blank=True)
-    status = models.CharField(max_length=255, blank=True)
+    otherRegister = models.CharField(max_length=255, blank=True) # For "Other" register type
+
+    # <<< UPDATED/ADDED: Specific fields to replace generic 'reason' and 'status' >>>
+    status = models.CharField(max_length=255, blank=True, help_text="Patient status for BP Sugar Check")
+    bp_sugar_chart_reason = models.CharField(max_length=255, blank=True, help_text="Reason for BP Sugar Chart")
+    followup_reason = models.CharField(max_length=255, blank=True, help_text="Reason for Follow Up Visit")
+    followup_other_reason = models.TextField(blank=True, help_text="Text for 'Other' reason in Follow Up")
+    
+    # --- Legacy/Miscellaneous Fields ---
+    role = models.CharField(max_length=50, blank=True) # Note: 'type' field is now preferred
     employee_status = models.CharField(max_length=255, blank=True)
     since_date = models.DateField(blank=True, null=True)
     transfer_details = models.TextField(blank=True, null=True)
-    other_reason_details = models.TextField(blank=True, null=True)
-    mrdNo = models.CharField(max_length=255, blank=True)
-    guardian = models.CharField(max_length=255, blank=True)
-    otherRegister = models.CharField(max_length=255, blank=True)
-    previousemployer=models.CharField(max_length=255,blank=True)
-    previouslocation=models.CharField(max_length=255,blank=True)
+    other_reason_details = models.TextField(blank=True, null=True) # Potentially legacy field
 
     def __str__(self):
-        return self.emp_no if self.emp_no else f"Employee {self.id}" # Handle missing emp_no
+        return self.emp_no if self.emp_no else f"Employee {self.id}"
 
     def save(self, *args, **kwargs):
         if not self.profilepic:
             self.profilepic_url = ''
+        # Ensures that on saving, if a profile pic exists, its URL is set.
+        elif self.profilepic and not self.profilepic_url:
+            self.profilepic_url = self.profilepic.url
         super().save(*args, **kwargs)
 
 
-# --- Dashboard Model --- *MODIFIED*
+# --- Dashboard Model ---
 class Dashboard(BaseModel):
-    # ... (keep all existing fields from Dashboard as they were) ...
-    emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
-    type = models.TextField(max_length=255)
-    type_of_visit = models.TextField(max_length=255)
-    register = models.TextField(max_length=255)
-    purpose = models.TextField(max_length=255)
-    date = models.DateField(auto_now=True)
+    # --- Core Visit Information ---
+    mrdNo = models.CharField(max_length=255, blank=True)
+    emp_no = models.CharField(max_length=200, blank=True) # Changed to CharField for consistency
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    type = models.CharField(max_length=255, blank=True) # e.g., Employee, Contractor
+    type_of_visit = models.CharField(max_length=255, blank=True) # e.g., Preventive, Curative
+    register = models.CharField(max_length=255, blank=True)
+    purpose = models.CharField(max_length=255, blank=True)
+    date = models.DateField() # Removed auto_now=True to be set explicitly
+    visitOutcome = models.CharField(max_length=255, blank=True)
+
+    # --- Register/Event Specific Dynamic Fields (Mirrored from employee_details) ---
     year = models.CharField(max_length=4, blank=True)
     batch = models.CharField(max_length=255, blank=True)
     hospitalName = models.CharField(max_length=255, blank=True)
@@ -132,14 +163,16 @@ class Dashboard(BaseModel):
     contractName = models.CharField(max_length=255, blank=True)
     prevcontractName = models.CharField(max_length=255, blank=True)
     old_emp_no = models.CharField(max_length=200, blank=True)
-    reason = models.CharField(max_length=255, blank=True)
-    status = models.CharField(max_length=255, blank=True)
-    mrdNo = models.CharField(max_length=255, blank=True)
-    visitOutcome = models.CharField(max_length=255, blank=True)
     otherRegister = models.CharField(max_length=255, blank=True)
 
+    # <<< UPDATED/ADDED: Specific fields mirrored from employee_details for reporting >>>
+    status = models.CharField(max_length=255, blank=True, help_text="Patient status for BP Sugar Check")
+    bp_sugar_chart_reason = models.CharField(max_length=255, blank=True, help_text="Reason for BP Sugar Chart")
+    followup_reason = models.CharField(max_length=255, blank=True, help_text="Reason for Follow Up Visit")
+    followup_other_reason = models.TextField(blank=True, help_text="Text for 'Other' reason in Follow Up")
+
     def __str__(self):
-        return f"Dashboard Record {self.id} for Emp {self.emp_no}"
+        return f"Dashboard Record {self.id} for Emp {self.emp_no or self.aadhar}"
 
 
 # --- Vitals Model --- *MODIFIED*
