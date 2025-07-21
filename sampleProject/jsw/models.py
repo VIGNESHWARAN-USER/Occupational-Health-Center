@@ -1677,22 +1677,28 @@ class PharmacyMedicine(BaseModel):
     def __str__(self):
         return f"{self.brand_name} ({self.chemical_name})"
 
-# --- Instrument Calibration Model ---
-# No emp_no, so no aadhar added here
-class InstrumentCalibration(BaseModel): # Not inheriting BaseModel
+from django.db import models
+
+class InstrumentCalibration(models.Model):
+    # This will be the unique business key for the instrument.
     equipment_sl_no = models.CharField(max_length=255)
+    
+    # This will be our auto-incrementing number, managed by the view.
+    serial_no = models.IntegerField(editable=False)
+    entry_date = models.DateField(auto_now=True)
     instrument_name = models.CharField(max_length=255)
     numbers = models.IntegerField()
     certificate_number = models.CharField(max_length=255, null=True, blank=True)
-    make = models.CharField(max_length=255, null=True, blank=True)
+    make = models.CharField(max_length=255, null=True, blank=True) # Corresponds to "Brand Name"
     model_number = models.CharField(max_length=255, null=True, blank=True)
     freq = models.CharField(max_length=255, null=True, blank=True)
     calibration_date = models.DateField()
     next_due_date = models.DateField()
-    calibration_status = models.BooleanField()
+    calibration_status = models.CharField(max_length=225, null=True, blank=True)
+    done_by = models.CharField(max_length=225, null=True, blank=True)
 
-    def __str__(self): # Corrected from _str_
-        return self.instrument_name
+    def __str__(self):
+        return f"{self.instrument_name} ({self.equipment_sl_no})"
 
 # --- Prescription Model --- *MODIFIED*
 class Prescription(BaseModel):

@@ -5,6 +5,7 @@ import { saveAs } from "file-saver";
 import Sidebar from "./Sidebar";
 
 const InstrumentCalibration = () => {
+  // --- STATE MANAGEMENT ---
   const [pendingCalibrations, setPendingCalibrations] = useState([]);
   const [calibrationHistory, setCalibrationHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -13,129 +14,116 @@ const InstrumentCalibration = () => {
   const [selectedInstrument, setSelectedInstrument] = useState(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false); // Prevents double-clicks
+
   const [statusCounts, setStatusCounts] = useState({
     red_count: 0,
     yellow_count: 0,
     green_count: 0,
   });
-
+  
   const frequencyOptions = [
-    "Monthly",
-    "Once in 2 Months",
-    "Quarterly",
-    "Half-Yearly",
-    "Yearly",
-    "Once in 2 Years",
+    "Monthly", "Once in 2 Months", "Quarterly", "Half-Yearly", "Yearly", "Once in 2 Years",
   ];
 
-  const normalizeFrequency = (freq) => freq.trim().toLowerCase();
+  // --- INITIAL STATES FOR FORMS ---
+  const initialInstrumentState = {
+    equipment_sl_no: "", instrument_name: "", numbers: "", certificate_number: "",
+    make: "", model_number: "", freq: "", calibration_date: "",
+    next_due_date: "", calibration_status: "",
+  };
+  const [newInstrument, setNewInstrument] = useState(initialInstrumentState);
+
+  const initialCompletionState = {
+    calibration_date: new Date().toISOString().split("T")[0],
+    freq: "", next_due_date: "", certificate_number: "",
+  };
+  const [completionDetails, setCompletionDetails] = useState(initialCompletionState);
+
+  // --- UTILITY FUNCTIONS ---
+  const normalizeFrequency = (freq) => (freq || "").trim().toLowerCase();
 
   const calculateNextDueDate = (calibrationDate, freq) => {
     if (!calibrationDate || !freq) return "";
     const date = new Date(calibrationDate);
+    if (isNaN(date.getTime())) return ""; // Invalid date check
+
     const normalizedFreq = normalizeFrequency(freq);
     switch (normalizedFreq) {
-      case "monthly":
-        date.setMonth(date.getMonth() + 1);
-        break;
-      case "once in 2 months":
-        date.setMonth(date.getMonth() + 2);
-        break;
-      case "quarterly":
-        date.setMonth(date.getMonth() + 3);
-        break;
-      case "half-yearly":
-        date.setMonth(date.getMonth() + 6);
-        break;
-      case "yearly":
-        date.setFullYear(date.getFullYear() + 1);
-        break;
-      case "once in 2 years":
-        date.setFullYear(date.getFullYear() + 2);
-        break;
-      default:
-        return "";
+      case "monthly": date.setMonth(date.getMonth() + 1); break;
+      case "once in 2 months": date.setMonth(date.getMonth() + 2); break;
+      case "quarterly": date.setMonth(date.getMonth() + 3); break;
+      case "half-yearly": date.setMonth(date.getMonth() + 6); break;
+      case "yearly": date.setFullYear(date.getFullYear() + 1); break;
+      case "once in 2 years": date.setFullYear(date.getFullYear() + 2); break;
+      default: return "";
     }
     return date.toISOString().split("T")[0];
   };
 
-  const getButtonColor = (nextDueDate, freq) => {
-    const today = new Date();
-    const [day, month, year] = nextDueDate.split("-");
-    const dueDate = new Date(`${year}-${month}-${day}`);
+  /**
+   * DEBUGGED: Reliably parses "DD-Mon-YYYY" and calculates button color.
+   */
+  const getButtonColor = (nextDueDateStr, freq) => {
+    const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const parts = nextDueDateStr.split('-');
+    if (parts.length !== 3) return "bg-gray-400"; // Invalid format
 
-    const msInMonth = 1000 * 60 * 60 * 24 * 30.44;
+    const day = parseInt(parts[0], 10);
+    const month = months[parts[1].toLowerCase()];
+    const year = parseInt(parts[2], 10);
+
+    if (isNaN(day) || month === undefined || isNaN(year)) return "bg-gray-400";
+
+    const dueDate = new Date(year, month, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (dueDate < today) return "bg-red-600";
+
     const diffInMs = dueDate - today;
-    const monthsDiff = diffInMs / msInMonth;
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
 
     const normalizedFreq = normalizeFrequency(freq);
-    let totalMonths = 12;
+    let totalDaysInPeriod = 365; // Default to Yearly
+    if (normalizedFreq === "half-yearly") totalDaysInPeriod = 182;
+    else if (normalizedFreq === "quarterly") totalDaysInPeriod = 91;
+    else if (normalizedFreq === "once in 2 months") totalDaysInPeriod = 61;
+    else if (normalizedFreq === "monthly") totalDaysInPeriod = 30;
+    else if (normalizedFreq === "once in 2 years") totalDaysInPeriod = 730;
 
-    if (normalizedFreq === "half-yearly") totalMonths = 6;
-    else if (normalizedFreq === "quarterly") totalMonths = 3;
-    else if (normalizedFreq === "monthly") totalMonths = 1;
-    else if (normalizedFreq === "once in 2 months") totalMonths = 2;
-    else if (normalizedFreq === "once in 2 years") totalMonths = 24;
-    
-    if (diffInMs < 0) return "bg-red-600"; 
+    const fractionRemaining = diffInDays / totalDaysInPeriod;
 
-    const fraction = monthsDiff / totalMonths;
-
-    if (fraction >= 0.66) return "bg-green-600";
-    if (fraction >= 0.33) return "bg-yellow-500";
+    if (fractionRemaining > 0.5) return "bg-green-600";
+    if (fractionRemaining > 0.25) return "bg-yellow-500";
     return "bg-red-600";
   };
-
-
-  const [newInstrument, setNewInstrument] = useState({
-    equipment_sl_no: "",
-    instrument_name: "",
-    numbers: "",
-    certificate_number: "",
-    make: "",
-    model_number: "",
-    freq: "",
-    calibration_date: "",
-    next_due_date: "",
-    calibration_status: "",
-  });
-
-  const [completionDetails, setCompletionDetails] = useState({
-    calibration_date: new Date().toISOString().split("T")[0],
-    freq: "",
-    next_due_date: "",
-  });
-
+  
+  // --- DATA FETCHING & SIDE EFFECTS ---
   useEffect(() => {
     fetchPendingCalibrations();
   }, []);
-  
+
   useEffect(() => {
     const counts = pendingCalibrations.reduce(
       (acc, item) => {
         const color = getButtonColor(item.next_due_date, item.freq);
-        if (color === "bg-red-600") {
-          acc.red_count++;
-        } else if (color === "bg-yellow-500") {
-          acc.yellow_count++;
-        } else if (color === "bg-green-600") {
-          acc.green_count++;
-        }
+        if (color === "bg-red-600") acc.red_count++;
+        else if (color === "bg-yellow-500") acc.yellow_count++;
+        else if (color === "bg-green-600") acc.green_count++;
         return acc;
-      },
-      { red_count: 0, yellow_count: 0, green_count: 0 }
+      }, { red_count: 0, yellow_count: 0, green_count: 0 }
     );
     setStatusCounts(counts);
   }, [pendingCalibrations]);
 
   const fetchPendingCalibrations = async () => {
     try {
-      const response = await axios.get(
-        "https://occupational-health-center-1.onrender.com/get_pending_calibrations/"
-      );
-      setPendingCalibrations(response.data.pending_calibrations);
+      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibrations/");
+      setPendingCalibrations(response.data.pending_calibrations || []);
     } catch (error) {
       console.error("Error fetching pending calibrations:", error);
+      alert("Error: Could not fetch pending calibrations.");
     }
   };
 
@@ -144,116 +132,100 @@ const InstrumentCalibration = () => {
       const params = {};
       if (fromDate) params.from = fromDate;
       if (toDate) params.to = toDate;
-
-      const response = await axios.get(
-        "https://occupational-health-center-1.onrender.com/get_calibration_history/",
-        { params }
-      );
-      setCalibrationHistory(response.data.calibration_history);
+      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibration_history/", { params });
+      setCalibrationHistory(response.data.calibration_history || []);
       setShowHistory(true);
     } catch (error) {
       console.error("Error fetching calibration history:", error);
+      alert("Error: Could not fetch calibration history.");
     }
   };
 
+  // --- EVENT HANDLERS ---
   const handleDownloadExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(calibrationHistory);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Calibration History");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const data = new Blob([excelBuffer], {
-      type: "application/octet-stream",
-    });
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(data, "Calibration_History.xlsx");
   };
 
   const handleAddInstrument = async () => {
-    const requiredFields = [
-      "equipment_sl_no",
-      "instrument_name",
-      "numbers",
-      "calibration_date",
-      "next_due_date",
-      "freq",
-      "calibration_status",
-    ];
-
+    const requiredFields = ["equipment_sl_no", "instrument_name", "numbers", "calibration_date", "freq", "calibration_status"];
     const missingField = requiredFields.find((field) => !newInstrument[field]);
     if (missingField) {
-      alert(`Please fill in the required field: ${missingField.replace("_", " ")}`);
+      alert(`Please fill in the required field: ${missingField.replace(/_/g, " ")}`);
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await axios.post("https://occupational-health-center-1.onrender.com/add_instrument/", {
         ...newInstrument,
-        calibration_status: parseInt(newInstrument.calibration_status),
-      });      
-      setShowModal(false);
-      fetchPendingCalibrations();
-      setNewInstrument({
-        equipment_sl_no: "",
-        instrument_name: "",
-        numbers: "",
-        certificate_number: "",
-        make: "",
-        model_number: "",
-        freq: "",
-        calibration_date: "",
-        next_due_date: "",
-        calibration_status: "",
+        done_by: localStorage.getItem("userData"),
       });
+      alert("Instrument added successfully!");
+      setShowModal(false);
+      setNewInstrument(initialInstrumentState); // Reset form
+      fetchPendingCalibrations(); // Refresh list
     } catch (error) {
-      console.error("Error adding instrument:", error.response?.data || error.message);
-      alert("Failed to add instrument.");
+      const errorMessage = error.response?.data?.error || "An unknown server error occurred.";
+      console.error("Error adding instrument:", errorMessage);
+      alert(`Failed to add instrument: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
     }
-    
+  };
+  
+  const handleCompleteCalibration = async () => {
+    if (!completionDetails.freq) {
+      alert("Please select a frequency for the next calibration cycle.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/complete_calibration/", {
+          id: selectedInstrument.id,
+          ...completionDetails,
+        }
+      );
+      alert(response.data.message); // Show success message from backend
+      setShowCompleteModal(false);
+      fetchPendingCalibrations(); // Refresh list
+    } catch (error) {
+      const errorMessage = error.response?.data?.error || "An unknown server error occurred.";
+      console.error("Error completing calibration:", errorMessage);
+      alert(`Failed to complete calibration: ${errorMessage}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenCompleteModal = (instrument) => {
+    setSelectedInstrument(instrument);
+    setCompletionDetails({
+        ...initialCompletionState,
+        // Pre-fill certificate number if it already exists
+        certificate_number: instrument.certificate_number || "",
+    });
+    setShowCompleteModal(true);
+  };
+  
+  const handleCloseAddModal = () => {
+    setShowModal(false);
+    setNewInstrument(initialInstrumentState);
   };
 
   const handleClearFilters = () => {
     setFromDate("");
     setToDate("");
+    // Re-fetch history without date filters
     fetchCalibrationHistory();
   };
 
-  const handleOpenCompleteModal = (item) => {
-    setSelectedInstrument(item);
-    setCompletionDetails({
-      calibration_date: new Date().toISOString().split("T")[0],
-      freq: "",
-      next_due_date: "",
-    });
-    setShowCompleteModal(true);
-  };
-
-  const handleCompleteCalibration = async () => {
-    if (!completionDetails.freq || !completionDetails.next_due_date) {
-      alert("Please enter both frequency and next due date");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        "https://occupational-health-center-1.onrender.com/complete_calibration/",
-        {
-          id: selectedInstrument.id,
-          ...completionDetails,
-        }
-      );
-
-      if (response.data.message) {
-        setShowCompleteModal(false);
-        fetchPendingCalibrations();
-      }
-    } catch (error) {
-      console.error("Error completing calibration:", error.response?.data || error.message);
-      alert("Failed to complete calibration");
-    }
-  };
-
+  // --- RENDER ---
   return (
     <div className="h-screen flex bg-[#8fcadd]">
       <Sidebar />
@@ -261,81 +233,28 @@ const InstrumentCalibration = () => {
         <div className="flex justify-between items-start mb-6">
           {showHistory ? (
             <>
-              <button
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
-                onClick={() => setShowHistory(false)}
-              >
+              <button className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800" onClick={() => setShowHistory(false)} >
                 ← Back to Current Status
               </button>
               <div className="flex justify-end items-center mb-4 space-x-2">
-                <label>
-                  From:
-                  <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                    className="border p-1 ml-1"
-                  />
-                </label>
-                <label>
-                  To:
-                  <input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                    className="border p-1 ml-1"
-                  />
-                </label>
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  onClick={fetchCalibrationHistory}
-                >
-                  Apply Filter
-                </button>
-                <button
-                  onClick={handleClearFilters}
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
-                >
-                  Clear
-                </button>
-                <button
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  onClick={handleDownloadExcel}
-                >
-                  Download Excel
-                </button>
+                <label>From: <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border p-1 ml-1" /></label>
+                <label>To: <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border p-1 ml-1" /></label>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" onClick={fetchCalibrationHistory}>Apply Filter</button>
+                <button onClick={handleClearFilters} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Clear</button>
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" onClick={handleDownloadExcel}>Download Excel</button>
               </div>
             </>
           ) : (
             <>
               <div className="flex flex-col space-y-2">
-                <button
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  onClick={() => setShowModal(true)}
-                >
-                  + Add Instrument
-                </button>
-                <button
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  onClick={fetchCalibrationHistory}
-                >
-                  View Calibration History
-                </button>
+                <button className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700" onClick={() => setShowModal(true)}>+ Add Instrument</button>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" onClick={fetchCalibrationHistory}>View Calibration History</button>
               </div>
-
-              
-                <h2 className="text-3xl font-bold">Current Status</h2>
-
+              <h2 className="text-3xl font-bold">Current Status</h2>
               <div className="flex space-x-2">
-                <div className="px-3 py-2 bg-red-600 text-white rounded shadow">
-                  {statusCounts.red_count}
-                </div>
-                <div className="px-3 py-2 bg-yellow-500 text-white rounded shadow">
-                  {statusCounts.yellow_count}
-                </div>
-                <div className="px-3 py-2 bg-green-600 text-white rounded shadow">
-                  {statusCounts.green_count}
-                </div>
+                <div className="px-3 py-2 bg-red-600 text-white rounded shadow">{statusCounts.red_count}</div>
+                <div className="px-3 py-2 bg-yellow-500 text-white rounded shadow">{statusCounts.yellow_count}</div>
+                <div className="px-3 py-2 bg-green-600 text-white rounded shadow">{statusCounts.green_count}</div>
               </div>
             </>
           )}
@@ -343,49 +262,37 @@ const InstrumentCalibration = () => {
 
         {!showHistory ? (
           <div className="overflow-x-auto">
-          <table className="bg-white w-full min-w-[1000px]">
-            <thead>
-              <tr className="bg-gray-200">
-                {/* --- CHANGE 1: Added "Status" to the headers --- */}
-                {["S.no","Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calibration Date", "Next Due Date", "Status", "Action"].map((head) => (
-                  <th key={head} className="border px-4 py-2 text-left">{head}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-            {pendingCalibrations.map((item) => {
-              const buttonColor = getButtonColor(item.next_due_date, item.freq);
-              return (
-                <tr key={item.id} className="hover:bg-gray-100">
-                  <td className="border px-3 py-2 text-sm">{item.id}</td>
-                  <td className="border px-3 py-2 text-sm">{item.equipment_sl_no}</td>
-                  <td className="border px-3 py-2 text-sm">{item.instrument_name}</td>
-                  <td className="border px-3 py-2 text-sm">{item.numbers}</td>
-                  <td className="border px-3 py-2 text-sm">{item.certificate_number}</td>
-                  <td className="border px-3 py-2 text-sm">{item.make}</td>
-                  <td className="border px-3 py-2 text-sm">{item.model_number}</td>
-                  <td className="border px-3 py-2 text-sm">{item.freq}</td>
-                  <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.calibration_date}</td>
-                  <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.next_due_date}</td>
-                  
-                  {/* --- CHANGE 2: Added a new cell for the status color circle --- */}
-                  <td className="border px-3 py-2 text-center">
-                    <div className={`${buttonColor} h-4 w-4 rounded-full mx-auto`}></div>
-                  </td>
-                  
-                  <td className="border px-3 py-2 text-sm text-center">
-                    <button
-                      className={`${buttonColor} text-white py-1 px-3 text-xs rounded hover:opacity-80`}
-                      onClick={() => handleOpenCompleteModal(item)}
-                       
-                    >
-                      Complete
-                    </button>
-                  </td>
+            <table className="bg-white w-full min-w-[1200px]">
+              <thead>
+                <tr className="bg-gray-200">
+                  {["S.No", "Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Action"].map((head) => (
+                    <th key={head} className="border px-4 py-2 text-left text-sm">{head}</th>
+                  ))}
                 </tr>
-              )})}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pendingCalibrations.map((item, index) => {
+                  const buttonColor = getButtonColor(item.next_due_date, item.freq);
+                  return (
+                    <tr key={item.id} className="hover:bg-gray-100">
+                      <td className="border px-3 py-2 text-sm">{index + 1}</td>
+                      <td className="border px-3 py-2 text-sm">{item.equipment_sl_no}</td>
+                      <td className="border px-3 py-2 text-sm">{item.instrument_name}</td>
+                      <td className="border px-3 py-2 text-sm">{item.numbers}</td>
+                      <td className="border px-3 py-2 text-sm">{item.certificate_number}</td>
+                      <td className="border px-3 py-2 text-sm">{item.make}</td>
+                      <td className="border px-3 py-2 text-sm">{item.model_number}</td>
+                      <td className="border px-3 py-2 text-sm">{item.freq}</td>
+                      <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.calibration_date}</td>
+                      <td className="border px-3 py-2 text-sm whitespace-nowrap">{item.next_due_date}</td>
+                      <td className="border px-3 py-2 text-sm text-center">
+                        <button className={`${buttonColor} text-white py-1 px-3 text-xs rounded hover:opacity-80`} disabled = {item.calibration_status === "Completed"} onClick={() => handleOpenCompleteModal(item)}>Complete</button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         ) : (
           <div>
@@ -393,7 +300,7 @@ const InstrumentCalibration = () => {
             <table className="bg-white w-full">
               <thead>
                 <tr className="bg-gray-200">
-                  {["Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calibration Date", "Next Due Date", "Status"].map((head) => (
+                  {["Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Status"].map((head) => (
                     <th key={head} className="border px-4 py-2 text-left">{head}</th>
                   ))}
                 </tr>
@@ -411,7 +318,7 @@ const InstrumentCalibration = () => {
                     <td className="border px-4 py-2">{item.calibration_date}</td>
                     <td className="border px-4 py-2">{item.next_due_date}</td>
                     <td className="border px-4 py-2 text-center">
-                      <span className="bg-green-500 text-white px-2 py-1 rounded">Completed</span>
+                      <span className="bg-green-500 text-white px-2 py-1 rounded">{(item.calibration_status ? "Completed" : "Pending")}</span>
                     </td>
                   </tr>
                 ))}
@@ -420,118 +327,63 @@ const InstrumentCalibration = () => {
           </div>
         )}
 
-        {/* ... (Rest of the Modals code remains the same) ... */}
+        {/* Add Instrument Modal */}
         {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded shadow-lg w-1/3">
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
               <h2 className="text-xl font-bold mb-4">Add Instrument</h2>
-              <input type="text" placeholder="Equipment Unique ID No" className="border p-2 w-full mb-2"
-                value={newInstrument.equipment_sl_no}
-                onChange={(e) => setNewInstrument({ ...newInstrument, equipment_sl_no: e.target.value })}
-              />
-              <input type="text" placeholder="Instrument Name" className="border p-2 w-full mb-2"
-                value={newInstrument.instrument_name}
-                onChange={(e) => setNewInstrument({ ...newInstrument, instrument_name: e.target.value })}
-              />
-              <input type="number" placeholder="Numbers" className="border p-2 w-full mb-2"
-                value={newInstrument.numbers}
-                onChange={(e) => setNewInstrument({ ...newInstrument, numbers: e.target.value })}
-              />
-              <input type="text" placeholder="Certificate Number" className="border p-2 w-full mb-2"
-                value={newInstrument.certificate_number}
-                onChange={(e) => setNewInstrument({ ...newInstrument, certificate_number: e.target.value })}
-              />
-              <input type="text" placeholder="Make" className="border p-2 w-full mb-2"
-                value={newInstrument.make}
-                onChange={(e) => setNewInstrument({ ...newInstrument, make: e.target.value })}
-              />
-              <input type="text" placeholder="Model Number" className="border p-2 w-full mb-2"
-                value={newInstrument.model_number}
-                onChange={(e) => setNewInstrument({ ...newInstrument, model_number: e.target.value })}
-              />
-
+              <input type="text" placeholder="Instrument Name" className="border p-2 w-full mb-2" value={newInstrument.instrument_name} onChange={(e) => setNewInstrument({ ...newInstrument, instrument_name: e.target.value })} />
+              <input type="number" placeholder="Numbers" className="border p-2 w-full mb-2" value={newInstrument.numbers} onChange={(e) => setNewInstrument({ ...newInstrument, numbers: e.target.value })} />
+              <input type="text" placeholder="Make (Brand Name)" className="border p-2 w-full mb-2" value={newInstrument.make} onChange={(e) => setNewInstrument({ ...newInstrument, make: e.target.value })} />
+              <input type="text" placeholder="Model Number" className="border p-2 w-full mb-2" value={newInstrument.model_number} onChange={(e) => setNewInstrument({ ...newInstrument, model_number: e.target.value })} />
+              <input type="text" placeholder="Equipment Sl.No" className="border p-2 w-full mb-2" value={newInstrument.equipment_sl_no} onChange={(e) => setNewInstrument({ ...newInstrument, equipment_sl_no: e.target.value })} />
+              <input type="text" placeholder="Certificate Number (Optional)" className="border p-2 w-full mb-2" value={newInstrument.certificate_number} onChange={(e) => setNewInstrument({ ...newInstrument, certificate_number: e.target.value })} />
               <label>Calibration Date</label>
-              <input type="date" className="border p-2 w-full mb-2"
-                value={newInstrument.calibration_date}
-                onChange={(e) => {
-                  const date = e.target.value;
-                  const nextDue = calculateNextDueDate(date, newInstrument.freq);
-                  setNewInstrument({ ...newInstrument, calibration_date: date, next_due_date: nextDue });
-                }}
-              />
-              
+              <input type="date" className="border p-2 w-full mb-2" value={newInstrument.calibration_date} onChange={(e) => { const date = e.target.value; const nextDue = calculateNextDueDate(date, newInstrument.freq); setNewInstrument({ ...newInstrument, calibration_date: date, next_due_date: nextDue }); }} />
               <label>Frequency</label>
-              <select className="border p-2 w-full mb-2"
-                value={newInstrument.freq}
-                onChange={(e) => {
-                  const freq = e.target.value;
-                  const nextDue = calculateNextDueDate(newInstrument.calibration_date, freq);
-                  setNewInstrument({ ...newInstrument, freq, next_due_date: nextDue });
-                }}
-              >
-              
+              <select className="border p-2 w-full mb-2" value={newInstrument.freq} onChange={(e) => { const freq = e.target.value; const nextDue = calculateNextDueDate(newInstrument.calibration_date, freq); setNewInstrument({ ...newInstrument, freq, next_due_date: nextDue }); }} >
                 <option value="" disabled>Select Frequency</option>
-                {frequencyOptions.map((freq, idx) => (
-                  <option key={idx} value={freq}>{freq}</option>
-                ))}
+                {frequencyOptions.map((freq, idx) => (<option key={idx} value={freq}>{freq}</option>))}
               </select>
-
               <label>Next Due Date</label>
-              <input type="date" className="border p-2 w-full mb-2 bg-gray-100" readOnly
-                value={newInstrument.next_due_date}
-              />
-
-              <label>Status</label>
-              <select className="border p-2 w-full mb-2"
-                value={newInstrument.calibration_status}
-                onChange={(e) => setNewInstrument({ ...newInstrument, calibration_status: e.target.value })}
-              >
+              <input type="date" className="border p-2 w-full mb-2 bg-gray-100" readOnly value={newInstrument.next_due_date} />
+              <label>Initial Status</label>
+              <select className="border p-2 w-full mb-2" value={newInstrument.calibration_status} onChange={(e) => setNewInstrument({ ...newInstrument, calibration_status: e.target.value })} >
                 <option value="" disabled>Select Status</option>
                 <option value="0">Pending</option>
                 <option value="1">Completed</option>
               </select>
-
               <div className="flex justify-end">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700" onClick={handleAddInstrument}>Save</button>
-                <button className="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={() => setShowModal(false)}>Cancel</button>
+                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400" onClick={handleAddInstrument} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</button>
+                <button className="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={handleCloseAddModal}>Cancel</button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Complete Calibration Modal */}
         {showCompleteModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded shadow-lg w-1/3">
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
               <h2 className="text-xl font-bold mb-4">Complete Calibration</h2>
-              <label className="block mb-1">Calibration Date</label>
+              <label className="block mb-1">Completion Date</label>
               <input type="date" value={completionDetails.calibration_date} readOnly className="border p-2 w-full mb-2 bg-gray-100" />
-              <label className="block mb-1">Frequency</label>
-              <select className="border p-2 w-full mb-2"
-                value={completionDetails.freq}
-                onChange={(e) => {
-                  const freq = e.target.value;
-                  const nextDue = calculateNextDueDate(completionDetails.calibration_date, freq);
-                  setCompletionDetails({ ...completionDetails, freq, next_due_date: nextDue });
-                }}
-              >
+              <label className="block mb-1">Certificate Number (for this cycle)</label>
+              <input type="text" placeholder="Enter certificate number" className="border p-2 w-full mb-2" value={completionDetails.certificate_number} onChange={(e) => setCompletionDetails({ ...completionDetails, certificate_number: e.target.value })} />
+              <label className="block mb-1">Next Cycle Frequency</label>
+              <select className="border p-2 w-full mb-2" value={completionDetails.freq} onChange={(e) => { const freq = e.target.value; const nextDue = calculateNextDueDate(completionDetails.calibration_date, freq); setCompletionDetails({ ...completionDetails, freq, next_due_date: nextDue }); }} >
                 <option value="" disabled>Select Frequency</option>
-                {frequencyOptions.map((freq, idx) => (
-                  <option key={idx} value={freq}>{freq}</option>
-                ))}
+                {frequencyOptions.map((freq, idx) => (<option key={idx} value={freq}>{freq}</option>))}
               </select>
               <label className="block mb-1">Next Due Date</label>
-              <input type="date" className="border p-2 w-full mb-4"
-                value={completionDetails.next_due_date}
-                readOnly
-              />
+              <input type="date" className="border p-2 w-full mb-4 bg-gray-100" value={completionDetails.next_due_date} readOnly />
               <div className="flex justify-end">
-                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" onClick={handleCompleteCalibration}>Submit</button>
+                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400" onClick={handleCompleteCalibration} disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit"}</button>
                 <button className="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={() => setShowCompleteModal(false)}>Cancel</button>
               </div>
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

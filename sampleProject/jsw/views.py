@@ -4879,31 +4879,59 @@ def get_next_due_date(calibration_date_str, freq):
         logger.error(f"Could not parse calibration date '{calibration_date_str}' or frequency '{freq}'")
         return None # Return None if parsing fails
 
-@csrf_exempt # Should be GET
-def get_pending_calibrations(request):
-    if request.method == 'GET':
-        try:
-            # Fetch instruments marked as not calibrated (status=False)
-            pending = InstrumentCalibration.objects.filter(calibration_status=False).order_by("next_due_date") # Order by due date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import InstrumentCalibration
+from django.db.models import Max # Import Max
+import logging
 
-            data = []
-            for i in pending:
-                 data.append({
-                     "id": i.id, "equipment_sl_no": i.equipment_sl_no, "instrument_name": i.instrument_name,
-                     "numbers": i.numbers, "certificate_number": i.certificate_number, "make": i.make,
-                     "model_number": i.model_number, "freq": i.freq,
-                     "calibration_date": i.calibration_date.strftime("%d-%b-%Y") if i.calibration_date else None, # Format date
-                     "next_due_date": i.next_due_date.strftime("%d-%b-%Y") if i.next_due_date else None, # Format date
-                     "calibration_status": i.calibration_status,
-                 })
-            return JsonResponse({"pending_calibrations": data})
-        except Exception as e:
-            logger.exception("Error in get_pending_calibrations")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
+logger = logging.getLogger(__name__)
+
+@csrf_exempt # This decorator is not necessary for a GET request
+def get_calibrations(request):
+    if request.method != 'GET':
         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
         response['Allow'] = 'GET'
         return response
+
+    try:
+        # Step 1: Find the ID of the latest pending record for each equipment_sl_no.
+        # We group by the serial number and find the maximum 'id' in each group.
+        latest_pending_ids = InstrumentCalibration.objects.values(
+            'equipment_sl_no'
+        ).annotate(
+            latest_id=Max('id')
+        ).values_list('latest_id', flat=True)
+
+        # Step 2: Fetch the full objects for those specific IDs.
+        # This ensures we only get the single, most recent entry for each instrument.
+        unique_pending_calibrations = InstrumentCalibration.objects.filter(
+            id__in=list(latest_pending_ids)
+        ).order_by("next_due_date") # Order the final result by the due date for display
+
+        # Serialize the data for the JSON response
+        data = []
+        for i in unique_pending_calibrations:
+            data.append({
+                "id": i.id,
+                "equipment_sl_no": i.equipment_sl_no,
+                "instrument_name": i.instrument_name,
+                "numbers": i.numbers,
+                "certificate_number": i.certificate_number,
+                "make": i.make,
+                "model_number": i.model_number,
+                "freq": i.freq,
+                # Format dates for better readability in the frontend
+                "calibration_date": i.calibration_date.strftime("%d-%b-%Y") if i.calibration_date else None,
+                "next_due_date": i.next_due_date.strftime("%d-%b-%Y") if i.next_due_date else None,
+                "calibration_status": i.calibration_status,
+            })
+            
+        return JsonResponse({"pending_calibrations": data})
+
+    except Exception as e:
+        logger.exception("Error in get_calibrations")
+        return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
 
 @csrf_exempt # Should be GET
 def get_calibration_history(request):
@@ -4913,7 +4941,7 @@ def get_calibration_history(request):
             to_date_str = request.GET.get("to")
 
             # Fetch completed calibrations (status=True)
-            calibrated_instruments = InstrumentCalibration.objects.filter(calibration_status=True)
+            calibrated_instruments = InstrumentCalibration.objects.filter(calibration_status="Completed")
 
             # Apply date filtering based on calibration_date
             from_date = parse_date_internal(from_date_str)
@@ -4941,6 +4969,17 @@ def get_calibration_history(request):
         response['Allow'] = 'GET'
         return response
 
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction, IntegrityError
+from django.db.models import Max
+from .models import InstrumentCalibration
+from .utils import parse_date_internal # Assuming this is in your utils.py
+import logging
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def complete_calibration(request):
     if request.method != 'POST':
@@ -4948,120 +4987,157 @@ def complete_calibration(request):
 
     try:
         data = json.loads(request.body)
-        
-        # --- DEBUG PRINT 1: See the raw data received from React ---
-        print("--- RAW DATA RECEIVED ---")
-        print(data)
-        
         instrument_id = data.get("id")
         new_completion_date_str = data.get("calibration_date")
         new_freq = data.get("freq")
         new_next_due_date_str = data.get("next_due_date")
-        new_certificate_number = data.get("certificate_number")
+        
+        # Optional field for the completed record
+        new_certificate_number = data.get("certificate_number") 
 
+        # Validate that all required data for the new cycle is present
         if not all([instrument_id, new_completion_date_str, new_freq, new_next_due_date_str]):
-            return JsonResponse({"error": "Missing required fields."}, status=400)
+            return JsonResponse({"error": "Missing required fields: id, calibration_date, freq, and next_due_date are all required."}, status=400)
 
         completion_date = parse_date_internal(new_completion_date_str)
-        next_due_date = parse_date_internal(new_next_due_date_str)
+        next_due_date_for_new_record = parse_date_internal(new_next_due_date_str)
 
-        # --- DEBUG PRINT 2: See the parsed data ---
-        print("\n--- PARSED DATA ---")
-        print(f"Instrument ID: {instrument_id} (Type: {type(instrument_id)})")
-        print(f"Completion Date: {completion_date} (Type: {type(completion_date)})")
-        print(f"Next Due Date: {next_due_date} (Type: {type(next_due_date)})")
-        print(f"Frequency: {new_freq} (Type: {type(new_freq)})")
+        if not completion_date or not next_due_date_for_new_record:
+            return JsonResponse({"error": "Invalid date format. Please use YYYY-MM-DD."}, status=400)
 
-        if not completion_date or not next_due_date:
-            return JsonResponse({"error": "Invalid date format in payload."}, status=400)
-
+        # Use a database transaction to ensure both operations succeed or fail together
         with transaction.atomic():
-            instrument = InstrumentCalibration.objects.select_for_update().get(id=instrument_id)
-            
-            # --- DEBUG PRINT 3: Show the instrument before saving ---
-            print(f"\n--- INSTRUMENT FOUND (ID: {instrument.id}) ---")
+            # 1. Find the original record and lock it to prevent race conditions
+            original_instrument = InstrumentCalibration.objects.select_for_update().get(id=instrument_id)
 
-            instrument.calibration_date = completion_date
-            instrument.freq = new_freq
-            instrument.next_due_date = next_due_date
-            if new_certificate_number is not None:
-                instrument.certificate_number = new_certificate_number
-            
-            # --- DEBUG PRINT 4: This print will only be reached if the save is successful ---
-            print("\nAttempting to save instrument...")
-            instrument.save()
-            print("...Save successful!")
+            # Check if it's already completed to prevent duplicate actions
+            if original_instrument.calibration_status == "Completed":
+                return JsonResponse({"error": "This calibration record has already been completed."}, status=409) # 409 Conflict
 
-        logger.info(f"Calibration completed and rescheduled for Instrument ID {instrument_id}")
-        return JsonResponse({"message": "Calibration recorded and rescheduled successfully"})
+            # 2. Update the old record: Mark as 'completed'
+            original_instrument.calibration_status = "Completed"
+            original_instrument.calibration_date = completion_date # Set its completion date
+            if new_certificate_number:
+                original_instrument.certificate_number = new_certificate_number
+            original_instrument.save()
+
+            # 3. Create the new record for the next cycle
+            # Get the next serial number
+            last_serial = InstrumentCalibration.objects.aggregate(max_serial=Max('serial_no'))['max_serial']
+            new_serial_no = (last_serial or 0) + 1
+            
+            # Create the new pending record by copying data from the original
+            InstrumentCalibration.objects.create(
+                serial_no=new_serial_no,
+                equipment_sl_no=original_instrument.equipment_sl_no,
+                instrument_name=original_instrument.instrument_name,
+                numbers=original_instrument.numbers,
+                make=original_instrument.make,
+                model_number=original_instrument.model_number,
+                
+                # Set the new cycle's details
+                calibration_date=completion_date, # The new cycle starts on the completion date of the old one
+                freq=new_freq,
+                next_due_date=next_due_date_for_new_record,
+                
+                # Mark this new record as 'pending'
+                calibration_status="Pending",
+                
+                # Carry over who is responsible for the instrument
+                done_by=original_instrument.done_by 
+            )
+
+        logger.info(f"Calibration completed for Instrument ID {instrument_id} and new pending record created.")
+        return JsonResponse({"message": "Calibration completed and new cycle scheduled successfully."})
 
     except InstrumentCalibration.DoesNotExist:
-        return JsonResponse({"error": "Instrument record not found"}, status=404)
+        return JsonResponse({"error": "Instrument with the specified ID not found."}, status=404)
     except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+        return JsonResponse({"error": "Invalid JSON format in request body."}, status=400)
+    except IntegrityError as e:
+        logger.error(f"Database integrity error during completion: {e}")
+        return JsonResponse({"error": "A database error occurred. It's possible a unique constraint was violated.", "detail": str(e)}, status=500)
     except Exception as e:
-        # --- DEBUG PRINT 5: This will catch ANY other exception and print it ---
-        logger.exception(f"CRITICAL ERROR in complete_calibration for ID {data.get('id', 'Unknown')}")
-        print(f"\n!!!!!! EXCEPTION CAUGHT !!!!!!\n{e}\n")
+        logger.exception(f"An unexpected error occurred in complete_calibration for ID {data.get('id', 'Unknown')}")
         return JsonResponse({"error": "An unexpected server error occurred.", "detail": str(e)}, status=500)
+
+
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import IntegrityError
+from django.db.models import Max
+from .models import InstrumentCalibration
+from .utils import parse_date_internal, get_next_due_date
+import logging
+
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def add_instrument(request):
-    """ Adds a new instrument and its initial calibration record. """
+    """ Adds a new instrument and its initial calibration record with an auto-incrementing serial number. """
     if request.method != "POST":
         response = JsonResponse({"error": "Invalid method"}, status=405)
         response['Allow'] = 'POST'
         return response
 
     try:
-        data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+        data = json.loads(request.body.decode('utf-8'))
 
         # Validation
-        required_fields = ["equipment_sl_no", "instrument_name", "numbers", "freq", "calibration_date"]
-        missing = [f for f in required_fields if not data.get(f)]
-        if missing: return JsonResponse({"error": f"Missing required fields: {', '.join(missing)}"}, status=400)
+        required_fields = ["equipment_sl_no", "instrument_name", "numbers", "freq", "calibration_date", "calibration_status"]
+        missing = [f for f in required_fields if data.get(f) is None]
+        if missing:
+            return JsonResponse({"error": f"Missing required fields: {', '.join(missing)}"}, status=400)
+
+        # --- Logic for Auto-incrementing serial_no ---
+        # 1. Find the current maximum serial number.
+        last_instrument = InstrumentCalibration.objects.aggregate(max_serial=Max('serial_no'))
+        max_serial = last_instrument.get('max_serial', 0)
+        
+        # 2. If it's None (first entry), start at 1. Otherwise, increment.
+        new_serial_no = (max_serial or 0) + 1
+        # --- End of serial_no logic ---
 
         calibration_date_str = data["calibration_date"]
         calibration_date = parse_date_internal(calibration_date_str)
-        if not calibration_date: return JsonResponse({"error": "Invalid calibration_date format (YYYY-MM-DD)"}, status=400)
+        if not calibration_date:
+            return JsonResponse({"error": "Invalid calibration_date format (YYYY-MM-DD)"}, status=400)
 
         freq = data["freq"]
         next_due = get_next_due_date(calibration_date_str, freq)
-        if not next_due: return JsonResponse({"error": f"Invalid or unsupported frequency: {freq}"}, status=400)
-        next_due_date = next_due.date()
-
-        # Assume initial record is 'completed' for the given calibration date
-        initial_status = True # The record represents the calibration *just done*
+        if not next_due:
+            return JsonResponse({"error": f"Invalid or unsupported frequency: {freq}"}, status=400)
+        
+        
 
         instrument_data = {
+            "serial_no": new_serial_no, 
             "equipment_sl_no": data["equipment_sl_no"],
             "instrument_name": data["instrument_name"],
             "numbers": data["numbers"],
-            "certificate_number": data.get("certificate_number"), # Optional
-            "make": data.get("make"), # Optional
-            "model_number": data.get("model_number"), # Optional
+            "certificate_number": data.get("certificate_number"),
+            "make": data.get("make"),
+            "model_number": data.get("model_number"),
             "freq": freq,
             "calibration_date": calibration_date,
-            "next_due_date": next_due_date,
-            "calibration_status": initial_status
+            "next_due_date": data["next_due_date"],
+            "calibration_status": data["calibration_status"],
+            "done_by": data.get("done_by")
         }
-        filtered_data = {k:v for k,v in instrument_data.items() if v is not None}
-
-        # Check if instrument S/N already exists with pending status
-        if InstrumentCalibration.objects.filter(equipment_sl_no=data["equipment_sl_no"], calibration_status=False).exists():
-             return JsonResponse({"error": f"Instrument S/N {data['equipment_sl_no']} already exists with a pending calibration."}, status=409) # Conflict
+        filtered_data = {k: v for k, v in instrument_data.items() if v is not None}
 
         instrument = InstrumentCalibration.objects.create(**filtered_data)
         logger.info(f"Instrument added successfully: ID {instrument.id}, S/N {instrument.equipment_sl_no}")
-        return JsonResponse({"message": "Instrument added successfully", "id": instrument.id}, status=201)
+        return JsonResponse({"message": "Instrument added successfully", "id": instrument.id, "serial_no": instrument.serial_no}, status=201)
 
-    except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON format"}, status=400)
-    except IntegrityError as e: # Catch potential unique constraint violation on S/N
-        logger.error(f"Integrity error adding instrument: {e}")
-        return JsonResponse({"error": f"Instrument with S/N {data.get('equipment_sl_no')} might already exist."}, status=409)
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
     except Exception as e:
         logger.exception("Error adding instrument")
         return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+
 
 @csrf_exempt # Should be GET
 def get_pending_next_month_count(request):
