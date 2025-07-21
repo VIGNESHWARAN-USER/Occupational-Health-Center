@@ -5968,3 +5968,15 @@ def get_currentfootfalls(request):
     except Exception as e:
         logger.exception("An error occurred in get_currentfootfalls") # More detailed logging
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+def deleteInstrument(request):
+    if request.method == "POST":
+        instrument_id = json.loads(request.body)['equipment_sl_no']
+        print(instrument_id)
+        # instrument_id = request.data.get('id')
+        InstrumentCalibration.objects.filter(equipment_sl_no=instrument_id).delete()
+        return JsonResponse({'message':'Successfully retrieved data'}, status = 200)
+    else:
+        return JsonResponse({'error':'Invalid Method'}, status = 500)

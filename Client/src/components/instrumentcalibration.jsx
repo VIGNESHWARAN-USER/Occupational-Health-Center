@@ -203,7 +203,16 @@ const InstrumentCalibration = () => {
     }
   };
 
-  const handleOpenCompleteModal = (instrument) => {
+  const handleDelete = async (instrument) => {
+    const response = await axios.post("https://occupational-health-center-1.onrender.com/deleteInstrument", instrument);
+    console.log(response)
+    if(response.status === 200)
+      alert("Instrument Deleted Successfully");
+    else
+       alert("Instrument is not Deleted");
+  };
+  
+  const  handleOpenCompleteModal = (instrument) => {
     setSelectedInstrument(instrument);
     setCompletionDetails({
         ...initialCompletionState,
@@ -265,7 +274,7 @@ const InstrumentCalibration = () => {
             <table className="bg-white w-full min-w-[1200px]">
               <thead>
                 <tr className="bg-gray-200">
-                  {["S.No", "Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Action"].map((head) => (
+                  {["S.No", "Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Action", "Delete"].map((head) => (
                     <th key={head} className="border px-4 py-2 text-left text-sm">{head}</th>
                   ))}
                 </tr>
@@ -288,6 +297,9 @@ const InstrumentCalibration = () => {
                       <td className="border px-3 py-2 text-sm text-center">
                         <button className={`${buttonColor} text-white py-1 px-3 text-xs rounded hover:opacity-80`} disabled = {item.calibration_status === "Completed"} onClick={() => handleOpenCompleteModal(item)}>Complete</button>
                       </td>
+                      <td className="border px-3 py-2 text-sm text-center">
+                        <button className={`bg-red-600 text-white py-1 px-3 text-xs rounded hover:opacity-80`} onClick={() => handleDelete(item)}>Delete</button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -300,7 +312,7 @@ const InstrumentCalibration = () => {
             <table className="bg-white w-full">
               <thead>
                 <tr className="bg-gray-200">
-                  {["Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Status"].map((head) => (
+                  {["Equipment ID", "Instrument", "Numbers", "Certificate No", "Make", "Model No", "Freq", "Calib. Date", "Next Due", "Status", "Delete"].map((head) => (
                     <th key={head} className="border px-4 py-2 text-left">{head}</th>
                   ))}
                 </tr>
@@ -320,6 +332,9 @@ const InstrumentCalibration = () => {
                     <td className="border px-4 py-2 text-center">
                       <span className="bg-green-500 text-white px-2 py-1 rounded">{(item.calibration_status ? "Completed" : "Pending")}</span>
                     </td>
+                    <td className="border px-3 py-2 text-sm text-center">
+                        <button className={`bg-red-600 text-white py-1 px-3 text-xs rounded hover:opacity-80`} onClick={() => handleDelete(item)}>Delete</button>
+                      </td>
                   </tr>
                 ))}
               </tbody>
@@ -328,38 +343,201 @@ const InstrumentCalibration = () => {
         )}
 
         {/* Add Instrument Modal */}
-        {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded shadow-lg w-full max-w-md">
-              <h2 className="text-xl font-bold mb-4">Add Instrument</h2>
-              <input type="text" placeholder="Instrument Name" className="border p-2 w-full mb-2" value={newInstrument.instrument_name} onChange={(e) => setNewInstrument({ ...newInstrument, instrument_name: e.target.value })} />
-              <input type="number" placeholder="Numbers" className="border p-2 w-full mb-2" value={newInstrument.numbers} onChange={(e) => setNewInstrument({ ...newInstrument, numbers: e.target.value })} />
-              <input type="text" placeholder="Make (Brand Name)" className="border p-2 w-full mb-2" value={newInstrument.make} onChange={(e) => setNewInstrument({ ...newInstrument, make: e.target.value })} />
-              <input type="text" placeholder="Model Number" className="border p-2 w-full mb-2" value={newInstrument.model_number} onChange={(e) => setNewInstrument({ ...newInstrument, model_number: e.target.value })} />
-              <input type="text" placeholder="Equipment Sl.No" className="border p-2 w-full mb-2" value={newInstrument.equipment_sl_no} onChange={(e) => setNewInstrument({ ...newInstrument, equipment_sl_no: e.target.value })} />
-              <input type="text" placeholder="Certificate Number (Optional)" className="border p-2 w-full mb-2" value={newInstrument.certificate_number} onChange={(e) => setNewInstrument({ ...newInstrument, certificate_number: e.target.value })} />
-              <label>Calibration Date</label>
-              <input type="date" className="border p-2 w-full mb-2" value={newInstrument.calibration_date} onChange={(e) => { const date = e.target.value; const nextDue = calculateNextDueDate(date, newInstrument.freq); setNewInstrument({ ...newInstrument, calibration_date: date, next_due_date: nextDue }); }} />
-              <label>Frequency</label>
-              <select className="border p-2 w-full mb-2" value={newInstrument.freq} onChange={(e) => { const freq = e.target.value; const nextDue = calculateNextDueDate(newInstrument.calibration_date, freq); setNewInstrument({ ...newInstrument, freq, next_due_date: nextDue }); }} >
-                <option value="" disabled>Select Frequency</option>
-                {frequencyOptions.map((freq, idx) => (<option key={idx} value={freq}>{freq}</option>))}
-              </select>
-              <label>Next Due Date</label>
-              <input type="date" className="border p-2 w-full mb-2 bg-gray-100" readOnly value={newInstrument.next_due_date} />
-              <label>Initial Status</label>
-              <select className="border p-2 w-full mb-2" value={newInstrument.calibration_status} onChange={(e) => setNewInstrument({ ...newInstrument, calibration_status: e.target.value })} >
-                <option value="" disabled>Select Status</option>
-                <option value="0">Pending</option>
-                <option value="1">Completed</option>
-              </select>
-              <div className="flex justify-end">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400" onClick={handleAddInstrument} disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save"}</button>
-                <button className="ml-2 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600" onClick={handleCloseAddModal}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* --- Enhanced Add Instrument Modal --- */}
+{showModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+    <div className="bg-white p-8 rounded-lg shadow-2xl w-full max-w-2xl transform transition-all">
+      {/* Modal Header */}
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        Add New Instrument
+      </h2>
+
+      {/* Form with Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        
+        {/* Instrument Name (Full Width) */}
+        <div className="md:col-span-2">
+          <label htmlFor="instrument_name" className="block text-sm font-medium text-gray-700 mb-1">
+            Instrument Name
+          </label>
+          <input
+            type="text"
+            id="instrument_name"
+            placeholder="Enter Instrument Name"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.instrument_name}
+            onChange={(e) => setNewInstrument({ ...newInstrument, instrument_name: e.target.value })}
+          />
+        </div>
+
+        {/* Make (Brand Name) */}
+        <div>
+          <label htmlFor="make" className="block text-sm font-medium text-gray-700 mb-1">
+            Brand Name
+          </label>
+          <input
+            type="text"
+            id="make"
+            placeholder="Enter Brand Name"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.make}
+            onChange={(e) => setNewInstrument({ ...newInstrument, make: e.target.value })}
+          />
+        </div>
+
+        {/* Model Number */}
+        <div>
+          <label htmlFor="model_number" className="block text-sm font-medium text-gray-700 mb-1">
+            Model Number
+          </label>
+          <input
+            type="text"
+            id="model_number"
+            placeholder="Enter Model Number"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.model_number}
+            onChange={(e) => setNewInstrument({ ...newInstrument, model_number: e.target.value })}
+          />
+        </div>
+
+        {/* Equipment Sl.No */}
+        <div>
+          <label htmlFor="equipment_sl_no" className="block text-sm font-medium text-gray-700 mb-1">
+            Equipment Serial No.
+          </label>
+          <input
+            type="text"
+            id="equipment_sl_no"
+            placeholder="Unique Serial Number"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.equipment_sl_no}
+            onChange={(e) => setNewInstrument({ ...newInstrument, equipment_sl_no: e.target.value })}
+          />
+        </div>
+
+        {/* Numbers */}
+        <div>
+          <label htmlFor="numbers" className="block text-sm font-medium text-gray-700 mb-1">
+            Numbers
+          </label>
+          <input
+            type="number"
+            id="numbers"
+            placeholder="Enter associated number"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.numbers}
+            onChange={(e) => setNewInstrument({ ...newInstrument, numbers: e.target.value })}
+          />
+        </div>
+
+        {/* Certificate Number (Full Width) */}
+        <div className="md:col-span-2">
+          <label htmlFor="certificate_number" className="block text-sm font-medium text-gray-700 mb-1">
+            Certificate Number
+          </label>
+          <input
+            type="text"
+            id="certificate_number"
+            placeholder="Enter Certificate Number"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.certificate_number}
+            onChange={(e) => setNewInstrument({ ...newInstrument, certificate_number: e.target.value })}
+          />
+        </div>
+        
+        {/* --- Calibration Details Section --- */}
+
+        {/* Calibration Date */}
+        <div>
+          <label htmlFor="calibration_date" className="block text-sm font-medium text-gray-700 mb-1">
+            Last Calibration Date
+          </label>
+          <input
+            type="date"
+            id="calibration_date"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.calibration_date}
+            onChange={(e) => {
+              const date = e.target.value;
+              const nextDue = calculateNextDueDate(date, newInstrument.freq);
+              setNewInstrument({ ...newInstrument, calibration_date: date, next_due_date: nextDue });
+            }}
+          />
+        </div>
+
+        {/* Frequency */}
+        <div>
+          <label htmlFor="freq" className="block text-sm font-medium text-gray-700 mb-1">
+            Calibration Frequency
+          </label>
+          <select
+            id="freq"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.freq}
+            onChange={(e) => {
+              const freq = e.target.value;
+              const nextDue = calculateNextDueDate(newInstrument.calibration_date, freq);
+              setNewInstrument({ ...newInstrument, freq, next_due_date: nextDue });
+            }}
+          >
+            <option value="" disabled>Select Frequency</option>
+            {frequencyOptions.map((freq, idx) => (
+              <option key={idx} value={freq}>{freq}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Next Due Date (Read-Only) */}
+        <div>
+          <label htmlFor="next_due_date" className="block text-sm font-medium text-gray-700 mb-1">
+            Next Due Date
+          </label>
+          <input
+            type="date"
+            id="next_due_date"
+            className="w-full p-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+            readOnly
+            value={newInstrument.next_due_date}
+          />
+        </div>
+
+        {/* Initial Status */}
+        <div>
+          <label htmlFor="initial_status" className="block text-sm font-medium text-gray-700 mb-1">
+            Initial Status
+          </label>
+          <select
+            id="initial_status"
+            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+            value={newInstrument.calibration_status}
+            onChange={(e) => setNewInstrument({ ...newInstrument, calibration_status: e.target.value })}
+          >
+            <option value="" disabled>Select Status</option>
+            <option value="pending">Pending</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Modal Footer with Buttons */}
+      <div className="flex justify-end mt-8 pt-4 border-t">
+        <button
+          className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+          onClick={handleCloseAddModal}
+        >
+          Cancel
+        </button>
+        <button
+          className="ml-4 px-6 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          onClick={handleAddInstrument}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Saving..." : "Save Instrument"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* Complete Calibration Modal */}
         {showCompleteModal && (
