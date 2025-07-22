@@ -4920,7 +4920,7 @@ def get_calibrations(request):
                 "make": i.make,
                 "model_number": i.model_number,
                 "freq": i.freq,
-                # Format dates for better readability in the frontend
+                "inst_status": i.inst_status,
                 "calibration_date": i.calibration_date.strftime("%d-%b-%Y") if i.calibration_date else None,
                 "next_due_date": i.next_due_date.strftime("%d-%b-%Y") if i.next_due_date else None,
                 "calibration_status": i.calibration_status,

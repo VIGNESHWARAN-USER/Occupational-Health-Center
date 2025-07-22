@@ -142,6 +142,7 @@ const InstrumentCalibration = () => {
   const fetchPendingCalibrations = async () => {
     try {
       const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibrations/");
+      console.log(response.data.pending_calibrations)
       const calibrations = response.data.pending_calibrations || [];
       const formattedCalibrations = calibrations.map(item => ({
         ...item,
@@ -341,7 +342,7 @@ const InstrumentCalibration = () => {
             </>
           )}
         </div>
-
+          
         {!showHistory ? (
           <div className="overflow-x-auto">
             <table className="bg-white w-full min-w-[1200px]">
@@ -354,7 +355,8 @@ const InstrumentCalibration = () => {
                 </tr>
               </thead>
               <tbody>
-                {pendingCalibrations.map((item) => {
+                {pendingCalibrations.filter((item) => item.inst_status === "inuse").map((item) => {
+                  console.log(item);
                   const buttonColor = getButtonColor(item.next_due_date, item.freq);
                   return (
                     <tr key={item.id} className="hover:bg-gray-100">
@@ -481,6 +483,16 @@ const InstrumentCalibration = () => {
                     <option value="Completed">Completed</option>
                   </select>
                 </div>
+                {newInstrument.id && (
+                  <div>
+                  <label htmlFor="initial_status" className="block text-sm font-medium text-gray-700 mb-1">Instruemnt Status</label>
+                  <select id="initial_status" className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" value={newInstrument.inst_status} onChange={(e) => setNewInstrument({ ...newInstrument, inst_status: e.target.value })} >
+                    <option value="" disabled>Select Status</option>
+                    <option value="inuse">In Use</option>
+                    <option value="notinuse">Not in Use</option>
+                  </select>
+                </div>
+                )}
               </div>
               <div className="flex justify-end mt-8 pt-4 border-t">
                 <button className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" onClick={handleCloseAddModal}>Cancel</button>

@@ -1696,6 +1696,7 @@ class InstrumentCalibration(models.Model):
     calibration_status = models.CharField(max_length=225, null=True, blank=True)
     instrument_cnodition = models.CharField(max_length=225, blank=True, null=True)
     done_by = models.CharField(max_length=225, null=True, blank=True)
+    inst_status = models.CharField(max_length = 225, null = True, blank = True)
 
     def __str__(self):
         return f"{self.instrument_name} ({self.equipment_sl_no})"
