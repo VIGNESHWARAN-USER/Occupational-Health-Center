@@ -120,6 +120,7 @@ urlpatterns = [
     path("complete_calibration/", views.complete_calibration, name="complete_calibration"),
     path("add_instrument/", views.add_instrument, name="add_instrument"),
     path("deleteInstrument", views.deleteInstrument, name="deleteInstrument"),
+    path("EditInstrument", views.EditInstrument, name="EditInstrument"),
     path("archive_stock/", views.archive_zero_quantity_stock, name="archive_stock"),
     path("get_pending_next_month_count/", views.get_pending_next_month_count, name="get_pending_next_month_count"),
 

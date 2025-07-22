@@ -4916,7 +4916,6 @@ def get_calibrations(request):
                 "id": i.id,
                 "equipment_sl_no": i.equipment_sl_no,
                 "instrument_name": i.instrument_name,
-                "numbers": i.numbers,
                 "certificate_number": i.certificate_number,
                 "make": i.make,
                 "model_number": i.model_number,
@@ -4954,7 +4953,7 @@ def get_calibration_history(request):
                  data.append({
                      "id": entry.id, # Include ID
                      "equipment_sl_no": entry.equipment_sl_no, "instrument_name": entry.instrument_name,
-                     "numbers": entry.numbers, "certificate_number": entry.certificate_number,
+                     "certificate_number": entry.certificate_number,
                      "make": entry.make, "model_number": entry.model_number, "freq": entry.freq,
                      "calibration_date": entry.calibration_date.strftime("%d-%b-%Y") if entry.calibration_date else "",
                      "next_due_date": entry.next_due_date.strftime("%d-%b-%Y") if entry.next_due_date else "",
@@ -5031,7 +5030,6 @@ def complete_calibration(request):
                 serial_no=new_serial_no,
                 equipment_sl_no=original_instrument.equipment_sl_no,
                 instrument_name=original_instrument.instrument_name,
-                numbers=original_instrument.numbers,
                 make=original_instrument.make,
                 model_number=original_instrument.model_number,
                 
@@ -5086,7 +5084,7 @@ def add_instrument(request):
         data = json.loads(request.body.decode('utf-8'))
 
         # Validation
-        required_fields = ["equipment_sl_no", "instrument_name", "numbers", "freq", "calibration_date", "calibration_status"]
+        required_fields = ["equipment_sl_no", "instrument_name",  "freq", "calibration_date", "calibration_status"]
         missing = [f for f in required_fields if data.get(f) is None]
         if missing:
             return JsonResponse({"error": f"Missing required fields: {', '.join(missing)}"}, status=400)
@@ -5116,7 +5114,6 @@ def add_instrument(request):
             "serial_no": new_serial_no, 
             "equipment_sl_no": data["equipment_sl_no"],
             "instrument_name": data["instrument_name"],
-            "numbers": data["numbers"],
             "certificate_number": data.get("certificate_number"),
             "make": data.get("make"),
             "model_number": data.get("model_number"),
@@ -5925,7 +5922,7 @@ def get_currentfootfalls(request):
                 'data': []
             }, status=200)
 
-        # 6. Collect all MRD numbers from the filtered results
+       
         preventive_mrds = [
             f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
         ]
@@ -5980,3 +5977,45 @@ def deleteInstrument(request):
         return JsonResponse({'message':'Successfully retrieved data'}, status = 200)
     else:
         return JsonResponse({'error':'Invalid Method'}, status = 500)
+
+@csrf_exempt
+def EditInstrument(request):
+    """
+    Updates an existing instrument record.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method. Only POST is allowed."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        instrument_id = data.get("id")
+
+        if not instrument_id:
+            return JsonResponse({"error": "Instrument ID is required."}, status=400)
+
+        # Retrieve the instrument to be updated
+        try:
+            instrument = InstrumentCalibration.objects.get(id=instrument_id)
+        except InstrumentCalibration.DoesNotExist:
+            return JsonResponse({"error": "Instrument not found."}, status=404)
+
+        # Update the instrument fields with the new data
+        for key, value in data.items():
+            # Avoid updating the primary key
+            if key != "id":
+                setattr(instrument, key, value)
+        
+        # Recalculate next_due_date if calibration_date or freq has changed
+        if 'calibration_date' in data or 'freq' in data:
+            instrument.next_due_date = instrument.next_due_date
+
+        instrument.save()
+        
+        logger.info(f"Instrument updated successfully: ID {instrument.id}")
+        return JsonResponse({"message": "Instrument updated successfully."}, status=200)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format."}, status=400)
+    except Exception as e:
+        logger.exception("Error updating instrument")
+        return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)

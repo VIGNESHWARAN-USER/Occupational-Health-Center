@@ -1687,7 +1687,6 @@ class InstrumentCalibration(models.Model):
     serial_no = models.IntegerField(editable=False)
     entry_date = models.DateField(auto_now=True)
     instrument_name = models.CharField(max_length=255)
-    numbers = models.IntegerField()
     certificate_number = models.CharField(max_length=255, null=True, blank=True)
     make = models.CharField(max_length=255, null=True, blank=True) # Corresponds to "Brand Name"
     model_number = models.CharField(max_length=255, null=True, blank=True)
@@ -1695,6 +1694,7 @@ class InstrumentCalibration(models.Model):
     calibration_date = models.DateField()
     next_due_date = models.DateField()
     calibration_status = models.CharField(max_length=225, null=True, blank=True)
+    instrument_cnodition = models.CharField(max_length=225, blank=True, null=True)
     done_by = models.CharField(max_length=225, null=True, blank=True)
 
     def __str__(self):
