@@ -1185,6 +1185,18 @@ class OthersTest(BaseModel):
     Urethroscopy = models.TextField(max_length=255)
     Urethroscopy_comments = models.TextField(max_length=255)
     
+    Bronchoscopy = models.TextField(max_length=255)
+    Bronchoscopy_comments = models.TextField(max_length=255)
+    
+    Cystoscopy = models.TextField(max_length=255)
+    Cystoscopy_comments = models.TextField(max_length=255)
+    
+    Hysteroscopy = models.TextField(max_length=255)
+    Hysteroscopy_comments = models.TextField(max_length=255)
+    
+    Ureteroscopy = models.TextField(max_length=255)
+    Ureteroscopy_comments = models.TextField(max_length=255)
+    
     def _str_(self):
         return f"Others Test {self.id} for Emp {self.emp_no}"
     
@@ -1229,6 +1241,17 @@ class XRay(BaseModel):
     Pelvis = models.TextField(max_length=255)
     Pelvis_comments = models.TextField(max_length=255)   
     
+    
+    Skull = models.TextField(max_length=255)
+    Skull_comments = models.TextField(max_length=255)   
+    
+    
+    Upper_limb = models.TextField(max_length=255)
+    Upper_limb_comments = models.TextField(max_length=255)   
+    
+    Lower_limb = models.TextField(max_length=255)
+    Lower_limb_comments = models.TextField(max_length=255)   
+    
     def __str__(self):
         return f"X-Ray {self.id} for Emp {self.emp_no}"
     
@@ -1264,6 +1287,17 @@ class CTReport(BaseModel):
 
     CT_brain = models.TextField(max_length=255)
     CT_brain_comments = models.TextField(max_length=255)
+    
+    CT_Head= models.TextField(max_length=255)
+    CT_Head_comments = models.TextField(max_length=255)
+
+    CT_Neck= models.TextField(max_length=255)
+    CT_Neck_comments = models.TextField(max_length=255)
+
+
+    CT_Chest= models.TextField(max_length=255)
+    CT_Chest_comments = models.TextField(max_length=255)
+
 
     CT_lungs = models.TextField(max_length=255)
     CT_lungs_comments = models.TextField(max_length=255)
@@ -1276,6 +1310,12 @@ class CTReport(BaseModel):
 
     CT_pelvis = models.TextField(max_length=255)
     CT_pelvis_comments = models.TextField(max_length=255)
+    
+    CT_Upper_limb = models.TextField(max_length=255)
+    CT_Upper_limb_comments = models.TextField(max_length=255)   
+    
+    CT_Lower_limb = models.TextField(max_length=255)
+    CT_Lower_limb_comments = models.TextField(max_length=255)   
     
     def __str__(self):
         return f"CT {self.id} for Emp {self.emp_no}"
@@ -1290,6 +1330,12 @@ class MRIReport(BaseModel):
     mri_brain = models.TextField(max_length=255)
     mri_brain_comments = models.TextField(max_length=255)
 
+    mri_Head= models.TextField(max_length=255)
+    mri_Head_comments = models.TextField(max_length=255)
+
+    mri_Neck= models.TextField(max_length=255)
+    mri_Neck_comments = models.TextField(max_length=255)
+  
     mri_lungs = models.TextField(max_length=255)
     mri_lungs_comments = models.TextField(max_length=255)
 
@@ -1301,6 +1347,16 @@ class MRIReport(BaseModel):
 
     mri_pelvis = models.TextField(max_length=255)
     mri_pelvis_comments = models.TextField(max_length=255)
+
+    mri_Chest= models.TextField(max_length=255)
+    mri_Chest_comments = models.TextField(max_length=255)
+
+    mri_Upper_limb = models.TextField(max_length=255)
+    mri_Upper_limb_comments = models.TextField(max_length=255)   
+    
+    mri_Lower_limb = models.TextField(max_length=255)
+    mri_Lower_limb_comments = models.TextField(max_length=255)   
+ 
 
     def __str__(self):
         return f"MRI Report {self.id} for Emp {self.emp_no}"
@@ -1475,6 +1531,7 @@ class Member(BaseModel):
     aadhar = models.CharField(max_length=20, blank=True, null=True) # Already present, different length
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     password = models.CharField(max_length=255, null=True, blank=True)
+    type = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -1684,15 +1741,16 @@ class InstrumentCalibration(models.Model):
     equipment_sl_no = models.CharField(max_length=255)
     
     # This will be our auto-incrementing number, managed by the view.
-    serial_no = models.IntegerField(editable=False)
-    entry_date = models.DateField(auto_now=True)
+    instrument_number = models.CharField(max_length=100, null=True, blank=False)
+    
+    entry_date = models.DateField(auto_now_add=True)
     instrument_name = models.CharField(max_length=255)
     certificate_number = models.CharField(max_length=255, null=True, blank=True)
     make = models.CharField(max_length=255, null=True, blank=True) # Corresponds to "Brand Name"
     model_number = models.CharField(max_length=255, null=True, blank=True)
     freq = models.CharField(max_length=255, null=True, blank=True)
     calibration_date = models.DateField()
-    next_due_date = models.DateField()
+    next_due_date = models.DateField(null=True,blank=True)
     calibration_status = models.CharField(max_length=225, null=True, blank=True)
     instrument_cnodition = models.CharField(max_length=225, blank=True, null=True)
     done_by = models.CharField(max_length=225, null=True, blank=True)

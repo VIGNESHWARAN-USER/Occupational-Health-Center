@@ -6,10 +6,10 @@ import {
   FaRegCalendarAlt,
   FaSignOutAlt,
   FaPills,
-  FaBars, // Added for hamburger icon
+  FaBars,
   FaTimes,
   FaAmbulance,
-  FaUpload, // Added for close icon
+  FaUpload,
 } from "react-icons/fa";
 import {
   MdDashboard,
@@ -24,13 +24,14 @@ import {
 import axios from "axios";
 import img from "../assets/logo.png"; // Make sure this path is correct
 
-const Sidebar = () => {
+// --- CHANGE 1: Accept the 'redCount' prop ---
+const Sidebar = ({ redCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const accessLevel = localStorage.getItem("accessLevel") || "unknown"; // Provide default
-  const [pendingCount, setPendingCount] = useState(null); // Assuming you might want these back
-  const [expiryCount, setExpiryCount] = useState(null); // Assuming you might want these back
-  const [isOpen, setIsOpen] = useState(false); // State for mobile sidebar visibility
+  const accessLevel = localStorage.getItem("accessLevel") || "unknown";
+  const [pendingCount, setPendingCount] = useState(null);
+  const [expiryCount, setExpiryCount] = useState(null);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Close sidebar when navigating on mobile
   useEffect(() => {
@@ -40,32 +41,41 @@ const Sidebar = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
-  // --- Fetch counts logic (Optional: Keep if you still need badges) ---
+  // --- CHANGE 2: Update the logic to use the prop or fetch from API ---
   useEffect(() => {
-    // Example: Only fetch if user needs badges
-    if (accessLevel === 'nurse' || accessLevel === 'doctor' || accessLevel === 'pharmacy') {
-       fetchPendingCount();
+    // If redCount is passed as a prop (it will be a number, including 0), use it directly.
+    // This will happen when the user is on the InstrumentCalibration page.
+    if (typeof redCount === 'number') {
+      setPendingCount(redCount);
+    } else {
+      // Otherwise (on any other page), fall back to the original fetch logic.
+      if (accessLevel === 'nurse' || accessLevel === 'doctor') {
+        fetchPendingCount();
+      } else {
+        setPendingCount(0); // Set to 0 if not applicable for this user role
+      }
+    }
+    
+    // Fetch expiry count separately, as this logic is independent.
+    if (accessLevel === 'pharmacy') {
        fetchExpiryCount();
     }
-  }, [accessLevel]); // Re-fetch if accessLevel changes (though unlikely mid-session)
+  // This effect will re-run if the user navigates, the role changes, or the redCount prop updates.
+  }, [redCount, accessLevel, location.pathname]);
 
+
+  // This function now serves as the fallback for pages other than InstrumentCalibration.
   const fetchPendingCount = async () => {
-    // Only fetch if relevant for the current user type or specific routes
-    if (accessLevel === 'nurse' || accessLevel === 'doctor') {
-        try {
-        const response = await axios.get("https://occupational-health-center-1.onrender.com/get_red_status_count/");
-        setPendingCount(response.data.red_count);
-        } catch (error) {
-        console.error("Error fetching red count:", error);
-        setPendingCount(0); // Default to 0 on error
-        }
-    } else {
-        setPendingCount(0); // Not applicable
+    try {
+      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_red_status_count/");
+      setPendingCount(response.data.red_count);
+    } catch (error) {
+      console.error("Error fetching red count:", error);
+      setPendingCount(0); // Default to 0 on error
     }
   };
 
   const fetchExpiryCount = async () => {
-     // Only fetch if relevant for the current user type or specific routes
      if (accessLevel === 'pharmacy') {
         try {
             const response = await axios.get(
@@ -80,42 +90,39 @@ const Sidebar = () => {
          setExpiryCount(0); // Not applicable
      }
   };
-  // --- End Fetch counts logic ---
-
+  
   const menus = {
     nurse: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> }, // Changed name
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
       { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
       { name: "Data Upload", to: "../dataupload", icon: <FaUpload /> },
-      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' }, // Added badge identifier
+      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' },
     ],
     doctor: [
-      // Assuming same changes for doctor as nurse based on the provided code
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> }, // Changed name
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
       { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
       { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
-      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' }, // Added badge identifier
+      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' },
     ],
     admin: [
-      { name: "Dashboard", to: "../admindashboard", icon: <MdDashboard /> },
+      
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
     ],
     pharmacy: [
-      // Missing "Prescription Issued / Prescribed Out" from your specific code, added it back
       { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
       { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
       { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
-      { name: "Daily Usage", to: "../prescriptionin", icon: <MdReceipt /> }, // Re-added based on previous version logic might imply it's needed
-      { name: "Current Expiry", to: "../currentexpiry", icon: <MdWarning />, badgeName: 'expiry' }, // Added badge identifier
+      { name: "Daily Usage", to: "../prescriptionin", icon: <MdReceipt /> },
+      { name: "Current Expiry", to: "../currentexpiry", icon: <MdWarning />, badgeName: 'expiry' },
       { name: "Expiry Register", to: "../expiryregister", icon: <MdWarning /> },
       { name: "Discard/Damaged", to: "../discarddamaged", icon: <MdDelete /> },
       { name: "Ward Consumable", to: "../wardconsumable", icon: <MdInventory /> },
@@ -125,7 +132,8 @@ const Sidebar = () => {
 
   const currentMenu = menus[accessLevel] || [];
 
-  // Optional: Badge rendering logic if needed
+  // --- NO CHANGES NEEDED HERE ---
+  // This function already reads from the `pendingCount` state, which we are now correctly updating.
   const renderBadge = (badgeName) => {
     let count = null;
     let isLoading = false;
@@ -140,7 +148,6 @@ const Sidebar = () => {
       return null; // No badge for this item
     }
 
-    // Simple badge style, adjust as needed
     return (
       <>
         {isLoading ? (
@@ -158,12 +165,11 @@ const Sidebar = () => {
     );
   };
 
-
   return (
     <>
-      {/* --- Mobile Toggle Button (Position absolute/fixed in your main layout/header) --- */}
+      {/* Mobile Toggle Button */}
       <button
-        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-md shadow-md" // Added shadow
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-md shadow-md"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle Menu"
         aria-expanded={isOpen}
@@ -172,17 +178,16 @@ const Sidebar = () => {
         {isOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
       </button>
 
-      {/* --- Overlay for Mobile --- */}
+      {/* Overlay for Mobile */}
       {isOpen && (
         <div
           className="md:hidden fixed inset-0 bg-black opacity-50 z-30"
           onClick={() => setIsOpen(false)}
-          aria-hidden="true" // Added aria-hidden
+          aria-hidden="true"
         ></div>
       )}
 
-      {/* --- Sidebar --- */}
-      {/* Apply exact styles from user request + responsive classes */}
+      {/* Sidebar */}
       <div
         id="sidebar"
         className={`
@@ -191,21 +196,12 @@ const Sidebar = () => {
           text-white flex flex-col shadow-lg
           transform transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:relative md:translate-x-0 md:w-1/5 md:h-full md:flex md:shrink-0 {/* Adjust md:w-1/5 as per request */}
-          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden {/* Scrollbar hiding */}
+          md:relative md:translate-x-0 md:w-1/5 md:h-full md:flex md:shrink-0
+          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
           `}
-        // On medium screens and up (md:):
-        // - md:relative: Reset positioning
-        // - md:translate-x-0: Ensure it's visible
-        // - md:w-1/5: Set requested width for desktop (Note: w-64 might be more common)
-        // - md:h-full: Use h-full for relative positioning context on desktop
-        // - md:flex: Ensure it's displayed
-        // - md:shrink-0: Prevent shrinking
       >
-        {/* --- Logo --- */}
-        {/* Apply exact styles from user request */}
-        <div className="p-6 flex justify-center flex-shrink-0 relative"> {/* Kept relative for potential close button */}
-           {/* Optional: Close button inside sidebar for mobile */}
+        {/* Logo */}
+        <div className="p-6 flex justify-center flex-shrink-0 relative">
            <button
               className="md:hidden absolute top-2 right-2 p-2 text-white hover:text-gray-200"
               onClick={() => setIsOpen(false)}
@@ -216,32 +212,25 @@ const Sidebar = () => {
           <img
             src={img}
             alt="Logo"
-            // Apply exact styles from user request
             className="w-auto max-w-[80%] h-auto shadow-2xl p-4 rounded-lg bg-white"
           />
         </div>
 
-        {/* --- Menu Items --- */}
-        {/* Apply exact styles from user request */}
-        <nav className="flex-1 px-4 py-2"> {/* Adjusted padding */}
+        {/* Menu Items */}
+        <nav className="flex-1 px-4 py-2">
           {currentMenu.map((item, index) => {
-             // Refined isActive check
              const absoluteBaseUrl = window.location.origin + location.pathname.substring(0, location.pathname.lastIndexOf('/'));
              const absoluteItemPath = new URL(item.to, absoluteBaseUrl + '/').pathname;
-             // Check for exact match or if it's a parent path (but not the root if others exist)
-             const isActive = location.pathname === absoluteItemPath ||
-                             (location.pathname.startsWith(absoluteItemPath + '/') );
-
+             const isActive = location.pathname === absoluteItemPath || (location.pathname.startsWith(absoluteItemPath + '/'));
 
             return (
               <Link
                 key={index}
                 to={item.to}
-                // Apply exact styles from user request
                 className={`flex items-center justify-between p-3 mx-0 my-1 text-base rounded-lg font-medium transition duration-200 ease-in-out transform ${
                   isActive
-                    ? "bg-white text-blue-600 scale-100 shadow-md font-semibold" // Exact active style
-                    : "hover:bg-blue-500 hover:text-white hover:scale-105" // Exact hover style
+                    ? "bg-white text-blue-600 scale-100 shadow-md font-semibold"
+                    : "hover:bg-blue-500 hover:text-white hover:scale-105"
                 }`}
               >
                 {/* Icon and Text container */}
@@ -250,7 +239,7 @@ const Sidebar = () => {
                     <span>{item.name}</span>
                 </div>
 
-                {/* Optional: Badge rendering (Add back if needed) */}
+                {/* Badge rendering */}
                  {item.badgeName && renderBadge(item.badgeName)}
 
               </Link>
@@ -258,21 +247,18 @@ const Sidebar = () => {
           })}
         </nav>
 
-        {/* --- Login As Text --- */}
-        {/* Apply exact styles from user request */}
-        <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center"> {/* Added padding/centering */}
+        {/* Login As Text */}
+        <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center">
             Login as: {accessLevel.toUpperCase()}
         </p>
 
-        {/* --- Logout Button --- */}
-        {/* Apply exact styles from user request */}
-        <div className="p-4 mt-auto flex-shrink-0"> {/* Ensure logout stays at bottom */}
+        {/* Logout Button */}
+        <div className="p-4 mt-auto flex-shrink-0">
           <button
             onClick={() => {
-              localStorage.clear(); // Clear local storage on logout
+              localStorage.clear();
               navigate("../login");
             }}
-            // Apply exact styles from user request
             className="w-full flex items-center justify-center space-x-3 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition duration-200 ease-in-out"
           >
             <FaSignOutAlt />

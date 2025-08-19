@@ -219,7 +219,7 @@ def find_member_by_aadhar(request):
             return JsonResponse({'error': True, 'message': 'Aadhar number is required'}, status=400)
 
         try:
-            # Check OHC (employee_details model)
+            
             try:
                 employee_record = employee_details.objects.filter(aadhar=aadhar_param).first()
                 if employee_record:
@@ -327,7 +327,7 @@ def add_member(request):
         # Handle password
         raw_pw = data.get('password', f"{data['role'][0]}123" if data.get('role') else "DefaultPass123!")
         hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
+        
         # Build member data
         member_data = {
             'name': data['name'],
@@ -340,8 +340,10 @@ def add_member(request):
             'password': hashed_pw,
             'entry_date': date.today(),
             'aadhar': data['aadhar'],
-            'type': member_type  # Ensure the type is saved properly
+            'type': member_type  
         }
+        
+        
 
         # Add type-specific fields
         if member_type == 'ohc':
@@ -556,9 +558,24 @@ def fetchdata(request):
             default_structures = {}
             for model_cls in models_to_fetch:
                  model_name_lower = model_cls.__name__.lower()
-                 # Adjust key names if needed (e.g., renalfunctiontest -> renalfunctiontests_and_electrolytes)
-                 if model_cls == RenalFunctionTest: key_name = "renalfunctiontests_and_electrolytes"
-                 else: key_name = model_name_lower
+                 
+                 if model_cls == RenalFunctionTest: 
+                     key_name = "renalfunctiontests_and_electrolytes"
+                 elif model_cls == XRay:
+                     key_name = "xray"
+                 elif model_cls == CultureSensitivityTest:
+                     key_name == "routinesensitivitytest"
+                 # --- START: ADD/COMPLETE THESE CONDITIONS ---
+                 elif model_cls == USGReport:
+                     key_name = "usgreport" # Corrected from "usg" to match frontend
+                 elif model_cls == CTReport:
+                     key_name = "ctreport" # Corrected from "ct" to match frontend
+                 elif model_cls == MRIReport:
+                     key_name = "mrireport" # Corrected from "mri" to match frontend
+                 # --- END: ADD/COMPLETE THESE CONDITIONS ---
+                 
+                 else: 
+                     key_name = model_name_lower
 
                  fetched_data[key_name], default_structures[key_name] = get_latest_records(model_cls)
 
@@ -1365,15 +1382,15 @@ def add_urine_routine(request):
 
 @csrf_exempt
 def add_serology(request):
-    return _add_update_investigation(request, SerologyTest, "add_serology", "Serology Test details",required=True) #Assuming no MRD required
+    return _add_update_investigation(request, SerologyTest, "add_serology", "Serology Test details",requires_mrd=True) #Assuming no MRD required
 
 @csrf_exempt
 def add_motion_test(request):
-    return _add_update_investigation(request, MotionTest, "add_motion_test", "Motion Test details",required=True) #Assuming no MRD required
+    return _add_update_investigation(request, MotionTest, "add_motion_test", "Motion Test details",requires_mrd=True) #Assuming no MRD required
 
 @csrf_exempt
 def add_culturalsensitivity_function(request): # Corrected spelling: CultureSensitivity
-    return _add_update_investigation(request, CultureSensitivityTest, "add_culturalsensitivity_function", "Culture Sensitivity Test details",required=True) #Assuming no MRD required
+    return _add_update_investigation(request, CultureSensitivityTest, "add_culturalsensitivity_function", "Culture Sensitivity Test details",requires_mrd=True) #Assuming no MRD required
 
 @csrf_exempt
 def create_medical_history(request):
@@ -1449,11 +1466,11 @@ def add_womens_function(request):
 
 @csrf_exempt
 def add_occupationalprofile_function(request):
-    return _add_update_investigation(request, OccupationalProfile, "add_occupationalprofile_function", "Occupational Profile details") # Assuming no MRD
+    return _add_update_investigation(request, OccupationalProfile, "add_occupationalprofile_function", "Occupational Profile details",requires_mrd=True) # Assuming no MRD
 
 @csrf_exempt
 def add_otherstest_function(request):
-    return _add_update_investigation(request, OthersTest, "add_otherstest_function", "Others Test details") # Assuming no MRD
+    return _add_update_investigation(request, OthersTest, "add_otherstest_function", "Others Test details",requires_mrd=True) # Assuming no MRD
 
 @csrf_exempt
 def add_ophthalmic_report(request): # Corrected spelling
@@ -1851,16 +1868,19 @@ def add_significant_notes(request):
                 logger.warning(f"{log_prefix} failed: Aadhar required")
                 return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
 
+            mrd_number = data.get('mrdNo')
             defaults = {
                 'healthsummary': data.get('healthsummary'), 'remarks': data.get('remarks'),
                 'communicable_disease': data.get('communicable_disease'),
                 'incident_type': data.get('incident_type'), 'incident': data.get('incident'),
                 'illness_type': data.get('illness_type'),
-                'emp_no': data.get('emp_no') # Store if provided
+                'emp_no': data.get('emp_no'),'mrdNo': data.get('mrdNo'),
+            # Store if provided
                 # Add submitted_by if needed
             }
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
-
+            if mrd_number:
+                filtered_defaults['mrdNo'] = mrd_number
             # --- Update Dashboard visitOutcome (Side effect) ---
             healthsummary_val = data.get('healthsummary')
             if healthsummary_val:
@@ -1903,7 +1923,7 @@ def get_notes(request, aadhar):
                 if isinstance(note.get('entry_date'), date):
                     note['entry_date'] = note['entry_date'].isoformat()
 
-            # Fetch the *latest* status details for that aadhar
+            # Fetch the latest status details for that aadhar
             latest_employee_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
             emp_status_data = {}
             if latest_employee_entry:
@@ -4887,35 +4907,40 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-@csrf_exempt # This decorator is not necessary for a GET request
+# In your Django views.py
+
+@csrf_exempt
 def get_calibrations(request):
     if request.method != 'GET':
-        response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
-        response['Allow'] = 'GET'
-        return response
+        return JsonResponse({"error": "Invalid method. Use GET."}, status=405)
 
     try:
-        # Step 1: Find the ID of the latest pending record for each equipment_sl_no.
-        # We group by the serial number and find the maximum 'id' in each group.
-        latest_pending_ids = InstrumentCalibration.objects.values(
-            'equipment_sl_no'
+        latest_ids = InstrumentCalibration.objects.values(
+            'instrument_number'
         ).annotate(
             latest_id=Max('id')
         ).values_list('latest_id', flat=True)
 
-        # Step 2: Fetch the full objects for those specific IDs.
-        # This ensures we only get the single, most recent entry for each instrument.
-        unique_pending_calibrations = InstrumentCalibration.objects.filter(
-            id__in=list(latest_pending_ids)
-        ).order_by("next_due_date") # Order the final result by the due date for display
+        # The filter below fetches the latest records.
+        # We need to add one more filter to get ONLY the ones that are pending.
+        unique_calibrations = InstrumentCalibration.objects.filter(
+            id__in=list(latest_ids)
+        )
+        
+        # --- THIS IS THE ONLY ADDED LINE ---
+        # From that list of latest records, only keep the ones that are actually 'pending'.
+        pending_calibrations = unique_calibrations.filter(calibration_status='pending').order_by("next_due_date")
+        # --- END OF ADDED LINE ---
 
-        # Serialize the data for the JSON response
         data = []
-        for i in unique_pending_calibrations:
+        # Make sure to loop over the newly filtered queryset 'pending_calibrations'
+        for i in pending_calibrations:
             data.append({
                 "id": i.id,
+                "instrument_number": i.instrument_number,
                 "equipment_sl_no": i.equipment_sl_no,
                 "instrument_name": i.instrument_name,
+                "entry_date": i.entry_date.strftime("%d-%b-%Y") if i.entry_date else None,
                 "certificate_number": i.certificate_number,
                 "make": i.make,
                 "model_number": i.model_number,
@@ -4931,30 +4956,46 @@ def get_calibrations(request):
     except Exception as e:
         logger.exception("Error in get_calibrations")
         return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+# In your Django views.py
 
-@csrf_exempt # Should be GET
+# In your views.py
+
+# In your Django views.py
+
+# jsw/views.py
+
+@csrf_exempt
 def get_calibration_history(request):
     if request.method == 'GET':
         try:
             from_date_str = request.GET.get("from")
             to_date_str = request.GET.get("to")
+            
+            # --- MODIFIED LINE ---
+            # Fetch all records EXCEPT for the 'pending' ones. History should not show future tasks.
+            calibrated_instruments = InstrumentCalibration.objects.exclude(calibration_status='pending')
+            # --- END OF MODIFICATION ---
 
-            # Fetch completed calibrations (status=True)
-            calibrated_instruments = InstrumentCalibration.objects.filter(calibration_status="Completed")
-
-            # Apply date filtering based on calibration_date
             from_date = parse_date_internal(from_date_str)
             to_date = parse_date_internal(to_date_str)
-            if from_date: calibrated_instruments = calibrated_instruments.filter(calibration_date__gte=from_date)
-            if to_date: calibrated_instruments = calibrated_instruments.filter(calibration_date__lte=to_date)
+            if from_date:
+                calibrated_instruments = calibrated_instruments.filter(calibration_date__gte=from_date)
+            if to_date:
+                calibrated_instruments = calibrated_instruments.filter(calibration_date__lte=to_date)
 
             data = []
-            for entry in calibrated_instruments.order_by("-calibration_date"): # Order by most recent calibration
+            for entry in calibrated_instruments.order_by("-calibration_date", "-id"):
                  data.append({
-                     "id": entry.id, # Include ID
-                     "equipment_sl_no": entry.equipment_sl_no, "instrument_name": entry.instrument_name,
+                     "id": entry.id,
+                     "equipment_sl_no": entry.equipment_sl_no,
+                     "instrument_name": entry.instrument_name,
+                     "entry_date": entry.entry_date.strftime("%d-%b-%Y") if entry.entry_date else "",
+                     "instrument_number": entry.instrument_number,
                      "certificate_number": entry.certificate_number,
-                     "make": entry.make, "model_number": entry.model_number, "freq": entry.freq,
+                     "make": entry.make,
+                     "model_number": entry.model_number,
+                     "freq": entry.freq,
+                     "inst_status": entry.inst_status,
                      "calibration_date": entry.calibration_date.strftime("%d-%b-%Y") if entry.calibration_date else "",
                      "next_due_date": entry.next_due_date.strftime("%d-%b-%Y") if entry.next_due_date else "",
                      "calibration_status": entry.calibration_status,
@@ -4967,7 +5008,6 @@ def get_calibration_history(request):
         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
         response['Allow'] = 'GET'
         return response
-
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -4978,6 +5018,12 @@ from .utils import parse_date_internal # Assuming this is in your utils.py
 import logging
 
 logger = logging.getLogger(__name__)
+
+# jsw/views.py
+
+# ... (keep all other imports and functions as they are)
+
+# jsw/views.py
 
 @csrf_exempt
 def complete_calibration(request):
@@ -4991,10 +5037,9 @@ def complete_calibration(request):
         new_freq = data.get("freq")
         new_next_due_date_str = data.get("next_due_date")
         
-        # Optional field for the completed record
-        new_certificate_number = data.get("certificate_number") 
+        # --- REMOVED: We no longer expect a certificate number from the frontend ---
+        # new_certificate_number = data.get("certificate_number") 
 
-        # Validate that all required data for the new cycle is present
         if not all([instrument_id, new_completion_date_str, new_freq, new_next_due_date_str]):
             return JsonResponse({"error": "Missing required fields: id, calibration_date, freq, and next_due_date are all required."}, status=400)
 
@@ -5004,45 +5049,38 @@ def complete_calibration(request):
         if not completion_date or not next_due_date_for_new_record:
             return JsonResponse({"error": "Invalid date format. Please use YYYY-MM-DD."}, status=400)
 
-        # Use a database transaction to ensure both operations succeed or fail together
         with transaction.atomic():
-            # 1. Find the original record and lock it to prevent race conditions
+            # 1. Find the original record that is being completed.
             original_instrument = InstrumentCalibration.objects.select_for_update().get(id=instrument_id)
 
-            # Check if it's already completed to prevent duplicate actions
             if original_instrument.calibration_status == "Completed":
-                return JsonResponse({"error": "This calibration record has already been completed."}, status=409) # 409 Conflict
+                return JsonResponse({"error": "This calibration record has already been completed."}, status=409)
 
-            # 2. Update the old record: Mark as 'completed'
+            # 2. Update the old record to mark it as 'completed'.
             original_instrument.calibration_status = "Completed"
-            original_instrument.calibration_date = completion_date # Set its completion date
-            if new_certificate_number:
-                original_instrument.certificate_number = new_certificate_number
+            original_instrument.calibration_date = completion_date
+            
+            # --- REMOVED: We don't update the certificate number on the old record ---
+            # original_instrument.certificate_number = new_certificate_number
             original_instrument.save()
 
-            # 3. Create the new record for the next cycle
-            # Get the next serial number
-            last_serial = InstrumentCalibration.objects.aggregate(max_serial=Max('serial_no'))['max_serial']
-            new_serial_no = (last_serial or 0) + 1
-            
-            # Create the new pending record by copying data from the original
+            # 3. Create the new 'pending' record for the next cycle.
             InstrumentCalibration.objects.create(
-                serial_no=new_serial_no,
                 equipment_sl_no=original_instrument.equipment_sl_no,
+                instrument_number=original_instrument.instrument_number,
                 instrument_name=original_instrument.instrument_name,
                 make=original_instrument.make,
                 model_number=original_instrument.model_number,
-                
-                # Set the new cycle's details
-                calibration_date=completion_date, # The new cycle starts on the completion date of the old one
+                done_by=original_instrument.done_by,
+                inst_status=original_instrument.inst_status,
                 freq=new_freq,
+                calibration_date=completion_date,
                 next_due_date=next_due_date_for_new_record,
                 
-                # Mark this new record as 'pending'
-                calibration_status="Pending",
+                # --- MODIFIED: Inherit the certificate number from the original record ---
+                certificate_number=original_instrument.certificate_number,
                 
-                # Carry over who is responsible for the instrument
-                done_by=original_instrument.done_by 
+                calibration_status="pending",
             )
 
         logger.info(f"Calibration completed for Instrument ID {instrument_id} and new pending record created.")
@@ -5052,15 +5090,9 @@ def complete_calibration(request):
         return JsonResponse({"error": "Instrument with the specified ID not found."}, status=404)
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format in request body."}, status=400)
-    except IntegrityError as e:
-        logger.error(f"Database integrity error during completion: {e}")
-        return JsonResponse({"error": "A database error occurred. It's possible a unique constraint was violated.", "detail": str(e)}, status=500)
     except Exception as e:
         logger.exception(f"An unexpected error occurred in complete_calibration for ID {data.get('id', 'Unknown')}")
         return JsonResponse({"error": "An unexpected server error occurred.", "detail": str(e)}, status=500)
-
-
-
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -5072,31 +5104,44 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# In your views.py
+
+from django.db import transaction # Make sure transaction is imported
+
+from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import InstrumentCalibration
+from .utils import parse_date_internal, get_next_due_date # Assuming you have a utility for this
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+# jsw/views.py
+
+# jsw/views.py
+
+# jsw/views.py
+
+# jsw/views.py
+
 @csrf_exempt
 def add_instrument(request):
-    """ Adds a new instrument and its initial calibration record with an auto-incrementing serial number. """
     if request.method != "POST":
-        response = JsonResponse({"error": "Invalid method"}, status=405)
-        response['Allow'] = 'POST'
-        return response
+        return JsonResponse({"error": "Invalid method"}, status=405)
 
     try:
         data = json.loads(request.body.decode('utf-8'))
-
-        # Validation
-        required_fields = ["equipment_sl_no", "instrument_name",  "freq", "calibration_date", "calibration_status"]
-        missing = [f for f in required_fields if data.get(f) is None]
-        if missing:
-            return JsonResponse({"error": f"Missing required fields: {', '.join(missing)}"}, status=400)
-
-        # --- Logic for Auto-incrementing serial_no ---
-        # 1. Find the current maximum serial number.
-        last_instrument = InstrumentCalibration.objects.aggregate(max_serial=Max('serial_no'))
-        max_serial = last_instrument.get('max_serial', 0)
+        required_fields = ["instrument_number", "equipment_sl_no", "instrument_name", "freq", "calibration_date", "calibration_status"]
+        if any(f not in data or not data[f] for f in required_fields):
+            return JsonResponse({"error": "Missing required fields"}, status=400)
         
-        # 2. If it's None (first entry), start at 1. Otherwise, increment.
-        new_serial_no = (max_serial or 0) + 1
-        # --- End of serial_no logic ---
+        instrument_number = data["instrument_number"]
+
+        if InstrumentCalibration.objects.filter(instrument_number=instrument_number).exists():
+            return JsonResponse({"error": f"Instrument Number '{instrument_number}' is already in use."}, status=409)
 
         calibration_date_str = data["calibration_date"]
         calibration_date = parse_date_internal(calibration_date_str)
@@ -5104,38 +5149,58 @@ def add_instrument(request):
             return JsonResponse({"error": "Invalid calibration_date format (YYYY-MM-DD)"}, status=400)
 
         freq = data["freq"]
-        next_due = get_next_due_date(calibration_date_str, freq)
-        if not next_due:
-            return JsonResponse({"error": f"Invalid or unsupported frequency: {freq}"}, status=400)
-        
-        
+        status = data["calibration_status"]
 
-        instrument_data = {
-            "serial_no": new_serial_no, 
-            "equipment_sl_no": data["equipment_sl_no"],
-            "instrument_name": data["instrument_name"],
-            "certificate_number": data.get("certificate_number"),
-            "make": data.get("make"),
-            "model_number": data.get("model_number"),
-            "freq": freq,
-            "calibration_date": calibration_date,
-            "next_due_date": data["next_due_date"],
-            "calibration_status": data["calibration_status"],
-            "done_by": data.get("done_by")
-        }
-        filtered_data = {k: v for k, v in instrument_data.items() if v is not None}
+        with transaction.atomic():
+            common_data = {
+                "instrument_number": instrument_number,
+                "equipment_sl_no": data["equipment_sl_no"],
+                "instrument_name": data["instrument_name"],
+                "make": data.get("make"),
+                "model_number": data.get("model_number"),
+                "freq": freq,
+                "done_by": data.get("done_by"),
+                "inst_status": data.get("inst_status", "inuse"), # Default to 'inuse'
+            }
 
-        instrument = InstrumentCalibration.objects.create(**filtered_data)
-        logger.info(f"Instrument added successfully: ID {instrument.id}, S/N {instrument.equipment_sl_no}")
-        return JsonResponse({"message": "Instrument added successfully", "id": instrument.id, "serial_no": instrument.serial_no}, status=201)
+            if status == "Completed":
+                # This logic is correct for adding an instrument that is already calibrated.
+                # It correctly creates a historical "Completed" record and a new "pending" one.
+                next_due = get_next_due_date(calibration_date_str, freq)
+                InstrumentCalibration.objects.create(
+                    **common_data,
+                    certificate_number=data.get("certificate_number"),
+                    calibration_date=calibration_date,
+                    next_due_date=next_due,
+                    calibration_status="Completed"
+                )
+                instrument = InstrumentCalibration.objects.create(
+                    **common_data,
+                    calibration_date=calibration_date,
+                    next_due_date=next_due,
+                    calibration_status="pending"
+                )
+            else: # Status is 'pending'
+                # --- THIS IS THE FIX ---
+                # We no longer create a separate "Added" record.
+                # We only create the single, initial "pending" record which will appear in "Current Status".
+                instrument = InstrumentCalibration.objects.create(
+                    **common_data,
+                    certificate_number=data.get("certificate_number"),
+                    calibration_date=calibration_date,
+                    next_due_date=data.get("next_due_date"),
+                    calibration_status="pending"  # This is the only record created now.
+                )
+
+        logger.info(f"Instrument added successfully: Number {instrument.instrument_number}, ID: {instrument.id}")
+        return JsonResponse({"message": "Instrument added successfully", "id": instrument.id}, status=201)
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format"}, status=400)
     except Exception as e:
         logger.exception("Error adding instrument")
-        return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-
-
+        return JsonResponse({"error": str(e)}, status=500)  
+    
 @csrf_exempt # Should be GET
 def get_pending_next_month_count(request):
     if request.method == 'GET':
@@ -5967,21 +6032,82 @@ def get_currentfootfalls(request):
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 
+# jsw/views.py
+
+# ... (other imports at the top of your file)
+# Make sure these are present:
+import json
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import IntegrityError
+from .models import InstrumentCalibration
+
+logger = logging.getLogger(__name__)
+
+# ... (rest of your views.py file) ...
+
+# ==============================================================================
+# CORRECTED DELETE INSTRUMENT VIEW
+# ==============================================================================
+
 @csrf_exempt
 def deleteInstrument(request):
-    if request.method == "POST":
-        instrument_id = json.loads(request.body)['equipment_sl_no']
-        print(instrument_id)
-        # instrument_id = request.data.get('id')
-        InstrumentCalibration.objects.filter(equipment_sl_no=instrument_id).delete()
-        return JsonResponse({'message':'Successfully retrieved data'}, status = 200)
-    else:
-        return JsonResponse({'error':'Invalid Method'}, status = 500)
+    if request.method != "POST":
+        return JsonResponse({'message': 'Invalid Method. Use POST.'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        # --- MODIFIED: Delete based on the unique instrument_number ---
+        inst_num_to_delete = data.get('instrument_number')
+
+        if not inst_num_to_delete:
+            return JsonResponse({'message': "The 'instrument_number' is required for deletion."}, status=400)
+
+        # Find all records (history and pending) for this instrument number
+        instruments_to_delete = InstrumentCalibration.objects.filter(instrument_number=inst_num_to_delete)
+
+        if not instruments_to_delete.exists():
+            return JsonResponse({'message': 'Instrument not found.'}, status=404)
+
+        instrument_name = instruments_to_delete.first().instrument_name
+        count, _ = instruments_to_delete.delete()
+        
+        logger.info(f"Deleted {count} records for instrument '{instrument_name}' (Number: {inst_num_to_delete})")
+        return JsonResponse({'message': f"Instrument '{instrument_name}' and all its history have been deleted successfully."})
+
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred in deleteInstrument")
+        return JsonResponse({'message': 'An internal server error occurred.'}, status=500)
+
+
+
+
+# ... (rest of your views.py file, including EditInstrument) ...
+# jsw/views.py
+
+# ... (other imports at the top of your file)
+# Make sure these are present:
+from .utils import parse_date_internal, get_next_due_date # Assuming these are in your utils.py or views.py
+import logging
+
+logger = logging.getLogger(__name__)
+
+# ... (rest of your views)
+
+# jsw/views.py
+
+# jsw/views.py
+
+# jsw/views.py
+
+# jsw/views.py
 
 @csrf_exempt
 def EditInstrument(request):
     """
-    Updates an existing instrument record.
+    Safely updates an existing instrument record. If the instrument is marked
+    as obsolete, its calibration status is also finalized as 'obsolete'.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method. Only POST is allowed."}, status=405)
@@ -5993,29 +6119,126 @@ def EditInstrument(request):
         if not instrument_id:
             return JsonResponse({"error": "Instrument ID is required."}, status=400)
 
-        # Retrieve the instrument to be updated
-        try:
+        with transaction.atomic():
             instrument = InstrumentCalibration.objects.get(id=instrument_id)
-        except InstrumentCalibration.DoesNotExist:
-            return JsonResponse({"error": "Instrument not found."}, status=404)
+            original_instrument_number = instrument.instrument_number
 
-        # Update the instrument fields with the new data
-        for key, value in data.items():
-            # Avoid updating the primary key
-            if key != "id":
-                setattr(instrument, key, value)
-        
-        # Recalculate next_due_date if calibration_date or freq has changed
-        if 'calibration_date' in data or 'freq' in data:
-            instrument.next_due_date = instrument.next_due_date
+            # Step 1: Update the specific record with all new data
+            all_updatable_fields = [
+                'instrument_number', 'equipment_sl_no', 'instrument_name',
+                'certificate_number', 'make', 'model_number', 'freq',
+                'calibration_date', 'calibration_status', 'inst_status'
+            ]
 
-        instrument.save()
+            for field in all_updatable_fields:
+                if field in data:
+                    value = data[field]
+                    if field == 'calibration_date' and value:
+                        setattr(instrument, field, parse_date_internal(value))
+                    else:
+                        setattr(instrument, field, value)
+            
+            if 'calibration_date' in data or 'freq' in data:
+                if instrument.calibration_date and instrument.freq:
+                    instrument.next_due_date = get_next_due_date(
+                        instrument.calibration_date.strftime('%Y-%m-%d'), 
+                        instrument.freq
+                    )
+
+            # --- THIS IS THE FIX ---
+            # If the user sets the instrument status to 'obsolete', we must also
+            # update the calibration_status to 'obsolete'. This moves the record
+            # from the 'Current Status' list to the 'History' list permanently.
+            if 'inst_status' in data and data['inst_status'] == 'obsolete':
+                instrument.calibration_status = 'obsolete'
+                # An obsolete instrument has no next due date.
+                instrument.next_due_date = None 
+            # --- END OF FIX ---
+
+            instrument.save()
+
+            # Step 2: Propagate shared property changes
+            shared_fields_to_sync = [
+                'instrument_number', 'equipment_sl_no', 'instrument_name',
+                'make', 'model_number'
+            ]
+            
+            group_update_payload = {}
+            for field in shared_fields_to_sync:
+                if field in data:
+                    group_update_payload[field] = data[field]
+
+            if group_update_payload:
+                InstrumentCalibration.objects.filter(
+                    instrument_number=original_instrument_number
+                ).update(**group_update_payload)
         
         logger.info(f"Instrument updated successfully: ID {instrument.id}")
         return JsonResponse({"message": "Instrument updated successfully."}, status=200)
 
+    except InstrumentCalibration.DoesNotExist:
+        return JsonResponse({"error": "Instrument not found."}, status=404)
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON format."}, status=400)
     except Exception as e:
         logger.exception("Error updating instrument")
         return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+
+# Add this import at the top if it's not already there
+from django.db.models import F
+
+# ... (rest of your views.py file) ...
+
+# Add this new function anywhere in your views.py
+# jsw/views.py
+
+# Make sure Max is imported from django.db.models at the top of your file
+from django.db.models import Max
+
+# ... (rest of your views.py file)
+
+# Replace the old get_unique_instruments function with this one
+@csrf_exempt
+def get_unique_instruments(request):
+    """
+    Returns a list of unique instruments based on the most recent record
+    for each distinct instrument number.
+    """
+    if request.method != 'GET':
+        return JsonResponse({"error": "Invalid method. Use GET."}, status=405)
+
+    try:
+        # Step 1: Find the latest record 'id' for each instrument group.
+        # This is the best way to get a single, most relevant entry per instrument.
+        latest_ids_per_instrument = InstrumentCalibration.objects.values(
+            'instrument_number'
+        ).annotate(
+            latest_id=Max('id')
+        ).values_list('latest_id', flat=True)
+
+        # Step 2: Fetch the full objects for those specific latest IDs.
+        master_list_instruments = InstrumentCalibration.objects.filter(
+            id__in=list(latest_ids_per_instrument)
+        ).order_by('instrument_number')
+
+        # Step 3: Serialize the data, now including frequency and certificate number.
+        data = []
+        for i in master_list_instruments:
+            data.append({
+                "instrument_number": i.instrument_number,
+                "instrument_name": i.instrument_name,
+                "entry_date": i.entry_date.strftime("%d-%b-%Y") if i.entry_date else None,
+                "make": i.make,
+                "model_number": i.model_number,
+                "equipment_sl_no": i.equipment_sl_no,
+                "inst_status": i.inst_status,
+                # The new fields you requested
+                "freq": i.freq,
+                "certificate_number": i.certificate_number,
+            })
+
+        return JsonResponse({"unique_instruments": data})
+
+    except Exception as e:
+        logger.exception("Error in get_unique_instruments")
+        return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)

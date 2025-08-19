@@ -92,9 +92,7 @@ const footFallOptions = [
     { value: "", label: "Select Footfall Type" },
     { value: "Employee", label: "Employee" },
     { value: "Contractor", label: "Contractor" },
-    { value: "Employee+Contractor", label: "Employee + Contractor" },
-    { value: "Visitor", label: "Visitor" },
-    { value: "Total", label: "Total (Employee + Contractor + Visitor)" }
+    { value: "Visitor", label: "Visitor" }
 ];
 
 const OverAllFootFallDropdown = ({ value, onChange }) => {

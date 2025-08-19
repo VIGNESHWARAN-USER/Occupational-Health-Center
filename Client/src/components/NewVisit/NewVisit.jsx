@@ -1436,7 +1436,7 @@ const NewVisit = () => {
       case "Fitness":
         return <Fitness data={data} register = {register} type={visit} mrdNo={mrdNo} />;
       case "Investigations":
-        return <Investigation data={singleData} />;
+        return <Investigation data={singleData} mrdNo={mrdNo} />;
       case "Vaccination":
         return <Vaccination data={data} mrdNo={mrdNo}  />;
       case "Vitals":

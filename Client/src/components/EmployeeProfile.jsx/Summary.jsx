@@ -59,7 +59,7 @@ const Summary = () => {
                             <Vitals data = {visitData.vitals}/>
                             {/* FIX: Pass an object with the correct structure */}
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
-                            <Investigation data = {visitData}/>
+                           <Investigation data = {visitData.employee}/> 
                             <Vaccination data = {visitData.vaccination}/>
                             <ConsultationDisplay data = {visitData}/>
                         </>
@@ -69,7 +69,7 @@ const Summary = () => {
                             <Vitals data = {visitData.vitals}/>
                             {/* FIX: Pass an object with the correct structure */}
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
-                            <Investigation data = {visitData}/>
+                            <Investigation data = {visitData.employee}/>
                             <Vaccination data = {visitData.vaccination}/>
                             <Fitness data = {visitData.fitnessassessment}/>
                         </>))

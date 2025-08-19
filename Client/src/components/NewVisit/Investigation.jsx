@@ -53,10 +53,10 @@ function InvestigationForm({ data, mrdNo }) {
     "Occupational Profile": "occupationalprofile",
     "Others TEST": "otherstest",
     "OPHTHALMIC REPORT": "ophthalmicreport",
-    "USG": "usgreport",
-    "MRI": "mrireport",
+    "USG": "usg",
+    "MRI": "mri",
     "X-RAY": "xray",
-    "CT": "ctreport",
+    "CT": "ct",
   };
 
   const allInvFormOptions = Object.keys(categoryMap);
@@ -196,7 +196,7 @@ function InvestigationForm({ data, mrdNo }) {
         "LIPID PROFILE": "addLipidProfile",
         "LIVER FUNCTION TEST": "addLiverFunctionTest",
         "THYROID FUNCTION TEST": "addThyroidFunctionTest",
-        "AUTOIMMUNE TEST": "addAutoimmuneTest",
+        "AUTOIMMUNE TEST": "addAutoimmuneFunctionTest",
         "COAGULATION TEST": "addCoagulationTest",
         "ENZYMES & CARDIAC Profile": "addEnzymesAndCardiacProfile",
         "URINE ROUTINE": "addUrineRoutine",
@@ -205,8 +205,8 @@ function InvestigationForm({ data, mrdNo }) {
         "ROUTINE CULTURE & SENSITIVITY TEST": "addCultureSensitivityTest",
         "Men's Pack": "addMensPack",
         "Women's Pack": "addWomensPack",
-        "Occupational Profile": "addOccupationalProfile",
-        "Others TEST": "addOthersTest",
+        "Occupational Profile": "addOccupationalprofile",
+        "Others TEST": "addOtherstest",
         "OPHTHALMIC REPORT": "addOpthalmicReport",
         "USG": "addUSG",
         "MRI": "addMRI",

@@ -12,7 +12,7 @@ urlpatterns = [
     path('forgot_password/', views.forgot_password, name='forgot_password'),
     path('verify_otp/', views.verify_otp, name='verify_otp'),
     path('reset_password/', views.reset_password, name='reset_password'),
-    path('find_member_by_email/', views.find_member_by_aadhar, name='find_member_by_email'),
+    path('find_member_by_aadhar/', views.find_member_by_aadhar, name='find_member_by_aadhar'),
     path('members/add/', views.add_member, name='member-add'),
     path('members/update/<int:member_id>/', views.update_member, name='update_member'),
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
@@ -121,6 +121,7 @@ urlpatterns = [
     path("add_instrument/", views.add_instrument, name="add_instrument"),
     path("deleteInstrument", views.deleteInstrument, name="deleteInstrument"),
     path("EditInstrument", views.EditInstrument, name="EditInstrument"),
+    path('get_unique_instruments/', views.get_unique_instruments, name='get_unique_instruments'),
     path("archive_stock/", views.archive_zero_quantity_stock, name="archive_stock"),
     path("get_pending_next_month_count/", views.get_pending_next_month_count, name="get_pending_next_month_count"),
 

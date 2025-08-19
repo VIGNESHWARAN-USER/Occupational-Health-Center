@@ -689,9 +689,7 @@
         <div className="mb-6 p-4 border rounded-lg bg-white shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Allergy History</h2>
           <div className="grid grid-cols-1 md:grid-cols-[auto_auto_1fr] gap-x-4 gap-y-3 items-center">
-            <div className="font-semibold text-gray-700 pl-2 md:text-left text-sm">Type</div>
-            <div className="font-semibold text-gray-700 text-center text-sm">Response</div>
-            <div className="font-semibold text-gray-700 md:text-left text-sm">Comments</div>
+
             <div className="col-span-1 md:col-span-3 border-t my-1"></div>
             {['drug', 'food', 'others'].map(type => (
               <React.Fragment key={type}>

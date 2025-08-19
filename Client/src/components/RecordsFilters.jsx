@@ -1,11 +1,15 @@
+
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import Sidebar from "./Sidebar"; // Assuming Sidebar component exists and is correctly imported
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import * as XLSX from "xlsx"; // <<< NEW: Import xlsx library
+import { saveAs } from "file-saver"; 
 
 // --- Filter Section Definitions ---
+// <<< CHANGE 1: "Significant Notes" was added to this list.
 const filterSections = [
     { id: "employementstatus", label: "Employment Status" },
     { id: "personaldetails", label: "Personal Details" },
@@ -16,7 +20,10 @@ const filterSections = [
     { id: "vitals", label: "Vitals" },
     { id: "investigations", label: "Investigations" },
     { id: "fitness", label: "Fitness" },
-    { id: "specialcases", label: "Special Cases" }, // Added Special Cases
+    { id: "significantnotes", label: "Significant Notes" }, // <<< NEWLY ADDED
+    { id: "specialcases", label: "Special Cases" }, 
+    { id: "shiftingambulance", label: "Shifting Ambulance" },
+    { id: "consultationreview", label: "Consultation Review" },
     // { id: "prescriptions", label: "Prescriptions" },
     { id: "referrals", label: "Referrals" },
     { id: "statutoryforms", label: "Statutory Forms" },
@@ -162,20 +169,22 @@ const RecordsFilters = () => {
                     filterKey = `investigation_${value.form}_${value.param}`; filterObject = { [filterKey]: value };
                 } else if (key === "familyCondition" && typeof value === 'object' && value.condition && value.relation) {
                     filterKey = `family_${value.condition}_${value.relation}`; filterObject = { [filterKey]: value };
-                } else if (key === "referrals" && typeof value === 'object') { // Added uniqueness for referrals
+                } else if (key === "referrals" && typeof value === 'object') { 
                     filterKey = `referrals_${JSON.stringify(value)}`; filterObject = { [filterKey]: value };
-                } else if (key === "purpose" && typeof value === 'object') { // Added uniqueness for purpose
+                } else if (key === "purpose" && typeof value === 'object') { 
                     filterKey = `purpose_${JSON.stringify(value)}`; filterObject = { [filterKey]: value };
-                } else if (key === "fitness" && typeof value === 'object') { // Added uniqueness for fitness
+                } else if (key === "fitness" && typeof value === 'object') { 
                     filterKey = `fitness_${JSON.stringify(value)}`; filterObject = { [filterKey]: value };
-                } else if (key === "statutoryFormFilter" && typeof value === 'object') { // Added uniqueness for statutory forms
+                // <<< CHANGE 2: Added uniqueness for significant notes filter
+                } else if (key === "significantNotes" && typeof value === 'object') {
+                    filterKey = `significant_${JSON.stringify(value)}`; filterObject = { [filterKey]: value };
+                } else if (key === "statutoryFormFilter" && typeof value === 'object') { 
                     filterKey = `statutory_${value.formType}_${value.from}_${value.to}`; filterObject = { [filterKey]: value };
-                } else if (key.startsWith('personal_')) { // For personal conditions like personal_HTN
+                } else if (key.startsWith('personal_')) { 
                     filterKey = key; filterObject = { [filterKey]: value };
                 }
-                // Other simple key-value filters remain as they are
                  else {
-                    filterObject = { [key]: value }; // Key is already unique for simple filters
+                    filterObject = { [key]: value }; 
                  }
 
                 const existingIndex = updatedFilters.findIndex( f => Object.keys(f)[0] === filterKey );
@@ -203,14 +212,15 @@ const RecordsFilters = () => {
 
         // 2. Filter by selected criteria
         const filtersMap = selectedFilters.reduce((acc, filter) => {
-            const key = Object.keys(filter)[0]; // Use the potentially modified filterKey
+            const key = Object.keys(filter)[0];
             acc[key] = Object.values(filter)[0];
             return acc;
         }, {});
+
         results = results.filter(employee => {
             for (const key in filtersMap) {
                 const value = filtersMap[key];
-                console.log(key)
+                
                 // --- Personal Details ---
                 if (key === 'sex') { if (!employee.sex || employee.sex?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'bloodgrp') { if (employee.bloodgrp !== value) return false; }
@@ -218,41 +228,36 @@ const RecordsFilters = () => {
                 else if (key === 'ageFrom') { const age = calculateAge(employee.dob); if (age === '-' || age < parseInt(value, 10)) return false; }
                 else if (key === 'ageTo') { const age = calculateAge(employee.dob); if (age === '-' || age > parseInt(value, 10)) return false; }
 
-                // --- Employment Details (UPDATED) ---
+                // --- Employment Details ---
                 else if (key === 'designation') { if (!employee.designation || employee.designation?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'department') { if (!employee.department || employee.department?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'employer') { if (!employee.employer || employee.employer?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'moj') { if (!employee.moj || employee.moj?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'job_nature') { if (!employee.job_nature || employee.job_nature?.toLowerCase() !== value.toLowerCase()) return false; }
-                // ADDED: Logic for dojFrom
                 else if (key === 'dojFrom') {
-                    if (!employee.doj) return false; // Fail if employee has no DOJ
+                    if (!employee.doj) return false; 
                     try {
                         const employeeDoj = new Date(employee.doj);
                         const filterFromDate = new Date(value);
-                        // Normalize dates to ignore time
                         employeeDoj.setHours(0, 0, 0, 0);
                         filterFromDate.setHours(0, 0, 0, 0);
                         if (isNaN(employeeDoj) || isNaN(filterFromDate) || employeeDoj < filterFromDate) {
                             return false;
                         }
-                    } catch (e) { return false; } // Fail on invalid date format
+                    } catch (e) { return false; } 
                 }
-                // ADDED: Logic for dojTo
                 else if (key === 'dojTo') {
-                    if (!employee.doj) return false; // Fail if employee has no DOJ
+                    if (!employee.doj) return false;
                     try {
                         const employeeDoj = new Date(employee.doj);
                         const filterToDate = new Date(value);
-                        // Normalize dates to ignore time
                         employeeDoj.setHours(0, 0, 0, 0);
                         filterToDate.setHours(0, 0, 0, 0);
                         if (isNaN(employeeDoj) || isNaN(filterToDate) || employeeDoj > filterToDate) {
                             return false;
                         }
-                    } catch (e) { return false; } // Fail on invalid date format
+                    } catch (e) { return false; }
                 }
-                // REMOVED: The old single 'doj' filter logic is no longer needed.
 
                 // --- Employment Status ---
                  else if (key === 'status') {
@@ -274,57 +279,80 @@ const RecordsFilters = () => {
                  }
                  // --- Vitals ---
                 else if (key.startsWith('param_')) {
-                    const filterData = value; // value is { param, from, to, value: categoryValue }
+                    const filterData = value; 
                     const vitalParam = filterData.param;
                     if (!employee.vitals || employee.vitals[vitalParam] === undefined || employee.vitals[vitalParam] === null || employee.vitals[vitalParam] === '') return false;
-                    if (filterData.value) { // BMI category
+                    if (filterData.value) { 
                          if (vitalParam !== 'bmi') { console.warn(`Category filtering for vital '${vitalParam}' not implemented.`); return false; }
                          const bmiValue = parseFloat(employee.vitals.bmi);
                          if (isNaN(bmiValue)) return false;
                          let empCategory = '';
                          if (bmiValue < 18.5) empCategory = 'Under weight'; else if (bmiValue < 25) empCategory = 'Normal'; else if (bmiValue < 30) empCategory = 'Over weight'; else if (bmiValue < 35) empCategory = 'Obese'; else empCategory = 'Extremely Obese';
                          if(empCategory.toLowerCase() !== filterData.value.toLowerCase()) return false;
-                    } else { // Range
+                    } else { 
                         const vitalValue = parseFloat(employee.vitals[vitalParam]);
                         const fromValue = parseFloat(filterData.from); const toValue = parseFloat(filterData.to);
                         if (isNaN(vitalValue) || isNaN(fromValue) || isNaN(toValue) || vitalValue < fromValue || vitalValue > toValue) return false;
                     }
                 }
                 // --- Investigations ---
-                else if (key.startsWith('investigation_')) {
-                    const filterData = value; // { form, param, from, to, status }
+              
 
-                    const investigationCategory = employee[filterData.form];
+// <<< START: REPLACE THE ENTIRE INVESTIGATION BLOCK WITH THIS FIXED VERSION >>>
+else if (key.startsWith('investigation_')) {
+    const filterData = value;
+    // Get the nested investigation object (e.g., employee.mrireport)
+    const investigationCategory = employee[filterData.form];
 
-                    if (!investigationCategory) {
-                        return false;
-                    }
+    if (!investigationCategory) {
+        return false; // The employee doesn't have this investigation report.
+    }
 
-                    if (filterData.from && filterData.to) {
-                        const investigationValue = investigationCategory[filterData.param];
-                        if (investigationValue === undefined || investigationValue === null || investigationValue === '') {
-                            return false;
-                        }
-                        const numVal = parseFloat(investigationValue);
-                        const fromVal = parseFloat(filterData.from);
-                        const toVal = parseFloat(filterData.to);
-                        if (isNaN(numVal) || numVal < fromVal || numVal > toVal) {
-                            return false;
-                        }
-                    }
+    // --- FIX: Use the parameter name directly as the key ---
+    // The backend provides keys like "mri_brain", "xray_chest", etc. inside the report object.
+    // We don't need to transform it. filterData.param is the correct key.
+    const dataAccessKey = filterData.param;
 
-                    if (filterData.status) {
-                        const statusFieldKey = `${filterData.param}_status`;
-                        const investigationStatus = investigationCategory[statusFieldKey];
+    // --- LOGIC FOR RANGE FILTER ---
+    if (filterData.from && filterData.to) {
+        // Access the comments field, e.g., employee.mrireport['mri_brain_comments']
+        const valueToTestStr = investigationCategory[`${dataAccessKey}_comments`];
 
-                        if (!investigationStatus || investigationStatus.toLowerCase() !== filterData.status.toLowerCase()) {
-                            return false;
-                        }
-                    }
-                }
+        if (valueToTestStr === undefined || valueToTestStr === null || String(valueToTestStr).trim() === '') {
+            return false;
+        }
+
+        const numVal = parseFloat(valueToTestStr);
+        const fromVal = parseFloat(filterData.from);
+        const toVal = parseFloat(filterData.to);
+        
+        if (isNaN(numVal) || numVal < fromVal || numVal > toVal) {
+            return false;
+        }
+    }
+
+    // --- LOGIC FOR STATUS FILTER (e.g., Normal/Abnormal) ---
+    if (filterData.status) {
+        // Access the status field directly, e.g., employee.mrireport['mri_brain']
+        const statusToTest = investigationCategory[dataAccessKey];
+
+        // Also check the comments field, as status can be in either place
+        const statusInComments = investigationCategory[`${dataAccessKey}_comments`];
+
+        const statusMatch = (statusToTest && statusToTest.toLowerCase() === filterData.status.toLowerCase()) ||
+                          (statusInComments && statusInComments.toLowerCase() === filterData.status.toLowerCase());
+
+        if (!statusMatch) {
+            return false;
+        }
+    }
+}
+// <<< END: REPLACEMENT BLOCK >>>
+                
+               // <<< END: REPLACEMENT BLOCK >>>
                 // --- Fitness ---
-                else if (key.startsWith('fitness_')) { // Check the unique key
-                    const filterData = value; // value is the fitness form data object
+                else if (key.startsWith('fitness_')) { 
+                    const filterData = value; 
                     if (!employee.fitnessassessment) return false;
                     const fitnessMatch = Object.entries(filterData).every(([fitnessKey, fitnessValue]) =>
                         employee.fitnessassessment[fitnessKey]?.toLowerCase() === fitnessValue?.toLowerCase()
@@ -343,65 +371,78 @@ const RecordsFilters = () => {
                         if (employeeHasCase) return false;
                     }
                 }
+                // shifting ambulance
+               else if (key === 'shiftingAmbulance') {
+                    const consultationData = employee.consultation;
+                    const ambulanceShiftRequired = consultationData?.shifting_required?.toLowerCase() === 'yes'; 
+                    if (value === 'Yes' && !ambulanceShiftRequired) {
+                        return false; 
+                    } else if (value === 'No' && ambulanceShiftRequired) {
+                        return false; 
+                    }
+                }
+                // consultation review
+                else if (key === 'consultationReview') {
+                    const consultationData = employee.consultation;
+                    const hasReviewDate = !!consultationData?.follow_up_date; 
+                    if (value === 'Yes' && !hasReviewDate) {
+                        return false; 
+                    } else if (value === 'No' && hasReviewDate) {
+                        return false; 
+                    }
+                }
                 // --- Medical History ---
-                 else if (['smoking', 'alcohol', 'paan', 'diet'].includes(key)) {
-                     const habitData = employee.msphistory?.personal_history?.[key]; if (!habitData || habitData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
+                 else if (['smoking', 'alcohol', 'paan'].includes(key)) {
+                     const habitData = employee.medicalhistory?.personal_history?.[key]; if (!habitData || habitData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
+                 }
+                 else if (key === 'diet') {
+                    const dietData = employee.medicalhistory?.personal_history?.diet; if (!dietData || !value.toLowerCase().includes(dietData.toLowerCase())){
+                        return false;
+                    }
                  }
                  else if (key.startsWith('personal_')) {
-                     const condition = key.substring('personal_'.length); const conditionData = employee.msphistory?.medical_data?.[condition];
+                     const condition = key.substring('personal_'.length); const conditionData = employee.medicalhistory?.medical_data?.[condition];
                      const hasCond = conditionData && Array.isArray(conditionData.children) && conditionData.children.length > 0;
                      if ((value === 'Yes' && !hasCond) || (value === 'No' && hasCond)) return false;
                  }
-                // In applyFiltersToData, find and replace this specific block:
+                else if (key.startsWith('family_')) {
+                    const filterData = value; 
+                    const medicalData = employee.medicalhistory?.medical_data;
 
- else if (key.startsWith('family_')) {
-    const filterData = value; // This is now { condition?, status?, relation? }
-    const medicalData = employee.msphistory?.medical_data;
-
-    let employeeHasCondition = false;
-    let commentsToCheck = "";
-
-    // Determine the scope of the search based on the filter
-    if (filterData.condition) {
-        // A specific condition is selected, so we check only that one.
-        const conditionData = medicalData?.[filterData.condition];
-        employeeHasCondition = conditionData && conditionData.comment && conditionData.comment.trim() !== "";
-        if (employeeHasCondition) {
-            commentsToCheck = conditionData.comment;
-        }
-    } else {
-        // No specific condition, so check if ANY family history exists.
-        if (medicalData) {
-            employeeHasCondition = Object.values(medicalData).some(cond => cond && cond.comment && cond.comment.trim() !== "");
-            if (employeeHasCondition) {
-                // We will check against ALL family history comments combined.
-                commentsToCheck = Object.values(medicalData).map(c => c.comment || "").join(" ");
-            }
-        }
-    }
-
-    // Now, apply the filter checks
-    // 1. Check Status (e.g., must have a condition, or must not have one)
-    if (filterData.status) {
-        if ((filterData.status === 'Yes' && !employeeHasCondition) || (filterData.status === 'No' && employeeHasCondition)) {
-            return false; // Fails the status check
-        }
-    }
-
-    // 2. Check Relation (only if a relation is specified and the status check passed)
-    if (filterData.relation && employeeHasCondition) {
-        const relationRegex = new RegExp(`\\b${filterData.relation}\\b`, 'i');
-        if (!relationRegex.test(commentsToCheck)) {
-            return false; // Fails the relation check
-        }
-    }
-}
+                    let employeeHasCondition = false;
+                    let commentsToCheck = "";
+                    if (filterData.condition) {
+                        const conditionData = medicalData?.[filterData.condition];
+                        employeeHasCondition = conditionData && conditionData.comment && conditionData.comment.trim() !== "";
+                        if (employeeHasCondition) {
+                            commentsToCheck = conditionData.comment;
+                        }
+                    } else {
+                        if (medicalData) {
+                            employeeHasCondition = Object.values(medicalData).some(cond => cond && cond.comment && cond.comment.trim() !== "");
+                            if (employeeHasCondition) {
+                                commentsToCheck = Object.values(medicalData).map(c => c.comment || "").join(" ");
+                            }
+                        }
+                    }
+                    if (filterData.status) {
+                        if ((filterData.status === 'Yes' && !employeeHasCondition) || (filterData.status === 'No' && employeeHasCondition)) {
+                            return false; 
+                        }
+                    }
+                    if (filterData.relation && employeeHasCondition) {
+                        const relationRegex = new RegExp(`\\b${filterData.relation}\\b`, 'i');
+                        if (!relationRegex.test(commentsToCheck)) {
+                            return false; 
+                        }
+                    }
+                }
                  else if (['drugAllergy', 'foodAllergy', 'otherAllergies'].includes(key)) {
                      let allergyType = ''; if (key === 'drugAllergy') allergyType = 'drug'; else if (key === 'foodAllergy') allergyType = 'food'; else allergyType = 'others';
-                     const allergyData = employee.msphistory?.allergy_fields?.[allergyType]; if (!allergyData || allergyData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
+                     const allergyData = employee.medicalhistory?.allergy_fields?.[allergyType]; if (!allergyData || allergyData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
                  }
                  else if (key === 'surgicalHistory') {
-                     const hasSurg = employee.msphistory?.surgical_history && Array.isArray(employee.msphistory.surgical_history.children) && employee.msphistory.surgical_history.children.length > 0;
+                     const hasSurg = employee.medicalhistory?.surgical_history && Array.isArray(employee.medicalhistory.surgical_history.children) && employee.medicalhistory.surgical_history.children.length > 0;
                      if ((value === 'Yes' && !hasSurg) || (value === 'No' && hasSurg)) return false;
                  }
                 // --- Vaccination ---
@@ -418,7 +459,7 @@ const RecordsFilters = () => {
                  }
                 // --- Purpose ---
                 else if (key.startsWith('purpose_')) {
-                    const filterData = value; // { type_of_visit, register, specificCategory, fromDate, toDate }
+                    const filterData = value; 
                     if (filterData.type_of_visit && (employee.type_of_visit?.toLowerCase() !== filterData.type_of_visit.toLowerCase())) return false;
                     if (filterData.register && (employee.register?.toLowerCase() !== filterData.register.toLowerCase())) return false;
                     if (filterData.specificCategory && (employee.purpose?.toLowerCase() !== filterData.specificCategory.toLowerCase())) return false;
@@ -433,14 +474,28 @@ const RecordsFilters = () => {
                         } catch (e) { console.error("Date parsing error:", e); return false; }
                     }
                 }
+                
+                // <<< CHANGE 3: Added the core filtering logic for significant notes
+                // This assumes your `userData` response for each employee includes their LATEST significant notes
+                // in an object with the key `significant_notes`.
+                else if (key.startsWith('significant_')) {
+                    const filterData = value; // This is the object with filter criteria
+                    const notes = employee.significantnotes; // The employee's latest notes object
 
-                // --- Prescriptions ---
-                //  else if (["tablets", "injections", "creams","syrups","drops","respules","lotions","fluids", "powder","suture_procedure","dressing","others" ].includes(key)) {
-                //       if (!employee.prescription || !employee.prescription[key] || employee.prescription[key].toLowerCase() !== value.toLowerCase()) return false;
-                //  }
+                    if (!notes) return false; // Fail if the employee has no significant notes object at all
+
+                    // Check if every criterion in the filter is met by the employee's latest notes
+                    const notesMatch = Object.entries(filterData).every(([noteKey, filterValue]) => {
+                        const employeeValue = notes[noteKey];
+                        return employeeValue && employeeValue.toLowerCase() === filterValue.toLowerCase();
+                    });
+
+                    if (!notesMatch) return false;
+                }
+                
                 // --- Referrals ---
                  else if (key.startsWith('referrals_')) {
-                    const filterData = value; // { referred, speciality, hospitalName, doctorName }
+                    const filterData = value; 
                     const consultationData = employee.consultation;
                     if (filterData.referred === 'No') {
                         if (consultationData && consultationData.referral?.toLowerCase() === 'yes') return false;
@@ -453,9 +508,9 @@ const RecordsFilters = () => {
                 }
                 // --- Statutory Forms ---
                 else if (key.startsWith('statutory_')) {
-                    const filterData = value; // { formType, from, to }
+                    const filterData = value; 
                     const formKey = filterData.formType.toLowerCase();
-                    if (!filterData.formType || !employee[formKey]?.id) return false; // Check existence and ID
+                    if (!filterData.formType || !employee[formKey]?.id) return false; 
                     if (filterData.from || filterData.to) {
                         const formDateStr = employee[formKey]?.entry_date; if (!formDateStr) return false;
                         if (filterData.from && formDateStr < filterData.from) return false;
@@ -497,18 +552,33 @@ const RecordsFilters = () => {
              else if (value.toLowerCase() !== 'transferred to' && (relatedFrom || relatedTo)) { display += ` (Since: ${relatedFrom ? Object.values(relatedFrom)[0] : '...'} - ${relatedTo ? Object.values(relatedTo)[0] : '...'})`; }
              return display;
          }
-         if ((key === 'transferred_to' || key === 'from' || key === 'to') && selectedFilters.some(f => Object.keys(f)[0] === 'status')) return null; // Hide if part of status filter
+         if ((key === 'transferred_to' || key === 'from' || key === 'to') && selectedFilters.some(f => Object.keys(f)[0] === 'status')) return null;
          if (key.startsWith("param_") && typeof value === 'object') { return `Vitals: ${value.param.toUpperCase()} ${value.value ? `(${value.value})` : `[${value.from} - ${value.to}]`}`; }
          else if (key.startsWith("investigation_") && typeof value === 'object') { let d = `Invest: ${value.form.toUpperCase()} > ${value.param.toUpperCase()}`; if (value.from && value.to) d += ` [${value.from}-${value.to}]`; if (value.status) d += ` (${value.status.toUpperCase()})`; return d; }
          else if (key.startsWith("fitness_") && typeof value === 'object') { return `Fitness: ${Object.entries(value).map(([k, v]) => `${k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${v}`).join(", ")}`; }
-         else if (key === 'specialCase') { return `Special Cases: ${value}`; } // Added display for Special Cases
+         else if (key === 'specialCase') { return `Special Cases: ${value}`; } 
          else if (key.startsWith("purpose_") && typeof value === 'object') { let p = []; if(value.type_of_visit) p.push(`Type:${value.type_of_visit}`); if(value.register) p.push(`Reg:${value.register}`); if(value.specificCategory) p.push(`Cat:${value.specificCategory}`); if(value.fromDate || value.toDate) p.push(`Date:[${value.fromDate||'..'} to ${value.toDate||'..'}]`); return `Purpose: ${p.join('|')}`; }
          else if (key.startsWith("referrals_") && typeof value === 'object') { let p=[]; if (value.referred) p.push(`Referred:${value.referred}`); if (value.speciality) p.push(`Spec:${value.speciality}`); if (value.hospitalName) p.push(`Hosp:${value.hospitalName}`); if (value.doctorName) p.push(`Doc:${value.doctorName}`); return `Referral:${p.join(', ')}`; }
          else if (key.startsWith("family_") && typeof value === 'object') { return `FamilyHx: ${value.relation}-${value.condition}(${value.status})`; }
          else if (key.startsWith("personal_")) { return `PersonalHx: ${key.substring('personal_'.length)}(${value})`; }
          else if (['smoking', 'alcohol', 'paan', 'diet', 'drugAllergy', 'foodAllergy', 'otherAllergies', 'surgicalHistory'].includes(key)) { return `MedHx: ${key.replace(/([A-Z])/g,' $1').replace(/^./, s => s.toUpperCase())}(${value})`; }
          else if (key === 'vaccine_status') { return `Vaccine Status: ${value}`; }
+        // <<< CHANGE 4: Added display string logic for the new filter
+         else if (key.startsWith("significant_") && typeof value === 'object') {
+            const entries = Object.entries(value)
+                .map(([k, v]) => {
+                    const label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return `${label}: ${v}`;
+                });
+            return `Sig. Notes: ${entries.join(', ')}`;
+        }
          else if (key.startsWith('statutory_')) { const { formType, from, to } = value; let d = `Statutory: ${formType}`; if(from || to) d += ` [${from || '..'} - ${to || '..'}]`; return d; }
+         else if (key === 'shiftingAmbulance') {
+         return `Shifting Ambulance: ${value}`;
+        }
+        else if (key === 'consultationReview') {
+            return `Consultation Review: ${value}`;
+        }
          // Simple Key-Value or Default
          else {
               const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -517,21 +587,69 @@ const RecordsFilters = () => {
          }
     };
 
+     const handleDownload = () => {
+        if (filteredEmployees.length === 0) {
+            alert("No data to download.");
+            return;
+        }
+
+        // 1. Create a new workbook
+        const wb = XLSX.utils.book_new();
+
+        // 2. Create the filter details string
+        const filterDetails = selectedFilters.map(getFilterDisplayString).filter(Boolean).join("\n");
+        const filterHeader = ["Filter Criteria:"];
+        if (filterDetails) {
+            filterHeader.push(filterDetails);
+        } else {
+            filterHeader.push("No filters applied.");
+        }
+
+
+        // 3. Prepare the employee data
+        const employeeDataForExcel = filteredEmployees.map(emp => ({
+            "Emp ID": emp.emp_no || '-',
+            "Name": emp.name || '-',
+            "Age": calculateAge(emp.dob),
+            "Gender": emp.sex || '-',
+            "Role": emp.type || '-',
+            "Status": emp.employee_status || '-'
+        }));
+
+        // 4. Create a new worksheet
+        const ws = XLSX.utils.json_to_sheet([]);
+
+        // 5. Add filter details to the worksheet
+        XLSX.utils.sheet_add_aoa(ws, [filterHeader], { origin: "A1" });
+
+
+        // 6. Add employee data to the worksheet
+        XLSX.utils.sheet_add_json(ws, employeeDataForExcel, { origin: "A3", skipHeader: false });
+
+
+        // 7. Add the worksheet to the workbook
+        XLSX.utils.book_append_sheet(wb, ws, "Filtered Employees");
+
+        // 8. Generate the Excel file and trigger download
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'filtered_employee_records.xlsx');
+    };
+
 
     // --- JSX Render ---
     return (
         <div className="h-screen bg-[#8fcadd] flex">
             <Sidebar />
-            <div className="h-screen overflow-auto flex flex-1 flex-col"> {/* Use flex-1 */}
+            <div className="h-screen overflow-auto flex flex-1 flex-col"> 
                 {/* --- Selected Filters Display --- */}
-                <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300 sticky top-0 z-10 shadow-sm min-h-[50px]"> {/* Min height added */}
+                <div className="p-4 flex flex-wrap gap-2 bg-gray-100 rounded-xl border-gray-300 sticky top-0 z-10 shadow-sm min-h-[50px]"> 
                      {selectedFilters.length > 0 ? (
                         selectedFilters.map((filter, index) => {
                             const displayString = getFilterDisplayString(filter);
-                            const filterKey = Object.keys(filter)[0]; // Get the unique key
+                            const filterKey = Object.keys(filter)[0]; 
                             return displayString ? (
                                 <motion.div
-                                    key={filterKey} // Use the unique filter key
+                                    key={filterKey} 
                                     initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} layout
                                     className="flex items-center px-3 py-1 bg-blue-500 text-white rounded-full shadow text-sm cursor-default"
                                 >
@@ -572,26 +690,41 @@ const RecordsFilters = () => {
                                 {selectedSection === "employementdetails" && <EmploymentDetails addFilter={addFilter} />}
                                 {selectedSection === "vitals" && <Vitals addFilter={addFilter} />}
                                 {selectedSection === "fitness" && <Fitness addFilter={addFilter} />}
+                                {/* <<< CHANGE 5: Added the new component to the conditional render block */}
+                                {selectedSection === "significantnotes" && <SignificantNotesFilter addFilter={addFilter} />}
                                 {selectedSection === "specialcases" && <SpecialCasesFilter addFilter={addFilter} />}
                                 {selectedSection === "medicalhistory" && <MedicalHistoryForm addFilter={addFilter} />}
                                 {selectedSection === "investigations" && <Investigations addFilter={addFilter} />}
                                 {selectedSection === "vaccination" && <VaccinationForm addFilter={addFilter} />}
                                 {selectedSection === "purpose" && <PurposeFilter addFilter={addFilter} />}
-                                {/* {selectedSection === "prescriptions" && <Prescriptions addFilter={addFilter} />} */}
                                 {selectedSection === "referrals" && <Referrals addFilter={addFilter} specialityOptions={specialityOptions} hospitalOptions={hospitalOptions} doctorOptions={doctorOptions} />}
                                 {selectedSection === "statutoryforms" && <StatutoryForms addFilter={addFilter} />}
+                                {selectedSection === "shiftingambulance" && <ShiftingAmbulanceFilter addFilter={addFilter} />}
+                                {selectedSection === "consultationreview" && <ConsultationReviewFilter addFilter={addFilter} />}
                             </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
 
                 {/* --- Display Employee Data Table --- */}
-                <div className="p-4 flex-grow flex flex-col min-h-0"> {/* Added min-h-0 for flex-grow */}
-                    <h2 className="text-xl font-semibold mb-4 flex-shrink-0">Filtered Employee Records ({filteredEmployees.length})</h2>
+{/* --- Display Employee Data Table --- */}
+                <div className="p-4 flex-grow flex flex-col min-h-0">
+                    <div className="flex justify-between items-center mb-4 flex-shrink-0"> {/* <<< NEW: Wrapper div */}
+                        <h2 className="text-xl font-semibold">Filtered Employee Records ({filteredEmployees.length})</h2>
+                        <button
+                            onClick={handleDownload}
+                            className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                            disabled={filteredEmployees.length === 0}
+                        >
+                            Download Excel
+                        </button>
+                    </div>
                     <div className="overflow-auto flex-grow bg-gray-50 rounded-lg p-4 shadow-md border border-gray-200">
                         <table className="min-w-full bg-white rounded-lg ">
                             <thead className="bg-blue-600 text-white sticky top-0 z-5">
                                 <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Aadhar</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">MRD</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Emp ID</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Name</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider">Age</th>
@@ -610,6 +743,8 @@ const RecordsFilters = () => {
                                 ) : filteredEmployees.length > 0 ? (
                                     filteredEmployees.map((employee) => (
                                         <tr key={employee.id || employee.emp_no} className="hover:bg-blue-50 transition-colors duration-150">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{employee.aadhar || '-'}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{employee.mrdNo || '-'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{employee.emp_no || '-'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{employee.name || '-'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{calculateAge(employee.dob)}</td>
@@ -638,6 +773,83 @@ const RecordsFilters = () => {
 // ========================================================================
 // --- Filter Component Definitions (Keep ALL components below) ---
 // ========================================================================
+
+// <<< CHANGE 6: The new component is defined here. It's placed at the top for clarity.
+const SignificantNotesFilter = ({ addFilter }) => {
+    const [formData, setFormData] = useState({
+        communicable_disease: "",
+        incident_type: "",
+        incident: "",
+        illness_type: "",
+    });
+
+    // Options are taken from your SignificantNotes component
+    const communicableDiseaseOptions = [ { value: '', label: 'Any' }, { value: 'Notification 0', label: 'Notification 0' }, { value: 'Notification 1', label: 'Notification 1' }, { value: 'Notification 2', label: 'Notification 2' }, { value: 'Notification 3', label: 'Notification 3' }];
+    const incidentTypeOptions = [ { value: '', label: 'Any' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' }, { value: 'RWC', label: 'RWC' } ];
+    const incidentOptions = [ { value: '', label: 'Any' }, {value: 'Work Related Injury', label: 'Work Related Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Commutation Injury', label: 'Commutation Injury'}, {value: 'Others', label: 'Others'} ];
+    const illnessTypeOptions = [ { value: '', label: 'Any' }, {value: 'Work Related Illness', label: 'Work Related Illness'}, {value: 'Notifiable Disease', label: 'Notifiable Disease'} ];
+
+    const handleChange = (e) => {
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    };
+
+    const handleSubmit = () => {
+        const activeFilters = Object.fromEntries(
+            Object.entries(formData).filter(([_, v]) => v !== "")
+        );
+
+        if (Object.keys(activeFilters).length > 0) {
+            // The key here is "significantNotes" to match the addFilter logic
+            addFilter({ significantNotes: activeFilters });
+        } else {
+            alert("Please select at least one filter criterion.");
+        }
+        setFormData({
+            communicable_disease: "", incident_type: "", incident: "", illness_type: ""
+        });
+    };
+
+    const isSubmitDisabled = Object.values(formData).every(v => v === "");
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="communicable_disease-filter" className="block text-sm font-medium text-gray-700 mb-1">Notification</label>
+                    <select name="communicable_disease" id="communicable_disease-filter" value={formData.communicable_disease} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {communicableDiseaseOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    </select>
+                </div>
+                 <div>
+                    <label htmlFor="illness_type-filter" className="block text-sm font-medium text-gray-700 mb-1">Additional Illness Register</label>
+                    <select name="illness_type" id="illness_type-filter" value={formData.illness_type} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {illnessTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    </select>
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                    <label htmlFor="incident_type-filter" className="block text-sm font-medium text-gray-700 mb-1">Incident Category</label>
+                    <select name="incident_type" id="incident_type-filter" value={formData.incident_type} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        {incidentTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="incident-filter" className="block text-sm font-medium text-gray-700 mb-1">Incident Nature</label>
+                    <select name="incident" id="incident-filter" value={formData.incident} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                       {incidentOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    </select>
+                </div>
+            </div>
+            <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>
+                Add Significant Notes Filter
+            </button>
+        </div>
+    );
+};
+
+
+// --- ALL OTHER FILTER COMPONENTS REMAIN UNCHANGED BELOW THIS LINE ---
 
 const EmployementStatus = ({ addFilter }) => {
     const [formData, setFormData] = useState({ status: "", from: "", to: "", transferred_to: "", });
@@ -739,33 +951,31 @@ const Vitals = ({ addFilter }) => {
     return (<div className="space-y-4"> <div> <label htmlFor="param-vital-filter">Parameter</label> <select name="param" id="param-vital-filter" value={formData.param} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> {vitalParams.map(p => (<option key={p.value} value={p.value}>{p.label}</option>))} </select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> {showBmiDropdown && (<div className="md:col-span-2"> <label htmlFor="bmiCategory-filter">BMI Category</label> <select name="bmiCategory" id="bmiCategory-filter" value={formData.bmiCategory} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Select</option> {Object.entries(bmiOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))} </select> </div>)} {showRangeInputs && (<><div> <label htmlFor="from-vital-filter">Range From</label> <input type="number" id="from-vital-filter" name="from" value={formData.from} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 120"/> </div> <div> <label htmlFor="to-vital-filter">Range To</label> <input type="number" id="to-vital-filter" name="to" value={formData.to} onChange={handleChange} step="any" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 140"/> </div> </>)} </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Vital Filter ({selectedParamConfig?.label}) </button> </div>);
 };
 const Investigations = ({ addFilter }) => {
-    // CORRECTED: Keys now match the lowercase model names from the Django backend.
     const formOptions = {
-        heamatalogy: ["hemoglobin", "total_rbc", "total_wbc", "Haemotocrit", "neutrophil", "monocyte", "pcv", "mcv", "mch", "lymphocyte", "esr", "mchc", "platelet_count", "rdw", "eosinophil", "basophil", "peripheral_blood_smear_rbc_morphology" /*...*/],
-        routinesugartests: ["glucose_f", "glucose_pp", "random_blood_sugar", "estimated_average_glucose", "hba1c",/*...*/],
-        lipidprofile: ["total_cholesterol", "triglycerides", "hdl_cholesterol", "vldl_cholesterol", "ldl_cholesterol", "chol_hdl_ratio", "ldl_hdl_cho_ratio", /*...*/],
-        liverfunctiontest: ["bilirubin_total", "bilirubin_direct", "bilirubin_indirect", "sgot_ast", "sgpt_alt", "alkaline_phosphatase", "total_protein_serum", "albumin_serum", "globulin", "alb_glo_ratio", "gamma_glutamyl_transferase", /*...*/],
-        thyroidfunctiontest: ["t3_triiodothyronine", "t4_thyroxine", "tsh",/*...*/],
-        autoimmunetest: ["ana_antinuclear_antibody", "anti_ds_dna", "anticardiolipin_antibody", "rheumatoid_factor",/***/],
-        renalfunctiontests_and_electrolytes: ["urea", "blood_urea_nitrogen", "sr_creatinine", "egfr", "uric_acid", "sodium", "potassium", "calcium", "phosphorus", "chloride", "bicarbonate",/*...*/],
-        coagulationtest: ["prothrombin_time", "pt_inr", "bleeding_time", "clotting_time",/*...*/],
-        enzymesandcardiacprofile: ["acid_phosphatase", "adenosine_deaminase", "amylase", "lipase", "troponin_t", "troponin_i", "cpk_total", "cpk_mb", "ecg", "echo", "tmt",/*...*/],
-        urineroutine: ["colour", "appearance", "reaction_ph", "specific_gravity", "protein_albumin", "glucose_urine", "ketone_bodies", "urobilinogen", "bile_salts", "bile_pigments", "wbc_pus_cells", "red_blood_cells", "epithelial_cells", "casts", "crystals", "bacteria",/*...*/],
-        serology: ["screening_for_hiv_1_and_2", "hbsag", "hcv", "widal", "vdrl", "dengue_ns1ag", "dengue_igg", "dengue_igm",/*...*/],
-        motion: ["colour_appearance", "occult_blood", "ova", "cyst", "mucus", "pus_cells", "rbcs", "others",/*...*/],
-        routinesensitivitytest: ["culture_urine", "culture_motion", "culture_sputum", "culture_blood"],
+        heamatalogy: ["hemoglobin", "total_rbc", "total_wbc", "Haemotocrit", "neutrophil", "monocyte", "pcv", "mcv", "mch", "lymphocyte", "esr", "mchc", "platelet_count", "rdw", "eosinophil", "basophil", "peripheral_blood_smear_rbc_morphology" ],
+        routinesugartests: ["glucose_f", "glucose_pp", "random_blood_sugar", "estimated_average_glucose", "hba1c"],
+        lipidprofile: ["Total_Cholesterol", "triglycerides", "hdl_cholesterol", "vldl_cholesterol", "ldl_cholesterol", "chol_hdl_ratio", "ldl_chol_hdl_chol_ratio" ],
+        liverfunctiontest: ["bilirubin_total", "bilirubin_direct", "bilirubin_indirect", "sgot_ast", "sgpt_alt", "alkaline_phosphatase", "total_protein", "albumin_serum", "globulin_serum", "alb_glob_ratio", "gamma_glutamyl_transferase" ],
+        thyroidfunctiontest: ["t3_triiodothyronine", "t4_thyroxine", "tsh_thyroid_stimulating_hormone"],
+        autoimmunetest: ["ANA", "Anti_ds_dna", "Anticardiolipin_Antibodies", "Rheumatoid_factor"],
+        renalfunctiontests_and_electrolytes: ["urea", "bun", "serum_creatinine", "eGFR", "uric_acid", "sodium", "potassium", "calcium", "phosphorus", "chloride", "bicarbonate"],
+        coagulationtest: ["prothrombin_time", "pt_inr", "bleeding_time", "clotting_time"],
+        enzymescardiacprofile: ["acid_phosphatase", "adenosine_deaminase", "amylase", "lipase", "troponin_t", "troponin_i", "cpk_total", "cpk_mb", "ecg", "echo", "tmt"],
+        urineroutinetest: ["colour", "appearance", "reaction_ph", "specific_gravity", "protein_albumin", "glucose_urine", "ketone_bodies", "urobilinogen", "bile_salts", "bile_pigments", "wbc_pus_cells", "red_blood_cells", "epithelial_cells", "casts", "crystals", "bacteria"],
+        serologytest: ["screening_hiv","screening_hiv2","HBsAG", "HCV", "WIDAL", "VDRL", "Dengue_NS1Ag", "Dengue_IgG", "Dengue_IgM"],
+        motiontest: ["colour_motion","appearance_motion", "occult_blood", "ova", "cyst", "mucus", "pus_cells", "rbcs", "others"],
+        routinesensitivitytest: ["urine", "motion", "sputum", "blood"],
         menspack: ["psa"],
-        womenspack: ["mammogram", "pap_smear"],
-        occupationalprofile: ["audiometry", "pft", "bone_densitometry"],
-        otherstest: ["dental", "pathology"],
-        ophthalmicreport: ["vision", "color_vision", "cataract_glaucoma"], // CORRECTED spelling and consolidated
+        womenspack: ["Mammogaram", "PAP_Smear"],
+        occupationalprofile: ["Audiometry", "PFT"],
+        otherstest: ["Dental", "Pathology","Endoscopy"],
+        ophthalmicreport: ["vision", "color_vision", "cataract_glaucoma"],
         xray: ["xray_chest", "xray_spine", "xray_abdomen", "xray_kub", "xray_pelvis"],
-        ct: ["ct_brain", "ct_abdomen", "ct_pelvis", "ct_lungs", "ct_spine"],
-        mri: ["mri_brain", "mri_abdomen", "mri_pelvis", "mri_lungs", "mri_spine"],
-        usg: ["usg_abdomen", "usg_pelvis", "usg_neck", "usg_kub",/*...*/],
+        ctreport: ["CT_brain", "CT_abdomen", "CT_pelvis", "CT_lungs", "CT_spine"],
+        mrireport: ["mri_brain", "mri_abdomen", "mri_pelvis", "mri_lungs", "mri_spine"],
+        usgreport: ["usg_abdomen", "usg_pelvis", "usg_neck", "usg_kub"],
     };
 
-    // The rest of the component logic remains the same...
     const formatLabel = (k) => k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); const [formData, setFormData] = useState({ form: "", param: "", from: "", to: "", status: "", }); const selectedFormParams = formData.form ? formOptions[formData.form] || [] : [];
     useEffect(() => { setFormData((prev) => ({ ...prev, param: "", from: "", to: "", status: "" })); }, [formData.form]); const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = () => { const { form, param, from, to, status } = formData; if (!form || !param) { alert("Select Form and Parameter."); return; } let fp = { form, param }; let hv = false; if (from !== "" && to !== "") { if (parseFloat(from) > parseFloat(to)) { alert("'From' > 'To'."); return; } fp.from = from; fp.to = to; hv = true; } if (status !== "") { fp.status = status; hv = true; } if (!hv) { alert("Provide Range or Status."); return; } addFilter({ investigation: fp }); setFormData({ form: "", param: "", from: "", to: "", status: "" }); }; const isSubmitDisabled = !formData.form || !formData.param || (formData.from === "" && formData.to === "" && formData.status === "");
@@ -773,7 +983,6 @@ const Investigations = ({ addFilter }) => {
 };
 
 const Fitness = ({ addFilter }) => {
-    // The keys in this state object now EXACTLY match your Django model field names.
     const initialFormData = {
         tremors: "",
         romberg_test: "",
@@ -788,7 +997,6 @@ const Fitness = ({ addFilter }) => {
         Finger_nose_test: "",
         Psychological_PMK: "",
         Psychological_zollingar: "",
-        // Assuming these other fields also match your backend models
         special_cases: "",
         eye_exam_fit_status: "",
         job_nature: "",
@@ -820,10 +1028,8 @@ const Fitness = ({ addFilter }) => {
 
     const isSubmitDisabled = Object.values(formData).every(v => v === "");
 
-    // The JSX `name` and `value` props are updated to match the new state keys.
     return (
         <div className="space-y-6">
-            {/* Neurological / Balance Tests */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <label htmlFor="tremors-filter">Tremors</label>
@@ -875,7 +1081,6 @@ const Fitness = ({ addFilter }) => {
                 </div>
             </div>
 
-            {/* Phobias & Psychological Tests */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <label htmlFor="acrophobia-filter">Acrophobia</label>
@@ -903,7 +1108,6 @@ const Fitness = ({ addFilter }) => {
                 </div>
             </div>
 
-            {/* Fitness & Job Status */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <label htmlFor="MusculoSkeletal_Movements-filter">Musculoskeletal Movements</label>
@@ -931,7 +1135,6 @@ const Fitness = ({ addFilter }) => {
                 </div>
             </div>
 
-            {/* Special Cases */}
             <div>
                 <label htmlFor="special_cases-filter">Special Cases</label>
                 <textarea
@@ -951,12 +1154,8 @@ const Fitness = ({ addFilter }) => {
     );
 };
 
-// ========================================================================
-// --- CORRECTED Special Cases Filter Component ---
-// ========================================================================
 const SpecialCasesFilter = ({ addFilter }) => {
-    const [selectedValue, setSelectedValue] = useState(""); // "Yes", "No", or "NA"
-
+    const [selectedValue, setSelectedValue] = useState(""); 
     const handleChange = (e) => {
         setSelectedValue(e.target.value);
     };
@@ -967,7 +1166,7 @@ const SpecialCasesFilter = ({ addFilter }) => {
             return;
         }
         addFilter({ specialCase: selectedValue });
-        setSelectedValue(""); // Reset for next time
+        setSelectedValue("");
     };
 
     const isSubmitDisabled = !selectedValue;
@@ -1023,8 +1222,123 @@ const SpecialCasesFilter = ({ addFilter }) => {
     );
 };
 
+const ShiftingAmbulanceFilter = ({ addFilter }) => {
+    const [selectedValue, setSelectedValue] = useState("");
+
+    const handleChange = (e) => {
+        setSelectedValue(e.target.value);
+    };
+
+    const handleSubmit = () => {
+        if (!selectedValue) {
+            alert("Please select an option.");
+            return;
+        }
+        addFilter({ shiftingAmbulance: selectedValue });
+        setSelectedValue("");
+    };
+
+    const isSubmitDisabled = !selectedValue;
+
+    return (
+        <div className="space-y-4">
+            <p className="block text-sm font-medium text-gray-700 mb-2">
+                Was an ambulance shift required during the consultation?
+            </p>
+            <div className="flex items-center space-x-6 py-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="ambulanceShiftOption"
+                        value="Yes"
+                        checked={selectedValue === "Yes"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">Yes</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="ambulanceShiftOption"
+                        value="No"
+                        checked={selectedValue === "No"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">No</span>
+                </label>
+            </div>
+            <button
+                onClick={handleSubmit}
+                className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                disabled={isSubmitDisabled}
+            >
+                Add Shifting Ambulance Filter
+            </button>
+        </div>
+    );
+};
+
+const ConsultationReviewFilter = ({ addFilter }) => {
+    const [selectedValue, setSelectedValue] = useState("");
+
+    const handleChange = (e) => {
+        setSelectedValue(e.target.value);
+    };
+
+    const handleSubmit = () => {
+        if (!selectedValue) {
+            alert("Please select an option.");
+            return;
+        }
+        addFilter({ consultationReview: selectedValue });
+        setSelectedValue("");
+    };
+
+    const isSubmitDisabled = !selectedValue;
+
+    return (
+        <div className="space-y-4">
+            <p className="block text-sm font-medium text-gray-700 mb-2">
+                Was the consultation reviewed?
+            </p>
+            <div className="flex items-center space-x-6 py-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="consultationReviewOption"
+                        value="Yes"
+                        checked={selectedValue === "Yes"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">Yes</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="consultationReviewOption"
+                        value="No"
+                        checked={selectedValue === "No"}
+                        onChange={handleChange}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-gray-800 font-medium">No</span>
+                </label>
+            </div>
+            <button
+                onClick={handleSubmit}
+                className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                disabled={isSubmitDisabled}
+            >
+                Add Consultation Review Filter
+            </button>
+        </div>
+    );
+};
+
 const MedicalHistoryForm = ({ addFilter }) => {
-    // State and options remain the same
     const [ph, setPh] = useState({ smoking: "", alcohol: "", paan: "", diet: "", });
     const [pc, setPc] = useState({ condition: "", status: "", });
     const [fc, setFc] = useState({ condition: "", status: "", relation: "", });
@@ -1033,7 +1347,6 @@ const MedicalHistoryForm = ({ addFilter }) => {
 
     const hOpts={"":"Any",Yes:"Yes",No:"No",Cessased:"Cessased"}; const yOpts={"":"Any",Yes:"Yes",No:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Hyper thyroid","Hypo thyroid","Asthma","CVS","CNS","RS","GIT","KUB","CANCER","Defective Colour Vision","OTHERS","Obstetric","Gynaec"]; const rOpts=["","Father","Mother","Brother","Sister","Son","Daughter","Spouse","Grandparent","Other"];
 
-    // Handlers are unchanged
     const hhc=(e)=>{setPh(p=>({...p,[e.target.name]:e.target.value}))};
     const hpc=(e)=>{setPc(p=>({...p,[e.target.name]:e.target.value}))};
     const hfc=(e)=>{setFc(p=>({...p,[e.target.name]:e.target.value}))};
@@ -1042,15 +1355,11 @@ const MedicalHistoryForm = ({ addFilter }) => {
 
     const handleSubmit = () => {
         let cf={};
-        // This part is unchanged
         Object.entries(ph).forEach(([k,v])=>{if(v)cf[k]=v});
         Object.entries(al).forEach(([k,v])=>{if(v)cf[k]=v});
         if(sh.status){cf.surgicalHistory=sh.status}
         if(pc.condition&&pc.status){cf[`personal_${pc.condition}`]=pc.status}
 
-        // --- UPDATED Family History Logic ---
-        // This is the only logic that changes in this function.
-        // It now creates a filter if *any* family history field is filled.
         const { condition, status, relation } = fc;
         if (condition || status || relation) {
             const familyFilter = {};
@@ -1059,13 +1368,11 @@ const MedicalHistoryForm = ({ addFilter }) => {
             if (relation) familyFilter.relation = relation;
             cf.familyCondition = familyFilter;
         }
-        // --- End of UPDATED Logic ---
         if(Object.keys(cf).length > 0){
             addFilter(cf);
         } else {
             alert("Select at least one criterion.")
         }
-        // Reset state
         setPh({smoking:"",alcohol:"",paan:"",diet:""});
         setPc({condition:"",status:""});
         setFc({condition:"",status:"",relation:""});
@@ -1073,7 +1380,6 @@ const MedicalHistoryForm = ({ addFilter }) => {
         setSh({status:""});
     };
 
-    // This check is now simpler to allow for more flexible filter combinations
     const isSubmitDisabled = !Object.values(ph).some(v=>v) &&
         (!pc.condition || !pc.status) &&
         (!fc.condition && !fc.status && !fc.relation) &&
@@ -1082,18 +1388,14 @@ const MedicalHistoryForm = ({ addFilter }) => {
 
     return (
     <div className="space-y-6">
-        {/* All other fieldsets are UNCHANGED */}
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Habits</legend><div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">{Object.keys(ph).map((k)=>(<div key={k}><label htmlFor={`${k}-h-f`}>{k.charAt(0).toUpperCase()+k.slice(1)}</label><select name={k} id={`${k}-h-f`} value={ph[k]} onChange={hhc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(k==='diet'?dOpts:hOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset>
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Personal Conditions</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"><div><label htmlFor="pc-c-f">Condition</label><select name="condition" id="pc-c-f" value={pc.condition} onChange={hpc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Select--'}</option>)}</select></div><div><label htmlFor="pc-s-f">Status (Y/N)</label><select name="status" id="pc-s-f" value={pc.status} onChange={hpc} disabled={!pc.condition} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Allergies</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">{Object.keys(al).map((k)=>(<div key={k}><label htmlFor={`${k}-a-f`}>{k==='drugAllergy'?'Drug':k==='foodAllergy'?'Food':'Other'}</label><select name={k} id={`${k}-a-f`} value={al[k]} onChange={hal} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>))}</div></fieldset>
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Surgical History</legend><div className="grid grid-cols-1 gap-4 mt-2"><div><label htmlFor="sh-f">Any Past Surgeries?</label><select name="status" id="sh-f" value={sh.status} onChange={hsh} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div></div></fieldset>
-
-        {/* --- THIS IS THE ONLY SECTION WITH A VISUAL CHANGE --- */}
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Family History</legend>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <div><label htmlFor="fc-c-f">Condition</label><select name="condition" id="fc-c-f" value={fc.condition} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Any--'}</option>)}</select></div>
                 <div><label htmlFor="fc-r-f">Relation</label><select name="relation" id="fc-r-f" value={fc.relation} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{rOpts.map(r=><option key={r} value={r}>{r||'--Any--'}</option>)}</select></div>
-                {/* The "disabled" attribute has been removed from the select below */}
                 <div><label htmlFor="fc-s-f">Status (Y/N)</label><select name="status" id="fc-s-f" value={fc.status} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
             </div>
         </fieldset>
@@ -1103,7 +1405,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
 };
 const VaccinationForm = ({ addFilter }) => {
     const [formData, setFormData] = useState({ disease: "", vaccine: "", vaccine_status: "", });
-    const dOpts=["","Covid-19","Hepatitis B","Influenza","Tetanus","MMR",/*...*/]; const vOpts={"Covid-19":["","Covishield","Covaxin"],"Hepatitis B":["","Engerix-B"],"Influenza":["","Fluarix"],"Tetanus":["","Tdap"],"MMR":["","MMR-II"],}; const sOpts={"":"Any",Completed:"Completed",Partial:"Partial"};
+    const dOpts=["","Covid-19","Hepatitis B","Influenza","Tetanus","MMR",]; const vOpts={"Covid-19":["","Covishield","Covaxin"],"Hepatitis B":["","Engerix-B"],"Influenza":["","Fluarix"],"Tetanus":["","Tdap"],"MMR":["","MMR-II"],}; const sOpts={"":"Any",Completed:"Completed",Partial:"Partial"};
     const availableVaccines = formData.disease ? vOpts[formData.disease] || [""] : [""]; const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => { const ns = { ...prev, [name]: value }; if (name === 'disease') ns.vaccine = ""; return ns; }); };
     const handleSubmit = () => { const fd = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "")); if (Object.keys(fd).length > 0) { addFilter(fd); } else { alert("Select at least one criterion."); } setFormData({ disease: "", vaccine: "", vaccine_status: "" }); }; const isSubmitDisabled = !formData.disease && !formData.vaccine && !formData.vaccine_status;
     return (<div className="space-y-4"> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="d-v-f">Disease</label> <select name="disease" id="d-v-f" value={formData.disease} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{dOpts.map(d => <option key={d} value={d}>{d||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="v-s-f">Vaccine (Optional)</label> <select name="vaccine" id="v-s-f" value={formData.vaccine} onChange={handleChange} disabled={!formData.disease} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{availableVaccines.map(v => <option key={v} value={v}>{v||'--Any--'}</option>)}</select> </div> <div> <label htmlFor="s-v-f">Status</label> <select name="vaccine_status" id="s-v-f" value={formData.vaccine_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(sOpts).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Vaccination Filter </button> </div>);
@@ -1116,13 +1418,6 @@ function PurposeFilter({ addFilter }) {
     const handleSubmit = () => { const pf = {}; if (fromDate) pf.fromDate = fromDate; if (toDate) pf.toDate = toDate; if (type_of_visit) pf.type_of_visit = type_of_visit; if (register) pf.register = register; if (specificCategory) pf.specificCategory = specificCategory; if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) { alert("'From' > 'To'."); return; } if (Object.keys(pf).length > 0) { addFilter({ purpose: pf }); } else { alert("Select criterion or date range."); } setFormData({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "" }); }; const isSubmitDisabled = !fromDate && !toDate && !type_of_visit && !register && !specificCategory;
     return (<div className="space-y-4"> <fieldset className="border p-4 rounded-md"><legend>Date Range</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"> <div><label htmlFor="fD-p-f">From</label><input type="date" id="fD-p-f" name="fromDate" value={fromDate} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> <div><label htmlFor="tD-p-f">To</label><input type="date" id="tD-p-f" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> </div></fieldset> <fieldset className="border p-4 rounded-md"><legend>Visit Purpose</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"> <div><label htmlFor="tov-f">Type</label><select id="tov-f" name="type_of_visit" value={type_of_visit} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="r-p-f">Register</label><select id="r-p-f" name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="sc-p-f">Specific Reason</label><select id="sc-p-f" name="specificCategory" value={specificCategory} onChange={handleChange} disabled={!register||specificOpts.length===0} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{specificOpts.map((c, i)=>(<option key={`${c}-${i}`} value={c}>{c}</option>))}</select></div> </div></fieldset> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Purpose Filter</button> </div>);
 }
-// const Prescriptions = ({ addFilter }) => {
-//     const [formData, setFormData] = useState({ tablets: "", injections: "", creams: "",syrups: "",drops: "",respules: "",lotions: "",fluids: "",powder1: "",suture_procedure: "",dressing: "", others: "" });
-//     const tOpts=["","Aspirin","Ibuprofen",/*...*/]; const iOpts=["","Insulin","Adrenaline",/*...*/]; const cOpts=["","Hydrocortisone",/*...*/]; const oOpts=["","Syrup A","Inhaler B",/*...*/];
-//     const handleChange = (e) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
-//     const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([k,v])=>v!=="")); if(Object.keys(fd).length>0){addFilter(fd)}else{alert("Select medication.")} setFormData({tablets : "", injections: "", creams: "",syrups:"",drops:"",respules:"",lotions:"",fluids:"",powder1:"",suture_procedure:"",dressing:"", others: ""}); }; const isSubmitDisabled = Object.values(formData).every(v=>v==="");
-//     return (<div className="space-y-4"> <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"> <div> <label htmlFor="t-p-f">Tablets</label> <select name="tablets" id="t-p-f" value={formData.tablets} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{tOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="i-p-f">Injections</label> <select name="injections" id="i-p-f" value={formData.injections} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{iOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="c-p-f">Creams</label> <select name="creams" id="c-p-f" value={formData.creams} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="o-p-f">Others</label> <select name="others" id="o-p-f" value={formData.others} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{oOpts.map(o=><option key={o} value={o}>{o||'--Select--'}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Prescription Filter</button> </div>);
-// }
 const Referrals = ({ addFilter, specialityOptions = [], hospitalOptions = [], doctorOptions = [] }) => {
     const [formData, setFormData] = useState({ referred: "", speciality: "", hospitalName: "", doctorName: "" });
     const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" };
