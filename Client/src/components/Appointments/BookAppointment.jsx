@@ -65,7 +65,7 @@ const BookAppointment = () => {
   useEffect(() => {
     const fetchDetails = async () => {
         try {
-            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+            const response = await axios.post("http://localhost:8000/adminData");
             const fetchedEmployees = response.data.data;
 
             // It's better to update state with the fetched employees first
@@ -111,7 +111,7 @@ const BookAppointment = () => {
     console.log("Submitting form data:", formData); // Log data before sending
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
+      const response = await fetch("http://localhost:8000/bookAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

@@ -36,7 +36,7 @@ const Search = () => {
       setLoading(true);
       try {
         // Consider optimizing: Fetch only necessary fields if the list is very large
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         setEmployees(response.data.data);
         setFilteredEmployees(response.data.data); // Initially show all
         console.log(response.data.data);

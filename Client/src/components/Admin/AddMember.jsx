@@ -97,7 +97,7 @@ function AddMember() {
         setExternalFormData(initialExternalState);
 
         try {
-            const searchUrl = `https://occupational-health-center-1.onrender.com/find_member_by_aadhar/?aadhar=${encodeURIComponent(searchAadhar)}`;
+            const searchUrl = `http://localhost:8000/find_member_by_aadhar/?aadhar=${encodeURIComponent(searchAadhar)}`;
             const response = await axios.get(searchUrl);
             const data = response.data;
 
@@ -218,11 +218,11 @@ function AddMember() {
         // Determine API endpoint and method
         if (memberId) {
             // UPDATE mode
-            url = `https://occupational-health-center-1.onrender.com/members/update/${memberId}/`;
+            url = `http://localhost:8000/members/update/${memberId}/`;
             method = 'put';
         } else {
             // ADD mode
-            url = "https://occupational-health-center-1.onrender.com/members/add/";
+            url = "http://localhost:8000/members/add/";
             method = 'post';
         }
 

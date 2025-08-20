@@ -1749,7 +1749,7 @@ class InstrumentCalibration(models.Model):
     make = models.CharField(max_length=255, null=True, blank=True) # Corresponds to "Brand Name"
     model_number = models.CharField(max_length=255, null=True, blank=True)
     freq = models.CharField(max_length=255, null=True, blank=True)
-    calibration_date = models.DateField()
+    calibration_date = models.DateField(null=True,blank=True)
     next_due_date = models.DateField(null=True,blank=True)
     calibration_status = models.CharField(max_length=225, null=True, blank=True)
     instrument_cnodition = models.CharField(max_length=225, blank=True, null=True)

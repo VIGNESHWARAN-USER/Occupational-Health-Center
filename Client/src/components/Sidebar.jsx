@@ -67,7 +67,7 @@ const Sidebar = ({ redCount }) => {
   // This function now serves as the fallback for pages other than InstrumentCalibration.
   const fetchPendingCount = async () => {
     try {
-      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_red_status_count/");
+      const response = await axios.get("http://localhost:8000/get_red_status_count/");
       setPendingCount(response.data.red_count);
     } catch (error) {
       console.error("Error fetching red count:", error);
@@ -79,7 +79,7 @@ const Sidebar = ({ redCount }) => {
      if (accessLevel === 'pharmacy') {
         try {
             const response = await axios.get(
-                "https://occupational-health-center-1.onrender.com/get_current_expiry_count/"
+                "http://localhost:8000/get_current_expiry_count/"
             );
             setExpiryCount(response.data.count);
         } catch (error) {

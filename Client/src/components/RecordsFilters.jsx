@@ -66,7 +66,7 @@ const RecordsFilters = () => {
             setLoading(true);
             try {
                 // Fetch main employee data
-                const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+                const response = await axios.post("http://localhost:8000/userData");
                 const data = response.data?.data;
 
                 if (Array.isArray(data)) {
@@ -80,7 +80,7 @@ const RecordsFilters = () => {
                 }
 
                 // Fetch summary/notes/consultation data for filter options
-                const summaryResponse = await axios.get("https://occupational-health-center-1.onrender.com/get_notes/");
+                const summaryResponse = await axios.get("http://localhost:8000/get_notes/");
                 const consultationData = summaryResponse?.data?.consultation; // For Referrals
                 console.log("Fetched /get_notes/ response:", consultationData[0].speciality);
 

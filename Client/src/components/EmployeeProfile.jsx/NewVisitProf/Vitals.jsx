@@ -285,7 +285,7 @@ const VitalsDetails = ({ data }) => {
                                 <a
     key={doc.key}
     // This href builds the full, correct URL to your backend server
-    href={`https://occupational-health-center-1.onrender.com/media/${data[doc.key]}`}
+    href={`http://localhost:8000/media/${data[doc.key]}`}
     target="_blank"
     rel="noopener noreferrer"
     className="flex items-center space-x-3 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"

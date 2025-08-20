@@ -4909,6 +4909,8 @@ logger = logging.getLogger(__name__)
 
 # In your Django views.py
 
+# In jsw/views.py
+
 @csrf_exempt
 def get_calibrations(request):
     if request.method != 'GET':
@@ -4921,31 +4923,33 @@ def get_calibrations(request):
             latest_id=Max('id')
         ).values_list('latest_id', flat=True)
 
-        # The filter below fetches the latest records.
-        # We need to add one more filter to get ONLY the ones that are pending.
-        unique_calibrations = InstrumentCalibration.objects.filter(
-            id__in=list(latest_ids)
-        )
-        
-        # --- THIS IS THE ONLY ADDED LINE ---
-        # From that list of latest records, only keep the ones that are actually 'pending'.
-        pending_calibrations = unique_calibrations.filter(calibration_status='pending').order_by("next_due_date")
-        # --- END OF ADDED LINE ---
+        pending_calibrations = InstrumentCalibration.objects.filter(
+            id__in=list(latest_ids),
+            calibration_status='pending'
+        ).order_by("next_due_date")
 
         data = []
-        # Make sure to loop over the newly filtered queryset 'pending_calibrations'
         for i in pending_calibrations:
+            last_completed_record = InstrumentCalibration.objects.filter(
+                instrument_number=i.instrument_number,
+                calibration_status='Completed'
+            ).order_by('-calibration_date', '-id').first()
+
+            certificate_to_display = last_completed_record.certificate_number if last_completed_record else i.certificate_number
+
             data.append({
                 "id": i.id,
                 "instrument_number": i.instrument_number,
                 "equipment_sl_no": i.equipment_sl_no,
                 "instrument_name": i.instrument_name,
-                "entry_date": i.entry_date.strftime("%d-%b-%Y") if i.entry_date else None,
-                "certificate_number": i.certificate_number,
+                "certificate_number": certificate_to_display,
                 "make": i.make,
                 "model_number": i.model_number,
                 "freq": i.freq,
                 "inst_status": i.inst_status,
+                # --- THIS IS THE NEWLY ADDED LINE ---
+                "entry_date": i.entry_date.strftime("%d-%b-%Y") if i.entry_date else None,
+                # ------------------------------------
                 "calibration_date": i.calibration_date.strftime("%d-%b-%Y") if i.calibration_date else None,
                 "next_due_date": i.next_due_date.strftime("%d-%b-%Y") if i.next_due_date else None,
                 "calibration_status": i.calibration_status,
@@ -4971,10 +4975,7 @@ def get_calibration_history(request):
             from_date_str = request.GET.get("from")
             to_date_str = request.GET.get("to")
             
-            # --- MODIFIED LINE ---
-            # Fetch all records EXCEPT for the 'pending' ones. History should not show future tasks.
-            calibrated_instruments = InstrumentCalibration.objects.exclude(calibration_status='pending')
-            # --- END OF MODIFICATION ---
+            calibrated_instruments = InstrumentCalibration.objects.all()
 
             from_date = parse_date_internal(from_date_str)
             to_date = parse_date_internal(to_date_str)
@@ -4989,13 +4990,17 @@ def get_calibration_history(request):
                      "id": entry.id,
                      "equipment_sl_no": entry.equipment_sl_no,
                      "instrument_name": entry.instrument_name,
-                     "entry_date": entry.entry_date.strftime("%d-%b-%Y") if entry.entry_date else "",
                      "instrument_number": entry.instrument_number,
                      "certificate_number": entry.certificate_number,
                      "make": entry.make,
                      "model_number": entry.model_number,
                      "freq": entry.freq,
                      "inst_status": entry.inst_status,
+                     # --- THIS IS THE NEWLY ADDED LINE ---
+                     "entry_date": entry.entry_date.strftime("%d-%b-%Y") if entry.entry_date else "",
+                     # --- THIS LINE IS ALSO ADDED TO FIX THE "DONE BY" COLUMN ---
+                     "done_by": entry.done_by,
+                     # ------------------------------------
                      "calibration_date": entry.calibration_date.strftime("%d-%b-%Y") if entry.calibration_date else "",
                      "next_due_date": entry.next_due_date.strftime("%d-%b-%Y") if entry.next_due_date else "",
                      "calibration_status": entry.calibration_status,
@@ -5025,6 +5030,8 @@ logger = logging.getLogger(__name__)
 
 # jsw/views.py
 
+# In jsw/views.py
+
 @csrf_exempt
 def complete_calibration(request):
     if request.method != 'POST':
@@ -5036,9 +5043,8 @@ def complete_calibration(request):
         new_completion_date_str = data.get("calibration_date")
         new_freq = data.get("freq")
         new_next_due_date_str = data.get("next_due_date")
-        
-        # --- REMOVED: We no longer expect a certificate number from the frontend ---
-        # new_certificate_number = data.get("certificate_number") 
+        certificate_number_to_use = data.get("certificate_number") 
+        done_by_user = data.get("done_by")
 
         if not all([instrument_id, new_completion_date_str, new_freq, new_next_due_date_str]):
             return JsonResponse({"error": "Missing required fields: id, calibration_date, freq, and next_due_date are all required."}, status=400)
@@ -5056,30 +5062,29 @@ def complete_calibration(request):
             if original_instrument.calibration_status == "Completed":
                 return JsonResponse({"error": "This calibration record has already been completed."}, status=409)
 
-            # 2. Update the old record to mark it as 'completed'.
+            # --- START OF CORRECTION ---
+            # 2. Update the old record. Only change its status and add completion details.
+            #    DO NOT CHANGE THE DATES. This preserves the original record as a historical fact.
             original_instrument.calibration_status = "Completed"
-            original_instrument.calibration_date = completion_date
-            
-            # --- REMOVED: We don't update the certificate number on the old record ---
-            # original_instrument.certificate_number = new_certificate_number
+            original_instrument.done_by = done_by_user
+            original_instrument.certificate_number = certificate_number_to_use
             original_instrument.save()
+            # --- END OF CORRECTION ---
 
             # 3. Create the new 'pending' record for the next cycle.
+            #    (This part remains unchanged, as you requested).
             InstrumentCalibration.objects.create(
                 equipment_sl_no=original_instrument.equipment_sl_no,
                 instrument_number=original_instrument.instrument_number,
                 instrument_name=original_instrument.instrument_name,
                 make=original_instrument.make,
                 model_number=original_instrument.model_number,
-                done_by=original_instrument.done_by,
+                done_by=done_by_user,
                 inst_status=original_instrument.inst_status,
                 freq=new_freq,
                 calibration_date=completion_date,
                 next_due_date=next_due_date_for_new_record,
-                
-                # --- MODIFIED: Inherit the certificate number from the original record ---
-                certificate_number=original_instrument.certificate_number,
-                
+                certificate_number=certificate_number_to_use, 
                 calibration_status="pending",
             )
 
@@ -6234,6 +6239,8 @@ def get_unique_instruments(request):
                 "inst_status": i.inst_status,
                 # The new fields you requested
                 "freq": i.freq,
+                "last_calibration_date":i.calibration_date.strftime("%d-%b-%Y") if i.calibration_date else None,
+                "nextDue":i.next_due_date.strftime("%d-%b-%Y") if i.next_due_date else None,
                 "certificate_number": i.certificate_number,
             })
 
