@@ -174,7 +174,7 @@ function parseHierarchicalExcel(worksheet) {
 
     try {
         let uploadUrl = '';
-        const baseURL = 'http://localhost:8000'; 
+        const baseURL = 'https://occupational-health-center-1.onrender.com'; 
         if (formVal === "HR Data") {
             uploadUrl = `${baseURL}/hrupload`; 
         } else if (formVal === "Medical Data") {

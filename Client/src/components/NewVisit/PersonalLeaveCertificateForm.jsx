@@ -45,7 +45,7 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
     const fetchData = async () => {
       setIsFetching(true);
       try {
-        const response = await axios.get(`http://localhost:8000/personal-leave/get/?aadhar=${aadhar}`);
+        const response = await axios.get(`https://occupational-health-center-1.onrender.com/personal-leave/get/?aadhar=${aadhar}`);
         if (response.data && Object.keys(response.data).length > 0) {
           setFormData(response.data);
           setShowForm(true);
@@ -85,7 +85,7 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
     const payload = { ...formData, aadhar, mrdNo };
 
     try {
-        const response = await axios.post('http://localhost:8000/personal-leave/save/', payload);
+        const response = await axios.post('https://occupational-health-center-1.onrender.com/personal-leave/save/', payload);
         setStatusMessage({ text: response.data.message, type: 'success' });
     } catch (error) {
         const errorText = error.response?.data?.error || "Failed to save data.";

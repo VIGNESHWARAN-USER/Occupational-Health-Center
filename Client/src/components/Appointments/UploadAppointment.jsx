@@ -55,7 +55,7 @@ const UploadAppointmentPage = () => {
     setIsProcessing(true); // Start loading indicator
     setUploadStatus(null); // Reset status
     try {
-      const response = await fetch("http://localhost:8000/uploadAppointment/", {
+      const response = await fetch("https://occupational-health-center-1.onrender.com/uploadAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appointments: excelData }),
