@@ -563,8 +563,10 @@ def fetchdata(request):
                      key_name = "renalfunctiontests_and_electrolytes"
                  elif model_cls == XRay:
                      key_name = "xray"
+                 elif model_cls == MotionTest:
+                     key_name = "motiontest"
                  elif model_cls == CultureSensitivityTest:
-                     key_name == "routinesensitivitytest"
+                     key_name = "culturesensitivitytest"
                  # --- START: ADD/COMPLETE THESE CONDITIONS ---
                  elif model_cls == USGReport:
                      key_name = "usgreport" # Corrected from "usg" to match frontend

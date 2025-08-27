@@ -964,7 +964,7 @@ const Investigations = ({ addFilter }) => {
         urineroutinetest: ["colour", "appearance", "reaction_ph", "specific_gravity", "protein_albumin", "glucose_urine", "ketone_bodies", "urobilinogen", "bile_salts", "bile_pigments", "wbc_pus_cells", "red_blood_cells", "epithelial_cells", "casts", "crystals", "bacteria"],
         serologytest: ["screening_hiv","screening_hiv2","HBsAG", "HCV", "WIDAL", "VDRL", "Dengue_NS1Ag", "Dengue_IgG", "Dengue_IgM"],
         motiontest: ["colour_motion","appearance_motion", "occult_blood", "ova", "cyst", "mucus", "pus_cells", "rbcs", "others"],
-        routinesensitivitytest: ["urine", "motion", "sputum", "blood"],
+        culturesensitivitytest: ["urine", "motion", "sputum", "blood"],
         menspack: ["psa"],
         womenspack: ["Mammogaram", "PAP_Smear"],
         occupationalprofile: ["Audiometry", "PFT"],

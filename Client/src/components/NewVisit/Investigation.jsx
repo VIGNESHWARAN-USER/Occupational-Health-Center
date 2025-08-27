@@ -53,10 +53,10 @@ function InvestigationForm({ data, mrdNo }) {
     "Occupational Profile": "occupationalprofile",
     "Others TEST": "otherstest",
     "OPHTHALMIC REPORT": "ophthalmicreport",
-    "USG": "usg",
-    "MRI": "mri",
+    "USG": "usgreport",
+    "MRI": "mrireport",
     "X-RAY": "xray",
-    "CT": "ct",
+    "CT": "ctreport",
   };
 
   const allInvFormOptions = Object.keys(categoryMap);
@@ -219,7 +219,7 @@ function InvestigationForm({ data, mrdNo }) {
         alert(`No submission endpoint configured for "${categoryNameToSubmit}".`);
         return;
     }
-    const url = `https://occupational-health-center-1.onrender.com/${endpoint}`;
+    const url = `https://occupational-health-center-1.onrender.com/${endpoint}/`;
 
     try {
       // CHANGED: The payload now correctly uses formData which includes the new mrdNo.
