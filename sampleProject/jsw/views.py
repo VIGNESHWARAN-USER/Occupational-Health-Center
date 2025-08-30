@@ -5328,27 +5328,175 @@ def archive_zero_quantity_stock(request):
         response['Allow'] = 'POST'
         return response
 
-# HR Upload - Simple test endpoint, no Aadhar dependency shown
+import json
+import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db import transaction
+import pandas as pd
+import openpyxl
+from io import BytesIO
+from .models import employee_details  # Import your model
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+import json
+import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db import transaction
+import pandas as pd
+import openpyxl
+from io import BytesIO
+from .models import employee_details
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+def map_excel_headers_to_model_fields(excel_data_type):
+    # Base mappings common to all types
+    mapping = {
+        'BASIC DETAILS_Aadhar / Doc No.-Foreigner': 'aadhar', # Added a trailing underscore to match the flattened header format
+        'BASIC DETAILS_NAME': 'name',
+        'BASIC DETAILS_Aadhar / Doc No.-Foreigner_Name of Father / Mother / Guardian': 'guardian',
+        'BASIC DETAILS_Name of Father / Mother / Guardian': 'guardian',
+        'BASIC DETAILS_Date of Birth': 'dob',
+        'BASIC DETAILS_Sex': 'sex',
+        'BASIC DETAILS_Blood Group': 'bloodgrp',
+        'BASIC DETAILS_Marital Status': 'marital_status',
+        'BASIC DETAILS_Identification Mark 1': 'identification_marks1',
+        'BASIC DETAILS_Identification Mark 2': 'identification_marks2',
+        'BASIC DETAILS_Nationality': 'nationality',
+        'BASIC DETAILS_DocName': 'docName',
+        'BASIC DETAILS_Foreigner_Other Document_Site ID': 'other_site_id'
+    }
+
+    # Your specific headers have spaces and special characters. Let's adjust them.
+    mapping.update({
+        'Contact Details_Phone (Personal)': 'phone_Personal',
+        'Contact Details_Mail Id (Personal)': 'mail_id_Personal',
+        'Contact Details_Phone (Office)': 'phone_Office',
+        'Contact Details_Mail Id (Office)': 'mail_id_Office',
+        'Contact Details_Emergency Contact Person': 'emergency_contact_person',
+        'Contact Details_Emergency Contact Relation': 'emergency_contact_relation',
+        'Contact Details_Emergency Contact Phone': 'emergency_contact_phone',
+        'Contact Details_Mail Id (Emergency Contact Person)': 'mail_id_Emergency_Contact_Person',
+        'Contact Details_Permanent Address': 'permanent_address',
+        'Contact Details_Permanent Village/Town/City': 'permanent_area',
+        'Contact Details_Permanent State': 'permanent_state',
+        'Contact Details_Permanent Country': 'permanent_country',
+        'Contact Details_Residential Village/Town/City': 'residential_area',
+        'Contact Details_Residential State': 'residential_state',
+        'Contact Details_Residential Country': 'residential_country',
+    })
+
+    if excel_data_type == 'employee' or excel_data_type == 'associate':
+        # Mappings specific to Employee and Associate
+        mapping.update({
+            'Employment Details_Contract_Status': 'contract_status',
+            'Employment Details_Contract Number': 'contractName',
+            'Employment Details_Current Employer': 'employer',
+            'Employment Details_Current Designation_Location': 'location', # Combined header
+            'Employment Details_Designation': 'designation',
+            'Employment Details_Department': 'department',
+            'Employment Details_Nature of Job': 'job_nature',
+            'Employment Details_Date of Joining': 'doj',
+            'Employment Details_Mode of Joining': 'moj',
+            'Employment Details_Previous Employer': 'previousemployer',
+            'Employment Details_Previous Location': 'previouslocation',
+            'Employment Details_Employee Number': 'emp_no',
+        })
+    elif excel_data_type == 'visitor':
+        # Mappings specific to Visitor
+        mapping.update({
+            'Visit Details_Organization': 'organization',
+            'Visit Details_Address of Organization': 'addressOrganization',
+            'Visit Details_Visiting Department': 'visiting_department',
+            'Visit Details_Visiting Date From': 'visiting_date_from',
+            'Visit Details_Visiting Date To': 'visiting_date_to',
+            'Visit Details_Stay in Guest House': 'stay_in_guest_house',
+            'Visit Details_Visiting Purpose': 'visiting_purpose',
+            'Visit Details_Country ID': 'country_id',
+            'Visit Details_Other Site ID': 'other_site_id',
+        })
+
+    return mapping
+
 @csrf_exempt
-def hrupload(request):
+def hrupload(request, data_type):
     if request.method == 'POST':
         try:
-            # It's better practice to decode and load JSON safely
-            data = json.loads(request.body.decode('utf-8'))
-            logger.info(f"HRUpload Received Data: {data.get('data')}") # Log received data
-            # Add actual processing logic here if needed
-            return JsonResponse({"message":"HR data received successfully"}, status = 200)
-        except json.JSONDecodeError:
-            logger.error("hrupload failed: Invalid JSON")
-            return JsonResponse({"message":"Invalid JSON format"}, status = 400)
+            data_type = data_type.lower()
+            if data_type not in ['employee', 'associate', 'visitor']:
+                return JsonResponse({"error": "Invalid data type specified."}, status=400)
+
+            if 'file' not in request.FILES:
+                return JsonResponse({"error": "No file was uploaded."}, status=400)
+
+            uploaded_file = request.FILES['file']
+            file_bytes = uploaded_file.read()
+
+            excel_data = pd.read_excel(BytesIO(file_bytes), header=[0, 1], sheet_name=0)
+            
+            # The Fix: Use .map(str) to convert all parts of the multi-index header to strings
+            excel_data.columns = ['_'.join(map(str, col)).strip() for col in excel_data.columns.values]
+            
+            field_mapping = map_excel_headers_to_model_fields(data_type)
+            print(excel_data)
+            records_to_create = []
+            
+            for index, row in excel_data.iterrows():
+                record_data = {}
+                for excel_header, model_field in field_mapping.items():
+                    if excel_header in row:
+                        print(excel_header)
+                        value = row[excel_header]
+                        
+                        if 'date' in model_field or 'dob' in model_field or 'doj' in model_field: 
+                            try:
+                                if pd.notna(value):
+                                    if isinstance(value, pd.Timestamp):
+                                        record_data[model_field] = value.date()
+                                    elif isinstance(value, (int, float)):
+                                        # Handle Excel date numbers
+                                        record_data[model_field] = datetime.fromtimestamp(value, tz=None).date()
+                                    elif isinstance(value, str):
+                                        # Use a more flexible date parser
+                                        try:
+                                            record_data[model_field] = datetime.strptime(value.split(' ')[0], '%d-%m-%Y').date()
+                                        except ValueError:
+                                            try:
+                                                record_data[model_field] = datetime.strptime(value.split(' ')[0], '%d/%m/%Y').date()
+                                            except ValueError:
+                                                record_data[model_field] = None
+                                    else:
+                                        record_data[model_field] = None
+                            except Exception as e:
+                                logger.warning(f"Could not parse date for field {model_field} with value: {value}, Error: {e}")
+                                record_data[model_field] = None
+                        else:
+                            record_data[model_field] = str(value) if pd.notna(value) else ''
+                
+                record_data['type'] = data_type.capitalize()
+                record_data['mrdNo'] = '0'
+                
+                records_to_create.append(employee_details(**record_data))
+                
+            with transaction.atomic():
+                employee_details.objects.bulk_create(records_to_create)
+
+            return JsonResponse({"message": f"{len(records_to_create)} {data_type.capitalize()} records uploaded successfully."}, status=200)
+
         except Exception as e:
-            logger.exception("Error processing hrupload")
-            return JsonResponse({"message":"Error processing data", "detail": str(e)} ,status = 500)
-    else:
-         response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
-         response['Allow'] = 'POST'
-         return response
+            logger.exception("Error processing HR upload")
+            return JsonResponse({"error": "An error occurred during file processing.", "detail": str(e)}, status=500)
     
+    else:
+        response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+        response['Allow'] = 'POST'
+        return response
+
 
 @csrf_exempt
 def medicalupload(request):
