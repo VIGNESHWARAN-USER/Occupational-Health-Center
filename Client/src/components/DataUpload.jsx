@@ -157,18 +157,33 @@ const DataUpload = () => {
         console.log(`Uploading ${formVal} (${hrDataType}) file to ${uploadUrl}`);
         
         try {
-            const response = await axios.post(uploadUrl, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
+            const response = await axios.post(uploadUrl, formData);
 
             setSuccessMessage(response.data?.message || `${formVal} (${hrDataType}) uploaded successfully!`);
             resetState();
         } catch (err) {
-            console.error("Error uploading file:", err);
-            const errorMessage = err.response?.data?.error || err.message || "An unknown error occurred.";
-            setError(`Upload failed: ${errorMessage}`);
+            console.error("Error uploading file:", err.response || err);
+
+    let displayError = "Upload failed: An unknown error occurred.";
+
+    if (err.response && err.response.data) {
+        const { message, errors } = err.response.data;
+        
+        // Use the main message from the backend
+        displayError = `Upload failed: ${message || err.message}`;
+
+        // If there's a list of specific errors, format them for display
+        if (errors && Array.isArray(errors) && errors.length > 0) {
+            // Create a formatted string or a list component to show these errors.
+            // For simplicity, let's join them with line breaks.
+            const detailedErrors = errors.join('\n');
+            displayError += `\n\nDetails:\n${detailedErrors}`;
+        }
+    } else {
+        displayError = `Upload failed: ${err.message}`;
+    }
+    
+    setError(displayError);
         } finally {
             setIsSubmitting(false);
         }

@@ -652,26 +652,29 @@ class LiverFunctionTest(BaseModel):
 class ThyroidFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- T3 Fields ---
     t3_triiodothyronine = models.TextField(max_length=255)
-    t3_unit = models.TextField(max_length=255)
-    t3_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    t3_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
-    t3_comments = models.TextField(max_length=255)
+    t3_triiodothyronine_unit = models.TextField(max_length=255)
+    t3_triiodothyronine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    t3_triiodothyronine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    t3_triiodothyronine_comments = models.TextField(max_length=255)
 
+    # --- T4 Fields ---
     t4_thyroxine = models.TextField(max_length=255)
-    t4_unit = models.TextField(max_length=255)
-    t4_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    t4_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
-    t4_comments = models.TextField(max_length=255)
+    t4_thyroxine_unit = models.TextField(max_length=255)
+    t4_thyroxine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    t4_thyroxine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    t4_thyroxine_comments = models.TextField(max_length=255)
 
+    # --- TSH Fields ---
     tsh_thyroid_stimulating_hormone = models.TextField(max_length=255)
-    tsh_unit = models.TextField(max_length=255)
-    tsh_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    tsh_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
-    tsh_comments = models.TextField(max_length=255)
+    tsh_thyroid_stimulating_hormone_unit = models.TextField(max_length=255)
+    tsh_thyroid_stimulating_hormone_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
+    tsh_thyroid_stimulating_hormone_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    tsh_thyroid_stimulating_hormone_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Thyroid Function Test Report {self.id} for Emp {self.emp_no}"

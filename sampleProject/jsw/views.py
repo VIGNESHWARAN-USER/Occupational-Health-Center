@@ -5498,26 +5498,26 @@ def hrupload(request, data_type):
         return response
 
 
-@csrf_exempt
-def medicalupload(request):
-    if request.method == 'POST':
-        try:
-            # It's better practice to decode and load JSON safely
-            data = json.loads(request.body.decode('utf-8'))
+# @csrf_exempt
+# def medicalupload(request):
+#     if request.method == 'POST':
+#         try:
+#             # It's better practice to decode and load JSON safely
+#             data = json.loads(request.body.decode('utf-8'))
             
-            logger.info(f"medicalupload Received Data: {data.get('data')}") # Log received data
-            # Add actual processing logic here if needed
-            return JsonResponse({"message":"HR data received successfully"}, status = 200)
-        except json.JSONDecodeError:
-            logger.error("medicalupload failed: Invalid JSON")
-            return JsonResponse({"message":"Invalid JSON format"}, status = 400)
-        except Exception as e:
-            logger.exception("Error processing medicalupload")
-            return JsonResponse({"message":"Error processing data", "detail": str(e)} ,status = 500)
-    else:
-         response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
-         response['Allow'] = 'POST'
-         return response
+#             logger.info(f"medicalupload Received Data: {data.get('data')}") # Log received data
+#             # Add actual processing logic here if needed
+#             return JsonResponse({"message":"HR data received successfully"}, status = 200)
+#         except json.JSONDecodeError:
+#             logger.error("medicalupload failed: Invalid JSON")
+#             return JsonResponse({"message":"Invalid JSON format"}, status = 400)
+#         except Exception as e:
+#             logger.exception("Error processing medicalupload")
+#             return JsonResponse({"message":"Error processing data", "detail": str(e)} ,status = 500)
+#     else:
+#          response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+#          response['Allow'] = 'POST'
+#          return response
 
 
 @csrf_exempt # Should be GET
@@ -5672,14 +5672,14 @@ from .models import (
 BASIC_DETAILS_MAP = {
     'emp_no': 'Details_Basic detail_EMP NO',
     'name': 'Details_Basic detail_NAME',
-    'year': 'Details_Basic detail_Year',
-    'batch': 'Details_Basic detail_Batch',
-    'hospitalName': 'Details_Basic detail_Hospital',
-    'date': 'Details_Basic detail_Date',
-    # NOTE: Assuming an 'Aadhar' column exists in your Excel file
-    'aadhar': 'Details_Basic detail_Aadhar',
+    'year': 'Details_Basic Details_Year',
+    'batch': 'Details_Basic Details_Batch',
+    'hospitalName': 'Details_Basic Details_Hospital',
+    # ADDED THE DATE KEY HERE. SEE PART 2.
+    'date': 'Details_Basic Details_Date',
+    # Corrected 'Aadhar' to 'Aadhar Number'
+    'aadhar': 'Details_Basic Details_Aadhar Number', 
 }
-
 # --- Vitals ---
 VITALS_MAP = {
     'height': 'General Test_Vitals_Height',
@@ -5695,157 +5695,366 @@ VITALS_MAP = {
 
 # --- Test-specific Maps ---
 HAEMATOLOGY_MAP = {
-    'hemoglobin': 'HAEMATALOGY_Haemoglobin_RESULT',
-    'total_rbc': 'HAEMATALOGY_Red Blood Cell (RBC) Count_RESULT',
-    'total_wbc': 'HAEMATALOGY_WBC Count (TC)_RESULT',
-    'Haemotocrit': 'HAEMATALOGY_Haemotocrit (PCV)_RESULT',
-    'mcv': 'HAEMATALOGY_MCV_RESULT',
-    'mch': 'HAEMATALOGY_MCH_RESULT',
-    'mchc': 'HAEMATALOGY_MCHC_RESULT',
-    'platelet_count': 'HAEMATALOGY_Platelet Count_RESULT',
-    'rdw': 'HAEMATALOGY_RDW (CV)_RESULT',
-    'neutrophil': 'HAEMATALOGY_Neutrophil_RESULT',
-    'lymphocyte': 'HAEMATALOGY_Lymphocyte_RESULT',
-    'eosinophil': 'HAEMATALOGY_Eosinophil_RESULT',
-    'monocyte': 'HAEMATALOGY_Monocyte_RESULT',
-    'basophil': 'HAEMATALOGY_Basophils_RESULT',
-    'esr': 'HAEMATALOGY_Erythrocyte Sedimentation Rate (ESR)_RESULT',
-    'peripheral_blood_smear_rbc_morphology': 'HAEMATALOGY_Peripheral Blood Smear - RBC Morphology_RESULT',
-    'peripheral_blood_smear_parasites': 'HAEMATALOGY_Peripheral Blood Smear - Parasites_RESULT',
-    'peripheral_blood_smear_others': 'HAEMATALOGY_Peripheral Blood Smear - Others_RESULT',
-}
+    # === Complex Tests (with RESULT/UNIT/RANGE) ===
+    # We only need to define the _RESULT key. The function will find the rest automatically.
+    'hemoglobin':       'HAEMATALOGY_Haemoglobin_RESULT',
+    'total_rbc':        'HAEMATALOGY_Red Blood Cell (RBC) Count_RESULT',
+    'total_wbc':        'HAEMATALOGY_WBC Count (TC)_RESULT',
+    'Haemotocrit':      'HAEMATALOGY_Haemotocrit (PCV)_RESULT',
+    'mcv':              'HAEMATALOGY_MCV_RESULT',
+    'mch':              'HAEMATALOGY_MCH_RESULT',
+    'mchc':             'HAEMATALOGY_MCHC_RESULT',
+    'platelet_count':   'HAEMATALOGY_Platelet Count_RESULT',
+    'rdw':              'HAEMATALOGY_RDW (CV)_RESULT',
+    'neutrophil':       'HAEMATALOGY_Neutrophil_RESULT',
+    'lymphocyte':       'HAEMATALOGY_Lymphocyte_RESULT',
+    'eosinophil':       'HAEMATALOGY_Eosinophil_RESULT',
+    'monocyte':         'HAEMATALOGY_Monocyte_RESULT',
+    'basophil':         'HAEMATALOGY_Basophils_RESULT',
+    'esr':              'HAEMATALOGY_Erythrocyte Sedimentation Rate_RESULT',
 
+    # === Simple Tests (with just a COMMENTS column) ===
+    # Here, we map explicitly to the COMMENTS column from the Excel sheet.
+    'peripheral_blood_smear_rbc_morphology':          'HAEMATALOGY_Peripheral Blood Smear - RBC Morphology',
+    'peripheral_blood_smear_rbc_morphology_comments': 'HAEMATALOGY_Peripheral Blood Smear - RBC Morphology',
+
+    'peripheral_blood_smear_parasites':               'HAEMATALOGY_Peripheral Blood Smear - Parasites_COMMENTS',
+    'peripheral_blood_smear_parasites_comments':      'HAEMATALOGY_Peripheral Blood Smear - Parasites_COMMENTS',
+
+    'peripheral_blood_smear_others':                  'HAEMATALOGY_Peripheral Blood Smear - Others_COMMENTS',
+    'peripheral_blood_smear_others_comments':         'HAEMATALOGY_Peripheral Blood Smear - Others_COMMENTS',
+}
 SUGAR_TESTS_MAP = {
     'glucose_f': 'ROUTINE SUGAR TESTS_Glucose (F)_RESULT',
+    'glucose_f_unit':'ROUTINE SUGAR TESTS_Glucose (F)_UNIT',
+    
     'glucose_pp': 'ROUTINE SUGAR TESTS_Glucose (PP)_RESULT',
+    'glucose_pp_unit':'ROUTINE SUGAR TESTS_Glucose (PP)_Glucose (PP)_UNIT',
+  
     'random_blood_sugar': 'ROUTINE SUGAR TESTS_Random Blood sugar_RESULT',
+    'random_blood_sugar_unit':'ROUTINE SUGAR TESTS_Random Blood sugar_UNIT',
+  
     'estimated_average_glucose': 'ROUTINE SUGAR TESTS_Estimated Average Glucose_RESULT',
+    'estimated_average_glucose_unit':'ROUTINE SUGAR TESTS_Estimated Average Glucose_UNIT',
+    
     'hba1c': 'ROUTINE SUGAR TESTS_HbA1c_RESULT',
+    'hba1c_unit':'ROUTINE SUGAR TESTS_HbA1c_UNIT'
 }
 
 RENAL_FUNCTION_MAP = {
     'urea': 'RENAL FUNCTION TEST & ELECTROLYTES_Urea_RESULT',
+    'urea_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Urea_UNIT',
+    
     'bun': 'RENAL FUNCTION TEST & ELECTROLYTES_Blood urea nitrogen (BUN)_RESULT',
+    'bun_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Blood urea nitrogen (BUN)_UNIT',
+  
+  
     'serum_creatinine': 'RENAL FUNCTION TEST & ELECTROLYTES_Sr.Creatinine_RESULT',
+    'serum_creatinine_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Sr.Creatinine_UNIT',
+    
+    
     'eGFR': 'RENAL FUNCTION TEST & ELECTROLYTES_e GFR_RESULT',
+    'eGFR_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_e GFR_UNIT',
+   
+   
     'uric_acid': 'RENAL FUNCTION TEST & ELECTROLYTES_Uric acid_RESULT',
+    'uric_acid_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Uric acid_UNIT',
+   
     'sodium': 'RENAL FUNCTION TEST & ELECTROLYTES_Sodium_RESULT',
+    'sodium_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Sodium_UNIT',
+   
     'potassium': 'RENAL FUNCTION TEST & ELECTROLYTES_Potassium_RESULT',
+    'potassium_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Potassium_UNIT',
+   
     'calcium': 'RENAL FUNCTION TEST & ELECTROLYTES_Calcium_RESULT',
+    'calcium_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Calcium_UNIT',
+   
     'phosphorus': 'RENAL FUNCTION TEST & ELECTROLYTES_Phosphorus_RESULT',
+    'phosphorus_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Phosphorus_UNIT',
+   
     'chloride': 'RENAL FUNCTION TEST & ELECTROLYTES_Chloride_RESULT',
+    'chloride_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Chloride_UNIT',
+   
     'bicarbonate': 'RENAL FUNCTION TEST & ELECTROLYTES_Bicarbonate_RESULT',
+    'bicarbonate_unit': 'RENAL FUNCTION TEST & ELECTROLYTES_Bicarbonate_UNIT',
 }
 
 LIPID_PROFILE_MAP = {
-    'Total_Cholesterol': 'LIPID PROFILE_Total Cholesterol_RESULT',
-    'triglycerides': 'LIPID PROFILE_Triglycerides_RESULT',
-    'hdl_cholesterol': 'LIPID PROFILE_HDL - Cholesterol_RESULT',
-    'ldl_cholesterol': 'LIPID PROFILE_LDL- Cholesterol_RESULT',
-    'vldl_cholesterol': 'LIPID PROFILE_VLDL -Choleserol_RESULT',
-    'chol_hdl_ratio': 'LIPID PROFILE_CHOL:HDL ratio_RESULT',
-    'ldl_hdl_ratio': 'LIPID PROFILE_LDL.CHOL/HDL.CHOL Ratio_RESULT',
+    'Total_Cholesterol': 'LIPID PROFILE TESTS_Total Cholesterol_RESULT',
+    'Total_Cholesterol_unit': 'LIPID PROFILE TESTS_Total Cholesterol_UNIT',
+   
+    'triglycerides': 'LIPID PROFILE TESTS_Triglycerides_RESULT',
+    'triglycerides_unit': 'LIPID PROFILE TESTS_Triglycerides_UNIT',
+   
+    'hdl_cholesterol': 'LIPID PROFILE TESTS_HDL - Cholesterol_RESULT',
+    'hdl_cholesterol_unit': 'LIPID PROFILE TESTS_HDL - Cholesterol_UNIT',
+   
+    'ldl_cholesterol': 'LIPID PROFILE TESTS_LDL- Cholesterol_RESULT',
+    'ldl_cholesterol_unit': 'LIPID PROFILE TESTS_LDL- Cholesterol_UNIT',
+   
+    'vldl_cholesterol': 'LIPID PROFILE TESTS_VLDL -Choleserol_RESULT',
+    'vldl_cholesterol_unit': 'LIPID PROFILE TESTS_VLDL -Choleserol_UNIT',
+   
+    'chol_hdl_ratio': 'LIPID PROFILE TESTS_CHOL:HDL ratio_RESULT',
+    'chol_hdl_ratio_unit': 'LIPID PROFILE TESTS_CHOL:HDL ratio_UNIT',
+   
+    'ldl_chol_hdl_chol_ratio': 'LIPID PROFILE TESTS_LDL.CHOL/HDL.CHOL Ratio_RESULT',
+    'ldl_chol_hdl_chol_ratio_unit': 'LIPID PROFILE TESTS_LDL.CHOL/HDL.CHOL Ratio_UNIT',
 }
 
+# LIVER_FUNCTION_MAP = {
+#     'bilirubin_total': 'LIVER FUNCTION TEST_Bilirubin -Total_RESULT',
+#     'bilirubin_direct': 'LIVER FUNCTION TEST_Bilirubin -Direct_RESULT',
+#     'bilirubin_indirect': 'LIVER FUNCTION TEST_Bilirubin -indirect_RESULT',
+#     'sgot_ast': 'LIVER FUNCTION TEST_SGOT /AST_RESULT',
+#     'sgpt_alt': 'LIVER FUNCTION TEST_SGPT /ALT_RESULT',
+#     'alkaline_phosphatase': 'LIVER FUNCTION TEST_Alkaline phosphatase_RESULT',
+#     'total_protein': 'LIVER FUNCTION TEST_Total Protein_RESULT',
+#     'albumin_serum': 'LIVER FUNCTION TEST_Albumin (Serum )_RESULT',
+#     'globulin_serum': 'LIVER FUNCTION TEST_Globulin(Serum)_RESULT',
+#     'alb_glob_ratio': 'LIVER FUNCTION TEST_Alb/Glob Ratio_RESULT',
+#     'gamma_glutamyl_transferase': 'LIVER FUNCTION TEST_Gamma Glutamyl transferase_RESULT',
+# }
 LIVER_FUNCTION_MAP = {
     'bilirubin_total': 'LIVER FUNCTION TEST_Bilirubin -Total_RESULT',
+    'bilirubin_total_unit': 'LIVER FUNCTION TEST_Bilirubin -Total_UNIT',
     'bilirubin_direct': 'LIVER FUNCTION TEST_Bilirubin -Direct_RESULT',
+    'bilirubin_direct_unit': 'LIVER FUNCTION TEST_Bilirubin -Direct_UNIT',
     'bilirubin_indirect': 'LIVER FUNCTION TEST_Bilirubin -indirect_RESULT',
+    'bilirubin_indirect_unit': 'LIVER FUNCTION TEST_Bilirubin -indirect_UNIT',
     'sgot_ast': 'LIVER FUNCTION TEST_SGOT /AST_RESULT',
+    'sgot_ast_unit': 'LIVER FUNCTION TEST_SGOT /AST_UNIT',
     'sgpt_alt': 'LIVER FUNCTION TEST_SGPT /ALT_RESULT',
+    'sgpt_alt_unit': 'LIVER FUNCTION TEST_SGPT /ALT_UNIT',
     'alkaline_phosphatase': 'LIVER FUNCTION TEST_Alkaline phosphatase_RESULT',
+    'alkaline_phosphatase_unit': 'LIVER FUNCTION TEST_Alkaline phosphatase_UNIT',
     'total_protein': 'LIVER FUNCTION TEST_Total Protein_RESULT',
+    'total_protein_unit': 'LIVER FUNCTION TEST_Total Protein_UNIT',
     'albumin_serum': 'LIVER FUNCTION TEST_Albumin (Serum )_RESULT',
-    'globulin_serum': 'LIVER FUNCTION TEST_Globulin(Serum)_RESULT',
+    'albumin_serum_unit': 'LIVER FUNCTION TEST_Albumin (Serum )_UNIT',
+    'globulin_serum': 'LIVER FUNCTION TEST_ Globulin(Serum)_RESULT',
+    'globulin_serum_unit': 'LIVER FUNCTION TEST_ Globulin(Serum)_UNIT',
     'alb_glob_ratio': 'LIVER FUNCTION TEST_Alb/Glob Ratio_RESULT',
+    'alb_glob_ratio_unit': 'LIVER FUNCTION TEST_Alb/Glob Ratio_UNIT',
     'gamma_glutamyl_transferase': 'LIVER FUNCTION TEST_Gamma Glutamyl transferase_RESULT',
+    'gamma_glutamyl_transferase_unit': 'LIVER FUNCTION TEST_Gamma Glutamyl transferase_UNIT',
+    'C_reactive_protien': 'LIVER FUNCTION TEST_C Reactive protein_RESULT',  # ADDED
+    'C_reactive_protien_unit': 'LIVER FUNCTION TEST_C Reactive protein_UNIT',  # ADDED
 }
 
 THYROID_FUNCTION_MAP = {
     't3_triiodothyronine': 'THYROID FUNCTION TEST_T3- Triiodothyroine_RESULT',
+    't3_triiodothyronine_unit': 'THYROID FUNCTION TEST_T3- Triiodothyroine_UNIT',
+    
     't4_thyroxine': 'THYROID FUNCTION TEST_T4 - Thyroxine_RESULT',
+    't4_thyroxine_unit': 'THYROID FUNCTION TEST_T4 - Thyroxine_UNIT',
+    
     'tsh_thyroid_stimulating_hormone': 'THYROID FUNCTION TEST_TSH- Thyroid Stimulating Hormone_RESULT',
+    'tsh_thyroid_stimulating_hormone_unit': 'THYROID FUNCTION TEST_TSH- Thyroid Stimulating Hormone_UNIT',
 }
 
 AUTOIMMUNE_MAP = {
     'ANA': 'AUTOIMMUNE TEST_ANA (Antinuclear Antibody)_RESULT',
+    'ANA_unit': 'AUTOIMMUNE TEST_ANA (Antinuclear Antibody)_UNIT',
+    
     'Anti_ds_dna': 'AUTOIMMUNE TEST_Anti ds DNA_RESULT',
+    'Anti_ds_dna_unit': 'AUTOIMMUNE TEST_Anti ds DNA_UNIT',
+    
     'Anticardiolipin_Antibodies': 'AUTOIMMUNE TEST_Anticardiolipin Antibodies (IgG & IgM)_RESULT',
+    'Anticardiolipin_Antibodies_unit': 'AUTOIMMUNE TEST_Anticardiolipin Antibodies (IgG & IgM)_UNIT',
+    
     'Rheumatoid_factor': 'AUTOIMMUNE TEST_Rheumatoid factor_RESULT',
+    'Rheumatoid_factor_unit': 'AUTOIMMUNE TEST_Rheumatoid factor_UNIT',
 }
 
 COAGULATION_MAP = {
     'prothrombin_time': 'COAGULATION TEST_Prothrombin Time (PT)_RESULT',
+    'prothrombin_time_unit': 'COAGULATION TEST_Prothrombin Time (PT)_UNIT',
+    
     'pt_inr': 'COAGULATION TEST_PT INR_RESULT',
+    'pt_inr_unit': 'COAGULATION TEST_PT INR_UNIT',
+    
     'bleeding_time': 'COAGULATION TEST_Bleeding Time (BT)_RESULT',
+    'bleeding_time_unit': 'COAGULATION TEST_Bleeding Time (BT)_UNIT',
+    
     'clotting_time': 'COAGULATION TEST_Clotting Time (CT)_RESULT',
+    'clotting_time_unit': 'COAGULATION TEST_Clotting Time (CT)_UNIT',
 }
 
+# ENZYMES_CARDIAC_MAP = {
+#     'acid_phosphatase': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_RESULT',
+#     'adenosine_deaminase': 'ENZYMES & CARDIAC Profile_Adenosine Deaminase_RESULT',
+#     'amylase': 'ENZYMES & CARDIAC Profile_Amylase_RESULT',
+#     'lipase': 'ENZYMES & CARDIAC Profile_Lipase_RESULT',
+#     'troponin_t': 'ENZYMES & CARDIAC Profile_Troponin- T_RESULT',
+#     'troponin_i': 'ENZYMES & CARDIAC Profile_Troponin- I_RESULT',
+#     'cpk_total': 'ENZYMES & CARDIAC Profile_CPK - TOTAL_RESULT',
+#     'cpk_mb': 'ENZYMES & CARDIAC Profile_CPK - MB_RESULT',
+#     'ecg': 'ENZYMES & CARDIAC Profile_ECG_RESULT',
+#     'echo': 'ENZYMES & CARDIAC Profile_ECHO_RESULT',
+#     'tmt_normal': 'ENZYMES & CARDIAC Profile_TMT_RESULT',
+# }
 ENZYMES_CARDIAC_MAP = {
     'acid_phosphatase': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_RESULT',
+    'acid_phosphatase_unit': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_UNIT',
+   
     'adenosine_deaminase': 'ENZYMES & CARDIAC Profile_Adenosine Deaminase_RESULT',
+    'adenosine_deaminase_unit': 'ENZYMES & CARDIAC Profile_Adenosine Deaminase_UNIT',
+   
     'amylase': 'ENZYMES & CARDIAC Profile_Amylase_RESULT',
+    'amylase_unit': 'ENZYMES & CARDIAC Profile_Amylase_UNIT',
+   
     'lipase': 'ENZYMES & CARDIAC Profile_Lipase_RESULT',
+    'lipase_unit': 'ENZYMES & CARDIAC Profile_Lipase_UNIT',
+   
     'troponin_t': 'ENZYMES & CARDIAC Profile_Troponin- T_RESULT',
+    'troponin_t_unit': 'ENZYMES & CARDIAC Profile_Troponin- T_UNIT',
+   
     'troponin_i': 'ENZYMES & CARDIAC Profile_Troponin- I_RESULT',
+    'troponin_i_unit': 'ENZYMES & CARDIAC Profile_Troponin- I_UNIT',
+   
     'cpk_total': 'ENZYMES & CARDIAC Profile_CPK - TOTAL_RESULT',
+    'cpk_total_unit': 'ENZYMES & CARDIAC Profile_CPK - TOTAL_UNIT',
+   
     'cpk_mb': 'ENZYMES & CARDIAC Profile_CPK - MB_RESULT',
+    'cpk_mb_unit': 'ENZYMES & CARDIAC Profile_CPK - MB_UNIT',
+   
     'ecg': 'ENZYMES & CARDIAC Profile_ECG_RESULT',
+    'ecg_unit': 'ENZYMES & CARDIAC Profile_ECG_UNIT',
+    'ecg_comments': 'ENZYMES & CARDIAC Profile_ECG_COMMENTS(If Abnormal)',
+    
     'echo': 'ENZYMES & CARDIAC Profile_ECHO_RESULT',
+    'echo_unit': 'ENZYMES & CARDIAC Profile_ECHO_UNIT',
+    'echo_comments': 'ENZYMES & CARDIAC Profile_ECHO_COMMENTS(If Abnormal)',
+    
     'tmt_normal': 'ENZYMES & CARDIAC Profile_TMT_RESULT',
+    'tmt_normal_unit': 'ENZYMES & CARDIAC Profile_TMT_UNIT',
+    'tmt_normal_comments': 'ENZYMES & CARDIAC Profile_TMT_COMMENTS(If Abnormal)',
+    
+    'angiogram': 'ENZYMES & CARDIAC Profile_angiogram_RESULT',  # ADDED
+    'angiogram_unit': 'ENZYMES & CARDIAC Profile_angiogram_UNIT',  # ADDED
+    'angiogram_comments': 'ENZYMES & CARDIAC Profile_angiogram_COMMENTS(If Abnormal)',  # ADDED
 }
 
-URINE_ROUTINE_MAP = {
-    'colour': 'URINE ROUTINE_Colour_RESULT',
-    'appearance': 'URINE ROUTINE_Appearance_RESULT',
-    'reaction_ph': 'URINE ROUTINE_Reaction (pH)_RESULT',
-    'specific_gravity': 'URINE ROUTINE_Specific gravity_RESULT',
-    'protein_albumin': 'URINE ROUTINE_Protein/Albumin_RESULT',
-    'glucose_urine': 'URINE ROUTINE_Glucose (Urine)_RESULT',
-    'ketone_bodies': 'URINE ROUTINE_Ketone Bodies_RESULT',
-    'urobilinogen': 'URINE ROUTINE_Urobilinogen_RESULT',
-    'bile_salts': 'URINE ROUTINE_Bile Salts_RESULT',
-    'bile_pigments': 'URINE ROUTINE_Bile Pigments_RESULT',
-    'wbc_pus_cells': 'URINE ROUTINE_WBC / Pus cells_RESULT',
-    'red_blood_cells': 'URINE ROUTINE_Red Blood Cells_RESULT',
-    'epithelial_cells': 'URINE ROUTINE_Epithelial celss_RESULT',
-    'casts': 'URINE ROUTINE_Casts_RESULT',
-    'crystals': 'URINE ROUTINE_Crystals_RESULT',
-    'bacteria': 'URINE ROUTINE_Bacteria_RESULT',
-}
+URINE_ROUTINE_MAP={
+'colour': 'URINE ROUTINE_Colour_RESULT',
+'colour_unit': 'URINE ROUTINE_Colour_UNIT',
 
+'appearance': 'URINE ROUTINE_Appearance_RESULT',
+'appearance_unit': 'URINE ROUTINE_Appearance_UNIT',
+
+'reaction_ph': 'URINE ROUTINE_Reaction (pH)_RESULT',
+'reaction_ph_unit': 'URINE ROUTINE_Reaction (pH)_UNIT',
+
+'specific_gravity': 'URINE ROUTINE_Specific gravity_RESULT',
+'specific_gravity_unit': 'URINE ROUTINE_Specific gravity_UNIT',
+
+'protein_albumin': 'URINE ROUTINE_Protein/Albumin_RESULT',
+'protein_albumin_unit': 'URINE ROUTINE_Protein/Albumin_UNIT',
+
+'glucose_urine': 'URINE ROUTINE_Glucose (Urine)_RESULT',
+'glucose_urine_unit': 'URINE ROUTINE_Glucose (Urine)_UNIT',
+
+'ketone_bodies': 'URINE ROUTINE_Ketone Bodies_RESULT',
+'ketone_bodies_unit': 'URINE ROUTINE_Ketone Bodies_UNIT',
+
+'urobilinogen': 'URINE ROUTINE_Urobilinogen_RESULT',
+'urobilinogen_unit': 'URINE ROUTINE_Urobilinogen_UNIT',
+
+'bile_salts': 'URINE ROUTINE_Bile Salts_RESULT',
+'bile_salts_unit': 'URINE ROUTINE_Bile Salts_UNIT',
+
+'bile_pigments': 'URINE ROUTINE_Bile Pigments_RESULT',
+'bile_pigments_unit': 'URINE ROUTINE_Bile Pigments_UNIT',
+
+'wbc_pus_cells': 'URINE ROUTINE_WBC / Pus cells_RESULT',
+'wbc_pus_cells_unit': 'URINE ROUTINE_WBC / Pus cells_UNIT',
+
+'red_blood_cells': 'URINE ROUTINE_Red Blood Cells_RESULT',
+'red_blood_cells_unit': 'URINE ROUTINE_Red Blood Cells_UNIT',
+
+'epithelial_cells': 'URINE ROUTINE_Epithelial celss_RESULT', # CORRECTED (Typo 'celss' fixed to 'cells')
+'epithelial_cells_unit': 'URINE ROUTINE_Epithelial celss_UNIT',
+
+'casts': 'URINE ROUTINE_Casts_RESULT',
+'casts_unit': 'URINE ROUTINE_Casts_UNIT',
+
+'crystals': 'URINE ROUTINE_Crystals_RESULT',
+'crystals_unit': 'URINE ROUTINE_Crystals_UNIT',
+
+'bacteria': 'URINE ROUTINE_Bacteria_RESULT',
+'bacteria_unit': 'URINE ROUTINE_Bacteria_UNIT',
+}
 SEROLOGY_MAP = {
-    'screening_hiv': 'SEROLOGY_Screening For HIV I & II_RESULT', # Assuming this covers both
+    
+    
     'HBsAG': 'SEROLOGY_HBsAg_RESULT',
-    'HCV': 'SEROLOGY_HCV_RESULT',
-    'WIDAL': 'SEROLOGY_WIDAL_RESULT',
-    'VDRL': 'SEROLOGY_VDRL_RESULT',
-    'Dengue_NS1Ag': 'SEROLOGY_Dengue NS1Ag_RESULT',
-    'Dengue_IgG': 'SEROLOGY_Dengue IgG_RESULT',
-    'Dengue_IgM': 'SEROLOGY_Dengue IgM_RESULT',
-}
+    'HBsAG_comments': 'SEROLOGY_HBsAg_Comment',
 
+    'HCV': 'SEROLOGY_HCV_RESULT',
+    'HCV_comments': 'SEROLOGY_HCV_Comment',
+
+    'WIDAL': 'SEROLOGY_WIDAL_RESULT',
+    'WIDAL_comments': 'SEROLOGY_WIDAL_Comment',
+    
+    'VDRL': 'SEROLOGY_VDRL_RESULT',
+    'VDRL_comments': 'SEROLOGY_VDRL_Comment',
+
+    'Dengue_NS1Ag': 'SEROLOGY_Dengue NS1Ag_RESULT',
+    'Dengue_NS1Ag_comments': 'SEROLOGY_Dengue NS1Ag_Comment',
+
+    'Dengue_IgG': 'SEROLOGY_Dengue IgG_RESULT',
+    'Dengue_IgG_comments': 'SEROLOGY_Dengue IgG_Comment',
+
+    'Dengue_IgM': 'SEROLOGY_Dengue IgM_RESULT',
+    'Dengue_IgM_comments': 'SEROLOGY_Dengue IgM_Comment',
+
+}
 MOTION_TEST_MAP = {
     'colour_motion': 'MOTION_Colour_RESULT',
-    'appearance_motion': 'MOTION_Appearance_RESULT',
-    'occult_blood': 'MOTION_Occult Blood_RESULT',
-    'ova': 'MOTION_Ova_RESULT',
-    'cyst': 'MOTION_Cyst_RESULT',
-    'mucus': 'MOTION_Mucus_RESULT',
-    'pus_cells': 'MOTION_Pus Cells_RESULT',
-    'rbcs': 'MOTION_RBCs_RESULT',
-    'others': 'MOTION_Others_RESULT',
-}
+    'colour_motion_unit': 'MOTION_Colour_UNIT',
 
+    'appearance_motion': 'MOTION_Appearance_RESULT',
+    'appearance_motion_unit': 'MOTION_Appearance_UNIT',
+
+    'occult_blood': 'MOTION_Occult Blood_RESULT',
+    'occult_blood_unit': 'MOTION_Occult Blood_UNIT',
+
+    'ova': 'MOTION_Ova_RESULT',
+    'ova_unit': 'MOTION_Ova_UNIT',
+
+    'cyst': 'MOTION_Cyst_RESULT',
+    'cyst_unit': 'MOTION_Cyst_UNIT',
+
+    'mucus': 'MOTION_Mucus_RESULT',
+    'mucus_unit': 'MOTION_Mucus_UNIT',
+
+    'pus_cells': 'MOTION_Pus Cells_RESULT',
+    'pus_cells_unit': 'MOTION_Pus Cells_UNIT',
+
+    'rbcs': 'MOTION_RBCs_RESULT',
+    'rbcs_unit': 'MOTION_RBCs_UNIT',
+
+    'others': 'MOTION_Others_RESULT',
+    'others_unit': 'MOTION_Others_UNIT',   
+}
 CULTURE_SENSITIVITY_MAP = {
     'urine': 'ROUTINE CULTURE & SENSITIVITY TEST_Urine_RESULT',
-    'motion': 'ROUTINE CULTURE & SENSITIVITY TEST_Motion_RESULT',
-    'sputum': 'ROUTINE CULTURE & SENSITIVITY TEST_Sputum_RESULT',
-    'blood': 'ROUTINE CULTURE & SENSITIVITY TEST_Blood_RESULT',
-}
+    'urine_unit': 'ROUTINE CULTURE & SENSITIVITY TEST_Urine_UNIT',
 
+    'motion': 'ROUTINE CULTURE & SENSITIVITY TEST_Motion_RESULT',
+    'motion_unit': 'ROUTINE CULTURE & SENSITIVITY TEST_Motion_UNIT',
+
+    'sputum': 'ROUTINE CULTURE & SENSITIVITY TEST_Sputum_RESULT',
+    'sputum_unit': 'ROUTINE CULTURE & SENSITIVITY TEST_Sputum_UNIT',
+
+    'blood': 'ROUTINE CULTURE & SENSITIVITY TEST_Blood_RESULT',
+    'blood_unit': 'ROUTINE CULTURE & SENSITIVITY TEST_Blood_UNIT',
+}
 MENS_PACK_MAP = {
     'psa': "Men's Pack_PSA (Prostate specific Antigen)_RESULT",
+    'psa_unit': "Men's Pack_PSA (Prostate specific Antigen)_UNIT",
+    'psa_comments': "Men's Pack_PSA (Prostate specific Antigen)_Comments",
 }
 
 WOMENS_PACK_MAP = {
@@ -5854,54 +6063,166 @@ WOMENS_PACK_MAP = {
 }
 
 OCCUPATIONAL_PROFILE_MAP = {
-    'Audiometry': "Occupational Profile_Audiometry_RESULT",
-    'PFT': "Occupational Profile_PFT_RESULT",
+    # Model Field Name (must match your model exactly) : 'Generated Excel Header from Image'
+
+    'Audiometry':            'Occupational Profile_Audiometry_NORMAL / ABNORMAL',
+    'Audiometry_comments':   'Occupational Profile_Audiometry_COMMENTS',
+
+    'PFT':                   'Occupational Profile_PFT_NORMAL / ABNORMAL',
+    'PFT_comments':          'Occupational Profile_PFT_COMMENTS',
+}
+OTHERS_TEST_MAP = {
+    'Bone_Densitometry':  'Other Test_Bone Densitometry_RESULT',
+    'Bone_Densitometry_unit':  'Other Test_Bone Densitometry_UNIT',
+    'Vit_D':              'Other Test_Vit D_RESULT',
+    'Vit_D_unit':              'Other Test_Vit D_UNIT',
+    'Vit_B12':            'Other Test_Vit B12_RESULT',
+    'Vit_B12_unit':            'Other Test_Vit B12_UNIT',
+    'Serum_Ferritin':     'Other Test_serum.ferritin_RESULT',
+    'Serum_Ferritin_unit':     'Other Test_serum.ferritin_UNIT',
+
+    # === Simple Tests (with NORMAL/ABNORMAL and COMMENTS) ===
+    # These are mapped explicitly.
+    'Dental':             'Other Test_Dental_NORMAL / ABNORMAL',
+    'Dental_comments':    'Other Test_Dental_COMMENTS',
+
+    'Pathology':          'Other Test_Pathology_NORMAL / ABNORMAL',
+    'Pathology_comments': 'Other Test_Pathology_COMMENTS',
+
+    'Endoscopy':          'Other Test_Endoscopy_NORMAL / ABNORMAL',
+    'Endoscopy_comments': 'Other Test_Endoscopy_COMMENTS',
+
+    # Correcting the typo from Clonoscopy to Colonoscopy to match Excel
+    'Clonoscopy':         'Other Test_Colonoscopy_NORMAL / ABNORMAL',
+    'Clonoscopy_comments':'Other Test_Colonoscopy_COMMENTS',
+    
+    'Urethroscopy':       'Other Test_Urethroscopy_NORMAL / ABNORMAL',
+    'Urethroscopy_comments':'Other Test_Urethroscopy_COMMENTS',
+    
+    'Bronchoscopy':       'Other Test_Bronchoscopy_NORMAL / ABNORMAL',
+    'Bronchoscopy_comments':'Other Test_Bronchoscopy_COMMENTS',
+    
+    'Cystoscopy':         'Other Test_Cystoscopy_NORMAL / ABNORMAL',
+    'Cystoscopy_comments':'Other Test_Cystoscopy_COMMENTS',
+    
+    'Hysteroscopy':       'Other Test_Hysteroscopy_NORMAL / ABNORMAL',
+    'Hysteroscopy_comments':'Other Test_Hysteroscopy_COMMENTS',
+    
+    'Ureteroscopy':       'Other Test_Ureteroscopy_NORMAL / ABNORMAL',
+    'Ureteroscopy_comments':'Other Test_Ureteroscopy_COMMENTS',
 }
 
-OTHERS_TEST_MAP = {
-    'Bone_Densitometry': "Others TEST_Bone Densitometry_RESULT",
-    'Dental': "Others TEST_Dental_RESULT",
-    'Pathology': "Others TEST_Pathology_RESULT",
-}
+# In views.py, use this map after you fix the Excel file.
 
 OPHTHALMIC_MAP = {
-    'vision': 'OPHTHALMIC REPORT_Vision_RESULT',
-    'color_vision': 'OPHTHALMIC REPORT_Color Vision_RESULT',
-    'Cataract_glaucoma': 'OPHTHALMIC REPORT_Cataract/ glaucoma_RESULT',
-}
+    'vision':                     'OPHTHALMIC REPORT_Vision_NORMAL / ABNORMAL',
+    'vision_comments':            'OPHTHALMIC REPORT_Vision_COMMENTS',
 
+    'color_vision':               'OPHTHALMIC REPORT_Color Vision_NORMAL / ABNORMAL',
+    'color_vision_comments':      'OPHTHALMIC REPORT_Color Vision_COMMENTS',
+    
+    'Cataract_glaucoma':          'OPHTHALMIC REPORT_Cataract/ glaucoma_NORMAL / ABNORMAL',
+    'Cataract_glaucoma_comments': 'OPHTHALMIC REPORT_Cataract/ glaucoma_COMMENTS',
+}
 XRAY_MAP = {
-    'Chest': 'X-RAY_Chest_RESULT',
-    'Spine': 'X-RAY_Spine_RESULT',
-    'Abdomen': 'X-RAY_Abdomen_RESULT',
-    'KUB': 'X-RAY_KUB_RESULT',
-    'Pelvis': 'X-RAY_Pelvis_RESULT',
-}
+    # Model Field Name (must match your model exactly) : 'Generated Excel Header from Image'
 
+    'Chest':            'X-RAY_Chest_NORMAL / ABNORMAL',
+    'Chest_comments':   'X-RAY_Chest_COMMENTS (If Abnormal)',
+
+    'Spine':            'X-RAY_Spine_NORMAL / ABNORMAL',
+    'Spine_comments':   'X-RAY_Spine_COMMENTS (If Abnormal)',
+
+    'Abdomen':          'X-RAY_Abdomen_NORMAL / ABNORMAL',
+    'Abdomen_comments': 'X-RAY_Abdomen_COMMENTS (If Abnormal)',
+
+    'KUB':              'X-RAY_KUB_NORMAL / ABNORMAL',
+    'KUB_comments':     'X-RAY_KUB_COMMENTS (If Abnormal)',
+
+    'Pelvis':           'X-RAY_Pelvis_NORMAL / ABNORMAL',
+    'Pelvis_comments':  'X-RAY_Pelvis_COMMENTS (If Abnormal)',
+
+    'Skull':            'X-RAY_Skull_NORMAL / ABNORMAL',
+    'Skull_comments':   'X-RAY_Skull_COMMENTS (If Abnormal)',
+
+    'Upper_limb':       'X-RAY_Upper limb_NORMAL / ABNORMAL',
+    'Upper_limb_comments':'X-RAY_Upper limb_COMMENTS (If Abnormal)',
+
+    'Lower_limb':       'X-RAY_Lower limb_NORMAL / ABNORMAL',
+    'Lower_limb_comments':'X-RAY_Lower limb_COMMENTS (If Abnormal)',
+}
 USG_MAP = {
-    'usg_abdomen': 'USG_ABDOMEN_RESULT',
-    'usg_kub': 'USG_KUB_RESULT',
-    'usg_pelvis': 'USG_Pelvis_RESULT',
-    'usg_neck': 'USG_Neck_RESULT',
-}
+    # Model Field Name (must match your model exactly) : 'Generated Excel Header from Image'
 
+    'usg_abdomen':            'USG_ABDOMEN_NORMAL / ABNORMAL',
+    'usg_abdomen_comments':   'USG_ABDOMEN_COMMENTS (If Abnormal)',
+
+    'usg_pelvis':             'USG_Pelvis_NORMAL / ABNORMAL',
+    'usg_pelvis_comments':    'USG_Pelvis_COMMENTS (If Abnormal)',
+
+    'usg_neck':               'USG_Neck_NORMAL / ABNORMAL',
+    'usg_neck_comments':      'USG_Neck_COMMENTS (If Abnormal)',
+
+    'usg_kub':                'USG_KUB_NORMAL / ABNORMAL',
+    'usg_kub_comments':       'USG_KUB_COMMENTS (If Abnormal)',
+}
 CT_MAP = {
-    'CT_brain': 'CT_Brain_RESULT',
-    'CT_lungs': 'CT_Lungs_RESULT',
-    'CT_abdomen': 'CT_Abdomen_RESULT',
-    'CT_spine': 'CT_Spine_RESULT',
-    'CT_pelvis': 'CT_Pelvis_RESULT',
+    # Model Field Name (exact match) : 'Generated Excel Header from Image'
+
+    'CT_brain':           'CT_Brain_NORMAL / ABNORMAL',
+    'CT_brain_comments':  'CT_Brain_COMMENTS (If Abnormal)',
+
+    'CT_Head':            'CT_Head_NORMAL / ABNORMAL',
+    'CT_Head_comments':   'CT_Head_COMMENTS (If Abnormal)',
+
+    # ADD THESE TWO LINES FOR NECK
+    'CT_Neck':            'CT_Neck_NORMAL / ABNORMAL',
+    'CT_Neck_comments':   'CT_Neck_COMMENTS (If Abnormal)',
+
+    'CT_abdomen':         'CT_Abdomen with KUB_NORMAL / ABNORMAL',
+    'CT_abdomen_comments':'CT_Abdomen with KUB_COMMENTS (If Abnormal)',
+
+    'CT_pelvis':          'CT_Pelvis_NORMAL / ABNORMAL',
+    'CT_pelvis_comments': 'CT_Pelvis_COMMENTS (If Abnormal)',
+
+    'CT_lungs':           'CT_Lungs_NORMAL / ABNORMAL',
+    'CT_lungs_comments':  'CT_Lungs_COMMENTS (If Abnormal)',
+
+    'CT_Chest':           'CT_Chest_NORMAL / ABNORMAL',
+    'CT_Chest_comments':  'CT_Chest_COMMENTS (If Abnormal)',
+
+    'CT_spine':           'CT_Spine_NORMAL / ABNORMAL',
+    'CT_spine_comments':  'CT_Spine_COMMENTS (If Abnormal)',
+
+    'CT_Upper_limb':      'CT_Upper limb_NORMAL / ABNORMAL',
+    'CT_Upper_limb_comments':'CT_Upper limb_COMMENTS (If Abnormal)',
+
+    'CT_Lower_limb':      'CT_Lower limb_NORMAL / ABNORMAL',
+    'CT_Lower_limb_comments':'CT_Lower limb_COMMENTS (If Abnormal)',
 }
 
 MRI_MAP = {
-    'mri_brain': 'MRI_Brain_RESULT',
-    'mri_lungs': 'MRI_Lungs_RESULT',
-    'mri_abdomen': 'MRI_Abdomen_RESULT',
-    'mri_spine': 'MRI_Spine_RESULT',
-    'mri_pelvis': 'MRI_Pelvis_RESULT',
+    'mri_brain':           'MRI_Brain_NORMAL / ABNORMAL',
+    'mri_brain_comments':  'MRI_Brain_COMMENTS (If Abnormal)',
+    'mri_Head':            'MRI_Head_NORMAL / ABNORMAL',
+    'mri_Head_comments':   'MRI_Head_COMMENTS (If Abnormal)',
+    'mri_Neck':            'MRI_Neck_NORMAL / ABNORMAL',
+    'mri_Neck_comments':   'MRI_Neck_COMMENTS (If Abnormal)',
+    'mri_abdomen':         'MRI_Abdomen with KUB_NORMAL / ABNORMAL',
+    'mri_abdomen_comments':'MRI_Abdomen with KUB_COMMENTS (If Abnormal)',
+    'mri_pelvis':          'MRI_Pelvis_NORMAL / ABNORMAL',
+    'mri_pelvis_comments': 'MRI_Pelvis_COMMENTS (If Abnormal)',
+    'mri_lungs':           'MRI_Lungs_NORMAL / ABNORMAL',
+    'mri_lungs_comments':  'MRI_Lungs_COMMENTS (If Abnormal)',
+    'mri_Chest':           'MRI_Chest_NORMAL / ABNORMAL',
+    'mri_Chest_comments':  'MRI_Chest_COMMENTS (If Abnormal)',
+    'mri_spine':           'MRI_Spine_NORMAL / ABNORMAL',
+    'mri_spine_comments':  'MRI_Spine_COMMENTS (If Abnormal)',
+    'mri_Upper_limb':      'MRI_Upper limb_NORMAL / ABNORMAL',
+    'mri_Upper_limb_comments':'MRI_Upper limb_COMMENTS (If Abnormal)',
+    'mri_Lower_limb':      'MRI_Lower limb_NORMAL / ABNORMAL',
+    'mri_Lower_limb_comments':'MRI_Lower limb_COMMENTS (If Abnormal)',
 }
-
-
 # ==============================================================================
 # PYTHON-BASED EXCEL PARSER
 # ==============================================================================
@@ -5944,17 +6265,65 @@ def parse_hierarchical_excel_py(worksheet):
 # ==============================================================================
 # DATA PROCESSING HELPER FUNCTIONS
 # ==============================================================================
-def _populate_data(model_map, row_data):
-    """Generic helper to populate a dictionary from row_data based on a map."""
+def _populate_data(model,model_map, row_data):
+    """
+    This is the final, universal helper function.
+    It reads your `*_MAP` and intelligently handles both complex tests (with _RESULT)
+    and simple, explicit maps (like for X-Ray, CT, and parts of Haematology).
+    """
     instance_data = {}
+    
     for model_field, excel_key in model_map.items():
-        if excel_key in row_data and row_data[excel_key] is not None:
-            instance_data[model_field] = row_data[excel_key]
-    return instance_data
+        # --- Case 1: Handle complex tests that use the _RESULT suffix ---
+        if excel_key.endswith('_RESULT'):
+            result_excel_key = excel_key
+            
+            # 1a. Process the main RESULT field
+            if result_excel_key in row_data and row_data[result_excel_key] is not None:
+                instance_data[model_field] = str(row_data[result_excel_key])
 
+            # 1b. Dynamically find and process UNIT, RANGE, and COMMENTS
+            unit_excel_key = result_excel_key.replace('_RESULT', '_UNIT')
+            range_excel_key = result_excel_key.replace('_RESULT', '_REFERENCE RANGE')
+            comments_excel_key = result_excel_key.replace('_RESULT', '_Comments')
+
+            # Process UNIT
+            if unit_excel_key in row_data and row_data[unit_excel_key] is not None:
+                unit_model_field = f"{model_field}_unit"
+                # Check if the model actually has this field before trying to save to it
+                if hasattr(model, unit_model_field):
+                    instance_data[unit_model_field] = str(row_data[unit_excel_key])
+
+            # Process COMMENTS
+            if comments_excel_key in row_data and row_data[comments_excel_key] is not None:
+                comments_model_field = f"{model_field}_comments"
+                if hasattr(model, comments_model_field):
+                    instance_data[comments_model_field] = str(row_data[comments_excel_key])
+            
+            # Process and SPLIT REFERENCE RANGE
+            if range_excel_key in row_data and row_data[range_excel_key] is not None:
+                range_from_model_field = f"{model_field}_reference_range_from"
+                range_to_model_field = f"{model_field}_reference_range_to"
+                # Check if the model has BOTH range fields
+                if hasattr(model, range_from_model_field) and hasattr(model, range_to_model_field):
+                    range_value = str(row_data[range_excel_key])
+                    try:
+                        # This is the crucial part that splits the range
+                        from_val, to_val = map(str.strip, range_value.split('-'))
+                        instance_data[range_from_model_field] = from_val
+                        instance_data[range_to_model_field] = to_val
+                    except (ValueError, TypeError):
+                        print(f"Warning: Could not parse range '{range_value}' for {model_field}")
+
+        # --- Case 2: Handle simple/explicit maps (like for X-Ray and Peripheral Smear) ---
+        else:
+            if excel_key in row_data and row_data[excel_key] is not None:
+                instance_data[model_field] = str(row_data[excel_key])
+                
+    return instance_data
 def process_model_data(model, model_map, row_data, employee, entry_date):
     """A generic function to process any model."""
-    data = _populate_data(model_map, row_data)
+    data = _populate_data(model,model_map, row_data)
     if data:
         model.objects.update_or_create(
             emp_no=employee.emp_no,
@@ -5967,16 +6336,33 @@ def process_model_data(model, model_map, row_data, employee, entry_date):
 # ==============================================================================
 # MAIN UPLOAD VIEW (HANDLES FILE UPLOAD)
 # ==============================================================================
+from django.db import transaction
+from django.http import JsonResponse
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+
+import openpyxl
+
+# Make sure to import all your models and maps
+# from .models import employee_details, vitals, heamatalogy, ...etc
+# from .maps import BASIC_DETAILS_MAP, VITALS_MAP, HAEMATOLOGY_MAP, ...etc
+# from .utils import parse_hierarchical_excel_py # Assuming this is where the function is
+
+# ==============================================================================
+# MAIN UPLOAD VIEW (HANDLES FILE UPLOAD)
+# ==============================================================================
 @method_decorator(csrf_exempt, name='dispatch')
 class MedicalDataUploadView(View):
     def post(self, request, *args, **kwargs):
-        uploaded_file = request.FILES.get('medical_file')
+        uploaded_file = request.FILES.get('file')      
         if not uploaded_file:
             return JsonResponse({'status': 'error', 'message': 'No file was uploaded.'}, status=400)
 
         try:
             workbook = openpyxl.load_workbook(uploaded_file, data_only=True)
             worksheet = workbook.active
+            # Assuming parse_hierarchical_excel_py is defined elsewhere and works correctly
             json_data = parse_hierarchical_excel_py(worksheet)
 
             if not json_data:
@@ -5991,84 +6377,102 @@ class MedicalDataUploadView(View):
         try:
             with transaction.atomic():
                 for i, row in enumerate(json_data):
-                    s_no_key = 'Details_Basic detail_S.NO'
+                    s_no_key = 'Details_Basic detail_S.NO' # Assuming this is your S.NO column header after parsing
                     row_identifier = f"Row (S.No: {row.get(s_no_key, i + 4)})"
 
+                    # --- Step 1: Read all required details from the current Excel row ---
                     try:
-                        hospital = row.get(BASIC_DETAILS_MAP['hospitalName'])
-                        batch = row.get(BASIC_DETAILS_MAP['batch'])
-                        aadhar = str(row.get(BASIC_DETAILS_MAP['aadhar'])).strip() if row.get(BASIC_DETAILS_MAP['aadhar']) else None
-                        date_str = row.get(BASIC_DETAILS_MAP['date'])
-                        print(hospital, batch, aadhar, date_str)
-                        if not all([hospital, batch, aadhar, date_str]):
-                            errors.append(f"{row_identifier}: Missing required lookup fields (Hospital, Batch, Aadhar, or Date).")
+                        # Get Aadhar (primary identifier)
+                        aadhar_excel = str(row.get(BASIC_DETAILS_MAP['aadhar'])).strip() if row.get(BASIC_DETAILS_MAP['aadhar']) else None
+                        
+                        # <<< ADDED >>>: Get Year, Batch, and Hospital from the row
+                        year_excel = str(row.get(BASIC_DETAILS_MAP['year'])).strip() if row.get(BASIC_DETAILS_MAP['year']) else None
+                        batch_excel = str(row.get(BASIC_DETAILS_MAP['batch'])).strip() if row.get(BASIC_DETAILS_MAP['batch']) else None
+                        hospital_excel = str(row.get(BASIC_DETAILS_MAP['hospitalName'])).strip() if row.get(BASIC_DETAILS_MAP['hospitalName']) else None
+
+                        if not aadhar_excel:
+                            errors.append(f"{row_identifier}: Missing required field (Aadhar).")
                             error_count += 1
                             continue
-
-                        entry_date = datetime.strptime(str(date_str), '%Y-%m-%d').date()
                         
-                    except (ValueError, TypeError) as e:
-                        errors.append(f"{row_identifier}: Invalid date format or missing key. Details: {e}.")
+                    except Exception as e:
+                        errors.append(f"{row_identifier}: Error processing required basic detail fields. Details: {e}.")
                         error_count += 1
                         continue
 
+                    # --- Step 2: Find the LATEST Employee using ONLY Aadhar ---
                     try:
-                        
-                        employee = employee_details.objects.get(
-                            hospitalName=hospital,
-                            batch=batch,
-                            aadhar=aadhar,
-                            entry_date = date_str
-                        )
-                        print(employee)
-                    except employee_details.DoesNotExist:
-                        errors.append(f"{row_identifier}: Employee with Aadhar '{aadhar}', Hospital '{hospital}', and Batch '{batch}' not found.")
-                        error_count += 1
-                        continue
-                    except employee_details.MultipleObjectsReturned:
-                        errors.append(f"{row_identifier}: Found multiple employees for Aadhar '{aadhar}'. Data is ambiguous.")
-                        error_count += 1
-                        continue
+                        # Find the most recently created employee record with this Aadhar number
+                        employee = employee_details.objects.filter(
+                            aadhar=aadhar_excel
+                        ).order_by('id').last()
 
-                    # --- Call all processing functions ---
-                    process_model_data(vitals, VITALS_MAP, row, employee, entry_date)
-                    process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, entry_date)
-                    process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, entry_date)
-                    process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, entry_date)
-                    process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, entry_date)
-                    process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, entry_date)
-                    process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, entry_date)
-                    process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, entry_date)
-                    process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, entry_date)
-                    process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, entry_date)
-                    process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, entry_date)
-                    process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, entry_date)
-                    process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, entry_date)
-                    process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, entry_date)
-                    process_model_data(MensPack, MENS_PACK_MAP, row, employee, entry_date)
-                    process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, entry_date)
-                    process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, entry_date)
-                    process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, entry_date)
-                    process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, entry_date)
-                    process_model_data(XRay, XRAY_MAP, row, employee, entry_date)
-                    process_model_data(USGReport, USG_MAP, row, employee, entry_date)
-                    process_model_data(CTReport, CT_MAP, row, employee, entry_date)
-                    process_model_data(MRIReport, MRI_MAP, row, employee, entry_date)
+                        if employee is None:
+                            raise employee_details.DoesNotExist
+                        
+                        # <<< MODIFIED >>>: Update the found employee record with row-specific data
+                        # This ensures each employee's record is tagged with the correct batch info
+                        if year_excel:
+                            employee.year = year_excel
+                        if batch_excel:
+                            employee.batch = batch_excel
+                        if hospital_excel:
+                            employee.hospitalName = hospital_excel
+                        
+                        employee.save() # Persist these changes to the database
+                        
+                    except employee_details.DoesNotExist:
+                        error_msg = (f"{row_identifier}: Employee with Aadhar '{aadhar_excel}' not found in the database.")
+                        errors.append(error_msg)
+                        error_count += 1
+                        continue
+                    
+                    # --- Step 3: Use the date FROM THE FOUND EMPLOYEE to save medical data ---
+                    entry_date_to_save = employee.entry_date
+
+                    # --- Step 4: Call all processing functions with the retrieved date ---
+                    # This part remains unchanged
+                    process_model_data(vitals, VITALS_MAP, row, employee, entry_date_to_save)
+                    process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, entry_date_to_save)
+                    process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, entry_date_to_save)
+                    process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, entry_date_to_save)
+                    process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, entry_date_to_save)
+                    process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, entry_date_to_save)
+                    process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, entry_date_to_save)
+                    process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, entry_date_to_save)
+                    process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, entry_date_to_save)
+                    process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, entry_date_to_save)
+                    process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, entry_date_to_save)
+                    process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, entry_date_to_save)
+                    process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, entry_date_to_save)
+                    process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, entry_date_to_save)
+                    process_model_data(MensPack, MENS_PACK_MAP, row, employee, entry_date_to_save)
+                    process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, entry_date_to_save)
+                    process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, entry_date_to_save)
+                    process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, entry_date_to_save)
+                    process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, entry_date_to_save)
+                    process_model_data(XRay, XRAY_MAP, row, employee, entry_date_to_save)
+                    process_model_data(USGReport, USG_MAP, row, employee, entry_date_to_save)
+                    process_model_data(CTReport, CT_MAP, row, employee, entry_date_to_save)
+                    process_model_data(MRIReport, MRI_MAP, row, employee, entry_date_to_save)
                     
                     success_count += 1
                 
                 if error_count > 0:
+                    # If any row failed validation, this will trigger the transaction to roll back
                     raise Exception(f"Validation failed for {error_count} row(s). Rolling back all changes.")
 
         except Exception as e:
+            # This block catches errors, including the rollback exception from above
             return JsonResponse({
                 'status': 'error',
                 'message': str(e),
-                'success_count': 0,
+                'success_count': 0, # On failure, success count is reset to 0
                 'error_count': error_count or len(json_data),
                 'errors': errors,
             }, status=400)
 
+        # This block is only reached if the entire transaction succeeds without errors
         return JsonResponse({
             'status': 'success',
             'message': f'Successfully processed {success_count} records.',
@@ -6076,7 +6480,6 @@ class MedicalDataUploadView(View):
             'error_count': 0,
             'errors': []
         }, status=201)
-
 
 @csrf_exempt
 def fetchadmindata(request):
