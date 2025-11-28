@@ -119,6 +119,9 @@ const BasicDetails = ({ data }) => { // Assuming 'data' contains the fetched/sav
                         {data?.role === "Employee" && ( // Location only for Employee
                             <DetailCard label="Location" value={data?.location} />
                         )}
+                        {data?.role === "Contractor" && ( 
+                            <DetailCard label="Contractor Status" value={data?.contractor_status} />
+                        )}
                         <DetailCard label="Designation" value={data?.designation} />
                         <DetailCard label="Department" value={data?.department} />
                         <DetailCard label="Nature of Job" value={data?.job_nature} />

@@ -36,7 +36,7 @@ const Search = () => {
       setLoading(true);
       try {
         // Consider optimizing: Fetch only necessary fields if the list is very large
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         setEmployees(response.data.data);
         setFilteredEmployees(response.data.data); // Initially show all
         console.log(response.data.data);
@@ -167,7 +167,7 @@ const Search = () => {
                         <td className="px-6 py-4 align-middle">{emp.emp_no || '-'}</td>
                         {/* Display Aadhar Number */}
                         <td className="px-6 py-4 align-middle">{emp.aadhar || '-'}</td>
-                        <td className="px-6 py-4 align-middle">{emp.role || '-'}</td>
+                        <td className="px-6 py-4 align-middle">{emp.type || '-'}</td>
                         <td className="px-6 py-4 align-middle">
                           {emp.name || '-'}
                         </td>

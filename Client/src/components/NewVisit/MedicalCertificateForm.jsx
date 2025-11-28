@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { data } from 'react-router-dom';
 
 // --- Helper components (unchanged) ---
 const inputClasses = `w-full p-2 border rounded-md bg-white focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;
@@ -55,7 +56,7 @@ export const FormRadioGroup = ({ label, name, value, onChange, options, classNam
 // --- MODIFIED: The `initialData` prop is removed. ---
 const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
   const [showForm, setShowForm] = useState(false);
-  
+  console.log()
   // --- A constant for the default empty state, used for resetting the form. ---
   const defaultFormState = {
     employeeName: '', age: '', sex: '', date: '', empNo: '',
@@ -86,7 +87,7 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
       try {
         // We assume you have a GET endpoint like this.
         // Make sure the URL is correct.
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/medical-certificate/get/?aadhar=${aadhar}`);
+        const response = await axios.get(`http://localhost:8000/medical-certificate/get/?aadhar=${aadhar}`);
         
         if (response.data && Object.keys(response.data).length > 0) {
           console.log("Fetched existing certificate data:", response.data);
@@ -137,7 +138,7 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
 
     try {
       // Your backend view for submitting is at `/medical-certificate/submit/`
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/medical-certificate/submit/", payload);
+      const response = await axios.post("http://localhost:8000/medical-certificate/submit/", payload);
       setSubmissionStatus({ message: response.data.message || "Certificate saved successfully!", type: 'success' });
     } catch (error) {
       const errorMsg = error.response?.data?.error || error.message || 'An unknown server error occurred.';
@@ -171,26 +172,8 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
             ) : (
                 <>
                     <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-xl font-bold text-gray-800">
-                            Medical Certificate of Fitness to Return to Duty
-                        </h2>
                     </div>
                     <div className="space-y-8">
-                        {/* The form sections below are unchanged */}
-                        <section>
-                            <h3 className={sectionTitleClasses}>Employee Details</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                                <FormInput label="Employee Name" name="employeeName" value={formData.employeeName} onChange={handleChange} />
-                                <FormInput label="Age" name="age" type="number" value={formData.age} onChange={handleChange} />
-                                <FormInput label="Sex" name="sex" value={formData.sex} onChange={handleChange} />
-                                <FormInput label="Emp No" name="empNo" value={formData.empNo} onChange={handleChange} />
-                                <FormInput label="Department" name="department" value={formData.department} onChange={handleChange} />
-                                <FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} />
-                                <FormInput label="JSW Contract" name="jswContract" value={formData.jswContract} onChange={handleChange} />
-                                <FormInput label="Nature of Work" name="natureOfWork" value={formData.natureOfWork} onChange={handleChange} />
-                                <FormSelect label="Covid Vaccination" name="covidVaccination" value={formData.covidVaccination} onChange={handleChange} options={["Yes", "No", "Partial"]} placeholder="Select Status..." />
-                            </div>
-                        </section>
                         <section>
                             <h3 className={sectionTitleClasses}>Medical Leave Information</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
@@ -212,9 +195,8 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
                             </div>
                         </section>
                         <section>
-                            <h3 className={sectionTitleClasses}>Notes & Signatures</h3>
+                            <h3 className={sectionTitleClasses}>Signatures</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                                <FormTextarea label="Note / Remarks" name="note" value={formData.note} onChange={handleChange} className="md:col-span-2" />
                                 <FormInput label="OHC Staff Signature" name="ohcStaffSignature" value={formData.ohcStaffSignature} onChange={handleChange} />
                                 <FormInput label="Individual Signature" name="individualSignature" value={formData.individualSignature} onChange={handleChange} />
                             </div>

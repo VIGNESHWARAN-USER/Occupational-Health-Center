@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaFileUpload, FaInfoCircle } from 'react-icons/fa';
+import { MdDelete } from "react-icons/md";
 
 // --- Generic Info Modal Component (Keep as is from Primary) ---
 const InfoModal = ({ isOpen, onClose, title, children }) => {
@@ -46,6 +47,7 @@ const BpStandardsModal = ({ isOpen, onClose }) => {
 // --- Main Vitals Form Component (Integrated) ---
 const VitalsForm = ({ data, type, mrdNo }) => {
     const initialData = data?.[0] || {};
+    console.log(initialData)
     console.log("VitalsForm mrdNo prop:", mrdNo);
     console.log("VitalsForm type prop:", type);
 
@@ -61,12 +63,12 @@ const VitalsForm = ({ data, type, mrdNo }) => {
     });
 
     const [selectedFiles, setSelectedFiles] = useState({
-        ApplicationForm: null,
-        SelfDeclaration: null,
-        Consent: null,
-        FitnessCertificate: null,
-        LabReports: null,
-        Confession: null,
+        application_form: null,
+        self_declared: null,
+        consent: null,
+        fc: null,
+        report: null,
+        manual: null,
     });
 
     console.log("Current formData state:", formData);
@@ -89,11 +91,12 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
      useEffect(() => {
         const initialVitals = initialData?.vitals;
+        console.log(initialVitals)
         const defaultState = {
             systolic: '', diastolic: '', bp_status: '', pulse: '', pulse_status: '', pulse_comment: '', respiratory_rate: '', respiratory_rate_status: '', respiratory_rate_comment: '', temperature: '', temperature_status: '', temperature_comment: '', spO2: '', spO2_status: '', spO2_comment: '', weight: '', height: '', bmi: '', bmi_status: '', bmi_comment: '',
-            aadhar: initialData.aadhar || '',
+            aadhar: initialData.aadhar || '', application_form: null, self_declared: null, consent: null, fc: null, report: null, manual: null
         };
-        setSelectedFiles({ ApplicationForm: null, SelfDeclaration: null, Consent: null, FitnessCertificate: null, LabReports: null, Confession: null });
+        setSelectedFiles({ application_form: null, self_declared: null, consent: null, fc: null, report: null, manual: null });
 
         if (initialVitals && typeof initialVitals === 'object') {
             console.log("Loading vitals from props:", initialVitals);
@@ -104,6 +107,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                     loadedData[key] = initialVitals[key];
                 }
             }
+            console.log(loadedData)
             loadedData.aadhar = initialData.aadhar || loadedData.aadhar || '';
             loadedData.bp_status = calculateBpStatus(loadedData.systolic, loadedData.diastolic);
             loadedData.pulse_status = calculatePulseStatus(loadedData.pulse);
@@ -120,7 +124,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
             defaultState.bmi_status = calculateBmiStatus(initialBmi);
             setFormData(defaultState);
         }
-    }, [data, initialData.aadhar]); // Added initialData.aadhar to dependency if it can change independently
+    }, []); // Added initialData.aadhar to dependency if it can change independently
 
 
     useEffect(() => { const s = calculateBpStatus(formData.systolic, formData.diastolic); if (s !== formData.bp_status) { setFormData(p => ({ ...p, bp_status: s })); } }, [formData.systolic, formData.diastolic, formData.bp_status]);
@@ -135,6 +139,12 @@ const VitalsForm = ({ data, type, mrdNo }) => {
         setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
+    const handleDelete = async (key, mrdNo) => {
+        e.preventDefault();
+        const response = await axios.post("http://localhost:8000/deleteUploadedFile", {mrdNo, key});
+        console.log(response);
+    }
+
     const handleFileChange = (event, fileKey) => {
         const file = event.target.files[0];
         setSelectedFiles((prevFiles) => ({ ...prevFiles, [fileKey]: file || null }));
@@ -146,12 +156,12 @@ const VitalsForm = ({ data, type, mrdNo }) => {
     };
 
     const fileFieldMapping = {
-        ApplicationForm: 'application_form',
-        SelfDeclaration: 'self_declared',
-        Consent: 'consent',
-        FitnessCertificate: 'fc',
-        LabReports: 'report',
-        Confession: 'manual',
+        application_form: 'application_form',
+        self_declared: 'self_declared',
+        consent: 'consent',
+        fc: 'fc',
+        report: 'report',
+        manual: 'manual',
     };
 
     const handleSubmit = async (e) => {
@@ -193,14 +203,14 @@ const VitalsForm = ({ data, type, mrdNo }) => {
             console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File(${pair[1].name}, size: ${pair[1].size}, type: ${pair[1].type})` : pair[1]));
         }
 
-        const apiUrl = "https://occupational-health-center-1.onrender.com/addvitals";
+        const apiUrl = "http://localhost:8000/addvitals";
 
         try {
             const resp = await axios.post(apiUrl, submissionData);
 
             if (resp.status === 200 || resp.status === 201) {
                 alert(`Vitals and documents ${resp.status === 201 ? 'added' : 'updated'} successfully!`);
-                setSelectedFiles({ ApplicationForm: null, SelfDeclaration: null, Consent: null, FitnessCertificate: null, LabReports: null, Confession: null });
+                setSelectedFiles({ application_form: null, self_declared: null, consent: null, fc: null, report: null, manual: null });
                 // Optionally reset text inputs or refetch data here
             } else {
                 console.warn("Vitals/File submission response status not OK:", resp.status, resp.data);
@@ -246,12 +256,12 @@ const VitalsForm = ({ data, type, mrdNo }) => {
     };
 
     const fileInputsConfig = [
-        { key: 'ApplicationForm', label: 'Application Form' },
-        { key: 'SelfDeclaration', label: 'Self Declaration' },
-        { key: 'Consent', label: 'Consent' },
-        { key: 'LabReports', label: 'Lab Reports' },
-        { key: 'FitnessCertificate', label: 'Fitness Certificate' },
-        { key: 'Confession', label: 'Confession' },
+        { key: 'application_form', label: 'Application Form' },
+        { key: 'self_declared', label: 'Self Declaration' },
+        { key: 'consent', label: 'Consent' },
+        { key: 'report', label: 'Lab Reports' },
+        { key: 'fc', label: 'Fitness Certificate' },
+        { key: 'manual', label: 'Confession' },
     ];
 
     return (
@@ -338,7 +348,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                                 .filter(config => {
                                     if (type === "Visitor") {
                                         const backendKey = fileFieldMapping[config.key];
-                                        // Show if backendKey is 'report' (LabReports) or 'manual' (Confession)
+                                        // Show if backendKey is 'report' (report) or 'manual' (manual)
                                         return ['report', 'manual'].includes(backendKey);
                                     }
                                     return true; // Otherwise, show all file inputs
@@ -347,7 +357,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                                 <div key={config.key}>
                                     <label className="block text-sm font-medium text-gray-600 mb-1">{config.label}</label>
                                     <motion.div
-                                        className="relative border border-gray-300 rounded-md p-2 flex items-center justify-between text-sm cursor-pointer bg-white hover:bg-gray-50"
+                                        className="relative border border-gray-300 rounded-md mb-2 p-2 flex items-center justify-between text-sm cursor-pointer bg-white hover:bg-gray-50"
                                         onClick={() => handleBrowseClick(config.key)}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
@@ -356,14 +366,36 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                                             {selectedFiles[config.key] ? selectedFiles[config.key].name : 'Choose file...'}
                                         </span>
                                         <FaFileUpload className="text-blue-500 ml-2 flex-shrink-0" />
-                                        <input
-                                            type="file"
-                                            id={config.key}
-                                            style={{ display: "none" }}
-                                            onChange={(e) => handleFileChange(e, config.key)}
-                                            accept=".pdf,.jpg,.jpeg,.png,image/*"
-                                        />
+                                        {/* Hidden file input */}
+                                                    <input
+                                                    type="file"
+                                                    id={config.key}
+                                                    style={{ display: "none" }}
+                                                    onChange={(e) => handleFileChange(e, config.key)}
+                                                    accept=".pdf,.jpg,.jpeg,.png,image/*"
+                                                    />
+
+                                                    
+
                                     </motion.div>
+                                    {/* Show link if file exists */}
+                                    
+                                {localStorage.getItem("accessLevel") === "doctor" && (formData[config.key] ? (
+                                    <>
+                                <a
+                                    href={`http://localhost:8000/media/${formData[config.key]}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 underline"
+                                >
+                                    View Nurse Uploaded File
+                                </a>
+                                <button className=" ms-24 text-xl text-red-700" onclick={()=>handleDelete(formData[config.key], mrdNo)}><MdDelete/></button>
+                                </>
+                                ) : (
+                                <span>No file uploaded by Nurse</span>
+
+                                ))}
                                 </div>
                             ))}
                         </div>

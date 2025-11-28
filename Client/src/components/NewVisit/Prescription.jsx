@@ -6,11 +6,11 @@ import axios from "axios";
 import { debounce } from "lodash";
 import jsPDF from "jspdf";
 
-const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
+const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }) => {
   console.log("Condition prop:", condition);
   console.log("Register prop:", register);
 
-  let mrdNo = data?.[0]?.mrdNo || "";
+  
   let aadhar = data?.[0]?.aadhar || "";
   const emp_no = data?.[0]?.emp_no;
   const existingPrescription = data?.[0]; // Assuming 'data' prop might contain an existing prescription
@@ -167,7 +167,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         console.warn("Attempted to add row for unknown type:", type);
     }
   };
-  
   // NEW: Fetch suggestions for Chemical Name
   const fetchChemicalSuggestions = useCallback(
     debounce(async (partialName, medicineForm, type, index) => {
@@ -180,7 +179,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         return;
       }
       try {
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-names/?name=${encodeURIComponent(partialName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
+        const response = await axios.get(`http://localhost:8000/get-chemical-names/?name=${encodeURIComponent(partialName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
         setChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
         setShowChemicalSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
       } catch (error) {
@@ -198,7 +197,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         return;
       }
       try {
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
+        const response = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`);
         setBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
         setShowBrandSuggestions(prev => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
       } catch (error) {
@@ -215,7 +214,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       if (!requiresDoseFetch || !brandName || !chemicalName || !medicineForm) { /* ... hide ... */ return; }
       try {
         const response = await axios.get(
-          `https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${encodeURIComponent(brandName)}&chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
+          `http://localhost:8000/get-dose-volume/?brand_name=${encodeURIComponent(brandName)}&chemical_name=${encodeURIComponent(chemicalName)}&medicine_form=${encodeURIComponent(medicineForm)}`
         );
         const suggestions = response.data.suggestions;
         setDoseSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: suggestions } }));
@@ -231,7 +230,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         if (!chemicalName || !brandName || !expiryDate) { /* ... hide ... */ return; }
         try {
             const response = await axios.get(
-                `https://occupational-health-center-1.onrender.com/get-quantity-suggestions/?chemical_name=${encodeURIComponent(chemicalName)}&brand_name=${encodeURIComponent(brandName)}&expiry_date=${encodeURIComponent(expiryDate)}`
+                `http://localhost:8000/get-quantity-suggestions/?chemical_name=${encodeURIComponent(chemicalName)}&brand_name=${encodeURIComponent(brandName)}&expiry_date=${encodeURIComponent(expiryDate)}`
             );
             setQtySuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
             setShowQtySuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions.length > 0 } }));
@@ -244,7 +243,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       if (!chemicalName || !brandName || !doseVolume) { /* ... hide ... */ return; }
       try {
         const response = await axios.get(
-          `https://occupational-health-center-1.onrender.com/get-expiry-dates/?chemical_name=${encodeURIComponent(chemicalName)}&brand_name=${encodeURIComponent(brandName)}&dose_volume=${encodeURIComponent(doseVolume)}`
+          `http://localhost:8000/get-expiry-dates/?chemical_name=${encodeURIComponent(chemicalName)}&brand_name=${encodeURIComponent(brandName)}&dose_volume=${encodeURIComponent(doseVolume)}`
         );
         setExpiryDateSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions } }));
         setShowExpiryDateSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: response.data.suggestions.length > 0 } }));
@@ -257,7 +256,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       if (searchTerm.length < 2) { setDoctorSuggestions([]); setShowDoctorSuggestions(false); return; }
       try {
         const response = await axios.get(
-          `https://occupational-health-center-1.onrender.com/get-doctor-names/?name=${encodeURIComponent(searchTerm)}`
+          `http://localhost:8000/get-doctor-names/?name=${encodeURIComponent(searchTerm)}`
         );
         setDoctorSuggestions(response.data.suggestions || []);
         setShowDoctorSuggestions(response.data.suggestions && response.data.suggestions.length > 0);
@@ -280,7 +279,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
 
   const handleInputChange = (e, type, index, field) => {
     if (type === "nurseNotes") {
-      if (!isNurse && !isNurseWithOverride) return;
       setNurseNotes(e?.target?.value ?? ""); return;
     }
     if (type === "consultedDoctor") {
@@ -671,24 +669,25 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
     return items.filter(item => (item?.chemicalName?.trim() !== "") || (item?.qty != null && String(item.qty).trim() !== "") || (item?.expiryDate?.trim() !== "") || (item?.issuedIn?.trim() !== "") || (item?.issuedOut?.trim() !== "") || (item?.prescriptionOut?.trim() !== ""));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (mrdNumber) => {
     try {
+      console.log('mrd',mrdNumber)
       if (mrdNo === "") {
       alert("Please submit the entries first to get MRD Number");
       return;
     }
-      if (!mrdNo) { setError("MRD number is required"); alert("Please ensure MRD number is available."); return; }
+      if (mrdNumber === "" || mrdNumber === undefined) { setError("MRD number is required"); alert("Please ensure MRD number is available."); return; }
 
       const allMedicineTypes = { tablets, injections, syrups, drops, creams, respules, lotions, fluids, powder, suture_procedure: sutureProcedureItems, dressing: dressingItems, others };
       const prescriptionData = {
-        emp_no, name: data?.[0]?.name || "", aadhar, mrdNo,
+        emp_no, name: data?.[0]?.name || "", aadhar, mrdNumber,
         nurse_notes: nurseNotes,
         consulted_doctor: (isDoctor || isNurseWithOverride) ? consultedDoctor : (existingPrescription?.consulted_doctor || ""), // Include consulted_doctor
         submitted_by: localStorage.getItem("username") || "Unknown",
-        issued_by: localStorage.getItem("username") || "Unknown", // Assuming same user for now
-        issued_status: condition ? 1 : 0, // Set issued_status based on condition
+        issued_by: localStorage.getItem("username") || "Unknown", 
+        issued_status: condition ? 1 : 0, 
       };
-
+      console.log(prescriptionData);
       const formatTimingForSubmit = (timingArray) => Array.isArray(timingArray) ? timingArray.map(t => t.value) : []; // Get just the value
 
       for (const key in allMedicineTypes) {
@@ -696,7 +695,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
         prescriptionData[key] = filterEmptyRows(items).map(item => ({ ...item, timing: formatTimingForSubmit(item.timing) }));
       }
 
-      const response = await axios.post(`https://occupational-health-center-1.onrender.com/prescriptions/add/`, prescriptionData);
+      const response = await axios.post(`http://localhost:8000/prescriptions/add/`, prescriptionData);
       if (response.status !== 201 && response.status !== 200) throw new Error(response.data.message || 'Failed to save prescription');
 
       const allItemsForStock = Object.values(allMedicineTypes).flat().map(item => ({ ...item, type: Object.keys(medicineForms).find(k => medicineForms[k] === medicineForms[Object.keys(allMedicineTypes).find(typeKey => allMedicineTypes[typeKey] === Object.values(allMedicineTypes).find(arr => arr.includes(item)) )]) || 'Other' }));
@@ -875,7 +874,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
   };
 
   const sectionOrder = ["tablets", "injections", "syrups", "drops", "creams", "respules", "lotions", "fluids", "powder", "sutureProcedureItems", "dressingItems", "others"];
-
   if (!aadhar && !existingPrescription) {
     return <div className="p-6 text-center text-gray-500">Please select an employee to view or create a prescription.</div>;
   }
@@ -944,17 +942,17 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register }) => {
       })}
 
       <section className="border border-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden bg-white">
-        <h2 className="text-lg font-semibold p-3 bg-yellow-50 border-b border-gray-200 text-yellow-700 flex justify-between items-center cursor-pointer hover:bg-yellow-100 transition-colors duration-150">Nurse Notes</h2>
+        <h2 className="text-lg font-semibold p-3 bg-yellow-50 border-b border-gray-200 text-yellow-700 flex justify-between items-center cursor-pointer hover:bg-yellow-100 transition-colors duration-150">Pharma Notes</h2>
         <div className="p-4">
-          <textarea placeholder="Enter nurse notes here..." value={nurseNotes} onChange={(e) => handleInputChange(e, "nurseNotes")}
+          <textarea placeholder="Enter Pharma notes here..." value={nurseNotes} onChange={(e) => handleInputChange(e, "nurseNotes")}
             className="px-3 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-vertical min-h-[80px]"
-            disabled={!isNurse && !isNurseWithOverride} />
+            disabled={accessLevel != "pharmacy"} />
         </div>
       </section>
 
       <div className="flex justify-end space-x-4 mt-8">
         {(!isPharmacy || isNurseWithOverride) && <ActionButton onClick={handleGeneratePrescription} color="green">Generate Prescription</ActionButton>}
-        {(isDoctor || isNurseWithOverride || isPharmacy) && <ActionButton onClick={handleSubmit} color="blue">{condition ? "Update Prescription" : "Submit Prescription"}</ActionButton>}
+        {(isDoctor || isNurseWithOverride || isPharmacy) && <ActionButton onClick={()=>handleSubmit(data?.[0]?.mrdNo)} color="blue">{condition ? "Update Prescription" : "Submit Prescription"}</ActionButton>}
       </div>
       {error && <p className="text-red-500 text-center mt-4">{error}</p>}
     </div>

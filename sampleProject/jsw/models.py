@@ -15,7 +15,7 @@ class BaseModel(models.Model):
 # No emp_no, so no aadhar added here
 class user(BaseModel):
     name = models.TextField(max_length=50)
-    password = models.TextField(max_length=50)
+    password = models.TextField(max_length=50, default="default123")
     accessLevel = models.TextField(max_length=50)
 
     def __str__(self):
@@ -72,9 +72,11 @@ class employee_details(BaseModel):
     
     # --- Contact Details ---
     phone_Personal = models.CharField(max_length=225, blank=True)
+    contractor_status = models.CharField(max_length=255, blank=True)
     mail_id_Personal = models.EmailField(max_length=225, blank=True)
     phone_Office = models.CharField(max_length=225, blank=True)
     mail_id_Office = models.EmailField(max_length=225, blank=True)
+    
     
     # --- Emergency Contact Details ---
     emergency_contact_person = models.CharField(max_length=225, blank=True)
@@ -1533,7 +1535,10 @@ class Member(BaseModel):
     hospital_name = models.CharField(max_length=255, null=True, blank=True)
     aadhar = models.CharField(max_length=20, blank=True, null=True) # Already present, different length
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    password = models.CharField(max_length=255, null=True, blank=True)
+    password = models.CharField(max_length=255, db_column='password', null=True, blank=True)
+
+    
+    
     type = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):

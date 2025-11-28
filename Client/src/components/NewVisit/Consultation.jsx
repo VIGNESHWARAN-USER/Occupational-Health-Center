@@ -51,7 +51,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
     };
     console.log("Submitting Alcohol Abuse Form Payload:", payload);
     try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/add_alcohol_form_data/", payload);
+        const response = await axios.post("http://localhost:8000/add_alcohol_form_data/", payload);
         if (response.status === 200 || response.status === 201) {
             alert(response.data.message || "Alcohol Abuse details submitted successfully!");
         } else {
@@ -215,7 +215,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
     if (emp_no && register === "Alcohol Abuse") {
         const fetchAlcoholData = async () => {
             try {
-                const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_alcohol_form_data/?aadhar=${emp_no}`);
+                const response = await axios.get(`http://localhost:8000/get_alcohol_form_data/?aadhar=${emp_no}`);
                 setInitialAlcoholData(response.data && Object.keys(response.data).length > 0 ? response.data : null);
             } catch (error) {
                 console.error("Could not fetch alcohol form data:", error);
@@ -234,7 +234,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
      useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+                const response = await axios.post("http://localhost:8000/adminData");
                 const fetchedEmployees = response.data.data;
                 console.log(fetchedEmployees)
     
@@ -319,7 +319,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
     };
     console.log("Submitting MAIN Consultation Payload:", consultationPayload);
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationPayload);
+      const response = await axios.post("http://localhost:8000/consultations/add/", consultationPayload);
       if (response.status === 200 || response.status === 201) {
         alert("Consultation data submitted successfully!");
         if (followUpDate) {
@@ -332,7 +332,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
                  consultedDoctor: "", employer: patientData?.employer || '',
              };
              try {
-                 const apptResponse = await axios.post("https://occupational-health-center-1.onrender.com/bookAppointment/", appointmentPayload);
+                 const apptResponse = await axios.post("http://localhost:8000/bookAppointment/", appointmentPayload);
                  if (apptResponse.status === 200 || apptResponse.status === 201) {
                     alert(`Follow-up appointment booked successfully! ${apptResponse.data.message || ''}`);
                  } else {
@@ -654,7 +654,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
             ))}
           </div>
         </div>
-        <div>
+{ accessLevel  === "nurse" && (     <div>
             <div>
                 <label htmlFor="">Book this footfall to:</label>
                 <select className="px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="" id="" value={bookedDoctor} onChange={(e)=>{setbookedDoctor(e.target.value)}}>
@@ -663,7 +663,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
                     ))}
                 </select>
             </div>
-        </div>
+        </div>)}
 
         {/* Submit Button for MAIN Consultation Form */}
         <div className="mt-8 flex justify-end">

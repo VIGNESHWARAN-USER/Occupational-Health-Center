@@ -22,7 +22,7 @@ const NewVisit = () => {
 
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
-  const [type, setType] = useState("Employee");
+  const [type, setType] = useState("");
   const [visit, setVisit] = useState("Preventive");
   const [register, setRegister] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -100,7 +100,7 @@ const NewVisit = () => {
           return;
         }
 
-        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+        const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.aadhar}`, { 
           profileImage: imageData, 
           formData 
         });
@@ -108,7 +108,7 @@ const NewVisit = () => {
         if (updateResponse.status === 200) {
           alert("Profile image updated successfully!");
           // Refresh employee list or update local state
-          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          const fetchResponse = await axios.post("http://localhost:8000/userData");
           setEmployees(fetchResponse.data.data);
           setFilteredEmployees(fetchResponse.data.data);
           setdata([{ ...formData, profileImage: imageData }]);
@@ -172,7 +172,7 @@ const NewVisit = () => {
         "Special Work Fitness": "Periodic Work Fitness",
         "Special Work Fitness (Renewal)": "Periodic Work Fitness",
         "Fitness After Medical Leave": "Fitness After Medical Leave",
-        "Fitness Personal Long Leave": "Fitness Personal Long Leave",
+        "Fitness After Personal Long Leave": "Fitness After Personal Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
         "Follow Up Visits":"Follow Up Visits",
@@ -220,8 +220,8 @@ const NewVisit = () => {
       [name]: value
     }));
   };
-  const [mrdNo, setMRDNo] = useState("");
-  console.log(data)
+  const [mrdNo, setMRDNo] = useState(mrdNumber);
+  
   const handleSubmitEntries = async (e) => {
     e.preventDefault();
     setLoading1(true);
@@ -406,7 +406,7 @@ const NewVisit = () => {
     }
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", submissionData, {
+      const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -436,13 +436,14 @@ const NewVisit = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if(mrdNo === ""){
+      console.log(mrdNo);
+      if(mrdNo === "" || mrdNo === undefined){
         alert("Please submit the entries first to get MRD Number"); 
         return;
       }
-      const updatedformData = { ...formData, role: type, mrdNo: mrdNo }
+      const updatedformData = { ...formData, type: type, mrdNo: mrdNo }
       console.log(updatedformData)
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -482,10 +483,10 @@ const NewVisit = () => {
           setdata([latestEmployee]);
           setsingleData([latestEmployee]);
           setFormData(latestEmployee);
-          const selectedType = latestEmployee.role;
+          const selectedType = latestEmployee.type;
           setType(selectedType);
-          setRegister(""); // Reset register
-          setPurpose("");   // Reset purpose
+          if(!reference) setRegister(""); 
+          if(!reference) setPurpose("");   
           setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" }));
           localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee));
           setProfileImage(latestEmployee.profileImage || null); // Set profile image if it exists
@@ -516,6 +517,7 @@ const NewVisit = () => {
               dashboard: {},
               department: "",
               designation: "",
+              contractor_status: "",
               dob: "",
               other_site_id: "",
               country_id: "",
@@ -561,7 +563,7 @@ const NewVisit = () => {
               register: "",
               OtherRegister: "",
               renalfunctiontests_and_electrolytes: {},
-              role: type,
+              type: type,
               routinesugartests: {},
               serology: {},
               sex: "",
@@ -621,7 +623,7 @@ const NewVisit = () => {
       try {
         setLoading(true);
         localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+        const response = await axios.post("http://localhost:8000/userData");
         console.log("API Response Data:", response.data.data);
         setEmployees(response.data.data);
         console.log(response.data.data);
@@ -795,14 +797,14 @@ const NewVisit = () => {
         }
         
         try {
-            const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+            const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.aadhar}`, { 
                 profileImage: imageData, 
                 formData 
             });
 
             if (updateResponse.status === 200) {
                 alert("Profile image captured and updated successfully!");
-                const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+                const fetchResponse = await axios.post("http://localhost:8000/userData");
                 setEmployees(fetchResponse.data.data);
                 setFilteredEmployees(fetchResponse.data.data);
                 setdata([{ ...formData, profileImage: imageData }]);
@@ -1132,22 +1134,22 @@ const NewVisit = () => {
                         onChange={handleChange}  id="" className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                          <option value="">Select</option>
-                          <option value="ssc">SSC</option>
-                          <option value="jbn">JBN</option>
-                          <option value="tmc">TMC</option>
-                          <option value="jbc">JBC</option>
-                          <option value="ggbs">GGBS</option>
-                          <option value="jbi">JBI</option>
-                          <option value="jba">JBA</option>
-                          <option value="support_staff">Support Staff</option>
-                          <option value="mbc">MBC</option>
-                          <option value="propreitor">Propreitor</option>
-                          <option value="csr_foundation">CSR Foundation</option>
-                          <option value="transporter">Transporter</option>
-                          <option value="jsw_society">JSW Society</option>
-                          <option value="shutdown">Shutdown</option>
-                          <option value="iti_apprentice">ITI Apprentice</option>
-                          <option value="supplier">Supplier</option>
+                          <option value="SSC">SSC</option>
+                          <option value="JBN">JBN</option>
+                          <option value="TMC">TMC</option>
+                          <option value="JBC">JBC</option>
+                          <option value="GGBS">GGBS</option>
+                          <option value="JBI">JBI</option>
+                          <option value="JBA">JBA</option>
+                          <option value="Support Staff">Support Staff</option>
+                          <option value="MBC">MBC</option>
+                          <option value="Propreitor">Propreitor</option>
+                          <option value="CSR Foundation">CSR Foundation</option>
+                          <option value="Transporter">Transporter</option>
+                          <option value="JSW Society">JSW Society</option>
+                          <option value="Shutdown">Shutdown</option>
+                          <option value="ITI Apprentice">ITI Apprentice</option>
+                          <option value="Supplier">Supplier</option>
                         </select>
                     </div>)
                   }

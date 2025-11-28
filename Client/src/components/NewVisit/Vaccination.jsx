@@ -36,7 +36,7 @@ const Vaccination = ({ data, mrdNo }) => {
       setIsHistoryLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/getvaccinations/${aadhar}`);
+        const response = await axios.get(`http://localhost:8000/getvaccinations/${aadhar}`);
         const visitRecords = response.data?.vaccinations; // This is the array of visit records
 
         if (Array.isArray(visitRecords) && visitRecords.length > 0) {
@@ -186,7 +186,7 @@ const Vaccination = ({ data, mrdNo }) => {
 
     setIsLoading(true);
     try {
-      await axios.post("https://occupational-health-center-1.onrender.com/vaccination/", {
+      await axios.post("http://localhost:8000/vaccination/", {
         aadhar: aadhar,
         mrdNo: mrdNo,
         emp_no: emp_no,

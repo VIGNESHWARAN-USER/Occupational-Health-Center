@@ -170,6 +170,32 @@ function InvestigationForm({ data, mrdNo }) {
     setFormData(newState);
   };
 
+  const handleClear = (e, category) => {
+    e.preventDefault();
+    const categoryKey = categoryMap[category];
+    if (!processedData || !categoryKey) return;
+  
+    // Deep clone the state to avoid mutating React state directly
+    const updatedData = { ...processedData };
+    const categoryData = { ...updatedData[categoryKey] };
+  
+    // Clear all fields in this category
+    for (const key in categoryData) {
+      categoryData[key] = null;
+    }
+  
+    // Put the cleared data back
+    updatedData[categoryKey] = categoryData;
+  
+    // Update both processedData and formData
+    setProcessedData(updatedData);
+    setFormData({ mrdNo: mrdNo || "" }); // Reset visible form fields
+  
+    console.log("Cleared data for", category, updatedData[categoryKey]);
+  };
+  
+
+
   const handleSubmit = async (e, categoryNameToSubmit) => {
     e.preventDefault();
 
@@ -219,7 +245,7 @@ function InvestigationForm({ data, mrdNo }) {
         alert(`No submission endpoint configured for "${categoryNameToSubmit}".`);
         return;
     }
-    const url = `https://occupational-health-center-1.onrender.com/${endpoint}`;
+    const url = `http://localhost:8000/${endpoint}`;
 
     try {
       // CHANGED: The payload now correctly uses formData which includes the new mrdNo.
@@ -424,6 +450,13 @@ function InvestigationForm({ data, mrdNo }) {
                   <div className="bg-white">
                     {renderFields(optionName)}
                     <div className="px-4 py-4 border-t flex justify-end">
+                        <button
+                            type="button"
+                            onClick={(e) => handleClear(e, optionName)}
+                            className="bg-red-600 text-white px-5 py-2 me-4 rounded-md shadow hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 text-sm"
+                        >
+                            Clear {optionName} Data
+                        </button>
                         <button
                             type="button"
                             onClick={(e) => handleSubmit(e, optionName)}

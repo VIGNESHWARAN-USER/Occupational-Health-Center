@@ -77,7 +77,7 @@ const Investigation = ({ data }) => {
     setError(null);
     try {
       const response = await axios.post(
-        `https://occupational-health-center-1.onrender.com/get_investigation_details/${data.aadhar}`,
+        `http://localhost:8000/get_investigation_details/${data.aadhar}`,
         filterPayload
       );
       setInvestigationData(response.data);

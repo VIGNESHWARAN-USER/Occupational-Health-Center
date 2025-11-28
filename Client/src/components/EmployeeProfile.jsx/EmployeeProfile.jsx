@@ -9,6 +9,7 @@ import axios from "axios";
 
 // --- HealthSummary Content Component ---
 const HealthSummaryContent = ({ employeeData, visitData }) => (
+    
     <div className="space-y-4 text-sm">
         <h4 className="font-semibold text-base text-blue-700 mb-2">Visit Health Summaries:</h4>
         {!visitData ? (
@@ -285,12 +286,15 @@ const EmployeeProfile = () => {
         if (!idValue || !idType) { console.warn("Missing identifier for fetching data."); setNotes([]); setEmploymentHistoryState([]); return; }
         setIsLoadingNotes(true); setError(null);
         try {
+            console.log('idvalue',idValue)
             // Use the identifier provided (emp_no, aadhar, country_id)
-            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${idValue}`); // Endpoint likely uses the primary ID passed
+            const response = await axios.get(`http://localhost:8000/get_notes/${idValue}`);
+
             console.log("Fetched Notes/Status Data:", response.data);
             if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
-                const visitNotes = Array.isArray(response.data.data) ? response.data.data : [];
-                const statusHistory = Array.isArray(response.data.status) ? response.data.status : [];
+                const visitNotes = Array.isArray(response.data.notes) ? response.data.notes : [];
+                const statusHistory = response.data.status ? [response.data.status] : [];
+
                 setNotes(visitNotes); setEmploymentHistoryState(statusHistory);
                 if (visitNotes.length === 0 && statusHistory.length === 0 && response.data.message?.includes("No records found")) { console.log("No visit or status records found (via message)."); }
             } else if (Array.isArray(response.data)) { setNotes(response.data); setEmploymentHistoryState([]); console.warn("Received only notes array, no status history."); }
@@ -330,7 +334,7 @@ const EmployeeProfile = () => {
 
         try {
             // IMPORTANT: Update backend endpoint if needed to handle different identifier types
-            const response = await fetch("https://occupational-health-center-1.onrender.com/update_employee_status/", { // Ensure endpoint handles `identifier` and `id_type`
+            const response = await fetch("http://localhost:8000/update_employee_status/", { // Ensure endpoint handles `identifier` and `id_type`
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
             });
             const result = await response.json();
@@ -373,7 +377,7 @@ const EmployeeProfile = () => {
             setIsLoadingEmployee(false);
 
             // Determine the correct ID and type to use for fetching history
-            const id = initialData.emp_no || initialData.aadhar || initialData.country_id;
+            const id = initialData.aadhar || initialData.country_id;
             const type = initialData.emp_no ? 'emp_no' : initialData.aadhar ? 'aadhar' : 'country_id';
             if (id && type) fetchNotesAndStatus(id, type);
             else { console.warn("No suitable ID found for history fetch."); setIsLoadingNotes(false); }

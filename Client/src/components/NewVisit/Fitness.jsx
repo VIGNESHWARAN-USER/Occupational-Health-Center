@@ -7,12 +7,12 @@ import PersonalLeaveCertificateForm from "./PersonalLeaveCertificateForm";
 import axios from "axios";
 
 // URLs (Keep as is)
-const FITNESS_ASSESSMENT_URL = "https://occupational-health-center-1.onrender.com/fitness-tests/";
-const FORM17_URL = "https://occupational-health-center-1.onrender.com/form17/";
-const FORM38_URL = "https://occupational-health-center-1.onrender.com/form38/";
-const FORM39_URL = "https://occupational-health-center-1.onrender.com/form39/";
-const FORM40_URL = "https://occupational-health-center-1.onrender.com/form40/";
-const FORM27_URL = "https://occupational-health-center-1.onrender.com/form27/";
+const FITNESS_ASSESSMENT_URL = "http://localhost:8000/fitness-tests/";
+const FORM17_URL = "http://localhost:8000/form17/";
+const FORM38_URL = "http://localhost:8000/form38/";
+const FORM39_URL = "http://localhost:8000/form39/";
+const FORM40_URL = "http://localhost:8000/form40/";
+const FORM27_URL = "http://localhost:8000/form27/";
 
 // --- Standard Input/Select Class ---
 const inputClass = "form-input block w-full mt-1 border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-sm";
@@ -218,7 +218,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
  useEffect(() => {
     const fetchDetails = async () => {
         try {
-            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+            const response = await axios.post("http://localhost:8000/adminData");
             const fetchedEmployees = response.data.data;
             console.log(fetchedEmployees)
 
@@ -497,11 +497,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             alert("Please submit the entries first to get MRD Number");
             return;
         }
-        if (!currentEmpNo) {
-            alert("No employee selected.");
-            return;
-        }
-        if (!overallFitness) {
+        if ((!overallFitness && accessLevel === "doctor")) {
             alert("Please select Overall Fitness status before submitting.");
             return;
         }
@@ -592,7 +588,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button onClick={submitForm17} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit Form 17'}
                 </button>
-                <button onClick={() => generateFormPdf(form17Data, "Form 17", data?.[0]?.emp_no, data?.[0]?.name, FORM17_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                <button onClick={() => generateFormPdf(form17Data, "Form 17", data?.[0]?.emp_no, data?.[0]?.name, FORM17_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.aadhar || isSubmitting}>
                     Generate PDF
                 </button>
             </div>
@@ -619,7 +615,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button onClick={submitForm38} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit Form 38'}
                 </button>
-                <button onClick={() => generateFormPdf(form38Data, "Form 38", data?.[0]?.emp_no, data?.[0]?.name, FORM38_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                <button onClick={() => generateFormPdf(form38Data, "Form 38", data?.[0]?.emp_no, data?.[0]?.name, FORM38_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.aadhar || isSubmitting}>
                     Generate PDF
                 </button>
             </div>
@@ -647,7 +643,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button onClick={submitForm39} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit Form 39'}
                 </button>
-                <button onClick={() => generateFormPdf(form39Data, "Form 39", data?.[0]?.emp_no, data?.[0]?.name, FORM39_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                <button onClick={() => generateFormPdf(form39Data, "Form 39", data?.[0]?.emp_no, data?.[0]?.name, FORM39_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.aadhar || isSubmitting}>
                     Generate PDF
                 </button>
             </div>
@@ -679,7 +675,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button onClick={submitForm40} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit Form 40'}
                 </button>
-                <button onClick={() => generateFormPdf(form40Data, "Form 40", data?.[0]?.emp_no, data?.[0]?.name, FORM40_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                <button onClick={() => generateFormPdf(form40Data, "Form 40", data?.[0]?.emp_no, data?.[0]?.name, FORM40_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.aadhar || isSubmitting}>
                     Generate PDF
                 </button>
             </div>
@@ -706,7 +702,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button onClick={submitForm27} className={`bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isSubmitting}>
                     {isSubmitting ? 'Submitting...' : 'Submit Form 27'}
                 </button>
-                <button onClick={() => generateFormPdf(form27Data, "Form 27", data?.[0]?.emp_no, data?.[0]?.name, FORM27_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.emp_no || isSubmitting}>
+                <button onClick={() => generateFormPdf(form27Data, "Form 27", data?.[0]?.emp_no, data?.[0]?.name, FORM27_LABELS)} className={`bg-yellow-500 text-white px-4 py-2 rounded-md text-sm hover:bg-yellow-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={!data?.[0]?.aadhar || isSubmitting}>
                     Generate PDF
                 </button>
             </div>
@@ -750,7 +746,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             <PersonalLeaveCertificateForm
                 mrdNo={mrdNo}
                 aadhar={data?.[0]?.aadhar}
-                isDoctor={isDoctor} // <-- THIS IS THE CRUCIAL FIX
+                isDoctor={isDoctor} 
             />
         )}
 
@@ -805,8 +801,6 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <button
                     onClick={toggleTests}
                     className="bg-blue-500 mt-10 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 text-sm"
-                    disabled={!data?.[0]?.emp_no || isSubmitting}
-                    title={!data?.[0]?.emp_no ? "Select an employee first" : (showAllTests ? 'Hide All Tests' : 'Show All Tests')}
                 >
                     {showAllTests ? 'Hide All Tests' : 'Show All Tests'}
                 </button>
@@ -825,7 +819,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                                             className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                                             checked={fitnessFormData[test.key] === value}
                                             onChange={handleFitnessInputChange}
-                                            disabled={!data?.[0]?.emp_no || isSubmitting}
+                                            disabled={!data?.[0]?.aadhar || isSubmitting}
                                         />
                                         <span className="capitalize">{value}</span>
                                     </label>
@@ -842,10 +836,10 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
                     <label htmlFor="eyeExamFitStatus" className="block text-base md:text-lg font-semibold mb-3 text-gray-700">Eye Exam Fitness Status by OPHTHALMOLOGIST</label>
                     <select id="eyeExamFitStatus" name="eyeExamFitStatus" value={eyeExamFitStatus} onChange={handleEyeExamFitStatusChange}
-                        disabled={!data?.[0]?.emp_no || isSubmitting}
-                        className={selectClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        disabled={!data?.[0]?.aadhar || isSubmitting}
+                        className={selectClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         title={!data?.[0]?.emp_no ? "Select an employee first" : ""}>
-                        <option value="" disabled>-- Select Status --</option>
+                        <option value="">-- Select Status --</option>
                         {eyeExamFitStatusOptions.map(option => (<option key={option} value={option}>{option}</option>))}
                     </select>
                 </div>
@@ -855,9 +849,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 <div className="mb-6">
                     <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-700">Fitness applied for (Job nature)</h2>
                     <select
-                        className={selectClass + ` mb-3 ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                        className={selectClass + ` mb-3 ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                         onChange={handleSelectChange} value=""
-                        disabled={!data?.[0]?.emp_no || isSubmitting}
+                        disabled={!data?.[0]?.aadhar || isSubmitting}
                         title={!data?.[0]?.emp_no ? "Select an employee first" : "Select job nature"}>
                         <option value="" disabled>-- Select an option to add --</option>
                         {allOptions.map((option, index) => (<option key={index} value={option} disabled={selectedOptions.includes(option)}>{option}</option>))}
@@ -882,13 +876,13 @@ const FitnessPage = ({ data, mrdNo, register }) => {
 
                 <div className="mt-6 mb-6">
                     <label htmlFor="generalExamination" className={labelClass}>General Examination</label>
-                    <textarea id="generalExamination" name="generalExamination" rows="3" value={generalExamination} onChange={handleGeneralExaminationChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={inputClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add General Examination details"} placeholder="Enter General Examination details here" />
+                    <textarea id="generalExamination" name="generalExamination" rows="3" value={generalExamination} onChange={handleGeneralExaminationChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={inputClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add General Examination details"} placeholder="Enter General Examination details here" />
                 </div>
                 <div className="mt-6 mb-6">
                     <label htmlFor="systematicExamination" className={labelClass}>Systemic Examination</label>
-                    <textarea id="systematicExamination" name="systematicExamination" rows="3" value={systematicExamination} onChange={handleSystematicChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={inputClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add Systematic Examination details (CVS, RS, GIT, CNS, etc)"} placeholder="Enter Systematic Examination details (CVS, RS, GIT, CNS, etc)" />
+                    <textarea id="systematicExamination" name="systematicExamination" rows="3" value={systematicExamination} onChange={handleSystematicChange} disabled={!data?.[0]?.aadhar || isSubmitting || accessLevel != "doctor"} className={inputClass + ` ${!data?.[0]?.aadhar || isSubmitting || accessLevel != "doctor" ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add Systematic Examination details (CVS, RS, GIT, CNS, etc)"} placeholder="Enter Systematic Examination details (CVS, RS, GIT, CNS, etc)" />
                 </div>
-                <div>
+            {accessLevel === "nurse" &&(   <div>
                     <div>
                         <label htmlFor="">Book this footfall to:</label>
                         <select className="px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" name="" id="" value={bookedDoctor} onChange={(e)=>{setbookedDoctor(e.target.value)}}>
@@ -897,13 +891,13 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                             ))}
                         </select>
                     </div>
-                </div>
+                </div>)}
 
                 {accessLevel === "doctor" && (
                     <div className="border-t pt-6 mt-6 space-y-6">
                         <div>
                             <label className={labelClass}>Fit for (Job Nature)</label>
-                            <select value={overallFitness} onChange={handleOverallFitnessChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={selectClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Set overall fitness"}>
+                            <select value={overallFitness} onChange={handleOverallFitnessChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={selectClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Set overall fitness"}>
                                 <option value="" disabled>-- Select status --</option>
                                 <option value="fit">Fit</option>
                                 <option value="unfit">Unfit</option>
@@ -914,8 +908,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                         {overallFitness === "conditional" && (
                             <div className="pl-4 border-l-4 border-blue-300 py-3 bg-blue-50 rounded-r-md space-y-3">
                                 <h3 className="text-md font-semibold text-gray-700">Conditionally Fit For (Select applicable)</h3>
-                                <select value="" onChange={handleConditionalSelectChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={selectClass}>
+                                <select value="" onChange={handleConditionalSelectChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={selectClass}>
                                     <option value="" disabled>-- Select an option to add --</option>
+                                    <option value="Ground Work">Ground Work</option>
                                     {allOptions.map((option, index) => (<option key={index} value={option} disabled={conditionalOptions.includes(option)}>{option}</option>))}
                                 </select>
                                 <div className="flex flex-wrap gap-2 min-h-[30px]">
@@ -938,14 +933,14 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                         )}
                         <div>
                             <label htmlFor="comments" className={labelClass}>Doctor's Remarks / Comments</label>
-                            <textarea id="comments" rows="3" value={comments} onChange={handleCommentsChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={inputClass + ` ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add comments"} placeholder="Enter any relevant comments..." />
+                            <textarea id="comments" rows="3" value={comments} onChange={handleCommentsChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={inputClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Add comments"} placeholder="Enter any relevant comments..." />
                         </div>
                         <div className="mt-4">
                             <label className={labelClass}>Special Cases</label>
                             <div className="flex space-x-4 mt-2">
                                 {["Yes", "No", "N/A"].map((value) => (
                                     <label key={value} className="flex items-center space-x-2 cursor-pointer text-gray-600 hover:text-gray-900 text-sm">
-                                        <input type="radio" name="specialCases" value={value} className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked={specialCases === value} onChange={handleSpecialCasesChange} disabled={!data?.[0]?.emp_no || isSubmitting} title={!data?.[0]?.emp_no ? "Select an employee first" : ""} />
+                                        <input type="radio" name="specialCases" value={value} className="form-radio h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500" checked={specialCases === value} onChange={handleSpecialCasesChange} disabled={!data?.[0]?.aadhar || isSubmitting} title={!data?.[0]?.emp_no ? "Select an employee first" : ""} />
                                         <span>{value}</span>
                                     </label>
                                 ))}
@@ -956,10 +951,10 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 )}
                 <div className="w-full flex justify-end mt-6 border-t pt-6">
                     <button
-                        className={`bg-blue-600 text-white px-5 py-2 md:px-6 md:py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 font-medium text-sm md:text-base ${!data?.[0]?.emp_no || isSubmitting || !overallFitness ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`bg-blue-600 text-white px-5 py-2 md:px-6 md:py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 font-medium text-sm md:text-base ${!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor") ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={handleFitnessSubmit}
-                        disabled={!data?.[0]?.emp_no || isSubmitting || !overallFitness}
-                        title={!data?.[0]?.emp_no ? "Cannot submit without employee data" : (!overallFitness ? "Overall fitness status is required" : "Submit fitness assessment")}>
+                        disabled={!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor")}
+                        title={!data?.[0]?.aadhar ? "Cannot submit without employee data" : ((!overallFitness && accessLevel === "doctor") ? "Overall fitness status is required" : "Submit fitness assessment")}>
                         {isSubmitting ? 'Submitting...' : 'Submit Fitness Assessment'}
                     </button>
                 </div>
@@ -970,7 +965,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                     <h1 className="text-2xl md:text-3xl font-bold my-6 md:my-8 text-gray-800 border-b pb-2">Statutory Forms</h1>
                     <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-200 mb-6 md:mb-8">
                         <h2 className="text-base md:text-lg font-semibold mb-4 text-gray-700">Select Forms to Fill / Generate PDF</h2>
-                        <select value="Select Form" onChange={handleStatutorySelectChange} disabled={!data?.[0]?.emp_no || isSubmitting} className={selectClass + ` mb-4 ${!data?.[0]?.emp_no || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Select a form"}>
+                        <select value="Select Form" onChange={handleStatutorySelectChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={selectClass + ` mb-4 ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`} title={!data?.[0]?.emp_no ? "Select an employee first" : "Select a form"}>
                             {statutoryOptions.map((option, index) => (<option key={index} value={option} disabled={option === "Select Form" || selectedStatutoryForms.includes(option)}>{option}</option>))}
                         </select>
                         <div className="flex flex-wrap gap-2 mt-4 mb-6 border-t pt-4 min-h-[30px]">

@@ -1,7 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { FaCircleInfo } from "react-icons/fa6";
+// FaCircleInfo is not used, FaInfoCircle is. I've cleaned up the import.
 import { FaInfoCircle } from 'react-icons/fa';
+
+// --- Data for the Information Modal ---
+const notifiableDiseases = [
+    { no: 1, name: "Lead poisoning including poisoning by any preparation or compound of lead or their sequelae." },
+    { no: 2, name: "Lead tetra-ethyl poisoning." },
+    { no: 3, name: "Phosphorous poisoning or its sequelae." },
+    { no: 4, name: "Mercury poisoning or its sequelae." },
+    { no: 5, name: "Manganese poisoning or its sequelae." },
+    { no: 6, name: "Arsenic poisoning or its sequelae." },
+    { no: 7, name: "Poisoning by nitrous fumes." },
+    { no: 8, name: "Carbon bisulphide poisoning." },
+    { no: 9, name: "Benzene poisoning, including poisoning by any of its homologues, their nitro or amido derivatives or its sequelae." },
+    { no: 10, name: "Chrome ulceration or its sequelae." },
+    { no: 11, name: "Anthrax." },
+    { no: 12, name: "Silicosis." },
+    { no: 13, name: "Poisoning by halogens or halogen derivatives of the hydrocarbons, of the aliphatic series." },
+    { no: 14, name: "Pathological manifestation due to : - a. Radium or other radioactive substances. b. X-rays." },
+    { no: 15, name: "Primary epitheliomatous cancer of the skin." },
+    { no: 16, name: "Toxic anemia." },
+    { no: 17, name: "Toxic jaundice due to poisonous substances." },
+    { no: 18, name: "Oil acne or dermatitis due to mineral oils and compounds containing mineral oil base." },
+    { no: 19, name: "Byssinosis." },
+    { no: 20, name: "Asbestosis." },
+    { no: 21, name: "Occupational or contact dermatitis caused by direct contract with chemical and paints. These are of types, that is, primary irritants and allergic sensitizers." },
+    { no: 22, name: "Noise induced hearing loss (exposure to high noise levels)." },
+    { no: 23, name: "Beryllium poisoning." },
+    { no: 24, name: "Carbon monoxide." },
+    { no: 25, name: "Coal miners' pneumoconiosis." },
+    { no: 26, name: "Phosgene poisoning." },
+    { no: 27, name: "Occupational cancer." },
+    { no: 28, name: "Isocyanates poisoning." },
+    { no: 29, name: "Toxic nephritis." }
+];
+
+// --- Reusable Modal Component ---
+const InfoModal = ({ isOpen, onClose, children }) => {
+    if (!isOpen) return null;
+
+    return (
+        // Backdrop
+        <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4 transition-opacity duration-300">
+            {/* Modal Content */}
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
+                {/* Modal Header */}
+                <div className="flex justify-between items-center p-4 border-b">
+                    <h3 className="text-lg font-semibold text-gray-800">Additional Information</h3>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+                </div>
+                {/* Modal Body */}
+                <div className="p-6 overflow-y-auto">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 // Helper component to display historical entries (remains the same)
 const HistoryList = ({ title, notes, fieldKey, isLoading, error }) => {
@@ -63,6 +120,9 @@ const SignificantNotes = ({ data, type }) => {
 
   // --- State for submission status ---
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // --- NEW: State for information modal ---
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // --- States for historical data ---
   const [historicalNotes, setHistoricalNotes] = useState([]);
@@ -88,7 +148,8 @@ const SignificantNotes = ({ data, type }) => {
   const emp_no = data && data.length > 0 ? data[0]?.emp_no : null;
   const aadhar = data && data.length > 0 ? data[0]?.aadhar : null;
   const accessLevel = typeof window !== 'undefined' ? localStorage.getItem('accessLevel') : null; // Check for window object
-  const isDoctor = accessLevel === 'doctor' || accessLevel === 'nurse';
+  console.log(accessLevel)
+  const isDoctor = accessLevel === 'doctor';
 
   // Function to fetch history and find previous entry (remains mostly the same)
   const fetchHistory = async (aadharNumber) => {
@@ -99,7 +160,7 @@ const SignificantNotes = ({ data, type }) => {
         setHistoricalNotes([]);
         setPreviousCommunicableDisease(''); // Reset previous value on fetch
         try {
-            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${aadharNumber}`);
+            const response = await axios.get(`http://localhost:8000/get_notes/${aadharNumber}`);
             console.log("Fetched Historical Notes:", response.data);
 
             // Handle the new response format
@@ -210,7 +271,7 @@ const SignificantNotes = ({ data, type }) => {
       illness_type: illnessType || null,
     };
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/significant_notes/add/", significantNotesData);
+      const response = await axios.post("http://localhost:8000/significant_notes/add/", significantNotesData);
       if (response.status === 200 || response.status === 201) {
         alert("Significant notes submitted successfully!");
         // Don't clear fields immediately, wait for data refresh? Or clear selectively?
@@ -240,7 +301,7 @@ const SignificantNotes = ({ data, type }) => {
   };
 
   // --- Render ---
-  if (!emp_no && !isLoadingHistory) { // Avoid showing error if history is still loading initially
+  if (!aadhar && !isLoadingHistory) { // Avoid showing error if history is still loading initially
       return <div className="p-6 text-center text-red-600 bg-white rounded-lg shadow">No employee selected or data available.</div>;
   }
    if (isLoadingHistory && !historicalNotes.length) { // Show loading indicator centered if it's the initial load
@@ -262,7 +323,7 @@ const SignificantNotes = ({ data, type }) => {
                 </label>
                 <textarea
                     id="healthsummary"
-                    className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm flex-grow resize-none" // Added resize-none
+                    className={isDoctor?"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400  focus:border-blue-400 text-sm flex-grow":"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 cursor-not-allowed focus:border-blue-400 text-sm flex-grow"} 
                     placeholder="Enter overall health summary..."
                     onChange={(e) => setHealthsummary(e.target.value)}
                     disabled={!isDoctor}
@@ -289,7 +350,7 @@ const SignificantNotes = ({ data, type }) => {
                 </label>
                 <textarea
                     id="remarks"
-                    className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm flex-grow " // Added resize-none
+                    className={isDoctor?"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400  focus:border-blue-400 text-sm flex-grow":"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 cursor-not-allowed focus:border-blue-400 text-sm flex-grow"} // Added resize-none
                     placeholder="Enter any relevant remarks..."
                     
                     onChange={(e) => setRemarks(e.target.value)}
@@ -317,7 +378,7 @@ const SignificantNotes = ({ data, type }) => {
                  </label>
                  <select
                     id="communicableDisease"
-                    className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm"
+                    className={isDoctor?"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm":"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm cursor-not-allowed"}
                     value={communicableDisease}
                     onChange={(e) => setCommunicableDisease(e.target.value)}
                     disabled={!isDoctor}
@@ -358,7 +419,7 @@ const SignificantNotes = ({ data, type }) => {
                     <label htmlFor="incidentType" className="block text-gray-700 text-sm font-medium mb-1">
                         Incident Category
                     </label>
-                    <select id="incidentType" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={incidentType} onChange={(e) => setIncidentType(e.target.value)} disabled={!isDoctor}>
+                    <select id="incidentType" className={isDoctor?"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm":"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm cursor-not-allowed"} value={incidentType} onChange={(e) => setIncidentType(e.target.value)} disabled={!isDoctor}>
                         {/* <option value="">Select...</option> // Included in options array */}
                         {incidentTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                     </select>
@@ -369,7 +430,7 @@ const SignificantNotes = ({ data, type }) => {
                     <label htmlFor="incident" className="block text-gray-700 text-sm font-medium mb-1">
                        Incident Nature
                     </label>
-                    <select id="incident" className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" value={incident} onChange={(e) => setIncident(e.target.value)} disabled={!isDoctor}>
+                    <select id="incident" className={isDoctor?"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm":"w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm cursor-not-allowed"} value={incident} onChange={(e) => setIncident(e.target.value)} disabled={!isDoctor}>
                         {/* <option value="">Select...</option> // Included in options array */}
                         {incidentOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
                     </select>
@@ -377,35 +438,35 @@ const SignificantNotes = ({ data, type }) => {
                  </div>
                  {/* Illness Type */}
                 <div>
-    <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
-        <span>Additional Illness register</span>
-        
-        
-        <a 
-            href="https://www.google.com/search?q=notifiable+disease+3rd+schedule+indian+factories+act+1948&oq=notifiable+disease+3rd+schedule+indian+factories+act+1948&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIKCAEQABiABBiiBDIKCAIQABiABBiiBDIHCAMQABjvBdIBCDE4OTBqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8"
-            target="_blank" // This opens the link in a new tab
-            rel="noopener noreferrer" // Security best practice for target="_blank"
-            className="ml-2 text-blue-500 hover:text-blue-700" // Margin-left for spacing and color for affordance
-            title="Click for more information on notifiable diseases" // Adds a helpful tooltip on hover
-        >
-            <FaInfoCircle size={16} /> 
-        </a>
-    </label>
-    
-    <select 
-        id="illnessType" 
-        className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm" 
-        value={illnessType} 
-        onChange={(e) => setIllnessType(e.target.value)} 
-        disabled={!isDoctor}
-    >
-       {illnessTypeOptions.map(option => (
-           <option key={option.value} value={option.value}>{option.label}</option>
-       ))}
-    </select>
-    
-    {/* TODO: Add HistoryList for illness_type if needed */}
-</div>
+                    {/* MODIFICATION START */}
+                    <label htmlFor="illnessType" className="block text-gray-700 text-sm font-medium mb-1 flex items-center">
+                        <span>Additional Illness register</span>
+                        {/* This button now opens the modal */}
+                        <button
+                            type="button" 
+                            onClick={() => setIsInfoModalOpen(true)}
+                            className="ml-2 text-blue-500 hover:text-blue-700"
+                            title="Click for more information on work-related illnesses and notifiable diseases"
+                        >
+                            <FaInfoCircle size={16} />
+                        </button>
+                    </label>
+                    {/* MODIFICATION END */}
+                    
+                    <select 
+                        id="illnessType" 
+                        className="w-full p-2 border rounded-md bg-blue-50 focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-sm cursor-not-allowed" 
+                        value={illnessType} 
+                        onChange={(e) => setIllnessType(e.target.value)} 
+                        disabled={!isDoctor}
+                    >
+                    {illnessTypeOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                    </select>
+                    
+                    {/* TODO: Add HistoryList for illness_type if needed */}
+                </div>
             </div>
         )}
 
@@ -414,8 +475,8 @@ const SignificantNotes = ({ data, type }) => {
           <button
             onClick={handleSubmit}
              type="button"
-             className={`bg-blue-600 text-white px-5 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 text-sm ${(!isDoctor || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
-             disabled={!isDoctor || isSubmitting}
+             className={`bg-blue-600 text-white px-5 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 text-sm ${(isDoctor || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+             disabled={isDoctor || isSubmitting}
           >
             {isSubmitting ? (
                 <><svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -426,6 +487,51 @@ const SignificantNotes = ({ data, type }) => {
           </button>
         </div>
       </form>
+
+      {/* MODAL RENDER: This is where the modal is called and its content is defined. */}
+      <InfoModal isOpen={isInfoModalOpen} onClose={() => setIsInfoModalOpen(false)}>
+        <div className="space-y-6 text-sm text-gray-700">
+            <div>
+                <h4 className="font-bold text-base mb-2 text-gray-800">Work-related ill health / Illness</h4>
+                <p>
+                    Work-related ill health can include acute, recurring, and chronic health problems caused or
+                    aggravated by work conditions or practices. They include musculoskeletal disorders, skin and
+                    respiratory diseases, malignant cancers, diseases caused by physical agents (e.g., noise induced
+                    hearing loss, vibration-caused diseases), and mental illnesses (e.g., anxiety, posttraumatic
+                    stress disorder).
+                </p>
+            </div>
+
+            <hr />
+
+            <div>
+                <h4 className="font-bold text-base mb-3 text-gray-800">List of notifiable diseases (The Factories Act – 1948)</h4>
+                <div className="overflow-x-auto border rounded-md">
+                    <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                                    S.No
+                                </th>
+                                <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Disease
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {notifiableDiseases.map((disease) => (
+                                <tr key={disease.no} className="hover:bg-gray-50">
+                                    <td className="px-4 py-2 whitespace-nowrap text-center font-medium">{disease.no}</td>
+                                    <td className="px-4 py-2">{disease.name}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+      </InfoModal>
+
     </div>
   );
 };

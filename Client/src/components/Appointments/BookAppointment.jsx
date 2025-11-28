@@ -13,13 +13,13 @@ const BookAppointment = () => {
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().slice(0, 10), // Consider if this should be today's date always or empty
-    role: "Employee", // Initial role value in formData
+    role: "Employee", 
     employeeId: "",
     aadharNo: "",
     name: "",
     organization: "",
     contractorName: "",
-    purpose: "Pre Employment",
+    purpose: "",
     appointmentDate: new Date().toISOString().slice(0, 10),
     time: "",
     bookedBy: "", 
@@ -34,8 +34,6 @@ const BookAppointment = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  console.log(employees)
-
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
     setRole(newRole); // Update the role state
@@ -49,7 +47,7 @@ const BookAppointment = () => {
         name: "",
         organization: "",
         contractorName: "",
-        purpose: "Pre Employment", // Reset purpose or keep?
+        purpose: "", 
         appointmentDate: new Date().toISOString().slice(0, 10),
         time: "",
         bookedBy: "", // Default or fetch options?
@@ -57,17 +55,14 @@ const BookAppointment = () => {
         submitted_Dr: "", // Default or fetch options?
         consultedDoctor: "",
     });
-    // REMOVED: Resetting validation state
-    // setIsEmployeeIdValid(false);
   };
-  console.log(doctors)
 
   useEffect(() => {
     const fetchDetails = async () => {
         try {
-            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+            const response = await axios.post("http://localhost:8000/adminData");
             const fetchedEmployees = response.data.data;
-
+            console.log(fetchedEmployees)
             // It's better to update state with the fetched employees first
             setEmployees(fetchedEmployees);
 
@@ -94,16 +89,10 @@ const BookAppointment = () => {
     };
 
     fetchDetails();
-}, []); // The empty dependency array ensures this runs only once on mount
+}, []); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // REMOVED: Validation check before submission
-    // if (role === "Employee" && !isEmployeeIdValid) {
-    //   alert("Please enter a valid Employee ID.");
-    //   return; // Prevent form submission if the employee ID is invalid
-    // }
 
     if(formData.bookedBy === "") formData.bookedBy = nurses[0];
     if(formData.submitted_Dr === "") formData.submitted_Dr = doctors[0];
@@ -111,7 +100,7 @@ const BookAppointment = () => {
     console.log("Submitting form data:", formData); // Log data before sending
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
+      const response = await fetch("http://localhost:8000/bookAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -155,7 +144,7 @@ const BookAppointment = () => {
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
-    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)"], disabled: false }, 
+    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)", "Follow Up Visits (Preventive)", "Follow Up Visits (Curative)"], disabled: false }, 
     { label: "Date of the appointment:", name: "appointmentDate", type: "date", disabled: false }, 
     { label: "Time:", name: "time", type: "time", disabled: false }, 
     { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
@@ -170,7 +159,7 @@ const BookAppointment = () => {
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical","Pre Employment Contract change", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
-    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)"] },
+    "Fitness After Medical Leave", "Mock Drill", "BP Sugar Check  ( Normal Value)", "Follow Up Visits (Preventive)", "Follow Up Visits (Curative)"] },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" },
     { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
@@ -182,7 +171,7 @@ const BookAppointment = () => {
     { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
     { label: "Name:", name: "name", type: "text", placeholder: "Enter name" },
     { label: "Organization:", name: "organization", type: "text", placeholder: "Enter organization name" },
-    { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Visitors Outsider Fitness", "Visitors Outsider Patient", "Followup Visits"] },
+    { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Visitors Outsider Fitness", "Visitors Outsider Patient","Follow Up Visits (Preventive)", "Follow Up Visits (Curative)"] },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" },
     { label: "Booking by (Nurse):", name: "bookedBy", type: "select", options: nurses, disabled: false }, 
@@ -276,8 +265,7 @@ const BookAppointment = () => {
           <button
             type="submit"
             className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed" // Adjusted style, added disabled style
-            // REMOVED: disabled condition based on employee ID validity
-            // disabled={role === "Employee" && !isEmployeeIdValid}
+            
           >
             Book appointment
           </button>

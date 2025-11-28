@@ -45,7 +45,7 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
     const fetchData = async () => {
       setIsFetching(true);
       try {
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/personal-leave/get/?aadhar=${aadhar}`);
+        const response = await axios.get(`http://localhost:8000/personal-leave/get/?aadhar=${aadhar}`);
         if (response.data && Object.keys(response.data).length > 0) {
           setFormData(response.data);
           setShowForm(true);
@@ -85,7 +85,7 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
     const payload = { ...formData, aadhar, mrdNo };
 
     try {
-        const response = await axios.post('https://occupational-health-center-1.onrender.com/personal-leave/save/', payload);
+        const response = await axios.post('http://localhost:8000/personal-leave/save/', payload);
         setStatusMessage({ text: response.data.message, type: 'success' });
     } catch (error) {
         const errorText = error.response?.data?.error || "Failed to save data.";
@@ -108,7 +108,7 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
   return (
     <div style={cardStyle}>
       <div style={headerStyle} onClick={toggleFormVisibility}>
-        <h2 style={titleStyle}>Personal Leave Certificate</h2>
+        <h2 style={titleStyle}>Personal Leave Details</h2>
         <span className="text-lg font-semibold">{showForm ? "[-]" : "[+]"}</span>
       </div>
 
@@ -119,29 +119,11 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
           ) : (
             <>
               <div className="flex justify-between items-center mb-6">
-                 <h2 className="text-xl font-bold text-gray-800">Certificate of Fitness to Return Duty</h2>
                 {logoSrc && <img src={logoSrc} className="h-12" alt="Company Logo" />}
               </div>
               <div className="space-y-8">
-                {/* All fields below correctly use the `allFieldsDisabled` variable */}
                 <section>
-                    <h3 className={sectionTitleClasses}>Employee Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-                        <FormInput label="Employee Name" name="employeeName" value={formData.employeeName} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="Age" name="age" type="number" value={formData.age} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="Sex" name="sex" value={formData.sex} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="Emp No" name="empNo" value={formData.empNo} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="Department" name="department" value={formData.department} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} disabled={allFieldsDisabled}/>
-                        <FormInput label="JSW / Contract" name="jswContract" value={formData.jswContract} onChange={handleChange} disabled={allFieldsDisabled} className="lg:col-span-3"/>
-                        <FormInput label="Nature of Work" name="natureOfWork" value={formData.natureOfWork} onChange={handleChange} disabled={allFieldsDisabled} className="lg:col-span-3"/>
-                    </div>
-                </section>
-                <section>
-                    <h3 className={sectionTitleClasses}>Leave & Medical Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <FormRadioGroup label="Surgical & Medical History" name="hasSurgicalHistory" value={formData.hasSurgicalHistory} onChange={handleChange} options={["Yes", "No"]} disabled={allFieldsDisabled}/>
-                        <FormRadioGroup label="Covid Vaccination" name="covidVaccination" value={formData.covidVaccination} onChange={handleChange} options={["Yes", "No"]} disabled={allFieldsDisabled}/>
                         <FormTextarea label="Personal Leave Description" name="personalLeaveDescription" value={formData.personalLeaveDescription} onChange={handleChange} disabled={allFieldsDisabled} className="md:col-span-2"/>
                         <FormInput label="Leave From" name="leaveFrom" type="date" value={formData.leaveFrom} onChange={handleChange} disabled={allFieldsDisabled}/>
                         <FormInput label="Leave Up To" name="leaveUpTo" type="date" value={formData.leaveUpTo} onChange={handleChange} disabled={allFieldsDisabled}/>
@@ -159,9 +141,8 @@ const PersonalLeaveCertificateForm = ({ aadhar, mrdNo, onDataChange, isDoctor, l
                     </div>
                 </section>
                 <section>
-                     <h3 className={sectionTitleClasses}>Notes & Signatures</h3>
+                     <h3 className={sectionTitleClasses}>Signatures</h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                        <FormTextarea label="Note" name="note" value={formData.note} onChange={handleChange} disabled={allFieldsDisabled} className="md:col-span-2"/>
                         <FormInput label="OHC Staff Signature" name="ohcStaffSignature" value={formData.ohcStaffSignature} onChange={handleChange} disabled={allFieldsDisabled}/>
                         <FormInput label="Individual Signature" name="individualSignature" value={formData.individualSignature} onChange={handleChange} disabled={allFieldsDisabled}/>
                      </div>

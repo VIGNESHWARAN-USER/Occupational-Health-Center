@@ -5,6 +5,8 @@ Django settings for sampleProject project.
 import os
 from pathlib import Path
 
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -14,7 +16,7 @@ MEDIA_URL = '/media/'
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'media'  # Add this line
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Add this line
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-2an=+9=g@e!k!x@al6ve@@g@fuxv&vgv%evj%6jv^l6421xojc'
@@ -27,6 +29,7 @@ ALLOWED_HOSTS = [
     'occupational-health-center-1.onrender.com',
     'localhost',
     '127.0.0.1'
+    'ohc.jsw.in'
 ]
 
 # CORS settings - allow all origins for development
@@ -42,11 +45,11 @@ CORS_ALLOW_METHODS = [
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = 'smtp.office365.com'
 EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = '2k22cse163@kiot.ac.in'          # Your Gmail
-EMAIL_HOST_PASSWORD = 'pdxm ybxs aang ybjq'        # App Password, not your actual Gmail password
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = 'jsw.salem@jsw.in'          # Your Gmail
+EMAIL_HOST_PASSWORD = 'pgtrkschxwqmfgtd'        # App Password, not your actual Gmail password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # Application definition
 INSTALLED_APPS = [
@@ -57,7 +60,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',  # Required for serving static files
-    'jsw'
+    'jsw',
+    'sslserver',
+    'django_extensions'
 ]
 
 MIDDLEWARE = [
@@ -95,17 +100,31 @@ WSGI_APPLICATION = 'sampleProject.wsgi.application'
 
 
 
+
+import pyodbc
+
+print(pyodbc.drivers())
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'defaultdb',
         'USER': 'avnadmin',
-        'PASSWORD': 'AVNS_uVkEh0awpxi9I4bEOCq',
-        'HOST': "mysql-5893c62-jsw-test.a.aivencloud.com",
-        'PORT': '19129',
-        'CONN_MAX_AGE': 0
+        'PASSWORD': 'AVNS_pglAGGn58sK9XJ7RYqD',
+        'HOST': "erp-vigneshwaran-6b62.k.aivencloud.com",
+        'PORT': '16990',
+        'CONN_MAX_AGE':0
     }
 }
+
+
+
+
+
+
+
+
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

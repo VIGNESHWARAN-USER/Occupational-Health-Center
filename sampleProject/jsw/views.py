@@ -29,6 +29,8 @@ from django.db.models import Max, Count, Sum, Q
 from django.db import transaction, IntegrityError
 from django.db.models.fields.files import ImageFieldFile, FieldFile
 from django.core.files.storage import default_storage
+from .models import employee_details   # <-- use your actual model
+
 
 # Django Auth Imports
 from django.contrib.auth.models import User
@@ -193,6 +195,7 @@ def login(request):
             # Use Django's authenticate or custom logic
             try:
                 member = Member.objects.get(employee_number=username)
+                
                 if bcrypt.checkpw(password.encode('utf-8'), member.password.encode('utf-8')):
                      # Login successful
                     return JsonResponse({
@@ -210,6 +213,118 @@ def login(request):
         except json.JSONDecodeError: return JsonResponse({"message": "Invalid request format"}, status=400)
         except Exception as e: logger.exception("Login failed."); return JsonResponse({"message": "Unexpected error occurred."}, status=500)
     return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
+
+@csrf_exempt
+def create_default_members(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST allowed'}, status=405)
+
+    def safe_date(value):
+        if isinstance(value, str) and value.strip():
+            return django_parse_date(value)
+        return None
+
+    try:
+        default_members = [
+            {
+                "email": "2k22cse162@kiot.ac.in",
+                "role": "nurse",
+                "employee_number": "900001",
+                "aadhar": "123456789001",
+                "memberType": "ohc",
+                "phone_number": "9000000001",
+                "name": "VICKY",
+                "designation": "nurse",
+                "date_exited": None,
+                "doj": "2025-11-28",
+                "job_nature": "nurse",
+                "password": "nurse"
+            },
+            {
+                "email": "2k22cse163@kiot.ac.in",
+                "role": "doctor",
+                "employee_number": "900002",
+                "aadhar": "123456789003",
+                "memberType": "ohc",
+                "phone_number": "9000000002",
+                "name": "VIGNESHWARAN",
+                "designation": "doctor",
+                "date_exited": None,
+                "doj": "2025-11-28",
+                "job_nature": "doctor",
+                "password": "doctor"
+            },
+            {
+                "email": "2k22cse124@kiot.ac.in",
+                "role": "admin",
+                "employee_number": "900003",
+                "aadhar": "123456789002",
+                "memberType": "ohc",
+                "phone_number": "9600207797",
+                "name": "RAMESH",
+                "designation": "admin",
+                "date_exited": "2025-11-28",
+                "doj": "2025-11-28",
+                "job_nature": "admin",
+                "password": "admin"
+            },
+            {
+                "email": "2k22cse114@kiot.ac.in",
+                "role": "pharma",
+                "employee_number": "900004",
+                "aadhar": "123456789004",
+                "memberType": "ohc",
+                "phone_number": "9000000004",
+                "name": "PRAMOTH",
+                "designation": "pharma",
+                "date_exited": None,
+                "doj": "2025-11-28",
+                "job_nature": "pharmacy",
+                "password": "pharma"
+            }
+        ]
+
+        created, skipped = 0, 0
+
+        for m in default_members:
+
+            # Skip if already exists
+            if Member.objects.filter(email__iexact=m["email"]).exists():
+                skipped += 1
+                continue
+
+            hashed_pw = bcrypt.hashpw(m["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+            Member.objects.create(
+                name=m["name"],
+                designation=m["designation"],
+                email=m["email"],
+                role=m["role"],
+                phone_number=m["phone_number"],
+                job_nature=m["job_nature"],
+                aadhar=m["aadhar"],
+                employee_number=m["employee_number"],
+                doj=safe_date(m["doj"]),
+                date_exited=safe_date(m["date_exited"]),
+                entry_date=date.today(),
+                password=hashed_pw,
+                type=m["memberType"]
+            )
+
+            created += 1
+
+        return JsonResponse({
+            "message": "Default members processed",
+            "created": created,
+            "skipped_already_exists": skipped
+        }, status=201 if created > 0 else 200)
+
+    except Exception as e:
+        logger.exception("create_default_members failed")
+        return JsonResponse({"error": "Internal error", "detail": str(e)}, status=500)
+
+
+
 
 @csrf_exempt
 def find_member_by_aadhar(request):
@@ -431,44 +546,7 @@ def delete_member(request, member_id):
         except Exception as e: logger.exception(f"delete_member failed ID: {member_id}."); return JsonResponse({'success': False, 'message': 'An error occurred during deletion.'}, status=500)
     return JsonResponse({'error': 'Invalid request method. Use POST.'}, status=405) # Changed error message
 
-@csrf_exempt
-def create_users(request):
-    # This creates Django admin users, separate from the Member model used for portal login
-    if request.method == 'POST':
-        try:
-            # Consider making passwords more secure or configurable
-            default_users = [
-                {'username': 'nurse_user', 'password': 'DefaultPasswordN1!', 'email': 'nurse@example.com', 'first_name': 'Default', 'last_name': 'Nurse'},
-                {'username': 'doctor_user', 'password': 'DefaultPasswordD1!', 'email': 'doctor@example.com', 'first_name': 'Default', 'last_name': 'Doctor'},
-                {'username': 'admin_user', 'password': 'DefaultPasswordA1!', 'email': 'admin@example.com', 'first_name': 'Default', 'last_name': 'Admin', 'is_staff': True, 'is_superuser': True},
-                {'username': 'pharmacy_user', 'password': 'DefaultPasswordP1!', 'email': 'pharmacy@example.com', 'first_name': 'Default', 'last_name': 'Pharmacy'}
-            ]
-            created_count, skipped_count = 0, 0
-            for user_data in default_users:
-                username = user_data['username']
-                if not User.objects.filter(username=username).exists():
-                    User.objects.create_user(
-                        username=username,
-                        password=user_data['password'],
-                        email=user_data.get('email', ''),
-                        first_name=user_data.get('first_name', ''),
-                        last_name=user_data.get('last_name', ''),
-                        is_staff=user_data.get('is_staff', False),
-                        is_superuser=user_data.get('is_superuser', False)
-                    )
-                    created_count += 1
-                else:
-                    skipped_count += 1
-            message = f"{created_count} Django users created. {skipped_count} skipped (already existed)."
-            logger.info(message)
-            return JsonResponse({"message": message}, status=201 if created_count > 0 else 200)
-        except Exception as e:
-            logger.exception("create_users (Django User) failed.")
-            return JsonResponse({"error": "Error creating default Django users.", "detail": str(e)}, status=500)
-    return JsonResponse({'error': 'Invalid request method. Use POST.'}, status=405)
 
-
-# --- Core Data Fetching / Entry (Using Aadhar) ---
 
 @csrf_exempt
 def fetchdata(request):
@@ -485,7 +563,7 @@ def fetchdata(request):
             latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
             # Get the full employee details for the latest IDs
             employees = list(employee_details.objects.filter(id__in=latest_employee_ids).values())
-
+           
             media_url_prefix = get_media_url_prefix(request) # Use helper function
 
             # Add profile picture URL
@@ -643,6 +721,7 @@ def addEntries(request):
     aadhar = None 
     try:
         data = json.loads(request.body.decode('utf-8'))
+        print(data)
         logger.debug(f"Received data for addEntries: {json.dumps(data)[:500]}...")
 
         employee_data = data.get('formData', {})
@@ -698,6 +777,7 @@ def addEntries(request):
             'job_nature': employee_data.get('job_nature', ''),
             'doj': parse_date_internal(employee_data.get('doj')),
             'moj': employee_data.get('moj', ''),
+            'contractor_status': employee_data.get('contractor_status', ''),
             'phone_Personal': employee_data.get('phone_Personal', ''),
             'mail_id_Personal': employee_data.get('mail_id_Personal', ''),
             'emergency_contact_person': employee_data.get('emergency_contact_person', ''),
@@ -850,6 +930,7 @@ def add_basic_details(request):
             'employee_status': data.get('employee_status'), 'since_date': parse_date_internal(data.get('since_date')),
             'transfer_details': data.get('transfer_details'), 'other_reason_details': data.get('other_reason_details'),
             'previousemployer':data.get('previousemployer'),'previouslocation':data.get('previouslocation'),
+            'contractor_status': data.get('contractor_status'),
             
             # Visitor Fields
             'other_site_id': data.get('other_site_id'), 'organization': data.get('organization'),
@@ -1915,38 +1996,60 @@ def add_significant_notes(request):
         return response
 
 @csrf_exempt
+
 def get_notes(request, aadhar):
-    """Fetches significant notes and the LATEST employee status based on AADHAR."""
-    if request.method == 'GET': # Use GET
+    """Fetches significant notes and the LATEST employee status based on AADHAR, with debug logging."""
+    if request.method == 'GET':
         try:
-            # Fetch notes for the specific aadhar
+            # Log incoming parameter
+            print(f"[DEBUG] get_notes called with AADHAR: {aadhar}")
+            logger.info(f"get_notes called with AADHAR: {aadhar}")
+
+            # Fetch notes for the specific AADHAR
             notes = list(SignificantNotes.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').values())
+            print(f"[DEBUG] Notes fetched: {notes}")
+            logger.info(f"Fetched {len(notes)} notes for aadhar {aadhar}")
+
+            # Convert entry_date to string
             for note in notes:
                 if isinstance(note.get('entry_date'), date):
                     note['entry_date'] = note['entry_date'].isoformat()
 
-            # Fetch the latest status details for that aadhar
+            # Fetch the latest employee status entry
             latest_employee_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
+            print(f"[DEBUG] Latest employee entry: {latest_employee_entry}")
+            
             emp_status_data = {}
             if latest_employee_entry:
-                 emp_status_data = {
-                     'employee_status': latest_employee_entry.employee_status,
-                     'since_date': latest_employee_entry.since_date.isoformat() if latest_employee_entry.since_date else None,
-                     'transfer_details': latest_employee_entry.transfer_details,
-                     'other_reason_details': latest_employee_entry.other_reason_details
-                 }
+                emp_status_data = {
+                    'employee_status': latest_employee_entry.employee_status,
+                    'since_date': latest_employee_entry.since_date.isoformat() if latest_employee_entry.since_date else None,
+                    'transfer_details': latest_employee_entry.transfer_details,
+                    'other_reason_details': latest_employee_entry.other_reason_details
+                }
+                print(f"[DEBUG] Status data: {emp_status_data}")
+                logger.info(f"Latest status for aadhar {aadhar}: {emp_status_data}")
+            else:
+                print("[DEBUG] No status entry found for this AADHAR")
+                logger.info(f"No employee status found for aadhar {aadhar}")
 
-            logger.info(f"Fetched {len(notes)} notes and status for aadhar {aadhar}.")
-            return JsonResponse({'notes': notes, 'status': emp_status_data}) # Return notes list and single status object
+            # Log final response
+            response_data = {'notes': notes, 'status': emp_status_data}
+            print(f"[DEBUG] Returning data: {response_data}")
+            logger.info(f"Returning notes and status for aadhar {aadhar}")
+
+            return JsonResponse(response_data)
+
         except Exception as e:
+            print(f"[ERROR] Exception in get_notes: {e}")
             logger.exception(f"get_notes failed for aadhar {aadhar}: An unexpected error occurred.")
             return JsonResponse({'error': "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
+        print(f"[DEBUG] Invalid request method: {request.method}")
         response = JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
         response['Allow'] = 'GET'
         return response
 
-# --- Forms ---
 # Generic form creation handler
 def _create_form(request, model_class, form_name, required_fields=None):
     log_prefix = f"create_{form_name.lower().replace(' ', '')}"
@@ -2896,7 +2999,7 @@ def add_prescription(request):
         emp_no = data.get('emp_no')
         name = data.get('name')
         aadhar = data.get('aadhar')
-        mrd_no = data.get('mrdNo')  # Get MRD number
+        mrd_no = data.get('mrdNumber')  # Get MRD number
         entry_date = timezone.now().date()  # Get current date
 
         # --- Basic Validation ---
@@ -4066,6 +4169,7 @@ def get_prescription_in_data(request):
             start_date = date(year, month, 1)
             days_in_req_month = get_days_in_month(year, month)
             end_date = date(year, month, days_in_req_month)
+            print(start_date, end_date)
         except ValueError as date_err:
              logger.error(f"Error calculating date range for {year}-{month}: {date_err}")
              return JsonResponse({'error': 'Internal error calculating month days.'}, status=500)
@@ -4126,6 +4230,7 @@ def get_prescription_in_data(request):
                 'date', 'quantity' # Ensure quantity is selected
             )
             logger.debug(f"Found {daily_data_qs.count()} daily quantity records for the month.")
+            print(daily_data_qs)
         else:
              logger.warning("No valid identifiers found to build DailyQuantity filter.")
 
@@ -4135,21 +4240,27 @@ def get_prescription_in_data(request):
         daily_quantities_map = {}
         for dq in daily_data_qs:
             # Validate essential keys before creating map entry
+            
             if not all(k in dq for k in required_fields + ['date']):
                 logger.warning(f"Skipping daily quantity record (missing keys) for map: {dq}")
                 continue
             expiry_key = dq.get('expiry_date') # Date object or None from DB
             key = (dq['chemical_name'], dq['brand_name'], dq['dose_volume'], expiry_key)
+            
             try:
                 day_num = dq['date'].day
                 quantity_val = dq.get('quantity', 0) # Default to 0 if quantity missing
+                print(day_num, quantity_val)
             except AttributeError: # Handle if 'date' is somehow not a date object
                  logger.warning(f"Skipping daily quantity record with invalid date object: {dq}")
                  continue
 
             if key not in daily_quantities_map:
                 daily_quantities_map[key] = {}
+                
             daily_quantities_map[key][day_num] = quantity_val
+        print(daily_quantities_map)
+            
 
         # --- Step 4: Structure Final JSON Response ---
         structured_data = []
@@ -4163,7 +4274,6 @@ def get_prescription_in_data(request):
                  continue
 
             chem_name = item['chemical_name']
-
             # Find or create the chemical group in the result list
             if chem_name not in processed_chemicals:
                  group_index = len(structured_data)
@@ -4186,8 +4296,9 @@ def get_prescription_in_data(request):
 
             # Lookup daily quantities using the map
             lookup_key = (chem_name, brand_name, dose_volume, expiry_date_obj)
+            print(lookup_key)
             brand_daily_data_raw = daily_quantities_map.get(lookup_key, {}) # Get {day: qty} or {}
-
+            
             # Format the daily quantities object for the frontend
             daily_quantities_formatted = {}
             monthly_total = 0
@@ -4211,7 +4322,7 @@ def get_prescription_in_data(request):
             else:
                 logger.error(f"Logic error: Could not find chemical group at index {group_index} for chemical {chem_name}")
 
-
+        
         logger.info(f"Successfully structured data for {len(structured_data)} chemicals for {year}-{month:02d}.")
         return JsonResponse(structured_data, safe=False) # Return the list
 
@@ -6801,4 +6912,37 @@ def get_unique_instruments(request):
 
     except Exception as e:
         logger.exception("Error in get_unique_instruments")
-        return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+        return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)   
+    
+
+
+@csrf_exempt
+def delete_uploaded_file(request):
+    if request.method == "POST":
+        key = request.POST.get('key')
+        mrdNo = request.POST.get('mrdNo')
+
+        if not key or not mrdNo:
+            return JsonResponse({"error": "Missing 'key' or 'mrdNo' in request."}, status=400)
+
+        try:
+            vitals = vitals.objects.get(mrdNo=mrdNo)
+        except vitals.DoesNotExist:
+            return JsonResponse({"error": "Vitals record not found."}, status=404)
+
+       
+        if not hasattr(vitals, key):
+            return JsonResponse({"error": f"Field '{key}' not found on Vitals."}, status=400)
+
+        
+        file_field = getattr(vitals, key)
+        if not file_field:
+            return JsonResponse({"error": f"No file found in field '{key}'."}, status=400)
+        file_field.delete(save=False) 
+        setattr(vitals, key, None)
+        vitals.save()
+
+        return JsonResponse({"success": True, "message": f"File in '{key}' deleted successfully."})
+
+    else:
+        return JsonResponse({"error": "Invalid method. Use POST."}, status=405)

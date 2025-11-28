@@ -16,7 +16,7 @@ urlpatterns = [
     path('members/add/', views.add_member, name='member-add'),
     path('members/update/<int:member_id>/', views.update_member, name='update_member'),
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
-    path('addUsers/', views.create_users, name='addusers'),
+    path('addUsers/', views.create_default_members, name='addusers'),
 
     # Core Data Fetching / Entry (Using Aadhar)
     path('userData', views.fetchdata, name = 'userData'),
@@ -28,8 +28,9 @@ urlpatterns = [
     path('visitData/<str:aadhar>/<str:date_str>', views.fetchVisitDataWithDate, name = 'fetchVisitdataWithDate'),
     path('update_employee_status/', views.update_employee_status, name='update_employee_status'),
 
-    # Vitals & Investigations (Using Aadhar from payload)
+    # Vitals & Investigations (Using Aadhar from payload)  
     path('addvitals', views.add_vital_details, name = 'addVitals'),
+    path('deleteUploadedFile', views.delete_uploaded_file, name = 'deleteUploadedFile'),
     path("addInvestigation", views.add_haem_report, name="addInvestigation"),
     path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"),
     # Correction: Point to the corrected view name
