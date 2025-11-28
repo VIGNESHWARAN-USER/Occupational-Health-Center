@@ -1,3 +1,5 @@
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 
@@ -67,9 +69,10 @@ const Vaccination = ({ data }) => {
 
   if (isLoading) {
     return (
-      <div className="mt-4 bg-white rounded-lg shadow-md p-4 text-center">
-        <p className="text-gray-500">Loading Vaccination History...</p>
-      </div>
+      <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+            <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+            <p className="text-gray-600 font-semibold text-lg animate-pulse">Loading Vaccination History...</p>
+          </div>
     );
   }
 

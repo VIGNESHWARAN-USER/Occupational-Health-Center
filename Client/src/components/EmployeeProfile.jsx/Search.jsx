@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react'; 
 import { FaSearch, FaUserCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../Sidebar';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';  
+import { FaIdCard, FaVenusMars, FaBirthdayCake, FaUserTag, FaArrowRight, FaFingerprint } from 'react-icons/fa';
 
 const Search = () => {
   const accessLevel = localStorage.getItem('accessLevel');
-  const navigate = useNavigate(); // Define navigate once
+  const navigate = useNavigate();
 
   // Check access level early
   if (accessLevel !== "nurse" && accessLevel !== "doctor") {
@@ -14,7 +17,6 @@ const Search = () => {
       <section className="bg-white h-full flex items-center dark:bg-gray-900">
         <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
           <div className="mx-auto max-w-screen-sm text-center">
-            {/* Using 403 for Forbidden Access might be more accurate than 404 */}
             <h1 className="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-primary-600 dark:text-primary-500">403</h1>
             <p className="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Access Denied.</p>
             <p className="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, you don't have permission to access this page.</p>
@@ -25,55 +27,50 @@ const Search = () => {
     );
   }
 
-  // State declarations only if access is granted
-  const [employees, setEmployees] = useState([]);
-  const [searchId, setSearchId] = useState(""); // Represents Aadhar number now
-  const [filteredEmployees, setFilteredEmployees] = useState([]);
+  // State declarations
+  const [employees, setEmployees] = useState([]); // Stores the search results
+  const [searchId, setSearchId] = useState(""); 
   const [loading, setLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false); // To track if a search has been performed
 
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setLoading(true);
-      try {
-        // Consider optimizing: Fetch only necessary fields if the list is very large
-        const response = await axios.post("http://localhost:8000/userData");
-        setEmployees(response.data.data);
-        setFilteredEmployees(response.data.data); // Initially show all
-        console.log(response.data.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        // Handle error display to user if needed
-      } finally { // Use finally to ensure loading is set to false
-        setLoading(false);
-      }
-    };
-    fetchDetails();
-  }, []); // Empty dependency array means this runs once on mount
+  // Updated Search Function: Calls API with Aadhar parameter
+  const handleSearch = async () => {
+    // Validate length before calling API
+    if (searchId.length !== 12) {
+      alert("Please enter a valid 12-digit Aadhar number.");
+      return;
+    }
 
-  const handleSearch = () => {
-    const searchTerm = searchId.trim(); // Trim whitespace
-    if (searchTerm === "") {
-      setFilteredEmployees(employees); // Show all if search is empty
-      localStorage.removeItem("selectedEmployee"); // Clear selection if needed
-    } else {
-      // Filter by Aadhar number (exact match is usually best for Aadhar)
-      const filtered = employees.filter(emp =>
-        emp.aadhar === searchTerm // Check for exact match
-        // If partial match is desired: emp.aadhar && emp.aadhar.includes(searchTerm)
-      );
-      setFilteredEmployees(filtered);
+    setLoading(true);
+    setHasSearched(true); // Mark that we have attempted a search
+    setEmployees([]); // Clear previous results while loading
 
-      // Optional: Update localStorage if needed, though clicking "View" passes data directly
-      if (filtered.length > 0) {
-        // Find the latest record among the matches if multiple exist (unlikely for unique Aadhar)
-        const latestEmployee = filtered.sort((a, b) =>
-           // Use a reliable timestamp; assuming id increments or use an 'updated_at' field
-           (b.id || 0) - (a.id || 0) // Example: Sort by id descending
-        )[0];
-        localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee));
-      } else {
-         localStorage.removeItem("selectedEmployee"); // Clear if no match
-      }
+    try {
+      // Sending Aadhar as a parameter in the body
+      // Ensure your backend expects: req.body.aadhar
+      const response = await axios.post("http://localhost:8000/userDataWithID", {
+        aadhar: searchId
+      });
+
+      // Assuming backend returns { data: [ ...results ] }
+      // If your backend returns the array directly, remove .data
+      setEmployees(response.data.data || []); 
+      
+      console.log("Search Results:", response.data.data);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      alert("Failed to fetch details. Please check the connection.");
+      setEmployees([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Allow searching by pressing "Enter" key
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && searchId.length === 12) {
+      handleSearch();
     }
   };
 
@@ -88,7 +85,6 @@ const Search = () => {
       if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
-       // Handle cases where DOB might be invalid or in the future
       return age >= 0 ? age : '-';
     } catch (e) {
       console.error("Error calculating age:", e);
@@ -99,7 +95,7 @@ const Search = () => {
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="p-8 w-4/5 overflow-y-auto"> {/* Added overflow-y-auto */}
+      <div className="p-8 w-4/5 overflow-y-auto">
         <h1 className="text-4xl font-bold mb-8 text-gray-800">Search Person</h1>
 
         <div className="bg-white shadow-xl rounded-xl p-8 transition-all duration-300 hover:shadow-2xl">
@@ -108,95 +104,125 @@ const Search = () => {
             <div className="relative flex-grow">
               <FaSearch className="absolute top-1/2 transform -translate-y-1/2 left-4 text-gray-600" />
               <input
-                type="text" // Use text initially, or number if you enforce digits
+                type="text"
                 value={searchId}
                 onChange={(e) => setSearchId(e.target.value.replace(/\D/g, ''))} // Allow only digits
-                maxLength={12} // Aadhar is 12 digits
-                placeholder="Search by Aadhar Number (12 digits)" // Updated placeholder
+                onKeyDown={handleKeyDown} // Listen for Enter key
+                maxLength={12}
+                placeholder="Search by Aadhar Number (12 digits)"
                 className="w-full bg-gray-100 py-3 pl-12 pr-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
             </div>
             <button
               onClick={handleSearch}
-              disabled={loading || searchId.length > 0 && searchId.length !== 12} // Disable search if loading or length is invalid (but not empty)
-              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50"
+              disabled={loading || searchId.length !== 12} // Disable if invalid length
+              className="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Search
             </button>
           </div>
 
-          {/* Employee Table - Added min-height for consistency */}
-          <div className="mt-6 overflow-auto max-h-[450px] min-h-[200px] bg-gray-50 rounded-lg p-4 shadow-inner"> {/* Added shadow-inner */}
-            <table className="min-w-full bg-white rounded-lg "> {/* Removed shadow-lg here */}
-              <thead className="bg-blue-500 text-white sticky top-0 z-10"> {/* Make header sticky */}
-                <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Profile</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Worker ID</th>
-                  {/* Added Aadhar Number column */}
-                  <th className="px-6 py-3 text-left text-sm font-medium">Aadhar Number</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Role</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Age</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Gender</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              {/* Use shadow on the container, not individual body */}
-              <tbody className="divide-y divide-gray-200">
-                {loading ? (
-                  <tr>
-                    {/* Updated colspan */}
-                    <td colSpan="8" className="text-center py-10">
-                      <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
-                      <p className='text-gray-500 mt-2'>Loading Data...</p>
-                    </td>
-                  </tr>
+          
+          <div className="mt-8 w-full">
+  {loading ? (
+    // --- LOADING STATE ---
+    <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+      <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+      <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Database...</p>
+    </div>
+  ) : (
+    employees.length > 0 ? (
+      // --- RESULTS LIST (CARDS) ---
+      <div className="grid gap-6">
+        {employees.map((emp) => (
+          <div 
+            key={emp.id || emp.aadhar} 
+            className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col md:flex-row"
+          >
+            {/* Left Side: Color Accent & Profile Pic */}
+            <div className="w-full md:w-64 bg-slate-50 flex flex-col items-center justify-center p-6 border-r border-gray-100 relative">
+              <div className="relative">
+                {emp.profilepic_url ? (
+                  <img 
+                    src={emp.profilepic_url} 
+                    alt="Profile" 
+                    className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
+                  />
                 ) : (
-                  filteredEmployees.length > 0 ? (
-                    filteredEmployees.map((emp) => (
-                      <tr key={emp.id || emp.aadhar} className="hover:bg-gray-100 transition duration-200">
-                        <td className="px-6 py-4 align-middle"> {/* Use align-middle */}
-                           {/* Display actual image or placeholder */}
-                          {emp.profilepic_url ? (
-                             <img src={emp.profilepic_url} alt={`${emp.name || 'User'} profile`} className='w-12 h-12 rounded-full object-cover text-gray-500'/>
-                           ) : (
-                             <FaUserCircle className="w-12 h-12 text-gray-400" />
-                           )}
-                        </td>
-                        {/* Display Worker ID or '-' if not applicable/present */}
-                        <td className="px-6 py-4 align-middle">{emp.emp_no || '-'}</td>
-                        {/* Display Aadhar Number */}
-                        <td className="px-6 py-4 align-middle">{emp.aadhar || '-'}</td>
-                        <td className="px-6 py-4 align-middle">{emp.type || '-'}</td>
-                        <td className="px-6 py-4 align-middle">
-                          {emp.name || '-'}
-                        </td>
-                        <td className="px-6 py-4 align-middle">
-                          {calculateAge(emp.dob)} {/* Use safe age calculation */}
-                        </td>
-                        <td className="px-6 py-4 align-middle">{emp.sex || '-'}</td>
-                        <td className="px-6 py-4 align-middle">
-                          <button
-                            // Pass the specific employee data in state
-                            onClick={() => navigate("../employeeprofile", { state: { data: emp } })}
-                            className="w-28 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-400 transition duration-300 text-sm"> {/* Adjusted padding/size */}
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      {/* Updated colspan */}
-                      <td colSpan="8" className="text-center py-10 text-gray-500">
-                        No person found matching the criteria.
-                      </td>
-                    </tr>
-                  )
+                  <FaUserCircle className="w-24 h-24 text-gray-300 bg-white rounded-full" />
                 )}
-              </tbody>
-            </table>
+                <span className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white ${emp.sex === 'Male' ? 'bg-blue-500' : 'bg-pink-500'}`}></span>
+              </div>
+              <h3 className="mt-3 text-lg font-bold text-gray-800 text-center">{emp.name || 'Unknown'}</h3>
+              <span className="text-xs font-semibold px-3 py-1 bg-blue-100 text-blue-700 rounded-full mt-1 uppercase tracking-wide">
+                {emp.status || 'Staff'}
+              </span>
+            </div>
+
+            {/* Middle: Details Grid */}
+            <div className="flex-1 p-6 grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
+              
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-bold uppercase tracking-wider">
+                  <FaFingerprint /> Aadhar
+                </div>
+                <div className="font-mono text-gray-700 font-medium">{emp.aadhar || '-'}</div>
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-bold uppercase tracking-wider">
+                  <FaIdCard /> Worker ID
+                </div>
+                <div className="text-gray-700 font-medium">{emp.emp_no || '-'}</div>
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-bold uppercase tracking-wider">
+                  <FaBirthdayCake /> Age
+                </div>
+                <div className="text-gray-700 font-medium">{calculateAge(emp.dob)} Years</div>
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-gray-400 mb-1 text-xs font-bold uppercase tracking-wider">
+                  <FaVenusMars /> Gender
+                </div>
+                <div className="text-gray-700 font-medium">{emp.sex || '-'}</div>
+              </div>
+
+            </div>
+
+            {/* Right Side: Action Button */}
+            <div className="p-6 flex items-center justify-center md:border-l border-gray-100 bg-gray-50/50">
+              <button
+                onClick={() => navigate("../employeeprofile", { state: { data: emp } })}
+                className="group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-blue-500/30 w-full md:w-auto font-medium"
+              >
+                View Profile
+                <FaArrowRight className="group-hover:translate-x-1 transition-transform text-sm" />
+              </button>
+            </div>
           </div>
+        ))}
+      </div>
+    ) : (
+      // --- NO RESULTS STATE ---
+      <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-gray-100 text-center">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
+          <FaUserTag className="text-3xl" />
+        </div>
+        <h3 className="text-xl font-bold text-gray-700">
+          {hasSearched ? "No Person Found" : "Ready to Search"}
+        </h3>
+        <p className="text-gray-500 mt-2 max-w-sm">
+          {hasSearched 
+            ? "We couldn't find anyone matching that Aadhar number. Please check the digits and try again." 
+            : "Enter a 12-digit Aadhar number above to fetch and view user details."}
+        </p>
+      </div>
+    )
+  )}
+</div>
         </div>
       </div>
     </div>

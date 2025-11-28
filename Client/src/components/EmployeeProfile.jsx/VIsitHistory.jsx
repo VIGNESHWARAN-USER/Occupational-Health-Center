@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { parse, isValid } from 'date-fns';
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const VisitHistory = ({ data }) => {
     // State for all filters
@@ -225,7 +227,10 @@ const VisitHistory = ({ data }) => {
                         {loading ? (
                             <tr>
                                 <td colSpan="6" className="text-center py-4 text-gray-500">
-                                    <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+                                    <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                                          <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                                          <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Database...</p>
+                                        </div>
                                 </td>
                             </tr>
                         ) : filteredData.length > 0 ? (
