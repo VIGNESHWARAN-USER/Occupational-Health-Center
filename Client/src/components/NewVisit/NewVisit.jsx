@@ -462,8 +462,13 @@ const NewVisit = () => {
   const handleSearch = async () => {  // Make handleSearch async
     console.log(searchId)
     if (searchId.trim() === "") {
+      console.log("Empty search input");
       setFilteredEmployees(employees);
       setdata([]); // Reset data when no input
+      setType(selectedType);
+      setVisit(latestEmployee.type_of_visit);
+      setRegister(latestEmployee.register);
+      setPurpose(latestEmployee.purpose);
       localStorage.removeItem("selectedEmployee"); // Remove saved employee
       setFormData({});//clears the input fields
       setUploadedImage(null);
@@ -473,20 +478,27 @@ const NewVisit = () => {
         const filtered = employees.filter(emp =>
           emp.aadhar.toLowerCase() === searchId.toLowerCase()
         );
+        console.log("Filtered Employees:", filtered);
 
         if (filtered.length > 0) {
           // Get the latest record by sorting by id (or updated_at)
           const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
           latestEmployee.mrdNo = "";
-          console.log("Latest Employee:", latestEmployee);
-          setFilteredEmployees([latestEmployee]);
+          console.log("Latest Employee:", latestEmployee);          setFilteredEmployees([latestEmployee]);
           setdata([latestEmployee]);
           setsingleData([latestEmployee]);
           setFormData(latestEmployee);
           const selectedType = latestEmployee.type;
           setType(selectedType);
-          if(!reference) setRegister(""); 
-          if(!reference) setPurpose("");   
+          setVisit(latestEmployee.type_of_visit);
+          console.log("Latest Employee Type of Visit:", latestEmployee.type_of_visit);
+          setRegister(latestEmployee.register);
+          console.log("Selected Register on Search:", latestEmployee.register);
+          setPurpose(latestEmployee.purpose);
+          console.log("Selected Purpose on Search:", latestEmployee.purpose);
+          console.log("Selected Type on Search:", selectedType);
+          // if(!reference) setRegister(""); 
+          // if(!reference) setPurpose("");   
           setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" }));
           localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee));
           setProfileImage(latestEmployee.profileImage || null); // Set profile image if it exists
@@ -650,6 +662,7 @@ const NewVisit = () => {
         }
 
         if (reference && type_of_visit1) {
+          console.log("type_of_visit1:", type_of_visit1,reference);
           setVisit(type_of_visit1);
         }
         if (reference && purpose1) {
