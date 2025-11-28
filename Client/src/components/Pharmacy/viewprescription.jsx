@@ -85,7 +85,7 @@ function Viewprescription() {
         setFilteredPrescriptions(filtered);
     }, [fromDate, toDate, prescriptions, showIssued]);
 
-    // Handle prescription selection
+    
     const handlePrescriptionSelect = (prescription) => {
         if (!prescription || !prescription.id) {
             console.error('Invalid prescription data:', prescription);
@@ -137,6 +137,8 @@ function Viewprescription() {
                     throw error;
                 }
             });
+
+            console.log("updated promises : ",updatePromises);
 
             // Wait for all stock updates to complete
             await Promise.all(updatePromises);
@@ -231,6 +233,7 @@ function Viewprescription() {
 
         // Set the prescription data and show the update form
         setSelectedPrescriptionData([prescriptionToIssue]);
+        console.log('Issuing Prescription:', prescriptionToIssue);
         setIsUpdating(true);
         window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
@@ -417,6 +420,7 @@ function Viewprescription() {
                             data={selectedPrescriptionData}
                             onPrescriptionUpdate={handlePrescriptionUpdate}
                             condition={true}
+                            mrdNo={selectedPrescriptionData[0].mrdNo}
                         />
                         <div className="mt-4 text-right">
                             <button

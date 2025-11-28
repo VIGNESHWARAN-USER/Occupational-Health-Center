@@ -2999,8 +2999,10 @@ def add_prescription(request):
         emp_no = data.get('emp_no')
         name = data.get('name')
         aadhar = data.get('aadhar')
-        mrd_no = data.get('mrdNumber')  # Get MRD number
+        mrd_no = data.get('mrdNo')  # Get MRD number
         entry_date = timezone.now().date()  # Get current date
+
+        print("MRD No : ", mrd_no)
 
         # --- Basic Validation ---
         if not mrd_no:
