@@ -483,7 +483,7 @@ const EmployeeProfile = () => {
                          {/* Details Grid - NOW ROLE-AWARE */}
                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm w-full">
                             {/* Common Fields */}
-                            <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500"><span className="font-semibold text-gray-900">Worker Type:</span> {employeeData.role || "N/A"}</p>
+                            <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500"><span className="font-semibold text-gray-900">Worker Type:</span> {employeeData.type || "N/A"}</p>
                             <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500"><span className="font-semibold text-gray-900">Gender:</span> {employeeData.sex || "N/A"}</p>
                             <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500"><span className="font-semibold text-gray-900">Mobile:</span> {employeeData.phone_Personal || "N/A"}</p>
                             <p className="p-3 bg-gray-50 rounded-lg shadow-sm border-l-4 border-blue-500"><span className="font-semibold text-gray-900">Blood Group:</span> {employeeData.bloodgrp || "N/A"}</p>

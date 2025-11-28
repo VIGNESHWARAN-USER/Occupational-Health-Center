@@ -547,6 +547,143 @@ def delete_member(request, member_id):
     return JsonResponse({'error': 'Invalid request method. Use POST.'}, status=405) # Changed error message
 
 
+@csrf_exempt
+def fetchdatawithID(request):
+    if request.method == "POST":
+        try:
+            # 1. Parse the Request Body
+            try:
+                body_data = json.loads(request.body)
+                target_aadhar = body_data.get('aadhar')
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid JSON body"}, status=400)
+
+            if not target_aadhar:
+                return JsonResponse({"error": "Aadhar number is required"}, status=400)
+
+            # 2. Fetch the specific Employee (Latest record)
+            # We order by -id to get the most recently added details for this Aadhar
+            employee = employee_details.objects.filter(aadhar=target_aadhar).values().order_by('-id').first()
+
+            if not employee:
+                # Return empty list if user not found (matches frontend logic)
+                return JsonResponse({"data": []}, status=200)
+
+            # Handle Profile Pic URL
+            media_url_prefix = get_media_url_prefix(request)
+            if employee.get("profilepic"):
+                employee["profilepic_url"] = f"{media_url_prefix}{employee['profilepic']}"
+            else:
+                employee["profilepic_url"] = None
+
+            # 3. Helper function to fetch single latest record or generate defaults
+            def get_single_latest_record(model, aadhar):
+                """
+                Fetches the latest record for a specific Aadhar.
+                If no record exists, returns a dictionary with default values.
+                """
+                record = None
+                
+                # Determine ordering field (entry_date, date, or id)
+                sort_field = '-id' # Default fallback
+                if hasattr(model, 'entry_date'):
+                    sort_field = '-entry_date'
+                elif hasattr(model, 'date'):
+                    sort_field = '-date'
+                
+                # Query the model
+                # We filter by aadhar and take the first one based on sort order
+                record = model.objects.filter(aadhar=aadhar).values().order_by(sort_field, '-id').first()
+
+                if record:
+                    return record
+                
+                # --- GENERATE DEFAULT STRUCTURE IF NO DATA FOUND ---
+                # This ensures the frontend receives { "diabetes": false } instead of undefined
+                default_data = {}
+                if model and hasattr(model, '_meta'):
+                    try:
+                        for field in model._meta.get_fields():
+                            if field.concrete and not field.is_relation and not field.primary_key:
+                                default_val = None
+                                if isinstance(field, CharField): 
+                                    default_val = ""
+                                elif isinstance(field, BooleanField): 
+                                    default_val = False
+                                elif isinstance(field, JSONField):
+                                    # Specific defaults for known JSON fields
+                                    if field.name in ["normal_doses", "booster_doses"]: 
+                                        default_val = {"dates": [], "dose_names": []}
+                                    elif field.name == "surgical_history": 
+                                        default_val = {"comments":"", "children": []}
+                                    elif field.name == "vaccination": 
+                                        default_val = {"vaccination": []}
+                                    elif field.name in ["job_nature", "conditional_fit_feilds"]: 
+                                        default_val = []
+                                    else: 
+                                        default_val = {}
+                                default_data[field.name] = default_val
+                    except Exception as e:
+                        logger.error(f"Error creating default structure for {model.__name__}: {e}")
+                
+                return default_data
+
+            # 4. List of models to fetch
+            models_to_fetch = [
+                 Dashboard, vitals, MedicalHistory, heamatalogy, RoutineSugarTests,
+                 RenalFunctionTest, LipidProfile, LiverFunctionTest, ThyroidFunctionTest,
+                 AutoimmuneTest, CoagulationTest, EnzymesCardiacProfile, UrineRoutineTest,
+                 SerologyTest, MotionTest, CultureSensitivityTest, MensPack, WomensPack,
+                 OccupationalProfile, OthersTest, OphthalmicReport, XRay, USGReport,
+                 CTReport, MRIReport, FitnessAssessment, VaccinationRecord, Consultation,
+                 Prescription, SignificantNotes, Form17, Form38, Form39, Form40, Form27
+            ]
+
+            # 5. Loop through models and attach data to the employee object
+            for model_cls in models_to_fetch:
+                # Determine key name (matching frontend expectations)
+                model_name_lower = model_cls.__name__.lower()
+                
+                if model_cls == RenalFunctionTest: 
+                     key_name = "renalfunctiontests_and_electrolytes"
+                elif model_cls == XRay:
+                     key_name = "xray"
+                elif model_cls == MotionTest:
+                     key_name = "motiontest"
+                elif model_cls == CultureSensitivityTest:
+                     key_name = "culturesensitivitytest"
+                elif model_cls == USGReport:
+                     key_name = "usgreport" 
+                elif model_cls == CTReport:
+                     key_name = "ctreport" 
+                elif model_cls == MRIReport:
+                     key_name = "mrireport" 
+                else: 
+                     key_name = model_name_lower
+
+                # Fetch data
+                data_record = get_single_latest_record(model_cls, target_aadhar)
+                
+                # Date Serialization helper
+                # Convert python datetime/date objects to strings for JSON
+                if isinstance(data_record, dict):
+                    for k, v in data_record.items():
+                        if isinstance(v, (datetime, date)):
+                            data_record[k] = v.isoformat()
+
+                # Attach to employee dict
+                employee[key_name] = data_record
+
+            # 6. Return response
+            # Frontend expects { data: [Object] }
+            return JsonResponse({"data": [employee]}, status=200)
+
+        except Exception as e:
+            logger.exception("Error in fetchdatawithID view")
+            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+
+    logger.warning("fetchdatawithID failed: Invalid request method.")
+    return JsonResponse({"error": "Invalid request method"}, status=405)
 
 @csrf_exempt
 def fetchdata(request):
@@ -6945,6 +7082,77 @@ def delete_uploaded_file(request):
         vitals.save()
 
         return JsonResponse({"success": True, "message": f"File in '{key}' deleted successfully."})
+
+    else:
+        return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+
+@csrf_exempt
+def get_worker_documents(request):
+    if request.method == "POST":
+        try:
+            # 1. Parse JSON body (Axios sends JSON, not Form Data)
+            data = json.loads(request.body)
+            aadhar = data.get('aadhar')
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        if not aadhar:
+            return JsonResponse({"error": "Missing 'aadhar' in request."}, status=400)
+
+        # 2. Fetch ALL records for this aadhar (History of uploads)
+        # We use .filter() instead of .get() to get a list
+        # We order by id descending to show newest uploads first
+        records = vitals.objects.filter(aadhar=aadhar).order_by('-id')
+
+        if not records.exists():
+            # It's not an error if no docs exist, just return empty list
+            return JsonResponse({"status": "success", "documents": []})
+
+        documents_list = []
+
+        # 3. Define the mapping of Model Field Name -> Frontend Label
+        # Only add fields that actually store files in your vitals model
+        file_fields_map = [
+            {'field': 'application_form', 'label': 'Application Form'},
+            {'field': 'self_declared', 'label': 'Self Declaration'},
+            {'field': 'consent', 'label': 'Consent Form'},
+            {'field': 'report', 'label': 'Lab Report'},
+            {'field': 'fc', 'label': 'Fitness Certificate'},
+            {'field': 'manual', 'label': 'Confession/Manual'},
+        ]
+
+        # 4. Iterate through records and extract files
+        for record in records:
+            # Determine the date for this record (Handle entry_date or date field)
+            # Use getattr to be safe if field doesn't exist, default to None
+            record_date = getattr(record, 'entry_date', getattr(record, 'date', None))
+            
+            # Format date to string if it exists
+            date_str = record_date.isoformat() if record_date else "Unknown Date"
+
+            for item in file_fields_map:
+                field_name = item['field']
+                label = item['label']
+
+                # Get the file field from the record
+                file_instance = getattr(record, field_name, None)
+
+                # Check if file exists and has a name (is not empty)
+                if file_instance and file_instance.name:
+                    documents_list.append({
+                        "label": label,
+                        # str(file_instance) usually returns the relative path (e.g., "pdfs/file.pdf")
+                        # The frontend appends the media URL prefix.
+                        "file_url": str(file_instance), 
+                        "date": date_str
+                    })
+
+        # 5. Return the formatted list
+        return JsonResponse({
+            "status": "success", 
+            "documents": documents_list
+        }, status=200)
 
     else:
         return JsonResponse({"error": "Invalid method. Use POST."}, status=405)

@@ -20,6 +20,7 @@ urlpatterns = [
 
     # Core Data Fetching / Entry (Using Aadhar)
     path('userData', views.fetchdata, name = 'userData'),
+    path('userDataWithID', views.fetchdatawithID, name = 'userDataWithID'),
     path('adminData', views.fetchadmindata, name = 'adminData'),
     path('addEntries', views.addEntries, name='add_Entries'),
     path('addbasicdetails', views.add_basic_details, name = 'addDetails'),
@@ -31,6 +32,7 @@ urlpatterns = [
     # Vitals & Investigations (Using Aadhar from payload)  
     path('addvitals', views.add_vital_details, name = 'addVitals'),
     path('deleteUploadedFile', views.delete_uploaded_file, name = 'deleteUploadedFile'),
+    path('get_worker_documents/', views.get_worker_documents, name = 'get_worker_documents/'),
     path("addInvestigation", views.add_haem_report, name="addInvestigation"),
     path("addRoutineSugarTest", views.add_routine_sugar, name="addRoutineSugarTest"),
     # Correction: Point to the corrected view name
@@ -44,6 +46,7 @@ urlpatterns = [
     path("addUrineRoutine", views.add_urine_routine, name="addUrineRoutine"),
     path("addSerology", views.add_serology, name="addSerology"),
     path("addMotion", views.add_motion_test, name="addMotion"),
+    
     path("addCultureSensitivityTest", views.add_culturalsensitivity_function, name="addCultureSensitivityTest"), # Corrected spelling of view function
 
     # Other Medical Data (Using Aadhar from payload)
