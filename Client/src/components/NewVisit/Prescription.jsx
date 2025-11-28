@@ -9,6 +9,8 @@ import jsPDF from "jspdf";
 const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }) => {
   console.log("Condition prop:", condition);
   console.log("Register prop:", register);
+  console.log("MRD No prop:", mrdNo);
+  console.log("Data prop:", data);
 
   
   let aadhar = data?.[0]?.aadhar || "";
@@ -70,7 +72,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   const accessLevel = localStorage.getItem("accessLevel");
   const isDoctor = accessLevel === "doctor";
   const isNurse = accessLevel === "nurse";
-  const isPharmacy = accessLevel === "pharmacy";
+  const isPharmacy = accessLevel === "pharmacist";
   const isNurseWithOverride = isNurse && register && typeof register === 'string' && register.toUpperCase().startsWith("OVER");
   console.log("Is Nurse with Override:", isNurseWithOverride);
 
@@ -307,6 +309,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         setDoseManuallyEntered((prev) => ({ ...prev, [type]: { ...prev[type], [index]: true } }));
         setShowDoseSuggestions((prev) => ({ ...prev, [type]: { ...prev[type], [index]: false } }));
     }
+
+    console.log(`Updating ${type} row ${index}, field ${field} with value:`, value);
 
     updateRowState(type, index, field, value);
 
@@ -552,6 +556,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     };
 
     // UPDATED: Chemical input now renders its own suggestions
+    console.log(`Rendering chemical input for type: ${type}, index: ${index}, current value: ${item.chemicalName}`);
     const renderChemicalInput = () => (
       <div className="relative">
         <input type="text" placeholder="Chemical Name" value={item.chemicalName || ""}
@@ -669,18 +674,18 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     return items.filter(item => (item?.chemicalName?.trim() !== "") || (item?.qty != null && String(item.qty).trim() !== "") || (item?.expiryDate?.trim() !== "") || (item?.issuedIn?.trim() !== "") || (item?.issuedOut?.trim() !== "") || (item?.prescriptionOut?.trim() !== ""));
   };
 
-  const handleSubmit = async (mrdNumber) => {
+  const handleSubmit = async (mrdNo) => {
     try {
-      console.log('mrd',mrdNumber)
+      console.log('mrd',mrdNo)
       if (mrdNo === "") {
-      alert("Please submit the entries first to get MRD Number");
-      return;
-    }
-      if (mrdNumber === "" || mrdNumber === undefined) { setError("MRD number is required"); alert("Please ensure MRD number is available."); return; }
+        alert("Please submit the entries first to get MRD Number");
+        return;
+      }
+      if (mrdNo === "" || mrdNo === undefined) { setError("MRD number is required"); alert("Please ensure MRD number is available."); return; }
 
       const allMedicineTypes = { tablets, injections, syrups, drops, creams, respules, lotions, fluids, powder, suture_procedure: sutureProcedureItems, dressing: dressingItems, others };
       const prescriptionData = {
-        emp_no, name: data?.[0]?.name || "", aadhar, mrdNumber,
+        emp_no, name: data?.[0]?.name || "", aadhar, mrdNo,
         nurse_notes: nurseNotes,
         consulted_doctor: (isDoctor || isNurseWithOverride) ? consultedDoctor : (existingPrescription?.consulted_doctor || ""), // Include consulted_doctor
         submitted_by: localStorage.getItem("username") || "Unknown",
@@ -914,6 +919,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       {sectionOrder.map((type) => {
         const stateMap = { tablets, injections, syrups, drops, creams, respules, lotions, fluids, powder, sutureProcedureItems, dressingItems, others };
         const items = stateMap[type] || [];
+        console.log('Rendering section:', data);
         let title, color, addItemButtonText;
         switch (type) {
           case "tablets": title = "Tablets"; color = "blue"; addItemButtonText = "Add Tablet"; break;
@@ -952,7 +958,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
 
       <div className="flex justify-end space-x-4 mt-8">
         {(!isPharmacy || isNurseWithOverride) && <ActionButton onClick={handleGeneratePrescription} color="green">Generate Prescription</ActionButton>}
-        {(isDoctor || isNurseWithOverride || isPharmacy) && <ActionButton onClick={()=>handleSubmit(data?.[0]?.mrdNo)} color="blue">{condition ? "Update Prescription" : "Submit Prescription"}</ActionButton>}
+        {(isDoctor || isNurseWithOverride || isPharmacy) && <ActionButton onClick={()=>handleSubmit(mrdNo)} color="blue">{condition ? "Update Prescription" : "Submit Prescription"}</ActionButton>}
       </div>
       {error && <p className="text-red-500 text-center mt-4">{error}</p>}
     </div>
