@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { FaFileUpload, FaInfoCircle } from 'react-icons/fa';
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdClose } from "react-icons/md";
 
 // --- Generic Info Modal Component (Keep as is from Primary) ---
 const InfoModal = ({ isOpen, onClose, title, children }) => {

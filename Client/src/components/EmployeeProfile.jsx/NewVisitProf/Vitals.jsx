@@ -1,12 +1,11 @@
-import React from 'react';
-// ==== MODIFICATION START: Import FaFileAlt for document links ====
-import { FaInfoCircle, FaFileAlt } from 'react-icons/fa';
-import { Link } from 'react-router-dom';
-// ==== MODIFICATION END ====
+import React, { useState, useEffect } from 'react';
+import axios from 'axios'; // Ensure axios is installed
+import { FaInfoCircle, FaFileAlt, FaCalendarAlt, FaExternalLinkAlt } from 'react-icons/fa';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
-// --- Info Modal Component (No changes needed) ---
+// --- Info Modal Component (No changes) ---
 const InfoModal = ({ isOpen, onClose, title, children }) => {
-    // ... (rest of the modal code is unchanged)
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm" onClick={onClose}>
@@ -25,30 +24,55 @@ const InfoModal = ({ isOpen, onClose, title, children }) => {
 };
 
 const VitalsDetails = ({ data }) => {
-    const [isBpModalOpen, setIsBpModalOpen] = React.useState(false);
-    const [isPulseModalOpen, setIsPulseModalOpen] = React.useState(false);
-    const [isTempModalOpen, setIsTempModalOpen] = React.useState(false);
-    const [isSpo2ModalOpen, setIsSpo2ModalOpen] = React.useState(false);
-    const [isRespRateModalOpen, setIsRespRateModalOpen] = React.useState(false);
-    const [isBmiModalOpen, setIsBmiModalOpen] = React.useState(false);
+    // Vitals Modals State
+    const [isBpModalOpen, setIsBpModalOpen] = useState(false);
+    const [isPulseModalOpen, setIsPulseModalOpen] = useState(false);
+    const [isTempModalOpen, setIsTempModalOpen] = useState(false);
+    const [isSpo2ModalOpen, setIsSpo2ModalOpen] = useState(false);
+    const [isRespRateModalOpen, setIsRespRateModalOpen] = useState(false);
+    const [isBmiModalOpen, setIsBmiModalOpen] = useState(false);
 
-    // ==== MODIFICATION START: Define and filter document fields ====
-    const documentFields = [
-        { key: 'application_form', label: 'Application Form' },
-        { key: 'self_declared', label: 'Self Declaration' },
-        { key: 'consent', label: 'Consent' },
-        { key: 'report', label: 'Lab Reports' },
-        { key: 'fc', label: 'Fitness Certificate' },
-        { key: 'manual', label: 'Confession' },
-    ];
+    // ==== MODIFICATION START: Documents State ====
+    const [documents, setDocuments] = useState([]);
+    const [docsLoading, setDocsLoading] = useState(false);
+    const [docsError, setDocsError] = useState(null);
 
-    const availableDocuments = documentFields.filter(doc => data && data[doc.key]);
+    // Fetch documents when data (and specifically aadhar) is available
+    useEffect(() => {
+        const fetchDocuments = async () => {
+            if (!data?.aadhar) return;
+
+            setDocsLoading(true);
+            setDocsError(null);
+            try {
+                // Adjust the URL to match your backend endpoint
+                const response = await axios.post('http://localhost:8000/get_worker_documents/', {
+                    aadhar: data.aadhar
+                });
+                
+                // Expecting response.data.documents to be an array of objects:
+                // { label: "Application Form", file_url: "...", date: "2023-10-12" }
+                if(response.data.status === 'success') {
+                    setDocuments(response.data.documents);
+                } else {
+                    // Handle case where API returns success but no docs or different structure
+                    setDocuments(response.data.documents || []); 
+                }
+            } catch (err) {
+                console.error("Error fetching documents:", err);
+                setDocsError("Failed to load documents.");
+            } finally {
+                setDocsLoading(false);
+            }
+        };
+
+        fetchDocuments();
+    }, [data?.aadhar]);
     // ==== MODIFICATION END ====
 
 
-    // --- BP Visualization Function (No changes needed) ---
+    // --- BP Visualization Function (No changes) ---
     const renderBpVisualization = (systolic, diastolic, status) => {
-        // ... (rest of the function is unchanged)
         const systolicValue = parseInt(systolic, 10);
         const diastolicValue = parseInt(diastolic, 10);
 
@@ -88,9 +112,8 @@ const VitalsDetails = ({ data }) => {
         );
     };
 
-    // --- BMI Visualization Function (No changes needed) ---
+    // --- BMI Visualization Function (No changes) ---
     const renderBmiVisualization = (bmi, status) => {
-        // ... (rest of the function is unchanged)
         const bmiValue = parseFloat(bmi);
 
         if (isNaN(bmiValue) || bmiValue <= 0) {
@@ -126,9 +149,20 @@ const VitalsDetails = ({ data }) => {
         );
     };
 
+    // Helper to format date
+    const formatDate = (dateString) => {
+        if (!dateString) return "No Date";
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric"
+        });
+    };
+
     return (
         <>
-            {/* Render Active Modals (No changes needed) */}
+            {/* ... Modals (BP, Pulse, etc.) - No changes ... */}
             <InfoModal isOpen={isBpModalOpen} onClose={() => setIsBpModalOpen(false)} title="Blood Pressure Classification">
                 <p><strong>Low BP (Hypotension) :</strong> &lt; 90 / &gt; 60 mmHg</p>
                 <p><strong>Normal :</strong> &lt; 120 / &gt; 80 mmHg</p>
@@ -137,12 +171,13 @@ const VitalsDetails = ({ data }) => {
                 <p><strong>Stage 2 Hypertension :</strong> ≥ 160 / ≥ 100 mmHg</p>
                 <p><strong>Hypertensive Urgency/Crisis :</strong> &gt; 180 / &gt; 120 mmHg</p>
             </InfoModal>
+            {/* ... Other modals (Pulse, Temp, etc) ... */}
             <InfoModal isOpen={isPulseModalOpen} onClose={() => setIsPulseModalOpen(false)} title="Pulse Information">
                 <p><strong>Normal :</strong> 60 - 100 bpm</p>
                 <p><strong>Bradycardia :</strong> &gt; 60 bpm</p>
                 <p><strong>Tachycardia :</strong> &gt; 100 bpm</p>
             </InfoModal>
-            <InfoModal isOpen={isTempModalOpen} onClose={() => setIsTempModalOpen(false)} title="Temperature Information (°F)">
+             <InfoModal isOpen={isTempModalOpen} onClose={() => setIsTempModalOpen(false)} title="Temperature Information (°F)">
                 <p><strong>Normal :</strong> &lt; 99.1°F </p>
                 <p><strong>Low Grade Fever :</strong> 99.1°F - 100.4°F</p>
                 <p><strong>Moderate Grade Fever :</strong> 100.5°F - 102.2°F</p>
@@ -171,8 +206,7 @@ const VitalsDetails = ({ data }) => {
             <div className="mt-8 p-6 bg-white rounded-xl shadow-md">
                 <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Vitals Details</h2>
 
-                {/* --- Rest of the Vitals sections (BP, Pulse, etc.) are unchanged --- */}
-                {/* Blood Pressure Section */}
+                {/* --- Vitals Sections (BP, Pulse, etc.) - No changes --- */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-lg font-semibold text-gray-700">Blood Pressure</h3>
@@ -193,8 +227,7 @@ const VitalsDetails = ({ data }) => {
                         </div>
                     </div>
                 </section>
-
-                {/* Pulse Section */}
+                {/* Pulse */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">Pulse <span className='text-xs font-normal'>(/min)</span></h3>
@@ -208,8 +241,7 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.pulse_comment} />
                     </div>
                 </section>
-                
-                {/* ... other vitals sections ... */}
+                {/* Temp */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">Temperature <span className='text-xs font-normal'>(°F)</span></h3>
@@ -223,6 +255,7 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.temperature_comment} />
                     </div>
                 </section>
+                {/* SpO2 */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">SpO₂ <span className='text-xs font-normal'>(%)</span></h3>
@@ -236,6 +269,7 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.spO2_comment} />
                     </div>
                 </section>
+                {/* Resp Rate */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm mb-6">
                     <div className="flex justify-between items-center mb-3">
                         <h3 className="text-md font-semibold text-gray-700">Respiratory Rate <span className='text-xs font-normal'>(/min)</span></h3>
@@ -249,6 +283,7 @@ const VitalsDetails = ({ data }) => {
                         <DetailCard label="Comment" value={data?.respiratory_rate_comment} />
                     </div>
                 </section>
+                {/* BMI */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm space-y-4 mb-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                         <div className='space-y-4'>
@@ -276,30 +311,51 @@ const VitalsDetails = ({ data }) => {
                     </div>
                 </section>
 
-                {/* ==== MODIFICATION START: New Section for Uploaded Documents ==== */}
+                {/* ==== MODIFICATION START: Updated Documents Section ==== */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4">Uploaded Documents</h3>
-                    {availableDocuments.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {availableDocuments.map((doc) => (
-                                <a
-    key={doc.key}
-    // This href builds the full, correct URL to your backend server
-    href={`http://localhost:8000/media/${data[doc.key]}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="flex items-center space-x-3 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-blue-50 hover:border-blue-400 transition-all duration-200"
->
-    <FaFileAlt className="text-blue-600 flex-shrink-0" size={20} />
-    <span className="text-sm font-medium text-gray-800 truncate" title={doc.label}>
-        {doc.label}
-    </span>
-</a>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Uploaded Documents</h3>
+                    
+                    {docsLoading ? (
+                         <div className="flex justify-center items-center py-6 text-blue-500">
+                             <FontAwesomeIcon icon={faSpinner} spin className="text-2xl mr-2" />
+                             <span>Fetching documents...</span>
+                         </div>
+                    ) : docsError ? (
+                        <div className="text-red-500 text-center py-4 bg-red-50 rounded border border-red-100">
+                            {docsError}
+                        </div>
+                    ) : documents.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {documents.map((doc, index) => (
+                                <div key={index} className="flex flex-col p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-blue-100 text-blue-600 rounded-full">
+                                                <FaFileAlt size={16} />
+                                            </div>
+                                            <span className="font-semibold text-gray-800 text-sm">{doc.label}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex items-center text-xs text-gray-500 mb-4 ml-1">
+                                        <FaCalendarAlt className="mr-1.5 text-gray-400" size={12} />
+                                        <span>{formatDate(doc.date)}</span>
+                                    </div>
+
+                                    <a 
+                                        href={`http://localhost:8000/media/${doc.file_url}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="mt-auto w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-800 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"
+                                    >
+                                        View Document <FaExternalLinkAlt size={12} />
+                                    </a>
+                                </div>
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-4 text-gray-500">
-                            No documents uploaded.
+                        <div className="text-center py-8 text-gray-500 bg-white rounded border border-dashed border-gray-300">
+                            No documents found for this user.
                         </div>
                     )}
                 </section>
@@ -307,7 +363,6 @@ const VitalsDetails = ({ data }) => {
 
             </div>
 
-            {/* Inline styles for dynamic Tailwind classes (No changes needed) */}
             <style jsx>{`
                 .text-blue-600 { color: #2563eb; } .text-blue-500 { color: #3b82f6; }
                 .text-green-600 { color: #16a34a; } .text-green-500 { color: #22c55e; }

@@ -117,7 +117,7 @@ const Sidebar = ({ redCount }) => {
       
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
     ],
-    pharmacy: [
+    pharmacist: [
       { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
       { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
       { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
