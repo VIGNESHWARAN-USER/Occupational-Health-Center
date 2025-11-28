@@ -6,10 +6,11 @@ import axios from 'axios';
 import BasicDetails from './NewVisitProf/BasicDetails';
 import Vitals from './NewVisitProf/Vitals';
 import MedicalHistory from './NewVisitProf/MedicalHistory'
-import Investigation from './NewVisitProf/Investigation'
 import Fitness from './NewVisitProf/Fitness'
 import Vaccination from './NewVisitProf/Vaccination'
 import ConsultationDisplay from './NewVisitProf/Consultation';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 const Summary = () => {
     const {aadhar, date, visit} = useLocation().state || "";
@@ -49,9 +50,10 @@ const Summary = () => {
                 >
                     {
                         (loading) ? (
-                            <div className="flex justify-center p-6 items-center">
-                                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
-                            </div>
+                            <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                                  <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                                  <p className="text-gray-600 font-semibold text-lg animate-pulse">Preparing summary...</p>
+                                </div>
                         ):
                         ((visit === "Curative") ?(
                         <>
@@ -59,7 +61,7 @@ const Summary = () => {
                             <Vitals data = {visitData.vitals}/>
                             {/* FIX: Pass an object with the correct structure */}
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
-                           <Investigation data = {visitData.employee}/> 
+                            
                             <Vaccination data = {visitData.vaccination}/>
                             <ConsultationDisplay data = {visitData}/>
                         </>
@@ -69,7 +71,7 @@ const Summary = () => {
                             <Vitals data = {visitData.vitals}/>
                             {/* FIX: Pass an object with the correct structure */}
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
-                            <Investigation data = {visitData.employee}/>
+                            
                             <Vaccination data = {visitData.vaccination}/>
                             <Fitness data = {visitData.fitnessassessment}/>
                         </>))

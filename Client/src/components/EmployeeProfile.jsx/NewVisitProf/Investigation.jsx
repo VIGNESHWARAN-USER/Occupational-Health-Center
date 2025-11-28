@@ -1,3 +1,5 @@
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import axios from "axios";
 import React, { useState, useEffect } from "react";
 
@@ -119,7 +121,10 @@ const Investigation = ({ data }) => {
   const formatLabel = (k) => k.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
 
   const renderResults = () => {
-    if (isLoading) return <p className="text-center text-gray-500 mt-8">Loading data...</p>;
+    if (isLoading) return <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+          <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+          <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Investigation...</p>
+        </div>;
     if (error) return <p className="text-center text-red-500 mt-8">{error}</p>;
     if (!selectedCategory || !selectedParameter) {
       return <p className="text-center text-gray-500 mt-8">Please select a category and parameter to view data.</p>;

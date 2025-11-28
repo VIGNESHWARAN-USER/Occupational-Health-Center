@@ -1,3 +1,5 @@
+import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 
@@ -113,7 +115,10 @@ const SignificantNotesDetails = ({ data }) => {
             <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Visit History</h2>
                 {isLoading ? (
-                    <p className="text-blue-500">Loading history...</p>
+                    <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                          <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                          <p className="text-gray-600 font-semibold text-lg animate-pulse">Loading history...</p>
+                        </div>
                 ) : error ? (
                     <p className="text-red-500">Error loading history: {error}</p>
                 ) : notes.length === 0 ? (
