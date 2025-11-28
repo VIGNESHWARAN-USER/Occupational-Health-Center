@@ -1,5 +1,5 @@
 # Byte-compiled / optimized / DLL files
-__pycache__/
+_pycache_/
 *.py[cod]
 *$py.class
 
@@ -54,3 +54,8 @@ media/
 venv/
 ENV/
 env/
+=======
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
