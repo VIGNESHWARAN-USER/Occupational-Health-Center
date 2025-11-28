@@ -227,6 +227,7 @@ const RecordsFilters = () => {
                 else if (key === 'marital_status') { if (!employee.marital_status || employee.marital_status?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'ageFrom') { const age = calculateAge(employee.dob); if (age === '-' || age < parseInt(value, 10)) return false; }
                 else if (key === 'ageTo') { const age = calculateAge(employee.dob); if (age === '-' || age > parseInt(value, 10)) return false; }
+                else if (key === 'nationality') {if (!employee.nationaity || employee.nationality?.toLowerCase() !== value.toLowerCase()) return false; }
 
                 // --- Employment Details ---
                 else if (key === 'designation') { if (!employee.designation || employee.designation?.toLowerCase() !== value.toLowerCase()) return false; }
@@ -234,6 +235,8 @@ const RecordsFilters = () => {
                 else if (key === 'employer') { if (!employee.employer || employee.employer?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'moj') { if (!employee.moj || employee.moj?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'job_nature') { if (!employee.job_nature || employee.job_nature?.toLowerCase() !== value.toLowerCase()) return false; }
+                else if (key === 'previousEmployer') { if (!employee.previousEmployer || employee.previousEmployer?.toLowerCase() !== value.toLowerCase()) return false; }
+                else if (key === 'preiousLocation') { if (!employee.previousLocation || employee.previousLocation?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'dojFrom') {
                     if (!employee.doj) return false; 
                     try {
@@ -392,7 +395,7 @@ else if (key.startsWith('investigation_')) {
                     }
                 }
                 // --- Medical History ---
-                 else if (['smoking', 'alcohol', 'paan'].includes(key)) {
+                 else if (['smoking', 'alcohol', 'paan/beetle'].includes(key)) {
                      const habitData = employee.medicalhistory?.personal_history?.[key]; if (!habitData || habitData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
                  }
                  else if (key === 'diet') {
@@ -561,7 +564,7 @@ else if (key.startsWith('investigation_')) {
          else if (key.startsWith("referrals_") && typeof value === 'object') { let p=[]; if (value.referred) p.push(`Referred:${value.referred}`); if (value.speciality) p.push(`Spec:${value.speciality}`); if (value.hospitalName) p.push(`Hosp:${value.hospitalName}`); if (value.doctorName) p.push(`Doc:${value.doctorName}`); return `Referral:${p.join(', ')}`; }
          else if (key.startsWith("family_") && typeof value === 'object') { return `FamilyHx: ${value.relation}-${value.condition}(${value.status})`; }
          else if (key.startsWith("personal_")) { return `PersonalHx: ${key.substring('personal_'.length)}(${value})`; }
-         else if (['smoking', 'alcohol', 'paan', 'diet', 'drugAllergy', 'foodAllergy', 'otherAllergies', 'surgicalHistory'].includes(key)) { return `MedHx: ${key.replace(/([A-Z])/g,' $1').replace(/^./, s => s.toUpperCase())}(${value})`; }
+         else if (['smoking', 'alcohol', 'paan/beetle', 'diet', 'drugAllergy', 'foodAllergy', 'otherAllergies', 'surgicalHistory'].includes(key)) { return `MedHx: ${key.replace(/([A-Z])/g,' $1').replace(/^./, s => s.toUpperCase())}(${value})`; }
          else if (key === 'vaccine_status') { return `Vaccine Status: ${value}`; }
         // <<< CHANGE 4: Added display string logic for the new filter
          else if (key.startsWith("significant_") && typeof value === 'object') {
@@ -709,15 +712,31 @@ else if (key.startsWith('investigation_')) {
                 {/* --- Display Employee Data Table --- */}
 {/* --- Display Employee Data Table --- */}
                 <div className="p-4 flex-grow flex flex-col min-h-0">
-                    <div className="flex justify-between items-center mb-4 flex-shrink-0"> {/* <<< NEW: Wrapper div */}
+                    <div className="flex justify-between items-center mb-4 flex-shrink-0">
                         <h2 className="text-xl font-semibold">Filtered Employee Records ({filteredEmployees.length})</h2>
-                        <button
-                            onClick={handleDownload}
-                            className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
-                            disabled={filteredEmployees.length === 0}
-                        >
-                            Download Excel
-                        </button>
+                        
+                        {/* Grouping Checkbox and Button together */}
+                        <div className="flex items-center gap-4">
+                            
+                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    // Assuming you have a state for this, e.g., includeContact
+                                    // checked={includeContact}
+                                    // onChange={(e) => setIncludeContact(e.target.checked)}
+                                />
+                                Add Contact Details
+                            </label>
+
+                            <button
+                                onClick={handleDownload}
+                                className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+                                disabled={filteredEmployees.length === 0}
+                            >
+                                Download Excel
+                            </button>
+                        </div>
                     </div>
                     <div className="overflow-auto flex-grow bg-gray-50 rounded-lg p-4 shadow-md border border-gray-200">
                         <table className="min-w-full bg-white rounded-lg ">
@@ -866,15 +885,109 @@ const EmployementStatus = ({ addFilter }) => {
     return (<div className="space-y-4"> <div> <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">Status</label> <select name="status" id="status-filter" value={formData.status} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">Select Status</option> <option value="Active">Active</option> <option value="Transferred To">Transferred To</option> <option value="Resigned">Resigned</option> <option value="Retired">Retired</option> <option value="Deceased">Deceased</option> <option value="Unauthorised Absence">Unauthorised Absence</option> <option value="Other">Other</option> </select> </div> {showTransferredTo && (<div> <label htmlFor="transferred_to-filter" className="block text-sm font-medium text-gray-700 mb-1">Transferred To Dept/Location</label> <input type="text" id="transferred_to-filter" name="transferred_to" value={formData.transferred_to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Department/Location"/> </div>)} {showDateRange && (<div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="from-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since From</label> <input type="date" id="from-date-filter" name="from" value={formData.from} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" max={new Date().toISOString().split("T")[0]}/> </div> <div> <label htmlFor="to-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since To</label> <input type="date" id="to-date-filter" name="to" value={formData.to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min={formData.from || undefined} max={new Date().toISOString().split("T")[0]}/> </div> </div>)} <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50" disabled={isSubmitDisabled}>Add Employment Status Filter</button> </div>);
 };
 const PersonalDetails = ({ addFilter }) => {
-    const [formData, setFormData] = useState({ ageFrom: "", ageTo: "", sex: "", bloodgrp: "", marital_status: "", });
-    const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
-    const handleSubmit = () => {
-        const filteredData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "" && v !== null));
-        if (filteredData.ageFrom && filteredData.ageTo && parseInt(filteredData.ageFrom, 10) > parseInt(filteredData.ageTo, 10)) { alert("'Age From' > 'Age To'."); return; }
-        if (Object.keys(filteredData).length > 0) { addFilter(filteredData); } else { alert("Enter at least one detail."); }
-        setFormData({ ageFrom: "", ageTo: "", sex: "", bloodgrp: "", marital_status: "" });
+    const [formData, setFormData] = useState({
+        ageFrom: "",
+        ageTo: "",
+        sex: "",
+        bloodgrp: "",
+        marital_status: "",
+        nationality: ""
+    });
+
+    const handleChange = (e) => {
+        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
-    return (<div className="space-y-4"> <div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="ageFrom-filter">Age From</label> <input type="number" id="ageFrom-filter" name="ageFrom" value={formData.ageFrom} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 25"/> </div> <div> <label htmlFor="ageTo-filter">Age To</label> <input type="number" id="ageTo-filter" name="ageTo" value={formData.ageTo} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 40"/> </div> </div> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="sex-filter">Sex</label> <select name="sex" id="sex-filter" value={formData.sex} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any Sex</option> <option value="Male">Male</option> <option value="Female">Female</option> <option value="Other">Other</option> </select> </div> <div> <label htmlFor="bloodgrp-filter">Blood Group</label> <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="A+">A+</option> <option value="A-">A-</option> <option value="B+">B+</option> <option value="B-">B-</option> <option value="AB+">AB+</option> <option value="AB-">AB-</option> <option value="O+">O+</option> <option value="O-">O-</option> </select> </div> <div> <label htmlFor="marital_status-filter">Marital Status</label> <select name="marital_status" id="marital_status-filter" value={formData.marital_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"> <option value="">Any</option> <option value="Single">Single</option> <option value="Married">Married</option> <option value="Separated">Separated</option> <option value="Divorced">Divorced</option> <option value="Widowed">Widowed</option> </select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Personal Details Filter</button> </div>);
+
+    // Accept the event 'e' here
+    const handleSubmit = (e) => {
+        // Prevent default form submission behavior
+        if (e) e.preventDefault();
+
+        const filteredData = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "" && v !== null));
+        
+        if (filteredData.ageFrom && filteredData.ageTo && parseInt(filteredData.ageFrom, 10) > parseInt(filteredData.ageTo, 10)) {
+            alert("'Age From' > 'Age To'.");
+            return;
+        }
+        
+        if (Object.keys(filteredData).length > 0) {
+            addFilter(filteredData);
+        } else {
+            alert("Enter at least one detail.");
+        }
+        
+        setFormData({ ageFrom: "", ageTo: "", sex: "", bloodgrp: "", marital_status: "", nationality: "" });
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label htmlFor="ageFrom-filter">Age From</label>
+                    <input type="number" id="ageFrom-filter" name="ageFrom" value={formData.ageFrom} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 25" />
+                </div>
+                <div>
+                    <label htmlFor="ageTo-filter">Age To</label>
+                    <input type="number" id="ageTo-filter" name="ageTo" value={formData.ageTo} onChange={handleChange} min="0" className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., 40" />
+                </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label htmlFor="sex-filter">Sex</label>
+                    <select name="sex" id="sex-filter" value={formData.sex} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        <option value="">Any Sex</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="bloodgrp-filter">Blood Group</label>
+                    <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        <option value="">Any</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="marital_status-filter">Marital Status</label>
+                    <select name="marital_status" id="marital_status-filter" value={formData.marital_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        <option value="">Any</option>
+                        <option value="Single">Single</option>
+                        <option value="Married">Married</option>
+                        <option value="Separated">Separated</option>
+                        <option value="Divorced">Divorced</option>
+                        <option value="Widowed">Widowed</option>
+                    </select>
+                </div>
+                <div>
+                    <label htmlFor="nationality_filter">Nationality</label>
+                    {/* Fixed: changed value from formData.nationality_status to formData.nationality */}
+                    <select name="nationality" id="nationality_filter" value={formData.nationality} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                        <option value="">Any</option>
+                        <option value="indian">Indian</option>
+                        <option value="foreign">Foreign</option>
+                    </select>
+                </div>
+            </div>
+            
+            {/* Added type="button" here */}
+            <button 
+                type="button" 
+                onClick={handleSubmit} 
+                className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" 
+                disabled={Object.values(formData).every(v => v === "")}
+            >
+                Add Personal Details Filter
+            </button>
+        </div>
+    );
 };
 const EmploymentDetails = ({ addFilter }) => {
     const [formData, setFormData] = useState({
@@ -883,13 +996,16 @@ const EmploymentDetails = ({ addFilter }) => {
         moj: "",
         employer: "",
         job_nature: "",
+        previousEmployer: "",
+        previousLocation: "",
         dojFrom: "",
         dojTo: "",
     });
 
     const employerOptions = { "JSW Steel": "JSW Steel", "JSW Cement": "JSW Cement", "JSW Foundation": "JSW Foundation" };
     const mojOptions = { "New Joinee": "New Joinee", "Transfer": "Transfer" };
-    const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant" };
+    const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant", "Painter": "Painter", "Driver": "Driver" };
+    const jobStatusOptions = { "JBC": "JBC", "SSC": "SSC", "JBN":"JBN", "TBC":"TBC", "GGBS":"GGBS", "JBI":"JBI", "JBA":"JBA", "Support Staff": "Support Staff", "MBC":"MBC", "Propreitor":"Propreitor", "CSR Foundation": "CSR Foundation", "Transporter":"Transporter", "JSW Society":"JSW Society", "Shut Down":"Shut Down", "ITI Apprentice":"ITI Apprentice", "Supplier":"Supplier"}
 
     const handleChange = (e) => {
         setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -910,34 +1026,114 @@ const EmploymentDetails = ({ addFilter }) => {
         }
 
         setFormData({
-            designation: "", department: "", moj: "", employer: "", job_nature: "", dojFrom: "", dojTo: ""
+            designation: "", department: "", moj: "", employer: "", job_nature: "", previousEmployer: "", previousLocation: "", dojFrom: "", dojTo: ""
         });
     };
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><label htmlFor="employer-filter">Employer</label><select name="employer" id="employer-filter" value={formData.employer} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(employerOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
-                <div><label htmlFor="moj-filter">Mode of Joining</label><select name="moj" id="moj-filter" value={formData.moj} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(mojOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
-                <div><label htmlFor="job_nature-filter">Job Nature</label><select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">Any</option>{Object.entries(jobNatureOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}</select></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label htmlFor="designation-filter">Designation</label><input type="text" id="designation-filter" name="designation" value={formData.designation} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Engineer" /></div>
-                <div><label htmlFor="department-filter">Department</label><input type="text" id="department-filter" name="department" value={formData.department} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., IT" /></div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t mt-4">
-                 <div>
-                    <label htmlFor="dojFrom-filter">Date of Joining (From)</label>
-                    <input type="date" id="dojFrom-filter" name="dojFrom" value={formData.dojFrom} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
+                {/* Row 1: Basic Dropdowns */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label htmlFor="employer-filter">Employer</label>
+                        <select name="employer" id="employer-filter" value={formData.employer} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                            <option value="">Any</option>
+                            {Object.entries(employerOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="moj-filter">Mode of Joining</label>
+                        <select name="moj" id="moj-filter" value={formData.moj} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                            <option value="">Any</option>
+                            {Object.entries(mojOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="job_nature-filter">Job Nature</label>
+                        <select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                            <option value="">Any</option>
+                            {Object.entries(jobNatureOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                        </select>
+                    </div>
+                    <div>
+                        <label htmlFor="job_status-filter">Job Status</label>
+                        <select name="job_status" id="job_status-filter" value={formData.job_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
+                            <option value="">Any</option>
+                            {Object.entries(jobStatusOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
+                        </select>
+                    </div>
                 </div>
-                 <div>
-                    <label htmlFor="dojTo-filter">Date of Joining (To)</label>
-                    <input type="date" id="dojTo-filter" name="dojTo" value={formData.dojTo} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
-                </div>
-            </div>
 
-            <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Employment Details Filter</button>
-        </div>
+                {/* Row 2: Conditional Transfer Fields 
+                    IMPORTANT: Replace "Transfer" below with the actual Key/ID from your mojOptions 
+                */}
+                {formData.moj === "Transfer" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div>
+                            <label htmlFor="prev-employer-filter">Previous Employer</label>
+                            <input 
+                                type="text" 
+                                id="prev-employer-filter" 
+                                name="previousEmployer" 
+                                value={formData.previousEmployer || ''} 
+                                onChange={handleChange} 
+                                className="w-full p-3 border rounded-lg focus:ring-blue-500" 
+                                placeholder="e.g., Previous Co." 
+                            />
+                        </div>
+                        <div>
+                            <label htmlFor="prev-location-filter">Previous Location</label>
+                            <input 
+                                type="text" 
+                                id="prev-location-filter" 
+                                name="previousLocation" 
+                                value={formData.previousLocation || ''} 
+                                onChange={handleChange} 
+                                className="w-full p-3 border rounded-lg focus:ring-blue-500" 
+                                placeholder="e.g., Chennai" 
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* Row 3: Designation & Department */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="designation-filter">Designation</label>
+                        <input type="text" id="designation-filter" name="designation" value={formData.designation} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Engineer" />
+                    </div>
+                    <div>
+                        <label htmlFor="department-filter">Department</label>
+                        <input type="text" id="department-filter" name="department" value={formData.department} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., IT" />
+                    </div>
+                </div>
+
+                {/* Row 4: Division & Work Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="division-filter">Division</label>
+                        <input type="text" id="division-filter" name="division" value={formData.division} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Cement" />
+                    </div>
+                    <div>
+                        <label htmlFor="workarea-filter">Work Area</label>
+                        <input type="text" id="workarea-filter" name="workarea" value={formData.workarea} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" placeholder="e.g., Rolling Mills" />
+                    </div>
+                </div>
+
+                {/* Row 5: Date Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t mt-4">
+                    <div>
+                        <label htmlFor="dojFrom-filter">Date of Joining (From)</label>
+                        <input type="date" id="dojFrom-filter" name="dojFrom" value={formData.dojFrom} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
+                    </div>
+                    <div>
+                        <label htmlFor="dojTo-filter">Date of Joining (To)</label>
+                        <input type="date" id="dojTo-filter" name="dojTo" value={formData.dojTo} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500" />
+                    </div>
+                </div>
+
+                <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={Object.values(formData).every(v => v === "")}>Add Employment Details Filter</button>
+            </div>
     );
 };
 const Vitals = ({ addFilter }) => {
@@ -1345,7 +1541,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
     const [al, setAl] = useState({ drugAllergy: "", foodAllergy: "", otherAllergies: "", });
     const [sh, setSh] = useState({ status: "", });
 
-    const hOpts={"":"Any",Yes:"Yes",No:"No",Cessased:"Cessased"}; const yOpts={"":"Any",Yes:"Yes",No:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Hyper thyroid","Hypo thyroid","Asthma","CVS","CNS","RS","GIT","KUB","CANCER","Defective Colour Vision","OTHERS","Obstetric","Gynaec"]; const rOpts=["","Father","Mother","Brother","Sister","Son","Daughter","Spouse","Grandparent","Other"];
+    const hOpts={"":"Any",Yes:"Yes",No:"No",Cessased:"Cessased"}; const yOpts={"":"Any",Yes:"Yes",No:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Vertigo", "Hyper thyroid","Hypo thyroid","Asthma","Mental Illness", "CVS","CNS","RS","ENT", "GIT","KUB","Musculo Skeletal (Fractures, etc.)","Skin", "Oral/Dental", "Cancer","Defective Colour Vision","OTHERS","Obstetric","Gynaec"]; const rOpts=["","Father","Mother","Brother","Sister","Son","Daughter","Spouse","Grandparent","Other"];
 
     const hhc=(e)=>{setPh(p=>({...p,[e.target.name]:e.target.value}))};
     const hpc=(e)=>{setPc(p=>({...p,[e.target.name]:e.target.value}))};
@@ -1395,7 +1591,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
         <fieldset className="border p-4 rounded-md"><legend className="text-lg font-semibold px-2 text-gray-600">Family History</legend>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                 <div><label htmlFor="fc-c-f">Condition</label><select name="condition" id="fc-c-f" value={fc.condition} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{cParams.map(c=><option key={c} value={c}>{c||'--Any--'}</option>)}</select></div>
-                <div><label htmlFor="fc-r-f">Relation</label><select name="relation" id="fc-r-f" value={fc.relation} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{rOpts.map(r=><option key={r} value={r}>{r||'--Any--'}</option>)}</select></div>
+                {/* <div><label htmlFor="fc-r-f">Relation</label><select name="relation" id="fc-r-f" value={fc.relation} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{rOpts.map(r=><option key={r} value={r}>{r||'--Any--'}</option>)}</select></div> */}
                 <div><label htmlFor="fc-s-f">Status (Y/N)</label><select name="status" id="fc-s-f" value={fc.status} onChange={hfc} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(yOpts).map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
             </div>
         </fieldset>
