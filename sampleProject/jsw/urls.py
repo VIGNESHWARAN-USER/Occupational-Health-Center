@@ -153,7 +153,9 @@ urlpatterns = [
     path('medicalupload', views.MedicalDataUploadView.as_view(), name='medical_upload'),
     path('get_investigation_details/<str:aadhar>', views.get_investigation_details, name = 'get_investigations-details'),
     path('update-pharmacy-stock/', views.update_pharmacy_stock, name='update_pharmacy_stock'),
-    path('get-chemical-names/',  views.get_chemical_name_suggestions,  name='get-chemical-name-suggestions'),
+    path(
+        'get-chemical-names/',  views.get_chemical_name_suggestions,  name='get-chemical-name-suggestions'
+    ),
   
 ]
 

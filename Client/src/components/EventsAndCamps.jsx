@@ -24,7 +24,7 @@ const EventsAndCamps = () => {
     const [uploadedFileNames, setUploadedFileNames] = useState({}); // Names of the files on DB
     const fileTypes = ["report1", "report2", "photos", "ppt"]; // Define file types
     const [dbFiles, setDbFiles] = useState({});  // store file URLs from the database
-    
+
     // Nurse Role Functionality
     if (accessLevel === "nurse" || accessLevel === "doctor") {
         const [formDatas, setFormDatas] = useState({
@@ -122,7 +122,6 @@ const EventsAndCamps = () => {
                 }
 
                 const data = await response.json();
-                console.log("Fetched camp data:", data); // Debugging log
                 setCampData(data);
                 setFilteredCampData(data);
 
@@ -136,7 +135,6 @@ const EventsAndCamps = () => {
                         ppt: camp.ppt
                     };
                 });
-                console.log("Initial dbFiles state:", initialDbFiles); // Debugging log
                 setDbFiles(initialDbFiles);
 
             } catch (err) {
@@ -161,20 +159,14 @@ const EventsAndCamps = () => {
         };
 
         const handleFileChange = (e, campId, fileType) => {
-            console.log("upload sucessfully",e);
-            console.log(campId);
-            console.log(fileType);
-            const files = Array.from(e.target.files);   
-            console.log("Selected files:", files);
+            const files = Array.from(e.target.files);
             setSelectedFiles((prevSelectedFiles) => ({
                 ...prevSelectedFiles,
                 [campId]: {
                     ...prevSelectedFiles[campId],
                     [fileType]: files[0],  // Only store the first file
                 },
-                
             }));
-
 
             // Update displayed file names
             setUploadedFileNames((prevNames) => ({
@@ -249,7 +241,6 @@ const EventsAndCamps = () => {
 
             const formData = new FormData();
             formData.append("files", fileToUpload);
-            console.log("Form Data File:", fileToUpload);
             formData.append("campId", campId);
             formData.append("fileType", fileType);
 
@@ -259,14 +250,12 @@ const EventsAndCamps = () => {
                     body: formData,
                 });
 
-
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(`File upload failed: ${response.status} - ${errorData.error || "Unknown error"}`);
                 }
 
                 const responseData = await response.json();
-                console.log("File upload response:", responseData); // Debugging log
 
                 // Update the dbFiles state with the new file URL
                 setDbFiles(prevDbFiles => ({
@@ -345,30 +334,24 @@ const EventsAndCamps = () => {
                 <div className="w-4/5 p-8 overflow-y-auto">
                     <div className="mb-8 flex justify-between items-center">
                         <h1 className="text-4xl font-bold mb-8 text-gray-800">Camps</h1>
-                       <div>
+                        <div>
                             {["View Camps", "Add Camps"].map((btnText, index) => (
                                 <button
-                                key={index}
-                                className={`px-4 py-2 rounded-lg me-4 text-white hover:opacity-90 ${
-                                    index === 0 ? "bg-blue-500 hover:bg-blue-600" : "bg-green-500 hover:bg-green-600"
-                                }`}
-                                onClick={() => {
-                                    setformVal(btnText);
-                                }}
+                                    key={index} rounded-lg bg-blue-500 me-4 text-white
+                                    className="px-4 py-2"
+                                    onClick={() => {
+                                        setformVal(btnText);
+                                    }}
                                 >
-                                {btnText}
+                                    {btnText}
                                 </button>
                             ))}
-                            </div>
-
-                            
-
+                        </div>
                     </div>
 
                     {formVal === "View Camps" ? (
                         <motion.div
-                            className="bg-white
-                             p-8 rounded-lg shadow-lg"
+                            className="bg-white p-8 rounded-lg shadow-lg"
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5 }}
@@ -454,7 +437,6 @@ const EventsAndCamps = () => {
                                         Export to Excel
                                     </button>
                                 </div>
-                                
                             </div>
 
                             {loading ? (
