@@ -57,38 +57,45 @@ const MockDrills = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array means it runs once on mount
 
-    const handleViewMockDrills = async () => {
-        try {
-            let url = 'http://localhost:8000/get-mockdrills/?';
-            if (fromDate) {
-                url += `from_date=${fromDate}&`;
-            }
-            if (toDate) {
-                url += `to_date=${toDate}&`;
-            }
-            if (url.endsWith('&')) {
-                url = url.slice(0, -1);
-            }
+   const handleViewMockDrills = async () => {
+    try {
+        const url = 'http://localhost:8000/get-mockdrills/';
 
-            const response = await fetch(url);
+        const bodyData = {
+            from_date: fromDate || "",
+            to_date: toDate || ""
+        };
 
-            if (response.ok) {
-                const data = await response.json();
-                setMockDrillData(data);
-                setShowForm(false);
-                setViewButtonSelected(true);
-                setAddButtonSelected(false);
-                setDetailedView(true);
-            } else {
-                console.error("Failed to fetch mock drills:", response.status);
-                const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
-                alert(`Failed to fetch data: ${errorData.detail || response.statusText}`);
-            }
-        } catch (error) {
-            console.error("Error fetching mock drills:", error);
-            alert("Error fetching data. Check console for details.");
+        console.log("Sending body:", bodyData);
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(bodyData),
+        });
+
+        console.log("response value", response);
+
+        if (response.ok) {
+            const data = await response.json();
+            setMockDrillData(data);
+            setShowForm(false);
+            setViewButtonSelected(true);
+            setAddButtonSelected(false);
+            setDetailedView(true);
+        } else {
+            console.error("Failed to fetch mock drills:", response.status);
+            const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+            alert(`Failed to fetch data: ${errorData.detail || response.statusText}`);
         }
-    };
+    } catch (error) {
+        console.error("Error fetching mock drills:", error);
+        alert("Error fetching data. Check console for details.");
+    }
+};
+
 
     const handleAddMockDrills = async () => {
         setShowForm(true);
@@ -102,7 +109,7 @@ const MockDrills = () => {
 
         // Fetch the latest mock drill data to autofill the form
         try {
-            const response = await fetch("http://localhost:8000/get-one-mockdrills/");
+            // const response = await fetch("http://localhost:8000/get-one-mockdrills");
             if (response.ok) {
                 const latestData = await response.json();
                 if (latestData && Object.keys(latestData).length > 0) {
@@ -459,15 +466,19 @@ const MockDrills = () => {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-gray-700 text-sm font-bold mb-2">Gender</label>
-                                            <input
-                                                type="text" 
-                                                name="gender"
-                                                value={formDatas.gender}
-                                                onChange={handleChange}
-                                                className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                        </div>
+    <label className="block text-gray-700 text-sm font-bold mb-2">Gender</label>
+    <select
+        name="gender"
+        value={formDatas.gender}
+        onChange={handleChange}
+        className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+        <option value="">-- Select Gender --</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+    </select>
+</div>
+
                                         <div>
                                             <label className="block text-gray-700 text-sm font-bold mb-2">Victim Department</label>
                                             <input

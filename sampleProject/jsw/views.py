@@ -3168,27 +3168,29 @@ def save_mockdrills(request):
         response = JsonResponse({"error": "Invalid request method"}, status=405)
         response['Allow'] = 'POST'
         return response
-
-# Use GET
+@csrf_exempt
 def get_mockdrills(request):
-    if request.method == "GET":
+    if request.method == "POST":
         try:
-            mock_drills_qs = mockdrills.objects.all().order_by('-date', '-time')
-            mock_drills_list = []
-            for drill in mock_drills_qs:
-                 drill_data = model_to_dict(drill)
-                 drill_data['date'] = drill.date.format() if drill.date else None
-                 # Format time if needed: drill_data['time'] = drill.time.strftime('%H:%M:%S') if drill.time else None
-                 mock_drills_list.append(drill_data)
-            return JsonResponse(mock_drills_list, safe=False)
+            data = json.loads(request.body)
+            from_date = data.get("from_date")
+            to_date = data.get("to_date")
+            print("Received:", from_date, to_date)
+
+            # Your filtering logic here...
+            queryset = mockdrills.objects.all()
+            if from_date:
+                queryset = queryset.filter(date__gte=from_date)
+            if to_date:
+                queryset = queryset.filter(date__lte=to_date)
+
+            response_data = list(queryset.values())
+            return JsonResponse(response_data, safe=False, status=200)
         except Exception as e:
-            logger.exception("get_mockdrills failed.")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
-        response = JsonResponse({"error": "Invalid request method"}, status=405)
-        response['Allow'] = 'GET'
-        return response
-    
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
 @csrf_exempt # Keep if you are posting to it, but for GET it's not strictly needed. For simplicity, let's assume it's only GET.
 def get_one_mockdrills(request):
     if request.method == "GET":
@@ -3295,7 +3297,12 @@ def upload_files(request):
     if request.method == 'POST':
         camp_id_str = request.POST.get('campId')
         file_type = request.POST.get('fileType') # e.g., 'report1', 'photos'
-        uploaded_file = request.FILES.get('file') # Common key for the file
+        uploaded_file = request.FILES.get('files') # Common key for the file
+        print("Camp ID : ", camp_id_str)
+        print("File Type : ", file_type)
+
+        print("Uploaded File : ", uploaded_file)
+        
 
         if not camp_id_str or not file_type or not uploaded_file:
             return JsonResponse({'error': 'campId, fileType, and file are required.'}, status=400)
@@ -6948,3 +6955,5 @@ def delete_uploaded_file(request):
 
     else:
         return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+
