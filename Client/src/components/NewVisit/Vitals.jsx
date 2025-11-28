@@ -139,6 +139,24 @@ const VitalsForm = ({ data, type, mrdNo }) => {
         setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
+    const handleRemoveSelectedFile = (e, key) => {
+        e.stopPropagation(); // Prevents opening the file browser
+        
+        // 1. Remove from state
+        setSelectedFiles((prev) => {
+            const newFiles = { ...prev };
+            delete newFiles[key];
+            return newFiles;
+        });
+
+        // 2. Reset the actual HTML input value
+        // (Crucial: otherwise selecting the same file again won't trigger onChange)
+        const inputElement = document.getElementById(key);
+        if (inputElement) {
+            inputElement.value = "";
+        }
+    };
+
     const handleDelete = async (key, mrdNo) => {
         e.preventDefault();
         const response = await axios.post("http://localhost:8000/deleteUploadedFile", {mrdNo, key});
@@ -356,27 +374,49 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                                 .map((config) => (
                                 <div key={config.key}>
                                     <label className="block text-sm font-medium text-gray-600 mb-1">{config.label}</label>
+                                    {/* Import MdClose if you haven't already: import { MdClose } from "react-icons/md"; */}
+
                                     <motion.div
-                                        className="relative border border-gray-300 rounded-md mb-2 p-2 flex items-center justify-between text-sm cursor-pointer bg-white hover:bg-gray-50"
+                                        className={`relative border rounded-md mb-2 p-2 flex items-center justify-between text-sm cursor-pointer transition-colors ${
+                                            selectedFiles[config.key] 
+                                                ? "bg-blue-50 border-blue-300" // Style when file is selected
+                                                : "border-gray-300 bg-white hover:bg-gray-50"
+                                        }`}
                                         onClick={() => handleBrowseClick(config.key)}
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
-                                        <span className={`truncate ${selectedFiles[config.key] ? 'text-gray-800' : 'text-gray-400'}`}>
+                                        {/* File Name Display */}
+                                        <span className={`truncate flex-1 ${selectedFiles[config.key] ? 'text-blue-800 font-medium' : 'text-gray-400'}`}>
                                             {selectedFiles[config.key] ? selectedFiles[config.key].name : 'Choose file...'}
                                         </span>
-                                        <FaFileUpload className="text-blue-500 ml-2 flex-shrink-0" />
+
+                                        {/* ACTIONS AREA */}
+                                        <div className="flex items-center">
+                                            
+                                            {/* CONDITIONAL DELETE BUTTON (Only shows if file is selected) */}
+                                            {selectedFiles[config.key] && (
+                                                <button
+                                                    onClick={(e) => handleRemoveSelectedFile(e, config.key)}
+                                                    className="mr-2 p-1 rounded-full hover:bg-red-100 text-red-500 transition-colors z-10"
+                                                    title="Remove selected file"
+                                                >
+                                                    <MdClose size={18} />
+                                                </button>
+                                            )}
+
+                                            {/* Upload Icon */}
+                                            <FaFileUpload className={`${selectedFiles[config.key] ? 'text-blue-600' : 'text-blue-500'} flex-shrink-0`} />
+                                        </div>
+
                                         {/* Hidden file input */}
-                                                    <input
-                                                    type="file"
-                                                    id={config.key}
-                                                    style={{ display: "none" }}
-                                                    onChange={(e) => handleFileChange(e, config.key)}
-                                                    accept=".pdf,.jpg,.jpeg,.png,image/*"
-                                                    />
-
-                                                    
-
+                                        <input
+                                            type="file"
+                                            id={config.key}
+                                            style={{ display: "none" }}
+                                            onChange={(e) => handleFileChange(e, config.key)}
+                                            accept=".pdf,.jpg,.jpeg,.png,image/*"
+                                        />
                                     </motion.div>
                                     {/* Show link if file exists */}
                                     
