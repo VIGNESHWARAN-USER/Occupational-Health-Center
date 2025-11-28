@@ -57,7 +57,7 @@ const Sidebar = ({ redCount }) => {
     }
     
     // Fetch expiry count separately, as this logic is independent.
-    if (accessLevel === 'pharmacy') {
+    if (accessLevel === 'pharmacist') {
        fetchExpiryCount();
     }
   // This effect will re-run if the user navigates, the role changes, or the redCount prop updates.
@@ -76,7 +76,7 @@ const Sidebar = ({ redCount }) => {
   };
 
   const fetchExpiryCount = async () => {
-     if (accessLevel === 'pharmacy') {
+     if (accessLevel === 'pharmacist') {
         try {
             const response = await axios.get(
                 "http://localhost:8000/get_current_expiry_count/"
