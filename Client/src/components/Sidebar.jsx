@@ -28,6 +28,8 @@ import img from "../assets/logo.png"; // Make sure this path is correct
 const Sidebar = ({ redCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const userName = localStorage.getItem("userData") || "Unknown User";
   const accessLevel = localStorage.getItem("accessLevel") || "unknown";
   const [pendingCount, setPendingCount] = useState(null);
   const [expiryCount, setExpiryCount] = useState(null);
@@ -244,11 +246,11 @@ const Sidebar = ({ redCount }) => {
           })}
         </nav>
 
-        {/* Login As Text */}
+        
         <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center">
-            {accessLevel.toUpperCase()}
+            {userName.toUpperCase()}
         </p>
-        <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center">
+        <p className="flex justify-center font-bold tracking-wider text-sm px-4 py-2 text-center">
             Login as: {accessLevel.toUpperCase()}
         </p>
 
