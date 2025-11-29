@@ -255,13 +255,8 @@ const Vaccination = ({ data, mrdNo }) => {
   if (!aadhar) {
     return (
       <div className="mt-4 bg-white rounded-lg shadow-md p-4">
-        <h1 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">
-          Vaccination
-        </h1>
-        <p className="p-4 text-center text-red-600 font-medium">
-          Employee Aadhar data not available. Cannot display or add vaccination
-          records.
-        </p>
+        
+        <p className="text-center text-red-600 my-4">Please select an employee first to view Vaccination categories.</p>
       </div>
     );
   }

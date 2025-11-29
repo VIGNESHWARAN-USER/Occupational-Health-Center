@@ -461,8 +461,14 @@
     // --- Rendered JSX ---
     return (
       <div className="p-4 md:p-6 bg-gray-100">
+        {(!data || data.length === 0) && (
+          <p className="text-center text-red-600 my-4">Please select an employee first to view Medical History categories.</p>
+        )}
 
         {/* Personal History Section */}
+
+        {data &&(data.length > 0) && (
+          <div>
         <div className="mb-6 p-4 border rounded-lg bg-white shadow-sm">
           <h2 className="text-xl font-semibold mb-4 text-gray-800">Personal History</h2>
           {/* Smoking */}
@@ -529,7 +535,7 @@
           </div>
         </div>
 
-        {/* --- PATIENT'S MEDICAL HISTORY TABLE (INTEGRATED) --- */}
+        // {/* --- PATIENT'S MEDICAL HISTORY TABLE (INTEGRATED) --- */}
         <div style={cardStyle}>
           <div style={headerStyle} onClick={toggleFormVisibility}>
             <h2 style={titleStyle}>Medical History</h2>
@@ -881,7 +887,7 @@
             Submit Medical History
           </button>
         </div>
-
+      </div>)}
       </div>
     );
   };

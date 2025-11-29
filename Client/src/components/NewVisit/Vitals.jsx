@@ -284,16 +284,25 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
     return (
         <>
+        
+        {(!data || data.length === 0) && (
+            <p className="text-center text-red-600 my-4">Please select an employee first to view vitals categories.</p>
+        )}
+        
             <BpStandardsModal isOpen={isBpModalOpen} onClose={() => setIsBpModalOpen(false)} />
             <BmiStandardsModal isOpen={isBmiModalOpen} onClose={() => setIsBmiModalOpen(false)} />
             <InfoModal isOpen={isPulseModalOpen} onClose={() => setIsPulseModalOpen(false)} title="Pulse Information"> <p><strong>Normal :</strong> 60 - 100 bpm</p> <p><strong>Bradycardia :</strong> &lt; 60 bpm</p> <p><strong>Tachycardia :</strong> &gt; 100 bpm</p> </InfoModal>
             <InfoModal isOpen={isTempModalOpen} onClose={() => setIsTempModalOpen(false)} title="Temperature Information (°F)"> <p><strong>Normal :</strong> &tl; 99.1°F </p> <p><strong>Low Grade Fever :</strong> 99.1°F - 100.4°F</p> <p><strong>Moderate Grade Fever :</strong> 100.5°F - 102.2°F</p> <p><strong>High Grade Fever :</strong> 102.3°F - 105.8°F</p> <p><strong>Hyperthermic :</strong> &gt; 105.8°F</p> </InfoModal>
             <InfoModal isOpen={isSpo2ModalOpen} onClose={() => setIsSpo2ModalOpen(false)} title="SpO₂ Information (%)"> <p><strong>Normal :</strong> 95% - 100%</p> <p><strong>Mild Hypoxemia :</strong> 91% - 94%</p> <p><strong>Moderate Hypoxemia :</strong> 86% - 90%</p> <p><strong>Severe Hypoxemia :</strong> &lt; 86%</p> </InfoModal>
             <InfoModal isOpen={isRespRateModalOpen} onClose={() => setIsRespRateModalOpen(false)} title="Respiratory Rate Information"> <p><strong>Normal :</strong> 12 - 20 breaths/min</p> <p><strong>Bradypnea :</strong> &lt; 12 breaths/min</p> <p><strong>Tachypnea :</strong> &gt; 20 breaths/min</p> </InfoModal>
-
+        
             <div className="bg-white mt-8 p-4 sm:p-6 rounded-xl shadow-lg">
-                <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Vitals & Documents Form</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
+
+                
+                {data &&(data.length > 0) && (
+                    
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <h2 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Vitals & Documents Form</h2>
                     <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">
                         <div className="flex justify-between items-center mb-3"> <h3 className="text-lg font-semibold text-gray-700">Blood Pressure</h3> <button type="button" onClick={() => setIsBpModalOpen(true)} className="text-blue-500 hover:text-blue-700" title="View Blood Pressure Standards"> <FaInfoCircle size={18} /> </button> </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
@@ -452,6 +461,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                         </button>
                     </div>
                 </form>
+                )}
             </div>
 
             <style jsx>{`
@@ -465,6 +475,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                 button:disabled:hover { background-color: #93c5fd; }
                 .min-h-\[160px\] { min-height: 160px; }
             `}</style>
+    
         </>
     );
 };

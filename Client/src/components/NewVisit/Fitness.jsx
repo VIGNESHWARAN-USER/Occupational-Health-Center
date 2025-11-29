@@ -731,6 +731,12 @@ const FitnessPage = ({ data, mrdNo, register }) => {
     const toggleMedicalCertificate = () => setShowMedicalCertificate(!showMedicalCertificate);
 
     return (
+        <div>
+            
+             {(!data || data.length === 0) && (
+            <p className="text-center text-red-600 my-4">Please select an employee first to view Fitness categories.</p>
+        )}
+        {data &&(data.length > 0) && (
         <div className="bg-gray-50 min-h-screen p-4 md:p-6 relative">
             <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-gray-800 border-b pb-2">Fitness Assessment</h1>
 
@@ -992,6 +998,8 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                 </>
             )}
         </div>
+        )}
+     </div>
     );
 };
 

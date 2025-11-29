@@ -364,7 +364,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
 
   // --- Render Logic ---
   if (!patientData) {
-    return <div className="p-6 text-center text-gray-500">Loading patient data or no data available...</div>;
+    return <div className="p-6 text-center text-red-600">Please select an employee to view or create a Consultation.</div>;
   }
   const textAreaClasses = `w-full p-4 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-ray-100 disabled:cursor-not-allowed`;
   const inputClasses = `w-full p-3 border rounded-lg bg-blue-50 focus:ring-2 focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed`;

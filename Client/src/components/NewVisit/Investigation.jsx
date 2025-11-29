@@ -425,17 +425,17 @@ function InvestigationForm({ data, mrdNo }) {
 
   return (
     <div className="bg-white p-6 md:p-8 rounded-lg shadow-md">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">Investigation Entry</h2>
 
       {!processedData && data && data.length > 0 && (
-           <p className="text-center text-orange-600 my-4">Processing employee data...</p>
+        <p className="text-center text-orange-600 my-4">Processing employee data...</p>
       )}
        {(!data || data.length === 0) && (
-          <p className="text-center text-red-600 my-4">Please select an employee first to view investigation categories.</p>
-      )}
+         <p className="text-center text-red-600 my-4">Please select an employee first to view investigation categories.</p>
+        )}
 
       {processedData && (
         <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6 border-b pb-2">Investigation Entry</h2>
             {displayOptions.length > 0 ? displayOptions.map((optionName) => (
               <div key={optionName} className="border rounded-md overflow-hidden">
                 <button

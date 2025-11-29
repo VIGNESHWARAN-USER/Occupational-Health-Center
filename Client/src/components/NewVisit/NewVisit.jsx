@@ -145,20 +145,20 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Follow Up Visits":"Follow Up Visits",
-        "Other": "Other",
+        "Preventive Follow Up Visits":"Follow Up Visits",
+        "Preventive Other": "Other",
       },
       Curative: {
         "Illness": "Outpatient",
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits": "Follow Up Visits",
+        "Curative Follow Up Visits": "Follow Up Visits",
         "BP Sugar Chart": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
-        "Other": "Other",
+        "Curative Other": "Other",
       }
     },
     Contractor: {
@@ -177,38 +177,38 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Follow Up Visits":"Follow Up Visits",
-        "Other": "Other",
+        "Preventive Follow Up Visits":"Follow Up Visits",
+        "Preventive Other": "Other",
       },
       Curative: {
         "Illness": "Outpatient",
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits": "Outpatient",
+        "Curative Follow Up Visits": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
-        "Other": "Other",
+        "Curative Other": "Other",
       },
     },
     Visitor: {
       Preventive: {
         "Fitness": "Fitness",
         "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Follow Up Visits":"Follow Up Visits",
+        "Preventive Follow Up Visits":"Follow Up Visits",
       },
       Curative: {
         "Illness": "Outpatient",
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits": "Outpatient",
+        "Curative Follow Up Visits": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
-        "Other": "Other",
+        "Curative Other": "Other",
       }
     }
   };
@@ -318,7 +318,7 @@ const NewVisit = () => {
       }
     }
 
-    if (register.startsWith("Follow Up Visits")) {
+    if (register.startsWith("Curative Follow Up Visits")) {
         if (!followupConsultationReason) {
           alert("Please select a Followup Consultation reason.");
           setLoading1(false);
@@ -401,7 +401,7 @@ const NewVisit = () => {
       };
     }
 
-    if (register.startsWith("Follow Up Visits")) {
+    if (register.startsWith("Curative Follow Up Visits")) {
       submissionData.extraData = {
         ...submissionData.extraData,
         purpose: followupConsultationReason,
@@ -745,6 +745,11 @@ const NewVisit = () => {
       case "BasicDetails":
         return (
           <div className="mt-8 p-4">
+            {(!formData.aadhar ) && (
+              <p className="text-center text-red-600 my-4">Please select an employee first to view Basic Details categories.</p>
+            )}
+        {formData.aadhar  && (
+          <div>
             <h2 className="text-lg font-medium mb-4">Personal Details</h2>
             <div className="grid grid-cols-3 mb-16 gap-4">
 
@@ -806,19 +811,19 @@ const NewVisit = () => {
               </div>
               
               <div> 
-    <label htmlFor="bloodgrp" className="block text-sm font-medium text-gray-700 ">Blood Group</label> 
-    <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} 
-    className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"> 
-    <option value="">--Select Option--</option> 
-    <option value="A+">A+</option>
-     <option value="A-">A-</option> 
-     <option value="B+">B+</option> 
-     <option value="B-">B-</option> 
-     <option value="AB+">AB+</option> 
-     <option value="AB-">AB-</option> 
-     <option value="O+">O+</option> 
-     <option value="O-">O-</option> 
-     </select> </div>
+                <label htmlFor="bloodgrp" className="block text-sm font-medium text-gray-700 ">Blood Group</label> 
+                <select name="bloodgrp" id="bloodgrp-filter" value={formData.bloodgrp} onChange={handleChange} 
+                className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"> 
+                <option value="">--Select Option--</option> 
+                <option value="A+">A+</option>
+                <option value="A-">A-</option> 
+                <option value="B+">B+</option> 
+                <option value="B-">B-</option> 
+                <option value="AB+">AB+</option> 
+                <option value="AB-">AB-</option> 
+                <option value="O+">O+</option> 
+                <option value="O-">O-</option> 
+                </select> </div>
               <div>
                   <label className="block text-sm font-medium text-gray-700 ">Marital Status</label>
                   <select
@@ -1344,6 +1349,7 @@ const NewVisit = () => {
             <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
               Add Basic Details
             </button>
+            </div>)}
           </div>
         );
       case "Fitness":
@@ -1770,7 +1776,7 @@ const NewVisit = () => {
                   </div>
                 )}
 
-                {register.startsWith("Follow Up Visits") && (
+                {register.startsWith("Curative Follow Up Visits") && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Followup Consultation</label>
