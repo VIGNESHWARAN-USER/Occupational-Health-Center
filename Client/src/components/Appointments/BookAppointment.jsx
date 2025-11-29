@@ -1,4 +1,3 @@
-// Book Appointment
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -6,14 +5,15 @@ import axios from "axios";
 const BookAppointment = () => {
   const [role, setRole] = useState("Employee");
   const [employees, setEmployees] = useState([]);
-  const [employeeIds, setEmployeeIds] = useState([]); // Still fetch IDs, might be useful later (e.g., autocomplete)
-  const [nurses, setNurses] = useState([])
-  const [doctors, setdoctors] = useState([])
-  // const [isEmployeeIdValid, setIsEmployeeIdValid] = useState(false); // REMOVED: No longer needed for restriction
+  const [nurses, setNurses] = useState([]);
+  const [doctors, setdoctors] = useState([]);
+  
+  // State to track if data was fetched from DB (to freeze fields)
+  const [isAutoFilled, setIsAutoFilled] = useState(false);
 
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().slice(0, 10), // Consider if this should be today's date always or empty
-    role: "Employee", 
+    date: new Date().toISOString().slice(0, 10),
+    role: "Employee",
     employeeId: "",
     aadharNo: "",
     name: "",
@@ -22,24 +22,75 @@ const BookAppointment = () => {
     purpose: "",
     appointmentDate: new Date().toISOString().slice(0, 10),
     time: "",
-    bookedBy: "", 
-    submitted_by_nurse: "", 
-    submitted_Dr: "", 
-    consultedDoctor: "", 
+    bookedBy: "",
+    submitted_Dr: "",
+    consultedDoctor: "",
   });
+
+  // --- NEW: Function to fetch worker details ---
+  const handleAadharLookup = async (aadhar) => {
+    if (aadhar.length !== 12) return;
+
+    try {
+      const response = await axios.post("http://localhost:8000/get_worker_by_aadhar/", {
+        aadhar: aadhar
+      });
+
+      if (response.data.success) {
+        const worker = response.data.data;
+        
+        setFormData(prev => ({
+          ...prev,
+          name: worker.name || "",
+          employeeId: worker.employeeId || "",
+          organization: worker.organization || "",
+          contractorName: worker.contractorName || "",
+          // Optional: You can also auto-switch the role if the backend returns it
+          // role: worker.role 
+        }));
+        
+        setIsAutoFilled(true); // Lock the fields
+        // alert("Worker details autofilled!"); 
+      }
+    } catch (error) {
+      console.log("Worker not found or error fetching", error);
+      // Don't alert error here, just let user type manually if not found
+      setIsAutoFilled(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(name, value)
-    setFormData({ ...formData, [name]: value });
+    
+    // Update State
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Logic for Aadhar Auto-fill
+    if (name === "aadharNo") {
+      if (value.length === 12) {
+        handleAadharLookup(value);
+      } else {
+        // If user changes Aadhar after autofill, unlock fields and clear them
+        if (isAutoFilled) {
+          setIsAutoFilled(false);
+          setFormData(prev => ({
+            ...prev,
+            [name]: value, // Keep the aadhar being typed
+            name: "",
+            employeeId: "",
+            organization: "",
+            contractorName: ""
+          }));
+        }
+      }
+    }
   };
 
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
-    setRole(newRole); // Update the role state
-    // Reset form data when role changes, keeping common fields if desired, or resetting all
+    setRole(newRole);
+    setIsAutoFilled(false); // Unfreeze fields on role switch
     setFormData({
-        // Reset common fields or all fields based on preference
         date: new Date().toISOString().slice(0, 10),
         role: newRole,
         employeeId: "",
@@ -50,9 +101,8 @@ const BookAppointment = () => {
         purpose: "", 
         appointmentDate: new Date().toISOString().slice(0, 10),
         time: "",
-        bookedBy: "", // Default or fetch options?
-        submitted_by_nurse: "", // Default or fetch options?
-        submitted_Dr: "", // Default or fetch options?
+        bookedBy: nurses.length > 0 ? nurses[0] : "",
+        submitted_Dr: doctors.length > 0 ? doctors[0] : "",
         consultedDoctor: "",
     });
   };
@@ -62,11 +112,8 @@ const BookAppointment = () => {
         try {
             const response = await axios.post("http://localhost:8000/adminData");
             const fetchedEmployees = response.data.data;
-            console.log(fetchedEmployees)
-            // It's better to update state with the fetched employees first
             setEmployees(fetchedEmployees);
 
-            // Filter and map to create new arrays of nurse and doctor names
             const nurseNames = fetchedEmployees
                 .filter(emp => emp.role === "nurse")
                 .map(emp => emp.name);
@@ -75,13 +122,15 @@ const BookAppointment = () => {
                 .filter(emp => emp.role === "doctor")
                 .map(emp => emp.name);
 
-            // Update the state with the new arrays
             setNurses(nurseNames);
             setdoctors(doctorNames);
-
-            // Extract employee IDs and store them in state
-            const extractedEmployeeIds = fetchedEmployees.map(employee => employee.emp_no);
-            setEmployeeIds(extractedEmployeeIds);
+            
+            // Set defaults for bookedBy/submitted_Dr if available
+            setFormData(prev => ({
+              ...prev,
+              bookedBy: nurseNames[0] || "",
+              submitted_Dr: doctorNames[0] || ""
+            }));
 
         } catch (error) {
             console.error("Error fetching employee data:", error);
@@ -89,15 +138,13 @@ const BookAppointment = () => {
     };
 
     fetchDetails();
-}, []); 
+  }, []); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if(formData.bookedBy === "") formData.bookedBy = nurses[0];
-    if(formData.submitted_Dr === "") formData.submitted_Dr = doctors[0];
-
-    console.log("Submitting form data:", formData); // Log data before sending
+    if(formData.bookedBy === "" && nurses.length > 0) formData.bookedBy = nurses[0];
+    if(formData.submitted_Dr === "" && doctors.length > 0) formData.submitted_Dr = doctors[0];
 
     try {
       const response = await fetch("http://localhost:8000/bookAppointment/", {
@@ -106,41 +153,34 @@ const BookAppointment = () => {
         body: JSON.stringify(formData),
       });
 
-      // Try parsing JSON regardless of status code for more detailed error info
       let data;
       try {
         data = await response.json();
       } catch (jsonError) {
-        // Handle cases where response is not valid JSON (e.g., server error page)
-        console.error("Error parsing JSON response:", jsonError);
-        if (!response.ok) {
-           throw new Error(`Server error: ${response.status} ${response.statusText}`);
-        } else {
-            // Success but no valid JSON? Unlikely for this API but possible
-           data = { message: "Appointment booked (non-JSON response)." };
-        }
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        data = { message: "Appointment booked." };
       }
+
       if (response.ok) {
         alert(data.message || "Appointment booked successfully!");
-         // Optionally reset form after successful submission
-         // handleRoleChange({ target: { value: role } }); // Re-use role change logic to reset
+        // Reset form completely
+        handleRoleChange({ target: { value: role } }); 
       } else {
-         console.error("Booking failed:", data);
-        alert(`${data.message || `Failed to book appointment. Status: ${response.status}`}`);
+        alert(`${data.message || `Failed. Status: ${response.status}`}`);
       }
     } catch (error) {
-      console.error("Error booking appointment:", error);
-      alert(`An error occurred while booking the appointment: ${error.message}`); 
+      alert(`Error: ${error.message}`); 
     }
   };
 
-  // Define fields - Remove 'disabled' property tied to isEmployeeIdValid
+  // --- Dynamic Field Definitions ---
+  // Note: 'disabled: isAutoFilled' is applied to fields we fetch from DB
+
   const employeeFields = [
-    
     { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false }, 
-    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: false }, 
-    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, 
-    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: false }, 
+    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: isAutoFilled }, 
+    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: isAutoFilled }, 
+    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: isAutoFilled }, 
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
@@ -152,10 +192,10 @@ const BookAppointment = () => {
   ];
 
   const contractorFields = [
-    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
-    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID" },
-    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: false }, 
-    { label: "Contractor Name:", name: "contractorName", type: "text", placeholder: "Enter contractor name" },
+    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false },
+    { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: isAutoFilled },
+    { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: isAutoFilled }, 
+    { label: "Contractor Name:", name: "contractorName", type: "text", placeholder: "Enter contractor name", disabled: isAutoFilled },
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Pre Employment", "Pre Employment (Food Handler)", "Pre Placement",
     "Annual / Periodical","Pre Employment Contract change", "Periodical (Food Handler)", "Camps (Mandatory)",
     "Camps (Optional)", "Special Work Fitness", "Special Work Fitness (Renewal)",
@@ -167,10 +207,9 @@ const BookAppointment = () => {
   ];
 
   const visitorFields = [
-    
-    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No" },
-    { label: "Name:", name: "name", type: "text", placeholder: "Enter name" },
-    { label: "Organization:", name: "organization", type: "text", placeholder: "Enter organization name" },
+    { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false },
+    { label: "Name:", name: "name", type: "text", placeholder: "Enter name", disabled: isAutoFilled },
+    { label: "Organization:", name: "organization", type: "text", placeholder: "Enter organization name", disabled: isAutoFilled },
     { label: "Enter the purpose:", name: "purpose", type: "select", options: ["Visitors Outsider Fitness", "Visitors Outsider Patient","Follow Up Visits (Preventive)", "Follow Up Visits (Curative)"] },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" },
@@ -185,17 +224,10 @@ const BookAppointment = () => {
 
   let displayedFields;
   switch (role) {
-    case "Employee":
-      displayedFields = employeeFields;
-      break;
-    case "Contractor":
-      displayedFields = contractorFields;
-      break;
-    case "Visitor":
-      displayedFields = visitorFields;
-      break;
-    default:
-      displayedFields = employeeFields;
+    case "Employee": displayedFields = employeeFields; break;
+    case "Contractor": displayedFields = contractorFields; break;
+    case "Visitor": displayedFields = visitorFields; break;
+    default: displayedFields = employeeFields;
   }
 
   return (
@@ -210,7 +242,7 @@ const BookAppointment = () => {
         <select
           value={role}
           onChange={handleRoleChange}
-          className="px-4 py-2 w-1/2 md:w-1/3 lg:w-1/4 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" // Adjusted width
+          className="px-4 py-2 w-1/2 md:w-1/3 lg:w-1/4 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="Employee">Employee</option>
           <option value="Contractor">Contractor</option>
@@ -223,25 +255,26 @@ const BookAppointment = () => {
       >
         {displayedFields.map((field, index) => (
           <motion.div
-            key={`${role}-${field.name}-${index}`} // More specific key when role changes
+            key={`${role}-${field.name}-${index}`}
             className="flex flex-col"
             variants={fieldVariants}
             initial="hidden"
             animate="visible"
             transition={{ delay: index * 0.07 }}
           >
-            <label className="text-gray-700 font-medium mb-2 text-sm"> {/* Smaller label */}
+            <label className="text-gray-700 font-medium mb-2 text-sm">
               {field.label}
             </label>
             {field.type === "select" ? (
               <select
                 name={field.name}
-                className={`px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${field.disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} // Added text-sm
-                value={formData[field.options[0]]}
+                className={`px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${field.disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
+                value={formData[field.name]}
                 onChange={handleChange}
-                disabled={field.disabled} // Use disabled from field definition
+                disabled={field.disabled}
               >
-                {field.options.map((option, idx) => (
+                {/* Handle case where options might be undefined initially */}
+                {field.options && field.options.map((option, idx) => (
                   <option key={idx} value={option}>
                     {option}
                   </option>
@@ -251,21 +284,23 @@ const BookAppointment = () => {
               <input
                 type={field.type}
                 name={field.name}
-                className={`px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${field.disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`} // Added text-sm
+                // Visual feedback for disabled fields: bg-gray-100 and opacity
+                className={`px-4 py-2 w-full bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${field.disabled ? 'bg-gray-100 cursor-not-allowed opacity-70' : ''}`}
                 placeholder={field.placeholder || ""}
                 value={formData[field.name]}
                 onChange={handleChange}
-                disabled={field.disabled} // Use disabled from field definition
+                disabled={field.disabled}
+                // maxLength for Aadhar
+                maxLength={field.name === "aadharNo" ? 12 : undefined} 
               />
             )}
           </motion.div>
         ))}
 
-        <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex justify-end mt-4"> {/* Added margin-top */}
+        <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex justify-end mt-4">
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed" // Adjusted style, added disabled style
-            
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Book appointment
           </button>

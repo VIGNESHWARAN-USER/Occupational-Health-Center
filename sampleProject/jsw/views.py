@@ -7279,3 +7279,42 @@ def get_worker_documents(request):
     else:
         return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
 
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import employee_details
+
+@csrf_exempt
+def get_worker_by_aadhar(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            aadhar = data.get('aadhar')
+
+            if not aadhar or len(aadhar) != 12:
+                return JsonResponse({'success': False, 'message': 'Invalid Aadhar'}, status=400)
+
+            # Get the LATEST entry for this Aadhar number
+            # We filter by aadhar and order by ID descending to get the newest record
+            worker = employee_details.objects.filter(aadhar=aadhar).order_by('-id').first()
+
+            if worker:
+                return JsonResponse({
+                    'success': True,
+                    'data': {
+                        'name': worker.name,
+                        'employeeId': worker.emp_no, # Maps DB 'emp_no' to Frontend 'employeeId'
+                        'organization': worker.employer, # Maps DB 'employer' to Frontend 'organization'
+                        'contractorName': worker.employer, # For contractors, employer is the agency name
+                        'role': worker.type # Useful to auto-switch role if needed
+                    }
+                }, status=200)
+            else:
+                return JsonResponse({'success': False, 'message': 'Worker not found'}, status=404)
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Invalid method'}, status=405)
