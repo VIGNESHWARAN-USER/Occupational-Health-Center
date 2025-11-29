@@ -880,7 +880,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
 
   const sectionOrder = ["tablets", "injections", "syrups", "drops", "creams", "respules", "lotions", "fluids", "powder", "sutureProcedureItems", "dressingItems", "others"];
   if (!aadhar && !existingPrescription) {
-    return <div className="p-6 text-center text-gray-500">Please select an employee to view or create a prescription.</div>;
+    return <div className="p-6 text-center text-red-600">Please select an employee to view or create a Prescription.</div>;
   }
   
   // The final JSX return remains the same, as the changes were in the functions it calls.

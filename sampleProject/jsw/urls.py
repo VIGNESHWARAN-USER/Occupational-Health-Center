@@ -130,7 +130,7 @@ urlpatterns = [
     path("get_pending_next_month_count/", views.get_pending_next_month_count, name="get_pending_next_month_count"),
 
 
-    # Mock Drills / Camps / Review
+    # Mock Drills / Camps / ReviewuserData
     path('save-mockdrills/', views.save_mockdrills, name='save_mockdrills'),
     path('get-mockdrills/', views.get_mockdrills, name='get_mockdrills'),
     path('get-one-mockdrills/', views.get_one_mockdrills, name='get_mockdrills'),
