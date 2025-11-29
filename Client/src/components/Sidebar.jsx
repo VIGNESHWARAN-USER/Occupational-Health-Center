@@ -105,14 +105,11 @@ const Sidebar = ({ redCount }) => {
     ],
     doctor: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
-      { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
-      { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
-      { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
-      { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
       { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
-      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' },
-    ],
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
+      
+      { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
+      ],
     admin: [
       
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
@@ -248,6 +245,9 @@ const Sidebar = ({ redCount }) => {
         </nav>
 
         {/* Login As Text */}
+        <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center">
+            {accessLevel.toUpperCase()}
+        </p>
         <p className="flex justify-center font-bold tracking-wider text-lg px-4 py-2 text-center">
             Login as: {accessLevel.toUpperCase()}
         </p>
