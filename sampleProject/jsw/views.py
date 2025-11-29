@@ -831,6 +831,35 @@ def fetchdata(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+
+import json
+import logging
+from datetime import datetime, date
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db.models import Max, CharField, BooleanField, JSONField
+
+# Import your models here
+from .models import (
+    employee_details, Dashboard, vitals, MedicalHistory, heamatalogy, RoutineSugarTests,
+    RenalFunctionTest, LipidProfile, LiverFunctionTest, ThyroidFunctionTest,
+    AutoimmuneTest, CoagulationTest, EnzymesCardiacProfile, UrineRoutineTest,
+    SerologyTest, MotionTest, CultureSensitivityTest, MensPack, WomensPack,
+    OccupationalProfile, OthersTest, OphthalmicReport, XRay, USGReport,
+    CTReport, MRIReport, FitnessAssessment, VaccinationRecord, Consultation,
+    Prescription, SignificantNotes, Form17, Form38, Form39, Form40, Form27
+)
+
+# Setup Logger
+logger = logging.getLogger(__name__)
+
+def get_media_url_prefix(request):
+    """Helper to construct the base media URL."""
+    scheme = request.scheme
+    host = request.get_host()
+    return f"{scheme}://{host}/media/"
+
+
 # Corrected addEntries view
 
 from django.http import JsonResponse
@@ -845,11 +874,38 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import json
+import logging
+import base64
+import uuid
+import re
+from datetime import date, datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.db.models import Max
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
+
+# Import your models
+from .models import employee_details, Dashboard 
+
+# Setup Logger
+logger = logging.getLogger(__name__)
+
+# Helper to safely parse dates (assuming this exists in your project, otherwise use this)
+def parse_date_internal(date_str):
+    if not date_str: return None
+    try:
+        return datetime.strptime(date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
+
 @csrf_exempt
 def addEntries(request):
     """
     Adds a new employee_details record and Dashboard record for a visit today.
-    Handles MRD number generation and correctly maps dynamic frontend data to specific model fields.
+    Handles MRD number generation, dynamic data mapping, and Profile Picture saving/copying.
     """
     if request.method != "POST":
         logger.warning("addEntries failed: Invalid request method. Only POST allowed.")
@@ -858,8 +914,7 @@ def addEntries(request):
     aadhar = None 
     try:
         data = json.loads(request.body.decode('utf-8'))
-        print(data)
-        logger.debug(f"Received data for addEntries: {json.dumps(data)[:500]}...")
+        # logger.debug(f"Received data for addEntries: {json.dumps(data)[:500]}...") 
 
         employee_data = data.get('formData', {})
         dashboard_data = data.get('formDataDashboard', {})
@@ -872,7 +927,7 @@ def addEntries(request):
 
         entry_date = date.today()
 
-        # --- MRD Number Logic (Unchanged) ---
+        # --- MRD Number Logic ---
         determined_mrd_no = None 
         with transaction.atomic():
             today_entries = employee_details.objects.filter(
@@ -893,11 +948,10 @@ def addEntries(request):
             seq_part = f"{next_sequence:06d}"
             date_part = entry_date.strftime('%d%m%Y')
             determined_mrd_no = f"{seq_part}{date_part}"
-        logger.info(f"Generated new MRD number {determined_mrd_no} for aadhar: {aadhar}")
-        # --- End MRD Number Logic ---
         
-        # --- Prepare combined data for employee_details ---
-        # <<< MODIFIED: All data preparation logic is updated below >>>
+        logger.info(f"Generated new MRD number {determined_mrd_no} for aadhar: {aadhar}")
+
+        # --- Prepare data for employee_details ---
         employee_defaults = {
             'name': employee_data.get('name', ''),
             'dob': parse_date_internal(employee_data.get('dob')),
@@ -959,7 +1013,7 @@ def addEntries(request):
             'mrdNo': determined_mrd_no,
         }
         
-        # <<< ADDED: Conditional logic to handle dynamic data from 'extraData' >>>
+        # Handle conditional logic from 'extraData'
         register_type = dashboard_data.get('register', '')
         if "BP Sugar Check" in register_type:
             employee_defaults['status'] = extra_data.get('status', '')
@@ -967,22 +1021,49 @@ def addEntries(request):
             employee_defaults['bp_sugar_chart_reason'] = extra_data.get('reason', '')
         elif "Follow Up Visits" in register_type:
             employee_defaults['followup_reason'] = extra_data.get('purpose', '')
-            # The frontend sends the "other" text in 'purpose_others'
             if extra_data.get('purpose', '').endswith("Others"):
                 employee_defaults['followup_other_reason'] = extra_data.get('purpose_others', '')
         
+        # Remove keys with None values
         employee_defaults_filtered = {k: v for k, v in employee_defaults.items() if v is not None}
 
-        # --- Create new employee_details entry ---
         with transaction.atomic():
+            # 1. Create the new Record
             employee_entry = employee_details.objects.create(
                 aadhar=aadhar,
                 entry_date=entry_date,
                 **employee_defaults_filtered
             )
 
-            # --- Prepare and save Dashboard data ---
-            # <<< MODIFIED: This now pulls data from the created employee_entry for consistency >>>
+            # 2. IMAGE LOGIC: Handle Profile Picture
+            profile_image_b64 = employee_data.get('profilepic') 
+            
+            # Case A: New Image Uploaded via Webcam or File
+            if profile_image_b64 and isinstance(profile_image_b64, str) and ';base64,' in profile_image_b64:
+                try:
+                    header, encoded = profile_image_b64.split(';base64,', 1)
+                    file_ext_match = re.search(r'data:image/(?P<ext>\w+);base64', header)
+                    file_ext = file_ext_match.group('ext') if file_ext_match else 'jpg'
+
+                    image_data = base64.b64decode(encoded)
+                    filename = f"profilepics/{aadhar}_{uuid.uuid4().hex[:8]}.{file_ext}"
+
+                    employee_entry.profilepic.save(filename, ContentFile(image_data), save=True)
+                    logger.info(f"Saved new profile picture for aadhar {aadhar} on entry {employee_entry.id}")
+                except Exception as img_err:
+                    logger.error(f"Failed to decode/save new profile picture: {img_err}")
+
+            # Case B: No new image, but check if we should carry forward the previous one
+            elif not employee_entry.profilepic:
+                # Find the most recent record for this user excluding the one we just created
+                previous_record = employee_details.objects.filter(aadhar=aadhar).exclude(id=employee_entry.id).order_by('-id').first()
+                if previous_record and previous_record.profilepic:
+                    # Assign the same file reference
+                    employee_entry.profilepic = previous_record.profilepic
+                    employee_entry.save()
+                    logger.info(f"Carried forward profile picture from record {previous_record.id} to {employee_entry.id}")
+
+            # 3. Create Dashboard Record
             dashboard_defaults = {
                 'type': employee_entry.type,
                 'type_of_visit': employee_entry.type_of_visit,
@@ -998,7 +1079,6 @@ def addEntries(request):
                 'old_emp_no': employee_entry.old_emp_no,
                 'mrdNo': employee_entry.mrdNo,
                 'emp_no': employee_entry.emp_no,
-                # <<< ADDED: Map specific fields to the dashboard model >>>
                 'status': employee_entry.status,
                 'bp_sugar_chart_reason': employee_entry.bp_sugar_chart_reason,
                 'followup_reason': employee_entry.followup_reason,
@@ -1012,16 +1092,15 @@ def addEntries(request):
                 **dashboard_defaults_filtered
             )
 
-        message = f"Visit Entry added (MRD: {employee_entry.mrdNo}) and Dashboard created successfully"
-        logger.info(f"addEntries successful for aadhar: {aadhar} on {entry_date}. MRD: {employee_entry.mrdNo}, EmployeeEntryID: {employee_entry.id}, DashboardID: {dashboard_entry.id}")
+        message = f"Entry added successfully. MRD: {employee_entry.mrdNo}"
         return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": aadhar}, status=200)
 
     except json.JSONDecodeError:
-        logger.error("addEntries failed: Invalid JSON data.", exc_info=True)
+        logger.error("addEntries failed: Invalid JSON data.")
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
-        logger.exception(f"addEntries failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
-        return JsonResponse({"error": "An internal server error occurred while processing the entry.", "detail": str(e)}, status=500)
+        logger.exception(f"addEntries failed for aadhar {aadhar}: {str(e)}")
+        return JsonResponse({"error": "Server error processing entry", "detail": str(e)}, status=500)
 
 
 @csrf_exempt
