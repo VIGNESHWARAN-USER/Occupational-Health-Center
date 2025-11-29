@@ -1,4 +1,3 @@
-// All appointment
 import React, { useEffect, useState, useMemo } from "react";
 import { FaSearch, FaCalendarAlt, FaFilter, FaSyncAlt, FaDownload } from "react-icons/fa";
 import { motion } from "framer-motion"; 

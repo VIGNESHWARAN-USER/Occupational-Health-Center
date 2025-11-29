@@ -6851,85 +6851,106 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers.json import DjangoJSONEncoder
+import logging
+
+# Import your models
+from .models import employee_details, FitnessAssessment, Consultation
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def get_currentfootfalls(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
 
     try:
-        # --- MODIFIED SECTION: Dynamic Filtering ---
-
-        # 1. Get optional filter parameters from the URL query string
+        # 1. Get optional filter parameters
         from_date_str = request.GET.get('fromDate')
         to_date_str = request.GET.get('toDate')
         purpose_str = request.GET.get('purpose')
 
-        # 2. Start with a base queryset
-        queryset = employee_details.objects.all()
-
-        # 3. Apply filters conditionally
-        if from_date_str:
-            queryset = queryset.filter(entry_date__gte=from_date_str)
-        
-        if to_date_str:
-            queryset = queryset.filter(entry_date__lte=to_date_str)
-
-        if purpose_str:
-            queryset = queryset.filter(register=purpose_str)
-            
-        # 4. If no date range is provided, default to today's footfalls.
-        #    This preserves the original behavior when no filters are applied.
         if not from_date_str and not to_date_str:
             today = date.today()
-            queryset = queryset.filter(entry_date=today)
+            from_date_str = today
+            to_date_str = today
+
+        # --- STEP 1: Filter Employee Details (Source of Date) ---
+        # We must start here because FitnessAssessment has no 'date' field.
+        # This is efficient: It gets the subset of potential patients for the date range.
         
-        # 5. Execute the final filtered query
-        #    The .order_by() is added to ensure a consistent output order.
-        footfalls = list(queryset.order_by('-entry_date', '-id').values())
+        employees_qs = employee_details.objects.all()
 
-        # --- END MODIFIED SECTION ---
+        if from_date_str:
+            employees_qs = employees_qs.filter(entry_date__gte=from_date_str)
+        if to_date_str:
+            employees_qs = employees_qs.filter(entry_date__lte=to_date_str)
+        if purpose_str:
+            employees_qs = employees_qs.filter(register=purpose_str)
 
+        # Exclude invalid visits
+        employees_qs = employees_qs.exclude(type_of_visit__isnull=True).exclude(type_of_visit='')
 
-        if not footfalls:
-            return JsonResponse({
-                'message': 'No footfalls found for the selected criteria.',
-                'data': []
-            }, status=200)
+        # Create a Map: { 'MRD123': {employee_data_dict} }
+        # This allows us to instantly Attach employee details to the fitness record later.
+        employee_records = list(employees_qs.values())
+        employee_map = {rec['mrdNo']: rec for rec in employee_records if rec.get('mrdNo')}
+        
+        # Get list of Valid MRDs for this date range
+        valid_mrds = list(employee_map.keys())
 
-       
-        preventive_mrds = [
-            f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
-        ]
-        curative_mrds = [
-            f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Curative' and f['mrdNo']
-        ]
+        if not valid_mrds:
+             return JsonResponse({'message': 'No visits found for this date criteria.', 'data': []}, status=200)
 
-        # 7. Fetch all related records in bulk (Efficient)
-        fitness_records = FitnessAssessment.objects.filter(mrdNo__in=preventive_mrds).values()
-        consultation_records = Consultation.objects.filter(mrdNo__in=curative_mrds).values()
+        # --- STEP 2: Fetch Child Data (The "Inner Join") ---
+        # We query FitnessAssessment using the MRDs we found in Step 1.
+        # This filters FitnessAssessment "indirectly" by date.
+        
+        # A. Fetch Fitness Records (Preventive)
+        fitness_records = list(FitnessAssessment.objects.filter(mrdNo__in=valid_mrds).values())
+        
+        # B. Fetch Consultation Records (Curative)
+        # Note: Included so Curative patients don't vanish, following the same "Inner Join" logic.
+        consultation_records = list(Consultation.objects.filter(mrdNo__in=valid_mrds).values())
 
-        # 8. Create maps for quick lookups
-        fitness_map = {record['mrdNo']: record for record in fitness_records}
-        consultation_map = {record['mrdNo']: record for record in consultation_records}
-
-        # 9. Combine the data
         response_data = []
-        for footfall in footfalls:
-            mrd_number = footfall.get('mrdNo')
-            combined_record = {
-                'details': footfall,
-                'assessment': None,
-                'consultation': None,
-            }
 
-            if footfall.get('type_of_visit') == 'Preventive':
-                combined_record['assessment'] = fitness_map.get(mrd_number)
-            elif footfall.get('type_of_visit') == 'Curative':
-                combined_record['consultation'] = consultation_map.get(mrd_number)
+        # --- STEP 3: Build Response Driven by Child Tables ---
+        # We iterate through the FITNESS records. If a record is here, it implies:
+        # 1. It exists in FitnessAssessment (Your primary criteria)
+        # 2. It matched the Date filter (via the MRD check)
+
+        # Process Preventive (Fitness)
+        for fitness in fitness_records:
+            mrd = fitness.get('mrdNo')
+            # Get the parent details from our map
+            parent_details = employee_map.get(mrd)
             
-            response_data.append(combined_record)
-        
-        # 10. Return the successful response
+            if parent_details:
+                response_data.append({
+                    'details': parent_details,
+                    'assessment': fitness,
+                    'consultation': None
+                })
+
+        # Process Curative (Consultation)
+        for consult in consultation_records:
+            mrd = consult.get('mrdNo')
+            parent_details = employee_map.get(mrd)
+            
+            if parent_details:
+                response_data.append({
+                    'details': parent_details,
+                    'assessment': None,
+                    'consultation': consult
+                })
+
+        # Optional: Sort the combined result by entry_date descending
+        response_data.sort(key=lambda x: x['details']['entry_date'], reverse=True)
+
         return JsonResponse(
             {'data': response_data, 'message': 'Successfully retrieved data'},
             encoder=DjangoJSONEncoder,
@@ -6937,7 +6958,7 @@ def get_currentfootfalls(request):
         )
 
     except Exception as e:
-        logger.exception("An error occurred in get_currentfootfalls") # More detailed logging
+        logger.exception("An error occurred in get_currentfootfalls")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 

@@ -4,6 +4,8 @@ import { FaSearch, FaCalendarAlt, FaFilter, FaSyncAlt } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 const CurrentFootfalls = () => {
   const [appointments, setAppointments] = useState([]);
@@ -240,9 +242,10 @@ const CurrentFootfalls = () => {
             {loading ? (
               <tr>
                 <td colSpan={numberOfColumns} className="text-center py-6">
-                  <div /* ... loading spinner ... */ className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]" role="status">
-                     <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Loading...</span>
-                  </div>
+                  <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                        <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                        <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Database...</p>
+                      </div>
                 </td>
               </tr>
               // Use the refined message function here
@@ -252,7 +255,7 @@ const CurrentFootfalls = () => {
                     <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition group">
                        {/* Apply sticky positioning to corresponding TD cells */}
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.mrdNo || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.role || '-'}</td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.type || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.emp_no || '-'}</td> {/* Adjust px value if needed */}
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.aadhar || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.name || '-'}</td> {/* Adjust px value if needed */}
