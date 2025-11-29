@@ -32,7 +32,7 @@ ENV/
 # Django files
 db.sqlite3
 *.log
-media/
+
 
 # Python packaging
 dist/
