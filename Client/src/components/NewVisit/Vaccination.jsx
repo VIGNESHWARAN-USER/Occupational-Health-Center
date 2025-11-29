@@ -368,7 +368,7 @@ const Vaccination = ({ data, mrdNo }) => {
                     htmlFor={`vaccine_name_${vIndex}`}
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Vaccine Name <span className="text-red-500">*</span>
+                    Vaccine (Chemical/Brand) Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"

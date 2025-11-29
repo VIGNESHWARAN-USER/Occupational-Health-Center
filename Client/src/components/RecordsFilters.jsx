@@ -11,22 +11,22 @@ import { saveAs } from "file-saver";
 // --- Filter Section Definitions ---
 // <<< CHANGE 1: "Significant Notes" was added to this list.
 const filterSections = [
-    { id: "employementstatus", label: "Employment Status" },
-    { id: "personaldetails", label: "Personal Details" },
-    { id: "employementdetails", label: "Employment Details" },
-    { id: "medicalhistory", label: "Medical History" },
-    { id: "vaccination", label: "Vaccination" },
-    { id: "purpose", label: "Purpose Filter" },
-    { id: "vitals", label: "Vitals" },
-    { id: "investigations", label: "Investigations" },
-    { id: "fitness", label: "Fitness" },
-    { id: "significantnotes", label: "Significant Notes" }, // <<< NEWLY ADDED
-    { id: "specialcases", label: "Special Cases" }, 
-    { id: "shiftingambulance", label: "Shifting Ambulance" },
-    { id: "consultationreview", label: "Consultation Review" },
+    { id: "employementstatus", label: "Employment Status",  roles: ["Employee", "Contractor"]},
+    { id: "personaldetails", label: "Personal Details", roles: ["Employee", "Contractor", "Visitor"] },
+    { id: "employementdetails", label: "Employment Details", roles: ["Employee", "Contractor"] },
+    { id: "medicalhistory", label: "Medical History", roles: ["Employee", "Contractor", "Visitor"] },
+    { id: "vaccination", label: "Vaccination", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "purpose", label: "Purpose", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "vitals", label: "Vitals", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "investigations", label: "Investigations", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "fitness", label: "Fitness", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "significantnotes", label: "Significant Notes", roles: ["Employee","Contractor", "Visitor"] }, // <<< NEWLY ADDED
+    // { id: "specialcases", label: "Special Cases" }, 
+    { id: "shiftingambulance", label: "Shifting Ambulance", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "consultationreview", label: "Consultation Review", roles: ["Employee","Contractor", "Visitor"] },
     // { id: "prescriptions", label: "Prescriptions" },
-    { id: "referrals", label: "Referrals" },
-    { id: "statutoryforms", label: "Statutory Forms" },
+    { id: "referrals", label: "Referrals", roles: ["Employee","Contractor", "Visitor"] },
+    { id: "statutoryforms", label: "Statutory Forms", roles: ["Employee","Contractor", "Visitor"] },
 ];
 
 // --- Helper function to calculate age ---
@@ -197,6 +197,23 @@ const RecordsFilters = () => {
         });
     };
 
+    // 1. Add this state definition
+    const [dateRange, setDateRange] = useState({
+        fromDate: "",
+        toDate: ""
+    });
+
+    // 2. Destructure the values so the JSX can read 'fromDate' and 'toDate'
+    const { fromDate, toDate } = dateRange;
+
+    // 3. Define the handleChange function
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setDateRange(prev => ({
+            ...prev,
+            [name]: value
+        }));
+    };
 
     // --- Core Filtering Logic ---
     const applyFiltersToData = () => {
@@ -662,16 +679,93 @@ else if (key.startsWith('investigation_')) {
                     )}
                 </div>
 
-                {/* --- Filter Selection Area --- */}
-                 <div className="flex m-4 gap-4">
-                    <select className="flex-shrink-0 p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500" onChange={handleRoleChange} value={selectedRole} aria-label="Select Role Filter">
-                        <option value="">Overall Role</option> <option value="Employee">Employee</option> <option value="Contractor">Contractor</option> <option value="Visitor">Visitor</option>
-                    </select>
-                    <select className="flex-grow p-3 bg-white border border-gray-300 rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onChange={(e) => { const v=e.target.value; if(v) { handleFilterClick(v); } e.target.value=""; }} value={""} aria-label="Select Filter Category to Add">
-                        <option value="" disabled> Add Filters By Category... </option>
-                        {filterSections.map((s) => (<option key={s.id} value={s.id}>{s.label}</option>))}
-                    </select>
+                {/* --- Filter Selection Area (Modern UI) --- */}
+                <div className="m-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col md:flex-row items-center gap-4 transition-all hover:shadow-md">
+                    
+                    {/* 1. Role Select */}
+                    <div className="relative w-full md:w-48">
+                        <label className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-gray-500">Role</label>
+                        <select 
+                            className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer" 
+                            onChange={handleRoleChange} 
+                            value={selectedRole} 
+                            aria-label="Select Role Filter"
+                        >
+                            <option value="">All Roles</option> 
+                            <option value="Employee">Employee</option> 
+                            <option value="Contractor">Contractor</option> 
+                            <option value="Visitor">Visitor</option>
+                        </select>
+                    </div>
+
+                    {/* Vertical Divider (Hidden on mobile) */}
+                    <div className="hidden md:block w-px h-8 bg-gray-200"></div>
+
+                    {/* 2. Date Range (Clean Group) */}
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="relative flex-grow md:flex-grow-0">
+                            <label className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-gray-500">From</label>
+                            <input 
+                                type="date" 
+                                name="fromDate" 
+                                value={fromDate} 
+                                onChange={handleChange} 
+                                className="w-full md:w-40 p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                        <span className="text-gray-400 font-medium">–</span>
+                        <div className="relative flex-grow md:flex-grow-0">
+                            <label className="absolute -top-2 left-3 bg-white px-1 text-xs font-medium text-gray-500">To</label>
+                            <input 
+                                type="date" 
+                                name="toDate" 
+                                value={toDate} 
+                                onChange={handleChange} 
+                                min={fromDate || undefined} 
+                                className="w-full md:w-40 p-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Vertical Divider (Hidden on mobile) */}
+                    <div className="hidden md:block w-px h-8 bg-gray-200"></div>
+
+                    {/* 3. Add Filter Category */}
+                    <div className="relative flex-grow w-full md:w-auto">
+                        <select 
+                            className="w-full p-2.5 pl-9 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer transition-colors"
+                            onChange={(e) => { 
+                                const v = e.target.value; 
+                                if (v) handleFilterClick(v); 
+                                e.target.value = ""; 
+                            }} 
+                            value=""
+                            aria-label="Select Filter Category to Add"
+                            disabled={!selectedRole} // Block selection until role chosen
+                        >
+                            <option value="" disabled>
+                                {selectedRole ? "+ Add Specific Filter..." : "Select Role First"}
+                            </option>
+
+                            {filterSections
+                                .filter((s) => !selectedRole || s.roles.includes(selectedRole))
+                                .map((s) => (
+                                    <option key={s.id} value={s.id}>{s.label}</option>
+                                ))
+                            }
+                        </select>
+
+                        {/* Icon */}
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z">
+                                </path>
+                            </svg>
+                        </div>
+                    </div>
+
+
                 </div>
 
                 {/* --- Dynamic Filter Form Area --- */}
@@ -684,13 +778,13 @@ else if (key.startsWith('investigation_')) {
                                     <button onClick={() => setSelectedSection(null)} className="text-gray-500 hover:text-red-600 p-1 rounded-full hover:bg-gray-100" aria-label="Close Filter Section"> <X size={20} /> </button>
                                 </div>
                                 {/* --- Render Specific Filter Component --- */}
-                                {selectedSection === "employementstatus" && <EmployementStatus addFilter={addFilter} />}
+                                {selectedSection === "employementstatus" && selectedRole !== "Visitor" && <EmployementStatus addFilter={addFilter} />}
                                 {selectedSection === "personaldetails" && <PersonalDetails addFilter={addFilter} />}
-                                {selectedSection === "employementdetails" && <EmploymentDetails addFilter={addFilter} />}
+                                {selectedSection === "employementdetails" && selectedRole !== "Visitor" && <EmploymentDetails addFilter={addFilter} />}
                                 {selectedSection === "vitals" && <Vitals addFilter={addFilter} />}
                                 {selectedSection === "fitness" && <Fitness addFilter={addFilter} />}
                                 {/* <<< CHANGE 5: Added the new component to the conditional render block */}
-                                {selectedSection === "significantnotes" && <SignificantNotesFilter addFilter={addFilter} />}
+                                {selectedSection === "significantnotes" &&  <SignificantNotesFilter addFilter={addFilter} />}
                                 {selectedSection === "specialcases" && <SpecialCasesFilter addFilter={addFilter} />}
                                 {selectedSection === "medicalhistory" && <MedicalHistoryForm addFilter={addFilter} />}
                                 {selectedSection === "investigations" && <Investigations addFilter={addFilter} />}
@@ -796,16 +890,45 @@ const SignificantNotesFilter = ({ addFilter }) => {
         incident_type: "",
         incident: "",
         illness_type: "",
+        special_case: "",
     });
 
-    // Options are taken from your SignificantNotes component
-    const communicableDiseaseOptions = [ { value: '', label: 'Any' }, { value: 'Notification 0', label: 'Notification 0' }, { value: 'Notification 1', label: 'Notification 1' }, { value: 'Notification 2', label: 'Notification 2' }, { value: 'Notification 3', label: 'Notification 3' }];
-    const incidentTypeOptions = [ { value: '', label: 'Any' }, { value: 'FAC', label: 'FAC' }, { value: 'LTI', label: 'LTI' }, { value: 'MTC', label: 'MTC' }, { value: 'FATAL', label: 'FATAL' }, { value: 'RWC', label: 'RWC' } ];
-    const incidentOptions = [ { value: '', label: 'Any' }, {value: 'Work Related Injury', label: 'Work Related Injury'}, {value: 'Domestic Injury', label: 'Domestic Injury'}, {value: 'Commutation Injury', label: 'Commutation Injury'}, {value: 'Others', label: 'Others'} ];
-    const illnessTypeOptions = [ { value: '', label: 'Any' }, {value: 'Work Related Illness', label: 'Work Related Illness'}, {value: 'Notifiable Disease', label: 'Notifiable Disease'} ];
+    const communicableDiseaseOptions = [
+        { value: "", label: "Any" },
+        { value: "Notification 0", label: "Notification 0" },
+        { value: "Notification 1", label: "Notification 1" },
+        { value: "Notification 2", label: "Notification 2" },
+        { value: "Notification 3", label: "Notification 3" },
+    ];
+
+    const incidentTypeOptions = [
+        { value: "", label: "Any" },
+        { value: "FAC", label: "FAC" },
+        { value: "LTI", label: "LTI" },
+        { value: "MTC", label: "MTC" },
+        { value: "FATAL", label: "FATAL" },
+        { value: "RWC", label: "RWC" },
+    ];
+
+    const incidentOptions = [
+        { value: "", label: "Any" },
+        { value: "Work Related Injury", label: "Work Related Injury" },
+        { value: "Domestic Injury", label: "Domestic Injury" },
+        { value: "Commutation Injury", label: "Commutation Injury" },
+        { value: "Others", label: "Others" },
+    ];
+
+    const illnessTypeOptions = [
+        { value: "", label: "Any" },
+        { value: "Work Related Illness", label: "Work Related Illness" },
+        { value: "Notifiable Disease", label: "Notifiable Disease" },
+    ];
 
     const handleChange = (e) => {
-        setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+        setFormData(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value,
+        }));
     };
 
     const handleSubmit = () => {
@@ -814,13 +937,17 @@ const SignificantNotesFilter = ({ addFilter }) => {
         );
 
         if (Object.keys(activeFilters).length > 0) {
-            // The key here is "significantNotes" to match the addFilter logic
             addFilter({ significantNotes: activeFilters });
         } else {
             alert("Please select at least one filter criterion.");
         }
+
         setFormData({
-            communicable_disease: "", incident_type: "", incident: "", illness_type: ""
+            communicable_disease: "",
+            incident_type: "",
+            incident: "",
+            illness_type: "",
+            special_case: "",
         });
     };
 
@@ -830,33 +957,92 @@ const SignificantNotesFilter = ({ addFilter }) => {
         <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="communicable_disease-filter" className="block text-sm font-medium text-gray-700 mb-1">Notification</label>
-                    <select name="communicable_disease" id="communicable_disease-filter" value={formData.communicable_disease} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {communicableDiseaseOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notification</label>
+                    <select
+                        name="communicable_disease"
+                        value={formData.communicable_disease}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        {communicableDiseaseOptions.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
                     </select>
                 </div>
-                 <div>
-                    <label htmlFor="illness_type-filter" className="block text-sm font-medium text-gray-700 mb-1">Additional Illness Register</label>
-                    <select name="illness_type" id="illness_type-filter" value={formData.illness_type} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {illnessTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                    </select>
-                </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div>
-                    <label htmlFor="incident_type-filter" className="block text-sm font-medium text-gray-700 mb-1">Incident Category</label>
-                    <select name="incident_type" id="incident_type-filter" value={formData.incident_type} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        {incidentTypeOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
-                    </select>
-                </div>
+
                 <div>
-                    <label htmlFor="incident-filter" className="block text-sm font-medium text-gray-700 mb-1">Incident Nature</label>
-                    <select name="incident" id="incident-filter" value={formData.incident} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                       {incidentOptions.map(option => (<option key={option.value} value={option.value}>{option.label}</option>))}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Additional Illness Register</label>
+                    <select
+                        name="illness_type"
+                        value={formData.illness_type}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        {illnessTypeOptions.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
                     </select>
                 </div>
             </div>
-            <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Incident Category</label>
+                    <select
+                        name="incident_type"
+                        value={formData.incident_type}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        {incidentTypeOptions.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Incident Nature</label>
+                    <select
+                        name="incident"
+                        value={formData.incident}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                        {incidentOptions.map(o => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Special Cases (Merged Radio Options) */}
+            <div>
+                <p className="block text-sm font-medium text-gray-700 mb-2">
+                    Special Case in Fitness/Consultation Notes?
+                </p>
+
+                <div className="flex items-center space-x-6 py-2">
+                    {["Yes", "No", "NA"].map(val => (
+                        <label key={val} className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                name="special_case"
+                                value={val}
+                                checked={formData.special_case === val}
+                                onChange={handleChange}
+                                className="form-radio h-5 w-5 text-blue-600"
+                            />
+                            <span className="text-gray-800 font-medium">{val}</span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            <button
+                onClick={handleSubmit}
+                disabled={isSubmitDisabled}
+                className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
                 Add Significant Notes Filter
             </button>
         </div>
@@ -1189,7 +1375,7 @@ const Fitness = ({ addFilter }) => {
         Finger_nose_test: "",
         Psychological_PMK: "",
         Psychological_zollingar: "",
-        special_cases: "",
+        // special_cases: "",
         eye_exam_fit_status: "",
         job_nature: "",
         overall_fitness: "",
@@ -1198,10 +1384,11 @@ const Fitness = ({ addFilter }) => {
     const [formData, setFormData] = useState(initialFormData);
 
     const NormalorAbnormal = { "": "Any", Normal: "Normal", Abnormal: "Abnormal" };
-    const yesNoOptions = { "": "Any", Yes: "Normal", No: "Abnormal" };
-    const Positiveoptions = { "": "Any", Positive: "Normal", Negative: "Abnormal" };
-    const jobNatureOptions = { "": "Any", "Desk Job": "Desk Job", "Field Work": "Field Work", "Manual Labor": "Manual Labor" };
+    const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" };
+    const Positiveoptions = { "": "Any", Positive: "Positive", Negative: "Negative" };
+    const jobNatureOptions = { "": "Any", Height: "Height", Gas_Line : "Gas Line", Confined_Space : "Confined Space", SCBA_Rescuer : "SCBA Resucer", Fire_Rescuer : "Fire Rescuer", Lone_Worker : "Lone Worker", Fisher_Man: "Fisher Man", Snake_Cather: "Snake Catcher", Others:"Others" };
     const fitnessStatusOptions = { "": "Any", Fit: "Fit", "Conditionally Fit": "Conditionally Fit", Unfit: "Unfit" };
+    const eyeExamFitStatusOptions = { "": "Any", Fit: "Fit", Fit_when_newly_prescribed_glass: "Fit when newly prescribed glass", Fit_with_existing_glass: "Fit with existing glass" ,Fit_with_an_advice_to_change_existing_glass_with_newly_prescribed_glass : "Fit with an advice to change existing glass with newly prescribed glass", Unfit: "Unfit" };
 
     const handleChange = (e) => {
         setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -1242,7 +1429,7 @@ const Fitness = ({ addFilter }) => {
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="Tandem-filter">Tandem</label>
+                    <label htmlFor="Tandem-filter">Straight Line (Tandem) Walking</label>
                     <select name="Tandem" id="Tandem-filter" value={formData.Tandem} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
@@ -1266,7 +1453,7 @@ const Fitness = ({ addFilter }) => {
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="CO_dizziness-filter">CO Dizziness</label>
+                    <label htmlFor="CO_dizziness-filter">C/O Dizziness R/O CNS/ENT</label>
                     <select name="CO_dizziness" id="CO_dizziness-filter" value={formData.CO_dizziness} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
@@ -1275,25 +1462,25 @@ const Fitness = ({ addFilter }) => {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                    <label htmlFor="acrophobia-filter">Acrophobia</label>
+                    <label htmlFor="acrophobia-filter">Fear of Height (Acrophobia)</label>
                     <select name="acrophobia" id="acrophobia-filter" value={formData.acrophobia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="Claustrophobia-filter">Claustrophobia</label>
+                    <label htmlFor="Claustrophobia-filter">Fear in confined/enclosed Space (Claustrophobia)</label>
                     <select name="Claustrophobia" id="Claustrophobia-filter" value={formData.Claustrophobia} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(yesNoOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="Psychological_PMK-filter">Psychological PMK</label>
+                    <label htmlFor="Psychological_PMK-filter">Psychological-PMK</label>
                     <select name="Psychological_PMK" id="Psychological_PMK-filter" value={formData.Psychological_PMK} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="Psychological_zollingar-filter">Psychological Zollingar</label>
+                    <label htmlFor="Psychological_zollingar-filter">Psychological-Zollingar</label>
                     <select name="Psychological_zollingar" id="Psychological_zollingar-filter" value={formData.Psychological_zollingar} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(NormalorAbnormal).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
@@ -1310,11 +1497,11 @@ const Fitness = ({ addFilter }) => {
                 <div>
                     <label htmlFor="eye_exam_fit_status-filter">Eye Exam Fitness</label>
                     <select name="eye_exam_fit_status" id="eye_exam_fit_status-filter" value={formData.eye_exam_fit_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
-                        {Object.entries(fitnessStatusOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        {Object.entries(eyeExamFitStatusOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="job_nature-filter">Job Nature</label>
+                    <label htmlFor="job_nature-filter">Fitness applied for (Job Nature)</label>
                     <select name="job_nature" id="job_nature-filter" value={formData.job_nature} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
                         {Object.entries(jobNatureOptions).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
@@ -1326,19 +1513,6 @@ const Fitness = ({ addFilter }) => {
                     </select>
                 </div>
             </div>
-
-            <div>
-                <label htmlFor="special_cases-filter">Special Cases</label>
-                <textarea
-                    name="special_cases"
-                    id="special_cases-filter"
-                    value={formData.special_cases}
-                    onChange={handleChange}
-                    className="w-full p-3 border rounded-lg focus:ring-blue-500"
-                    rows="3"
-                />
-            </div>
-
             <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>
                 Add Fitness Filter
             </button>
@@ -1346,73 +1520,73 @@ const Fitness = ({ addFilter }) => {
     );
 };
 
-const SpecialCasesFilter = ({ addFilter }) => {
-    const [selectedValue, setSelectedValue] = useState(""); 
-    const handleChange = (e) => {
-        setSelectedValue(e.target.value);
-    };
+// const SpecialCasesFilter = ({ addFilter }) => {
+//     const [selectedValue, setSelectedValue] = useState(""); 
+//     const handleChange = (e) => {
+//         setSelectedValue(e.target.value);
+//     };
 
-    const handleSubmit = () => {
-        if (!selectedValue) {
-            alert("Please select an option.");
-            return;
-        }
-        addFilter({ specialCase: selectedValue });
-        setSelectedValue("");
-    };
+//     const handleSubmit = () => {
+//         if (!selectedValue) {
+//             alert("Please select an option.");
+//             return;
+//         }
+//         addFilter({ specialCase: selectedValue });
+//         setSelectedValue("");
+//     };
 
-    const isSubmitDisabled = !selectedValue;
+//     const isSubmitDisabled = !selectedValue;
 
-    return (
-        <div className="space-y-4">
-            <p className="block text-sm font-medium text-gray-700 mb-2">
-                Does the record contain any special cases in Fitness or Consultation notes?
-            </p>
-            <div className="flex items-center space-x-6 py-2">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="specialCaseOption"
-                        value="Yes"
-                        checked={selectedValue === "Yes"}
-                        onChange={handleChange}
-                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-gray-800 font-medium">Yes</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="specialCaseOption"
-                        value="No"
-                        checked={selectedValue === "No"}
-                        onChange={handleChange}
-                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-gray-800 font-medium">No</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                        type="radio"
-                        name="specialCaseOption"
-                        value="NA"
-                        checked={selectedValue === "NA"}
-                        onChange={handleChange}
-                        className="form-radio h-5 w-5 text-gray-400 focus:ring-gray-300"
-                    />
-                    <span className="text-gray-800 font-medium">N/A</span>
-                </label>
-            </div>
-            <button
-                onClick={handleSubmit}
-                className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                disabled={isSubmitDisabled}
-            >
-                Add Special Cases Filter
-            </button>
-        </div>
-    );
-};
+//     return (
+//         <div className="space-y-4">
+//             <p className="block text-sm font-medium text-gray-700 mb-2">
+//                 Does the record contain any special cases in Fitness or Consultation notes?
+//             </p>
+//             <div className="flex items-center space-x-6 py-2">
+//                 <label className="flex items-center space-x-2 cursor-pointer">
+//                     <input
+//                         type="radio"
+//                         name="specialCaseOption"
+//                         value="Yes"
+//                         checked={selectedValue === "Yes"}
+//                         onChange={handleChange}
+//                         className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+//                     />
+//                     <span className="text-gray-800 font-medium">Yes</span>
+//                 </label>
+//                 <label className="flex items-center space-x-2 cursor-pointer">
+//                     <input
+//                         type="radio"
+//                         name="specialCaseOption"
+//                         value="No"
+//                         checked={selectedValue === "No"}
+//                         onChange={handleChange}
+//                         className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+//                     />
+//                     <span className="text-gray-800 font-medium">No</span>
+//                 </label>
+//                 <label className="flex items-center space-x-2 cursor-pointer">
+//                     <input
+//                         type="radio"
+//                         name="specialCaseOption"
+//                         value="NA"
+//                         checked={selectedValue === "NA"}
+//                         onChange={handleChange}
+//                         className="form-radio h-5 w-5 text-gray-400 focus:ring-gray-300"
+//                     />
+//                     <span className="text-gray-800 font-medium">N/A</span>
+//                 </label>
+//             </div>
+//             <button
+//                 onClick={handleSubmit}
+//                 className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+//                 disabled={isSubmitDisabled}
+//             >
+//                 Add Special Cases Filter
+//             </button>
+//         </div>
+//     );
+// };
 
 const ShiftingAmbulanceFilter = ({ addFilter }) => {
     const [selectedValue, setSelectedValue] = useState("");
@@ -1473,25 +1647,30 @@ const ShiftingAmbulanceFilter = ({ addFilter }) => {
 };
 
 const ConsultationReviewFilter = ({ addFilter }) => {
-    const [selectedValue, setSelectedValue] = useState("");
-
-    const handleChange = (e) => {
-        setSelectedValue(e.target.value);
-    };
+    const [reviewValue, setReviewValue] = useState("");
+    const [diagnosedValue, setDiagnosedValue] = useState("");
 
     const handleSubmit = () => {
-        if (!selectedValue) {
-            alert("Please select an option.");
+        if (!reviewValue || !diagnosedValue) {
+            alert("Please answer both questions.");
             return;
         }
-        addFilter({ consultationReview: selectedValue });
-        setSelectedValue("");
+
+        addFilter({
+            consultationReview: reviewValue,
+            diagnosed: diagnosedValue,
+        });
+
+        setReviewValue("");
+        setDiagnosedValue("");
     };
 
-    const isSubmitDisabled = !selectedValue;
+    const isSubmitDisabled = !reviewValue || !diagnosedValue;
 
     return (
         <div className="space-y-4">
+
+            {/* Question 1 */}
             <p className="block text-sm font-medium text-gray-700 mb-2">
                 Was the consultation reviewed?
             </p>
@@ -1499,26 +1678,56 @@ const ConsultationReviewFilter = ({ addFilter }) => {
                 <label className="flex items-center space-x-2 cursor-pointer">
                     <input
                         type="radio"
-                        name="consultationReviewOption"
+                        name="consultationReview"
                         value="Yes"
-                        checked={selectedValue === "Yes"}
-                        onChange={handleChange}
+                        checked={reviewValue === "Yes"}
+                        onChange={(e) => setReviewValue(e.target.value)}
                         className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-800 font-medium">Yes</span>
+                    <span>Yes</span>
                 </label>
                 <label className="flex items-center space-x-2 cursor-pointer">
                     <input
                         type="radio"
-                        name="consultationReviewOption"
+                        name="consultationReview"
                         value="No"
-                        checked={selectedValue === "No"}
-                        onChange={handleChange}
+                        checked={reviewValue === "No"}
+                        onChange={(e) => setReviewValue(e.target.value)}
                         className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-800 font-medium">No</span>
+                    <span>No</span>
                 </label>
             </div>
+
+            {/* Question 2 */}
+            <p className="block text-sm font-medium text-gray-700 mb-2">
+                Was Diagnosed?
+            </p>
+            <div className="flex items-center space-x-6 py-2">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="diagnosed"
+                        value="Yes"
+                        checked={diagnosedValue === "Yes"}
+                        onChange={(e) => setDiagnosedValue(e.target.value)}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>Yes</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="diagnosed"
+                        value="No"
+                        checked={diagnosedValue === "No"}
+                        onChange={(e) => setDiagnosedValue(e.target.value)}
+                        className="form-radio h-5 w-5 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>No</span>
+                </label>
+            </div>
+
             <button
                 onClick={handleSubmit}
                 className="w-full mt-4 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
@@ -1526,9 +1735,11 @@ const ConsultationReviewFilter = ({ addFilter }) => {
             >
                 Add Consultation Review Filter
             </button>
+
         </div>
     );
 };
+
 
 const MedicalHistoryForm = ({ addFilter }) => {
     const [ph, setPh] = useState({ smoking: "", alcohol: "", paan: "", diet: "", });
@@ -1596,16 +1807,170 @@ const MedicalHistoryForm = ({ addFilter }) => {
     );
 };
 const VaccinationForm = ({ addFilter }) => {
-    const [formData, setFormData] = useState({ disease: "", vaccine: "", vaccine_status: "", });
-    const dOpts=["","Covid-19","Hepatitis B","Influenza","Tetanus","MMR",]; const vOpts={"Covid-19":["","Covishield","Covaxin"],"Hepatitis B":["","Engerix-B"],"Influenza":["","Fluarix"],"Tetanus":["","Tdap"],"MMR":["","MMR-II"],}; const sOpts={"":"Any",Completed:"Completed",Partial:"Partial"};
-    const availableVaccines = formData.disease ? vOpts[formData.disease] || [""] : [""]; const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => { const ns = { ...prev, [name]: value }; if (name === 'disease') ns.vaccine = ""; return ns; }); };
-    const handleSubmit = () => { const fd = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "")); if (Object.keys(fd).length > 0) { addFilter(fd); } else { alert("Select at least one criterion."); } setFormData({ disease: "", vaccine: "", vaccine_status: "" }); }; const isSubmitDisabled = !formData.disease && !formData.vaccine && !formData.vaccine_status;
-    return (<div className="space-y-4"> <div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div> <label htmlFor="d-v-f">Disease</label> <select name="disease" id="d-v-f" value={formData.disease} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{dOpts.map(d => <option key={d} value={d}>{d||'--Select--'}</option>)}</select> </div> <div> <label htmlFor="v-s-f">Vaccine (Optional)</label> <select name="vaccine" id="v-s-f" value={formData.vaccine} onChange={handleChange} disabled={!formData.disease} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100">{availableVaccines.map(v => <option key={v} value={v}>{v||'--Any--'}</option>)}</select> </div> <div> <label htmlFor="s-v-f">Status</label> <select name="vaccine_status" id="s-v-f" value={formData.vaccine_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">{Object.entries(sOpts).map(([v,l]) => <option key={v} value={v}>{l}</option>)}</select> </div> </div> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}> Add Vaccination Filter </button> </div>);
+  const [formData, setFormData] = useState({
+    disease: "",
+    vaccine: "",
+    vaccine_status: "",
+  });
+
+  const dOpts = [
+    "",
+    "Covid-19",
+    "Hepatitis B",
+    "Influenza",
+    "Tetanus",
+    "MMR",
+    "Rabies",
+    "Chickenpox",
+    "HPV",
+    "Pneumococcal"
+  ];
+
+  // Simple independent prophylaxis dropdown
+  const pOpts = [
+    "",
+    "Pre-Prophylaxis",
+    "Post-Prophylaxis"
+  ];
+
+  const sOpts = {
+    "": "Any",
+    Completed: "Completed",
+    Partial: "Partial"
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = () => {
+    const filtered = Object.fromEntries(
+      Object.entries(formData).filter(([_, v]) => v !== "")
+    );
+
+    if (Object.keys(filtered).length === 0) {
+      return alert("Select at least one criterion.");
+    }
+
+    addFilter(filtered);
+    setFormData({ disease: "", vaccine: "", vaccine_status: "" });
+  };
+
+  const isSubmitDisabled =
+    !formData.disease && !formData.vaccine && !formData.vaccine_status;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        {/* Disease */}
+        <div>
+          <label htmlFor="d-v-f">Disease</label>
+          <select
+            name="disease"
+            id="d-v-f"
+            value={formData.disease}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:ring-blue-500"
+          >
+            {dOpts.map(d => (
+              <option key={d} value={d}>
+                {d || "--Select--"}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Prophylaxis */}
+        <div>
+          <label htmlFor="v-s-f">Prophylaxis</label>
+          <select
+            name="vaccine"
+            id="v-s-f"
+            value={formData.vaccine}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:ring-blue-500"
+          >
+            {pOpts.map(v => (
+              <option key={v} value={v}>
+                {v || "--Select--"}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status */}
+        <div>
+          <label htmlFor="s-v-f">Status</label>
+          <select
+            name="vaccine_status"
+            id="s-v-f"
+            value={formData.vaccine_status}
+            onChange={handleChange}
+            className="w-full p-3 border rounded-lg focus:ring-blue-500"
+          >
+            {Object.entries(sOpts).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={isSubmitDisabled}
+        className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+      >
+        Add Vaccination Filter
+      </button>
+    </div>
+  );
 };
-const PurposeData = { "Preventive": { "Medical Examination": ["Pre Employment", "Pre Employment (FH)", "Pre Placement", "Annual", "Periodical (FH)", "Camps (M)", "Camps (O)"], "Periodic Work Fitness": ["Special WF", "Special WF (R)"], "Fitness After Medical Leave": ["Fitness After ML"], "Mock Drill": ["Mock Drill"], "BP Sugar Check": ["BP Sugar Check"] }, "Curative": { "Outpatient": ["Illness", "OCI", "Injury", "OCI", "Follow-up", "BP Sugar Chart", "Injury Outside", "OCI Outside"], "Alcohol Abuse": ["Alcohol Abuse"] } };
+
+
+const PurposeData = { "Preventive": {
+        "Pre employment": "Medical Examination",
+        "Pre employment (Food Handler)": "Medical Examination",
+        "Pre Placement": "Medical Examination",
+        "Annual / Periodical": "Medical Examination",
+        "Periodical (Food Handler)": "Medical Examination",
+        "Retirement medical examination": "Medical Examination",
+        "Camps (Mandatory)": "Medical Examination",
+        "Camps (Optional)": "Medical Examination",
+        "Special Work Fitness": "Periodic Work Fitness",
+        "Special Work Fitness (Renewal)": "Periodic Work Fitness",
+        "Fitness After Medical Leave": "Fitness After Medical Leave",
+        "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
+        "Mock Drill": "Mock Drill",
+        "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "Follow Up Visits":"Follow Up Visits",
+        "Other": "Other",
+      },
+        "Curative": { "Illness": "Outpatient",
+        "Over Counter Illness": "Outpatient",
+        "Injury": "Outpatient",
+        "Over Counter Injury": "Outpatient",
+        "Follow Up Visits": "Follow Up Visits",
+        "BP Sugar Chart": "Outpatient",
+        "Injury Outside the Premises": "Outpatient",
+        "Over Counter Injury Outside the Premises": "Outpatient",
+        "Alcohol Abuse": "Alcohol Abuse",
+        "Other": "Other",
+    } };
 function PurposeFilter({ addFilter }) {
     const [formData, setFormData] = useState({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "", }); const { fromDate, toDate, type_of_visit, register, specificCategory } = formData;
-    const subcategories = type_of_visit ? Object.keys(PurposeData[type_of_visit] || {}) : []; const specificOpts = type_of_visit && register ? (PurposeData[type_of_visit]?.[register] || []) : [];
+    const subcategories = type_of_visit ? Object.keys(PurposeData[type_of_visit] || {}) : [];
+    // Get the value
+    const rawSpecific = type_of_visit && register ? PurposeData[type_of_visit]?.[register] : [];
+    // If it is a string, wrap it in an array [string]. If it is already an array, leave it.
+    const specificOpts = Array.isArray(rawSpecific) ? rawSpecific : (rawSpecific ? [rawSpecific] : []);
     const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => { const ns = { ...prev, [name]: value }; if (name === 'type_of_visit') { ns.register = ""; ns.specificCategory = ""; } else if (name === 'register') { ns.specificCategory = ""; } return ns; }); };
     const handleSubmit = () => { const pf = {}; if (fromDate) pf.fromDate = fromDate; if (toDate) pf.toDate = toDate; if (type_of_visit) pf.type_of_visit = type_of_visit; if (register) pf.register = register; if (specificCategory) pf.specificCategory = specificCategory; if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) { alert("'From' > 'To'."); return; } if (Object.keys(pf).length > 0) { addFilter({ purpose: pf }); } else { alert("Select criterion or date range."); } setFormData({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "" }); }; const isSubmitDisabled = !fromDate && !toDate && !type_of_visit && !register && !specificCategory;
     return (<div className="space-y-4"> <fieldset className="border p-4 rounded-md"><legend>Date Range</legend><div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2"> <div><label htmlFor="fD-p-f">From</label><input type="date" id="fD-p-f" name="fromDate" value={fromDate} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> <div><label htmlFor="tD-p-f">To</label><input type="date" id="tD-p-f" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className="w-full p-3 border rounded-lg focus:ring-blue-500"/></div> </div></fieldset> <fieldset className="border p-4 rounded-md"><legend>Visit Purpose</legend><div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2"> <div><label htmlFor="tov-f">Type</label><select id="tov-f" name="type_of_visit" value={type_of_visit} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500"><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="r-p-f">Register</label><select id="r-p-f" name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label htmlFor="sc-p-f">Specific Reason</label><select id="sc-p-f" name="specificCategory" value={specificCategory} onChange={handleChange} disabled={!register||specificOpts.length===0} className="w-full p-3 border rounded-lg focus:ring-blue-500 disabled:bg-gray-100"><option value="">--Select--</option>{specificOpts.map((c, i)=>(<option key={`${c}-${i}`} value={c}>{c}</option>))}</select></div> </div></fieldset> <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitDisabled}>Add Purpose Filter</button> </div>);
