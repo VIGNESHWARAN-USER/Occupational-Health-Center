@@ -63,6 +63,7 @@ const Vaccination = ({ data }) => {
 
     fetchVaccineData();
   }, [aadhar]);
+  
 
   // The rest of your component (the JSX) remains exactly the same,
   // as it's already correctly designed to display the data once it's in the right format.

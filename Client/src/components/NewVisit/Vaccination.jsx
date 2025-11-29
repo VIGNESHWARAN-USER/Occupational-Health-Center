@@ -75,6 +75,53 @@ const Vaccination = ({ data, mrdNo }) => {
 
   }, [aadhar]); // Re-run ONLY when aadhar changes
 
+  const VACCINE_OPTIONS = [
+  {
+    category: "Routine & Childhood (UIP India)",
+    vaccines: [
+      "BCG (Tuberculosis)",
+      "OPV (Oral Polio Vaccine)",
+      "Hepatitis B",
+      "Pentavalent (Diphtheria, Pertussis, Tetanus, HepB, Hib)",
+      "Rotavirus (RVV)",
+      "PCV (Pneumococcal Conjugate)",
+      "fIPV / IPV (Inactivated Polio)",
+      "Measles & Rubella (MR)",
+      "MMR (Measles, Mumps, Rubella)",
+      "DPT / DTP Booster",
+      "Tetanus Toxoid (TT / Td)",
+      "Japanese Encephalitis (JE)"
+    ]
+  },
+  {
+    category: "COVID-19",
+    vaccines: [
+      "Covishield (AstraZeneca)",
+      "Covaxin (Bharat Biotech)",
+      "Pfizer-BioNTech (Comirnaty)",
+      "Moderna (Spikevax)",
+      "Sputnik V",
+      "Corbevax",
+      "Novavax / Covovax"
+    ]
+  },
+  {
+    category: "Travel, Adult & Special",
+    vaccines: [
+      "Yellow Fever",
+      "Rabies (Post-exposure)",
+      "Typhoid Conjugate",
+      "Hepatitis A",
+      "HPV (Cervical Cancer / Gardasil)",
+      "Influenza (Flu Shot)",
+      "Varicella (Chickenpox)",
+      "Cholera",
+      "Meningococcal (Meningitis)",
+      "Pneumococcal Polysaccharide (PPSV23)"
+    ]
+  }
+];
+
 
   // --- State Update Handlers (Memoized) ---
   // No changes needed in these handlers
@@ -280,19 +327,47 @@ const Vaccination = ({ data, mrdNo }) => {
                   >
                     Vaccine<span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+
+                  <select
                     id={`disease_name_${vIndex}`}
                     value={vaccination.disease_name}
                     onChange={(e) =>
                       handleChange(vIndex, "disease_name", e.target.value)
                     }
-                    placeholder="e.g., COVID-19, Hepatitis B"
                     className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100"
                     required
                     disabled={isLoading}
-                  />
+                  >
+                    <option value="">Select a vaccine</option>
+
+                    {/* Common Vaccines */}
+                    <option value="COVID-19">COVID-19</option>
+                    <option value="Hepatitis B">Hepatitis B</option>
+                    <option value="DTP (Diphtheria, Tetanus, Pertussis)">DTP (Diphtheria, Tetanus, Pertussis)</option>
+                    <option value="MMR (Measles, Mumps, Rubella)">MMR (Measles, Mumps, Rubella)</option>
+                    <option value="Polio (OPV/IPV)">Polio (OPV/IPV)</option>
+                    <option value="BCG">BCG (Tuberculosis)</option>
+                    <option value="Rotavirus">Rotavirus</option>
+                    <option value="Hib">Hib (Haemophilus Influenzae Type B)</option>
+                    <option value="Influenza">Influenza</option>
+
+                    {/* Additional Vaccines */}
+                    <option value="HPV">HPV (Human Papillomavirus)</option>
+                    <option value="Hepatitis A">Hepatitis A</option>
+                    <option value="Pneumococcal (PCV)">Pneumococcal (PCV)</option>
+                    <option value="Varicella (Chickenpox)">Varicella (Chickenpox)</option>
+                    <option value="Typhoid">Typhoid</option>
+                    <option value="Rabies">Rabies</option>
+                    <option value="Japanese Encephalitis">Japanese Encephalitis</option>
+                    <option value="Meningococcal">Meningococcal</option>
+                    <option value="Cholera">Cholera</option>
+                    <option value="Yellow Fever">Yellow Fever</option>
+                    <option value="Shingles">Shingles</option>
+                    <option value="Malaria Vaccine">Malaria Vaccine</option>
+
+                  </select>
                 </div>
+
                 <div>
                   <label
                     htmlFor={`vaccine_name_${vIndex}`}

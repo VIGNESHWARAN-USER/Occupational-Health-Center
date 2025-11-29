@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
-// --- Reusable Helper Components for  ---
+// --- Reusable Helper Components ---
 
 /**
- * A component to  a label and its corresponding value in a consistent format.
+ * A component to display a label and its corresponding value in a consistent format.
  * It gracefully handles empty or null values.
  */
 const DataRow = ({ label, value, isTextArea = false }) => {
@@ -27,9 +27,23 @@ const DataRow = ({ label, value, isTextArea = false }) => {
 
 /**
  * A component to render the table for family members (Spouses/Children).
+ * Includes a fix for "members.map is not a function" error.
  */
 const FamilyMemberTable = ({ title, members, tableStyle, headerStyle, cellStyle }) => {
-  if (!members || members.length === 0) {
+  
+  // FIX: Ensure 'members' is always an array before trying to map it.
+  let safeMembers = [];
+  
+  if (Array.isArray(members)) {
+    // It's already an array
+    safeMembers = members;
+  } else if (members && typeof members === 'object') {
+    // It's an object (single record), wrap it in an array to prevent crash
+    safeMembers = [members];
+  }
+  // If null/undefined, safeMembers remains []
+
+  if (safeMembers.length === 0) {
     return (
       <div className="mt-4">
         <h3 className="text-lg font-semibold text-gray-800 mb-2">{title}</h3>
@@ -40,7 +54,7 @@ const FamilyMemberTable = ({ title, members, tableStyle, headerStyle, cellStyle 
 
   return (
     <div className="mt-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-2">{title} ({members.length})</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-2">{title} ({safeMembers.length})</h3>
       <div className="overflow-x-auto">
         <table style={tableStyle}>
           <thead>
@@ -54,14 +68,14 @@ const FamilyMemberTable = ({ title, members, tableStyle, headerStyle, cellStyle 
             </tr>
           </thead>
           <tbody>
-            {members.map((member, index) => (
+            {safeMembers.map((member, index) => (
               <tr key={index}>
-                <td style={cellStyle}>{member.sex || 'N/A'}</td>
-                <td style={cellStyle}>{member.dob || 'N/A'}</td>
-                <td style={cellStyle}>{member.age || 'N/A'}</td>
-                <td style={cellStyle}>{member.status || 'N/A'}</td>
-                <td style={cellStyle}>{member.reason || 'N/A'}</td>
-                <td style={cellStyle}>{member.remarks || 'N/A'}</td>
+                <td style={cellStyle}>{member?.sex || 'N/A'}</td>
+                <td style={cellStyle}>{member?.dob || 'N/A'}</td>
+                <td style={cellStyle}>{member?.age || 'N/A'}</td>
+                <td style={cellStyle}>{member?.status || 'N/A'}</td>
+                <td style={cellStyle}>{member?.reason || 'N/A'}</td>
+                <td style={cellStyle}>{member?.remarks || 'N/A'}</td>
               </tr>
             ))}
           </tbody>
@@ -72,12 +86,12 @@ const FamilyMemberTable = ({ title, members, tableStyle, headerStyle, cellStyle 
 };
 
 
-// --- Main  Component ---
+// --- Main Component ---
 
 const MedicalHistory1 = ({ data }) => {
-  console.log(data.medicalhistory)
+  // console.log(data.medicalhistory) 
   // Check for valid data, otherwise show a message
-  if (!data  || !data?.medicalhistory) {
+  if (!data || !data?.medicalhistory) {
     return (
       <div className="p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-xl font-semibold text-gray-700">Medical History</h2>
