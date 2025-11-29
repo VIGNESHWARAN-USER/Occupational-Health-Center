@@ -20,6 +20,7 @@ urlpatterns = [
 
     # Core Data Fetching / Entry (Using Aadhar)
     path('userData', views.fetchdata, name = 'userData'),
+    path('get_worker_by_aadhar/', views.get_worker_by_aadhar, name='get_worker_by_aadhar'),
     path('userDataWithID', views.fetchdatawithID, name = 'userDataWithID'),
     path('adminData', views.fetchadmindata, name = 'adminData'),
     path('addEntries', views.addEntries, name='add_Entries'),
