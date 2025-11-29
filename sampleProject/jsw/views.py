@@ -3350,21 +3350,36 @@ def save_mockdrills(request):
             drill_date = parse_date_internal(data.get("date"))
             if not drill_date: return JsonResponse({"error": "Valid date is required"}, status=400)
 
+            print(data.get('Action_Completion'))
+            print(data.get('Responsible'))
+
             mock_drill_data = {
-                'date': drill_date, 'time': data.get("time"), 'department': data.get("department"),
-                'location': data.get("location"), 'scenario': data.get("scenario"),
-                'ambulance_timing': data.get("ambulance_timing"), 'departure_from_OHC': data.get("departure_from_OHC"),
+                'date': drill_date,
+                'time': data.get("time"),
+                'department': data.get("department"),
+                'location': data.get("location"),
+                'scenario': data.get("scenario"),
+                'ambulance_timing': data.get("ambulance_timing"),
+                'departure_from_OHC': data.get("departure_from_OHC"),
                 'return_to_OHC': data.get("return_to_OHC"), 
-                'aadhar': aadhar, # Aadhar is included here
+                'aadhar': aadhar,
                 'emp_no': emp_no_val,
-                'victim_department': data.get("victim_department"), 'victim_name': data.get("victim_name"),
-                'nature_of_job': data.get("nature_of_job"), 'age': parse_form_age(data.get("age")),
-                'mobile_no': data.get("mobile_no"), 'gender': data.get("gender"), 'vitals': data.get("vitals"),
-                'complaints': data.get("complaints"), 'treatment': data.get("treatment"),
-                'referal': data.get("referal"), 'ambulance_driver': data.get("ambulance_driver"),
-                'staff_name': data.get("staff_name"), 'OHC_doctor': data.get("OHC_doctor"),
-                'staff_nurse': data.get("staff_nurse"), 'Action_Completion': data.get("action_completion"), # Corrected key to match frontend if needed
-                'Responsible': data.get("responsible"), # Corrected key to match frontend if needed
+                'victim_department': data.get("victim_department"),
+                'victim_name': data.get("victim_name"),
+                'nature_of_job': data.get("nature_of_job"),
+                'age': parse_form_age(data.get("age")),
+                'mobile_no': data.get("mobile_no"),
+                'gender': data.get("gender"),
+                'vitals': data.get("vitals"),
+                'complaints': data.get("complaints"),
+                'treatment': data.get("treatment"),
+                'referal': data.get("referal"),
+                'ambulance_driver': data.get("ambulance_driver"),
+                'staff_name': data.get("staff_name"),
+                'OHC_doctor': data.get("OHC_doctor"),
+                'staff_nurse': data.get("staff_nurse"),
+                'action_completion': data.get("Action_Completion"),
+                'responsible': data.get("Responsible"),
             }
 
             filtered_data = {k: v for k, v in mock_drill_data.items() if v is not None}
