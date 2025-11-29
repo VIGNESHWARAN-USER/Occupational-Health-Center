@@ -478,16 +478,12 @@ else if (key.startsWith('investigation_')) {
                     }
                 }
                 
-                // <<< CHANGE 3: Added the core filtering logic for significant notes
-                // This assumes your `userData` response for each employee includes their LATEST significant notes
-                // in an object with the key `significant_notes`.
+                
                 else if (key.startsWith('significant_')) {
-                    const filterData = value; // This is the object with filter criteria
-                    const notes = employee.significantnotes; // The employee's latest notes object
+                    const filterData = value; 
+                    const notes = employee.significantnotes; 
 
-                    if (!notes) return false; // Fail if the employee has no significant notes object at all
-
-                    // Check if every criterion in the filter is met by the employee's latest notes
+                    if (!notes) return false; 
                     const notesMatch = Object.entries(filterData).every(([noteKey, filterValue]) => {
                         const employeeValue = notes[noteKey];
                         return employeeValue && employeeValue.toLowerCase() === filterValue.toLowerCase();

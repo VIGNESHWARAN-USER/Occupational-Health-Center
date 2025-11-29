@@ -12,6 +12,8 @@ import { motion } from "framer-motion";
 import Consultation from "./Consultation";
 import Prescription from "./Prescription";
 import FormFields from "./FormFeilds";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
@@ -81,13 +83,13 @@ const NewVisit = () => {
 
     const file = e.target.files[0];
 
-    // Validate file type
+    
     if (!file.type.startsWith('image/')) {
       setUploadError('Please upload an image file.');
       return;
     }
 
-    setUploadError(null); // Clear any previous errors
+    setUploadError(null); 
     const reader = new FileReader();
     
     reader.onloadend = async () => {
@@ -267,8 +269,7 @@ const NewVisit = () => {
       return;
     }
 
-    // ##### DEBUGGED VALIDATION LOGIC #####
-    // Validate additional fields based on register type
+    
     if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
       if (!annualPeriodicalFields.year || !annualPeriodicalFields.batch || !annualPeriodicalFields.hospitalName) {
         alert("Please fill all Annual/Periodical fields (Year, Batch, Hospital Name)");
@@ -330,7 +331,7 @@ const NewVisit = () => {
         }
     }
 
-    // Prepare the submission data
+    
     const submissionData = {
       formDataDashboard: {
         typeofVisit: visit,
@@ -338,19 +339,22 @@ const NewVisit = () => {
         register: register,
         purpose: purpose
       },
-      extraData: {},
+      extraData: {
+        
+      },
       formData: {
         ...formData,
         entry_date: today,
         type: type,
         type_of_visit: visit,
         register: register,
-        purpose: purpose
-      }
+        purpose: purpose,
+        profilepic: uploadedImage || profileImage 
+      },
+      
     };
 
-    // ##### DEBUGGED DATA SUBMISSION LOGIC #####
-    // Add conditional fields based on register type
+    
     if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
       submissionData.extraData = {
         ...submissionData.extraData,
@@ -406,6 +410,7 @@ const NewVisit = () => {
     }
 
     try {
+      console.log("Submitting Data:", submissionData);
       const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
           "Content-Type": "application/json"
@@ -459,170 +464,94 @@ const NewVisit = () => {
       alert("Error submitting data!");
     }
   };
-  const handleSearch = async () => {  // Make handleSearch async
-    console.log(searchId)
+  // Step 2: New handleSearch - Calls API for specific ID
+  const handleSearch = async () => {
     if (searchId.trim() === "") {
-      console.log("Empty search input");
-      setFilteredEmployees(employees);
-      setdata([]); // Reset data when no input
-      setType(selectedType);
-      setVisit(latestEmployee.type_of_visit);
-      setRegister(latestEmployee.register);
-      setPurpose(latestEmployee.purpose);
-      localStorage.removeItem("selectedEmployee"); // Remove saved employee
-      setFormData({});//clears the input fields
-      setUploadedImage(null);
-      setIsNewEmployee(false);
-    } else {
-      try {
-        const filtered = employees.filter(emp =>
-          emp.aadhar.toLowerCase() === searchId.toLowerCase()
-        );
-        console.log("Filtered Employees:", filtered);
+      alert("Please enter an Aadhar ID");
+      return;
+    }
 
-        if (filtered.length > 0) {
-          // Get the latest record by sorting by id (or updated_at)
-          const latestEmployee = filtered.sort((a, b) => b.id - a.id)[0];
-          latestEmployee.mrdNo = "";
-          console.log("Latest Employee:", latestEmployee);          setFilteredEmployees([latestEmployee]);
-          setdata([latestEmployee]);
-          setsingleData([latestEmployee]);
-          setFormData(latestEmployee);
-          const selectedType = latestEmployee.type;
-          setType(selectedType);
-          setVisit(latestEmployee.type_of_visit);
-          console.log("Latest Employee Type of Visit:", latestEmployee.type_of_visit);
-          setRegister(latestEmployee.register);
-          console.log("Selected Register on Search:", latestEmployee.register);
-          setPurpose(latestEmployee.purpose);
-          console.log("Selected Purpose on Search:", latestEmployee.purpose);
-          console.log("Selected Type on Search:", selectedType);
-          // if(!reference) setRegister(""); 
-          // if(!reference) setPurpose("");   
-          setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", purpose: "" }));
-          localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee));
-          setProfileImage(latestEmployee.profileImage || null); // Set profile image if it exists
-          if (latestEmployee.profilepic_url) { //Use profilepic_url here directly since its already fully constructed in backend
-            console.log("profilepic_url:", latestEmployee.profilepic_url);
-            setUploadedImage(latestEmployee.profilepic_url); // profilepic_url is full url
-          }
-          setIsNewEmployee(false); // Reset the new employee flag
+    setLoading1(true); // Start button loading spinner
 
+    try {
+      // Call the API with the specific ID
+      const response = await axios.post("http://localhost:8000/userDataWithID", {
+        aadhar: searchId
+      });
 
-        } else {
-          // Employee not found. Ask if it's a new employee with a duplicate ID.
-          const isDuplicateNew = window.confirm(
-            "Aadhar ID not found, is this the Aadhar Number for a new employee?"
-          );
+      const resultData = response.data.data;
 
-          if (isDuplicateNew) {
-            // Initialize form with the entered employee ID and reset other fields.
-            setFormData({
-              aadhar: searchId,
-              pernament_address: "",
-              residential_address: "",
-              permanent_area: "",
-              residential_area: "",
-              bloodgrp: "",
-              coagulationtest: {},
-              consultation: {},
-              dashboard: {},
-              department: "",
-              designation: "",
-              contractor_status: "",
-              dob: "",
-              other_site_id: "",
-              country_id: "",
-              doj: "",
-              emergency_contact_person: "",
-              emergency_contact_phone: "",
-              emergency_contact_relation: "",
-              emp_no: "",
-              employer: "",
-              entry_date: "",
-              enzymesandcardiacprofile: {},
-              fitnessassessment: {},
-              haematology: {},
-              id: "",
-              identification_marks1: "",
-              identification_marks2: "",
-              job_nature: "",
-              lipidprofile: {},
-              liverfunctiontest: {},
-              mail_id_Emergency_Contact_Person: "",
-              mail_id_Office: "",
-              mail_id_Personal: "",
-              marital_status: "",
-              menspack: {},
-              moj: "",
-              motion: {},
-              entry_date: new Date().toISOString().split('T')[0],
-              mrdNo: "",
-              mri: {},
-              msphistory: {},
-              name: "",
-              permanent_country: "",
-              residential_country: "",
-              nationality: "",
-              docname: "",
-              opthalamicreport: {},
-              phone_Office: "",
-              phone_Personal: "",
-              prescription: {},
-              profilepic: "",
-              profilepic_url: "",
-              purpose: "",
-              register: "",
-              OtherRegister: "",
-              renalfunctiontests_and_electrolytes: {},
-              type: type,
-              routinesugartests: {},
-              serology: {},
-              sex: "",
-              guardian: "",
-              permanent_state: "",
-              residential_state: "",
-              thyroidfunctiontest: {},
-              type: "",
-              type_of_visit: "",
-              urineroutine: {},
-              usg: {},
-              vaccination: {},
-              significant_notes: {},
-              vitals: {}
-            });
-            setFilteredEmployees([formData]);
-            setdata([formData]);
-            setsingleData([formData]);
-            localStorage.setItem("selectedEmployee", JSON.stringify(formData));
-            setProfileImage(null);
-            setUploadedImage(null);
-            setIsNewEmployee(true);
-          } else {
-            setFilteredEmployees([]);
-            setdata([]);
-            setsingleData([]);
-            setFormData({});
-            localStorage.removeItem("selectedEmployee");
-            setProfileImage(null);
-            setUploadedImage(null);
-            setIsNewEmployee(false);
-          }
+      if (resultData && resultData.length > 0) {
+        // --- DATA FOUND ---
+        const latestEmployee = resultData[0];
+        
+        // Reset MRD for new visit
+        latestEmployee.mrdNo = ""; 
 
+        // Update all states
+        setFilteredEmployees([latestEmployee]);
+        setdata([latestEmployee]);
+        setsingleData([latestEmployee]);
+        setFormData(latestEmployee);
+
+        // Auto-fill dropdowns based on fetched data
+        setType(latestEmployee.type || "");
+        
+
+        // Handle Profile Picture
+        localStorage.setItem("selectedEmployee", JSON.stringify(latestEmployee));
+        setProfileImage(latestEmployee.profileImage || null);
+        if (latestEmployee.profilepic_url) {
+           setUploadedImage(latestEmployee.profilepic_url);
         }
-      } catch (error) {
-        console.error("Error during search:", error);
-        alert("An error occurred during search.");
+
+        setIsNewEmployee(false);
+        alert("Employee data loaded successfully!");
+
+      } else {
+        // --- NO DATA FOUND ---
+        const isDuplicateNew = window.confirm(
+          "Aadhar ID not found, is this the Aadhar Number for a new employee?"
+        );
+
+        if (isDuplicateNew) {
+          // Create blank form for new user
+          const newEmpData = {
+            aadhar: searchId,
+            name: "",
+            entry_date: new Date().toISOString().split('T')[0],
+            mrdNo: "",
+            // Add other empty fields if needed...
+          };
+          
+          setFormData(newEmpData);
+          setFilteredEmployees([newEmpData]);
+          setdata([newEmpData]);
+          setsingleData([newEmpData]);
+          
+          // Clear images
+          setProfileImage(null);
+          setUploadedImage(null);
+          setIsNewEmployee(true);
+        } else {
+          handleClear(); // User clicked Cancel
+        }
+        alert("No employee found with the provided Aadhar ID.");
       }
+    } catch (error) {
+      console.error("Error during search:", error);
+      alert("Error searching for user. Check connection.");
+    } finally {
+      setLoading1(false); // Stop button loading spinner
     }
   };
 
   const handleClear = () => {
     localStorage.removeItem("selectedEmployee");
     setdata([]);
-    setFormData({}); // Clear the form
+    setFormData({}); 
     setSearchId("");
-    setProfileImage(null); // Clear profile image
+    setProfileImage(null); 
     setUploadedImage(null);
     setIsNewEmployee(false);
     setMRDNo("");
@@ -631,57 +560,27 @@ const NewVisit = () => {
   
 
   useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        setLoading(true);
-        localStorage.removeItem("selectedEmployee");
-        const response = await axios.post("http://localhost:8000/userData");
-        console.log("API Response Data:", response.data.data);
-        setEmployees(response.data.data);
-        console.log(response.data.data);
-        setFilteredEmployees(response.data.data);
-
-        const savedEmployee = localStorage.getItem("selectedEmployee");
-        if (savedEmployee) {
-          const parsedEmployee = JSON.parse(savedEmployee);
-          setdata([parsedEmployee]);
-          setFormData(parsedEmployee);
-          setProfileImage(parsedEmployee.profileImage || null);
-        }
-
-        if (reference && search) {
-          setSearchId(search);
-        }
-        
-        if (reference && mrdNumber) {
-          setMRDNo(mrdNumber);
-        }
-
-        if (reference && type1) {
-          setType(type1);
-        }
-
-        if (reference && type_of_visit1) {
-          console.log("type_of_visit1:", type_of_visit1,reference);
-          setVisit(type_of_visit1);
-        }
-        if (reference && purpose1) {
-          setPurpose(purpose1);
-        }
-        if (reference && register1) {
-          setRegister(register1);
-        }
-        
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+    const initialize = async () => {
+      setLoading(true);
+      
+      
+      if (reference && search) {
+        setSearchId(search);
       }
+      
+      
+      if (reference) {
+        if (mrdNumber) setMRDNo(mrdNumber);
+        if (type1) setType(type1);
+        if (type_of_visit1) setVisit(type_of_visit1);
+        if (register1) setRegister(register1);
+        if (purpose1) setPurpose(purpose1);
+      }
+      
+      setLoading(false);
     };
 
-    fetchDetails();
-    
+    initialize();
   }, []);
   
 
@@ -765,11 +664,10 @@ const NewVisit = () => {
     { id: "Vaccination", label: "Vaccination" },
     visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
 
-    // --- CORRECTED LOGIC ---
-    // Show Consultation tab if the visit is Curative OR it's a Follow Up visit
+    
     (visit === "Curative") && { id: "Consultation", label: "Consultation and Referral" },
     
-    // Show Prescription tab ONLY for Curative visits
+    
     visit === "Curative" && { id: "Prescription", label: "Prescription" },
     
   ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering) 
@@ -1517,9 +1415,10 @@ const NewVisit = () => {
             transition={{ duration: 0.5 }}
             className="p-1 bg-white rounded-lg overflow-y-auto">
             {(loading) ? (
-              <div className="flex justify-center p-6 items-center">
-                <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
-              </div>
+              <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                                                        <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                                                        <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Database...</p>
+                                                      </div>
             ) : (<motion.div className="bg-white p-8 rounded-lg shadow-lg">
 
               <div className="bg-white rounded-lg w-full p-6 shadow-lg">
@@ -1625,24 +1524,33 @@ const NewVisit = () => {
 
                     <div className="flex flex-grow">
                       <button
-                        onClick={handleSearch}
-                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
-                      >
-                        Get
-                      </button>
+  // Disable if empty OR if currently loading
+  disabled={searchId.length != 12 || loading1 === true} 
+  onClick={handleSearch}
+  className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg me-4 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:cursor-not-allowed"
+>
+  {/* Show Spinner if loading, else show "Get" */}
+  {loading1 ? (
+    <FontAwesomeIcon icon={faSpinner} spin className="text-2xl text-white" />
+  ) : (
+    "Get"
+  )}
+</button>
                       <button
+                      disabled={searchId.length == 0 || loading1 === true}
                         onClick={handleClear}
-                        className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ml-2 mr-2"
+                        className="w-full bg-blue-500 text-white me-4 px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Clear
                       </button>
                       <button
+                        disabled={loading1 === true}
                         onClick={handleSubmitEntries}
-                        className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300"
+                        className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        { loading1 === true &&
-                <div className="inline-block h-8 w-8 text-white animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div> || "Add Entry"
-              }
+                        
+                Add Entry
+              
                       </button>
                     </div>
                   </div>
