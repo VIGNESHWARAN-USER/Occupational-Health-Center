@@ -288,7 +288,7 @@ const EmployeeProfile = () => {
         try {
             console.log('idvalue',idValue)
             // Use the identifier provided (emp_no, aadhar, country_id)
-            const response = await axios.get(`http://localhost:8000/get_notes/${idValue}`);
+            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${idValue}`);
 
             console.log("Fetched Notes/Status Data:", response.data);
             if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
@@ -334,7 +334,7 @@ const EmployeeProfile = () => {
 
         try {
             // IMPORTANT: Update backend endpoint if needed to handle different identifier types
-            const response = await fetch("http://localhost:8000/update_employee_status/", { // Ensure endpoint handles `identifier` and `id_type`
+            const response = await fetch("https://occupational-health-center-1.onrender.com/update_employee_status/", { // Ensure endpoint handles `identifier` and `id_type`
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
             });
             const result = await response.json();

@@ -435,7 +435,7 @@
       console.log("Submitting Data:", JSON.stringify(formData, null, 2));
 
       try {
-        const response = await fetch("http://localhost:8000/medical-history/", {
+        const response = await fetch("https://occupational-health-center-1.onrender.com/medical-history/", {
           method: "POST",
           headers: { "Content-Type": "application/json", },
           body: JSON.stringify(formData),

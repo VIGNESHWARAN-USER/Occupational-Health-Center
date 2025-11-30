@@ -46,7 +46,7 @@ const VitalsDetails = ({ data }) => {
             setDocsError(null);
             try {
                 // Adjust the URL to match your backend endpoint
-                const response = await axios.post('http://localhost:8000/get_worker_documents/', {
+                const response = await axios.post('https://occupational-health-center-1.onrender.com/get_worker_documents/', {
                     aadhar: data.aadhar
                 });
                 
@@ -343,7 +343,7 @@ const VitalsDetails = ({ data }) => {
                                     </div>
 
                                     <a 
-                                        href={`http://localhost:8000/media/${doc.file_url}`} 
+                                        href={`https://occupational-health-center-1.onrender.com/media/${doc.file_url}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
                                         className="mt-auto w-full text-center bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-800 py-2 rounded text-sm font-medium transition-colors duration-150 flex items-center justify-center gap-2"

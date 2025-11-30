@@ -32,7 +32,7 @@ const BookAppointment = () => {
     if (aadhar.length !== 12) return;
 
     try {
-      const response = await axios.post("http://localhost:8000/get_worker_by_aadhar/", {
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/get_worker_by_aadhar/", {
         aadhar: aadhar
       });
 
@@ -110,7 +110,7 @@ const BookAppointment = () => {
   useEffect(() => {
     const fetchDetails = async () => {
         try {
-            const response = await axios.post("http://localhost:8000/adminData");
+            const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
             const fetchedEmployees = response.data.data;
             setEmployees(fetchedEmployees);
 
@@ -147,7 +147,7 @@ const BookAppointment = () => {
     if(formData.submitted_Dr === "" && doctors.length > 0) formData.submitted_Dr = doctors[0];
 
     try {
-      const response = await fetch("http://localhost:8000/bookAppointment/", {
+      const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

@@ -90,7 +90,7 @@ const PrescriptionIn = () => {
     try {
       console.log(`Fetching data for ${year}-${monthOneIndexed}...`);
       // *** ADJUST URL TO YOUR DJANGO BACKEND ENDPOINT ***
-      const response = await fetch(`http://localhost:8000/api/prescription-in-data/?year=${year}&month=${monthOneIndexed}`);
+      const response = await fetch(`https://occupational-health-center-1.onrender.com/api/prescription-in-data/?year=${year}&month=${monthOneIndexed}`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -269,7 +269,7 @@ const PrescriptionIn = () => {
     }
 
     try {
-        const response = await fetch('http://localhost:8000/api/update-daily-quantities/', { // ADJUST URL
+        const response = await fetch('https://occupational-health-center-1.onrender.com/api/update-daily-quantities/', { // ADJUST URL
             method: 'POST',
             headers: { 'Content-Type': 'application/json' /* Add CSRF */ },
             body: JSON.stringify(payload)

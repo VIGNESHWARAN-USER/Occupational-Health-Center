@@ -22,7 +22,7 @@ const ExpiryRegister = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const res = await axios.get("http://localhost:8000/expiry_register/", { params });
+      const res = await axios.get("https://occupational-health-center-1.onrender.com/expiry_register/", { params });
       setExpiryRegister(res.data.expiry_register);
       setLoading(false);
     } catch (err) {
