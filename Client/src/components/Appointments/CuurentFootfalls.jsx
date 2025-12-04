@@ -41,7 +41,7 @@ const CurrentFootfalls = () => {
     // This prevents brief flashing of "no results" if the network is slow
     // setAppointments([]);
     try {
-      let url = "https://occupational-health-center-1.onrender.com/currentfootfalls/";
+      let url = "http://localhost:8000/currentfootfalls/";
       const params = new URLSearchParams();
 
       if (fromDate) params.append("fromDate", fromDate);
