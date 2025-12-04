@@ -87,7 +87,7 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
       try {
         // We assume you have a GET endpoint like this.
         // Make sure the URL is correct.
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/medical-certificate/get/?aadhar=${aadhar}`);
+        const response = await axios.get(`http://localhost:8000/medical-certificate/get/?aadhar=${aadhar}`);
         
         if (response.data && Object.keys(response.data).length > 0) {
           console.log("Fetched existing certificate data:", response.data);
@@ -138,7 +138,7 @@ const MedicalCertificateForm = ({ onDataChange,  mrdNo, aadhar }) => {
 
     try {
       // Your backend view for submitting is at `/medical-certificate/submit/`
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/medical-certificate/submit/", payload);
+      const response = await axios.post("http://localhost:8000/medical-certificate/submit/", payload);
       setSubmissionStatus({ message: response.data.message || "Certificate saved successfully!", type: 'success' });
     } catch (error) {
       const errorMsg = error.response?.data?.error || error.message || 'An unknown server error occurred.';

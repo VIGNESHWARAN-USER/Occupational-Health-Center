@@ -48,7 +48,7 @@ const Search = () => {
     try {
       // Sending Aadhar as a parameter in the body
       // Ensure your backend expects: req.body.aadhar
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/userDataWithID", {
+      const response = await axios.post("http://localhost:8000/userDataWithID", {
         aadhar: searchId
       });
 

@@ -102,7 +102,7 @@ const NewVisit = () => {
           return;
         }
 
-        const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+        const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.aadhar}`, { 
           profileImage: imageData, 
           formData 
         });
@@ -110,7 +110,7 @@ const NewVisit = () => {
         if (updateResponse.status === 200) {
           alert("Profile image updated successfully!");
           // Refresh employee list or update local state
-          const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+          const fetchResponse = await axios.post("http://localhost:8000/userData");
           setEmployees(fetchResponse.data.data);
           setFilteredEmployees(fetchResponse.data.data);
           setdata([{ ...formData, profileImage: imageData }]);
@@ -411,7 +411,7 @@ const NewVisit = () => {
 
     try {
       console.log("Submitting Data:", submissionData);
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addEntries", submissionData, {
+      const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -448,7 +448,7 @@ const NewVisit = () => {
       }
       const updatedformData = { ...formData, type: type, mrdNo: mrdNo }
       console.log(updatedformData)
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/addbasicdetails", updatedformData, {
+      const response = await axios.post("http://localhost:8000/addbasicdetails", updatedformData, {
         headers: {
           "Content-Type": "application/json"
         }
@@ -475,7 +475,7 @@ const NewVisit = () => {
 
     try {
       // Call the API with the specific ID
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/userDataWithID", {
+      const response = await axios.post("http://localhost:8000/userDataWithID", {
         aadhar: searchId
       });
 
@@ -708,14 +708,14 @@ const NewVisit = () => {
         }
         
         try {
-            const updateResponse = await axios.put(`https://occupational-health-center-1.onrender.com/updateProfileImage/${formData.aadhar}`, { 
+            const updateResponse = await axios.put(`http://localhost:8000/updateProfileImage/${formData.aadhar}`, { 
                 profileImage: imageData, 
                 formData 
             });
 
             if (updateResponse.status === 200) {
                 alert("Profile image captured and updated successfully!");
-                const fetchResponse = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+                const fetchResponse = await axios.post("http://localhost:8000/userData");
                 setEmployees(fetchResponse.data.data);
                 setFilteredEmployees(fetchResponse.data.data);
                 setdata([{ ...formData, profileImage: imageData }]);
