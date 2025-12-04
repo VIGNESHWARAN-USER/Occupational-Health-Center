@@ -367,88 +367,108 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                             <div className="flex items-center justify-center pt-5 md:pt-0"> {renderBmiVisualization(formData.bmi, formData.bmi_status)} </div>
                         </div>
                     </section>
+<section className="pt-5 border-t border-gray-200">
+  <h3 className="text-lg font-semibold text-gray-700 mb-3">Upload Documents</h3>
+  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    {fileInputsConfig
+      .filter((config) => {
+        if (type === "Visitor") {
+          const backendKey = fileFieldMapping[config.key];
+          return ["report", "manual"].includes(backendKey);
+        }
+        return true;
+      })
+      .map((config) => {
+        // Get access level
+        const accessLevel = localStorage.getItem("accessLevel");
+        const canViewFiles = accessLevel === "doctor" || accessLevel === "nurse";
+        const canDeleteFile = accessLevel === "doctor";
 
-                    <section className="pt-5 border-t border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-3">Upload Documents</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            {fileInputsConfig
-                                .filter(config => {
-                                    if (type === "Visitor") {
-                                        const backendKey = fileFieldMapping[config.key];
-                                        // Show if backendKey is 'report' (report) or 'manual' (manual)
-                                        return ['report', 'manual'].includes(backendKey);
-                                    }
-                                    return true; // Otherwise, show all file inputs
-                                })
-                                .map((config) => (
-                                <div key={config.key}>
-                                    <label className="block text-sm font-medium text-gray-600 mb-1">{config.label}</label>
-                                    {/* Import MdClose if you haven't already: import { MdClose } from "react-icons/md"; */}
+        return (
+          <div key={config.key}>
+            <label className="block text-sm font-medium text-gray-600 mb-1">{config.label}</label>
 
-                                    <motion.div
-                                        className={`relative border rounded-md mb-2 p-2 flex items-center justify-between text-sm cursor-pointer transition-colors ${
-                                            selectedFiles[config.key] 
-                                                ? "bg-blue-50 border-blue-300" // Style when file is selected
-                                                : "border-gray-300 bg-white hover:bg-gray-50"
-                                        }`}
-                                        onClick={() => handleBrowseClick(config.key)}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        {/* File Name Display */}
-                                        <span className={`truncate flex-1 ${selectedFiles[config.key] ? 'text-blue-800 font-medium' : 'text-gray-400'}`}>
-                                            {selectedFiles[config.key] ? selectedFiles[config.key].name : 'Choose file...'}
-                                        </span>
+            {/* UPLOAD UI */}
+            <motion.div
+              className={`relative border rounded-md mb-2 p-2 flex items-center justify-between text-sm cursor-pointer transition-colors ${
+                selectedFiles[config.key]
+                  ? "bg-blue-50 border-blue-300"
+                  : "border-gray-300 bg-white hover:bg-gray-50"
+              }`}
+              onClick={() => handleBrowseClick(config.key)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span
+                className={`truncate flex-1 ${
+                  selectedFiles[config.key] ? "text-blue-800 font-medium" : "text-gray-400"
+                }`}
+              >
+                {selectedFiles[config.key] ? selectedFiles[config.key].name : "Choose file..."}
+              </span>
 
-                                        {/* ACTIONS AREA */}
-                                        <div className="flex items-center">
-                                            
-                                            {/* CONDITIONAL DELETE BUTTON (Only shows if file is selected) */}
-                                            {selectedFiles[config.key] && (
-                                                <button
-                                                    onClick={(e) => handleRemoveSelectedFile(e, config.key)}
-                                                    className="mr-2 p-1 rounded-full hover:bg-red-100 text-red-500 transition-colors z-10"
-                                                    title="Remove selected file"
-                                                >
-                                                    <MdClose size={18} />
-                                                </button>
-                                            )}
+              <div className="flex items-center">
+                {selectedFiles[config.key] && (
+                  <button
+                    onClick={(e) => handleRemoveSelectedFile(e, config.key)}
+                    className="mr-2 p-1 rounded-full hover:bg-red-100 text-red-500 transition-colors z-10"
+                    title="Remove selected file"
+                  >
+                    <MdClose size={18} />
+                  </button>
+                )}
 
-                                            {/* Upload Icon */}
-                                            <FaFileUpload className={`${selectedFiles[config.key] ? 'text-blue-600' : 'text-blue-500'} flex-shrink-0`} />
-                                        </div>
+                <FaFileUpload
+                  className={`${
+                    selectedFiles[config.key] ? "text-blue-600" : "text-blue-500"
+                  } flex-shrink-0`}
+                />
+              </div>
 
-                                        {/* Hidden file input */}
-                                        <input
-                                            type="file"
-                                            id={config.key}
-                                            style={{ display: "none" }}
-                                            onChange={(e) => handleFileChange(e, config.key)}
-                                            accept=".pdf,.jpg,.jpeg,.png,image/*"
-                                        />
-                                    </motion.div>
-                                    {/* Show link if file exists */}
-                                    
-                                {localStorage.getItem("accessLevel") === "doctor" && (formData[config.key] ? (
-                                    <>
-                                <a
-                                    href={`http://localhost:8000/media/${formData[config.key]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-600 underline"
-                                >
-                                    View Nurse Uploaded File
-                                </a>
-                                <button className=" ms-24 text-xl text-red-700" onclick={()=>handleDelete(formData[config.key], mrdNo)}><MdDelete/></button>
-                                </>
-                                ) : (
-                                <span>No file uploaded by Nurse</span>
+              <input
+                type="file"
+                id={config.key}
+                style={{ display: "none" }}
+                onChange={(e) => handleFileChange(e, config.key)}
+                accept=".pdf,.jpg,.jpeg,.png,image/*"
+              />
+            </motion.div>
 
-                                ))}
-                                </div>
-                            ))}
-                        </div>
-                    </section>
+            {/* VIEW & DELETE OPTIONS */}
+            {canViewFiles && (
+              <>
+                {formData[config.key] ? (
+                  <div className="flex items-center">
+                    <a
+                      href={`http://localhost:8000/media/${formData[config.key]}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      View Uploaded File
+                    </a>
+
+                    {/* DELETE BUTTON ONLY FOR DOCTOR */}
+                    {canDeleteFile && (
+                      <button
+                        className="ms-24 text-xl text-red-700"
+                        onClick={() => handleDelete(formData[config.key], mrdNo)}
+                        title="Delete File"
+                      >
+                        <MdDelete />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span>No file uploaded yet</span>
+                )}
+              </>
+            )}
+          </div>
+        );
+      })}
+  </div>
+</section>
 
                     <div className="mt-8 flex justify-end">
                         <button
