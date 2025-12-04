@@ -1044,7 +1044,7 @@ const NewVisit = () => {
                   {type === "Contractor" &&
                     (<div>
                       <label className="block text-sm font-medium text-gray-700">
-                        Status
+                        Job Status
                       </label>
                         <select name="contractor_status" value={formData.contractor_status || ""}
                         onChange={handleChange}  id="" className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
