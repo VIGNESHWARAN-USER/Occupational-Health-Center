@@ -8,7 +8,7 @@ import axios from "axios";
 import * as XLSX from "xlsx"; // <<< NEW: Import xlsx library
 import { saveAs } from "file-saver"; 
 
-const [includeContact, setIncludeContact] = useState(false);
+
 
 
 // --- Filter Section Definitions ---
@@ -61,6 +61,7 @@ const RecordsFilters = () => {
     // State for referral options
     const [specialityOptions, setSpecialityOptions] = useState([]);
     const [doctorOptions, setDoctorOptions] = useState([]);
+    const [includeContact, setIncludeContact] = useState(false);
     const [hospitalOptions, setHospitalOptions] = useState([]);
 
     // --- Fetch Initial Employee Data and Filter Options ---
