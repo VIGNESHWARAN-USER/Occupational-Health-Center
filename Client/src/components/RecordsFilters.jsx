@@ -1176,6 +1176,8 @@ const EmploymentDetails = ({ addFilter }) => {
         designation: "",
         department: "",
         moj: "",
+        division: "",
+        workarea: "",
         employer: "",
         job_nature: "",
         previousEmployer: "",

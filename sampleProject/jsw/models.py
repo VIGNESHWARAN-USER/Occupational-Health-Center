@@ -63,6 +63,8 @@ class employee_details(BaseModel):
     employer = models.CharField(max_length=225, blank=True)
     designation = models.CharField(max_length=225, blank=True)
     department = models.CharField(max_length=225, blank=True)
+    division = models.CharField(max_length=225, blank=True)
+    workarea = models.CharField(max_length=225, blank=True)
     job_nature = models.CharField(max_length=225, blank=True)
     doj = models.DateField(null=True, blank=True)
     moj = models.CharField(max_length=225, blank=True)

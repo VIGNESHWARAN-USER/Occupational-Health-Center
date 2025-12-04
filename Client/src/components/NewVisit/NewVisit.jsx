@@ -1092,6 +1092,28 @@ const NewVisit = () => {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 ">Division</label>
+                    <input
+                      name="division"
+                      value={formData.division || ''}
+                      onChange={handleChange}
+                      type="text"
+                      placeholder="Enter division"
+                      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 ">Work Area</label>
+                    <input
+                      name="workarea"
+                      value={formData.workarea || ''}
+                      onChange={handleChange}
+                      type="text"
+                      placeholder="Enter work area"
+                      className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 ">Nature of Job</label>
                     <input
                       name="job_nature"
