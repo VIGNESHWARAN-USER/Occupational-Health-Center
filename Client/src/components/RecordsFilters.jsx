@@ -8,6 +8,9 @@ import axios from "axios";
 import * as XLSX from "xlsx"; // <<< NEW: Import xlsx library
 import { saveAs } from "file-saver"; 
 
+const [includeContact, setIncludeContact] = useState(false);
+
+
 // --- Filter Section Definitions ---
 // <<< CHANGE 1: "Significant Notes" was added to this list.
 const filterSections = [
@@ -613,43 +616,58 @@ else if (key.startsWith('investigation_')) {
         const wb = XLSX.utils.book_new();
 
         // 2. Create the filter details string
-        const filterDetails = selectedFilters.map(getFilterDisplayString).filter(Boolean).join("\n");
+        const filterDetails = selectedFilters
+            .map(getFilterDisplayString)
+            .filter(Boolean)
+            .join("\n");
+
         const filterHeader = ["Filter Criteria:"];
-        if (filterDetails) {
-            filterHeader.push(filterDetails);
-        } else {
-            filterHeader.push("No filters applied.");
-        }
+        filterHeader.push(filterDetails || "No filters applied.");
 
+        // 3. Prepare the employee data (base fields)
+        const employeeDataForExcel = filteredEmployees.map(emp => {
+            const baseData = {
+                "Emp ID": emp.emp_no || "-",
+                "Name": emp.name || "-",
+                "Age": calculateAge(emp.dob),
+                "Gender": emp.sex || "-",
+                "Role": emp.type || "-",
+                "Status": emp.employee_status || "-"
+            };
 
-        // 3. Prepare the employee data
-        const employeeDataForExcel = filteredEmployees.map(emp => ({
-            "Emp ID": emp.emp_no || '-',
-            "Name": emp.name || '-',
-            "Age": calculateAge(emp.dob),
-            "Gender": emp.sex || '-',
-            "Role": emp.type || '-',
-            "Status": emp.employee_status || '-'
-        }));
+            // ⬇️ Add contact only when checkbox is checked
+            if (includeContact) {
+                baseData["Phone"] = emp.phone || "-";
+                baseData["Email"] = emp.email || "-";
+                baseData["Address"] = emp.address || "-"; 
+                baseData["Emergency Contact"] = emp.emergency_contact || "-";
+                baseData["Emergency Phone"] = emp.emergency_phone || "-";
+                baseData["Emergency Relation"] = emp.emergency_relation || "-";
+            }
+
+            return baseData;
+        });
 
         // 4. Create a new worksheet
         const ws = XLSX.utils.json_to_sheet([]);
 
-        // 5. Add filter details to the worksheet
+        // 5. Add filter details on top
         XLSX.utils.sheet_add_aoa(ws, [filterHeader], { origin: "A1" });
 
+        // 6. Add employee data to sheet (starting row 3)
+        XLSX.utils.sheet_add_json(ws, employeeDataForExcel, {
+            origin: "A3",
+            skipHeader: false,
+        });
 
-        // 6. Add employee data to the worksheet
-        XLSX.utils.sheet_add_json(ws, employeeDataForExcel, { origin: "A3", skipHeader: false });
-
-
-        // 7. Add the worksheet to the workbook
+        // 7. Append worksheet to workbook
         XLSX.utils.book_append_sheet(wb, ws, "Filtered Employees");
 
-        // 8. Generate the Excel file and trigger download
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'filtered_employee_records.xlsx');
+        // 8. Download Excel
+        const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+        saveAs(new Blob([wbout], { type: "application/octet-stream" }), "filtered_employee_records.xlsx");
     };
+
 
 
     // --- JSX Render ---
@@ -780,7 +798,7 @@ else if (key.startsWith('investigation_')) {
                                 {/* --- Render Specific Filter Component --- */}
                                 {selectedSection === "employementstatus" && selectedRole !== "Visitor" && <EmployementStatus addFilter={addFilter} />}
                                 {selectedSection === "personaldetails" && <PersonalDetails addFilter={addFilter} />}
-                                {selectedSection === "employementdetails" && selectedRole !== "Visitor" && <EmploymentDetails addFilter={addFilter} />}
+                                {selectedSection === "employementdetails" && selectedRole !== "Visitor" && <EmploymentDetails addFilter={addFilter} selectedRole={selectedRole} />}
                                 {selectedSection === "vitals" && <Vitals addFilter={addFilter} />}
                                 {selectedSection === "fitness" && <Fitness addFilter={addFilter} />}
                                 {/* <<< CHANGE 5: Added the new component to the conditional render block */}
@@ -812,9 +830,8 @@ else if (key.startsWith('investigation_')) {
                                 <input 
                                     type="checkbox" 
                                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                    // Assuming you have a state for this, e.g., includeContact
-                                    // checked={includeContact}
-                                    // onChange={(e) => setIncludeContact(e.target.checked)}
+                                    checked={includeContact}
+                                    onChange={(e) => setIncludeContact(e.target.checked)}
                                 />
                                 Add Contact Details
                             </label>
@@ -1171,7 +1188,7 @@ const PersonalDetails = ({ addFilter }) => {
         </div>
     );
 };
-const EmploymentDetails = ({ addFilter }) => {
+const EmploymentDetails = ({ addFilter, selectedRole }) => {
     const [formData, setFormData] = useState({
         designation: "",
         department: "",
@@ -1239,6 +1256,7 @@ const EmploymentDetails = ({ addFilter }) => {
                             {Object.entries(jobNatureOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
                         </select>
                     </div>
+                    {selectedRole === "Contractor" && (
                     <div>
                         <label htmlFor="job_status-filter">Job Status</label>
                         <select name="job_status" id="job_status-filter" value={formData.job_status} onChange={handleChange} className="w-full p-3 border rounded-lg focus:ring-blue-500">
@@ -1246,6 +1264,7 @@ const EmploymentDetails = ({ addFilter }) => {
                             {Object.entries(jobStatusOptions).map(([k, v]) => (<option key={k} value={k}>{v}</option>))}
                         </select>
                     </div>
+                    )}
                 </div>
 
                 {/* Row 2: Conditional Transfer Fields 
