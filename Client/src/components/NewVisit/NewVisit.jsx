@@ -563,7 +563,7 @@ const NewVisit = () => {
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
-
+      console.log("Initializing with reference and appointment:", reference, appointment);
       // Check if we have reference data passed from the dashboard/booking
       if (reference && appointment) {
         
