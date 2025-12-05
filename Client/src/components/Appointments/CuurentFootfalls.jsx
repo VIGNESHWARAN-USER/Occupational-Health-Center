@@ -101,7 +101,8 @@ const CurrentFootfalls = () => {
   console.log(appointments)
   // handleStatusChange - remains the same
   const handleStatusChange = async (appointment) => {
-      navigate("../newvisit", { state: { appointment: appointment, reference: true } });
+    console.log("Navigating to New Visit with appointment:", appointment.details);
+      navigate("../newvisit", { state: { appointment: appointment.details, reference: true } });
   };
 
 
@@ -256,9 +257,9 @@ const CurrentFootfalls = () => {
                        {/* Apply sticky positioning to corresponding TD cells */}
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.mrdNo || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.type || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.emp_no || '-'}</td> {/* Adjust px value if needed */}
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.emp_no || '-'}</td> 
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.aadhar || '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.name || '-'}</td> {/* Adjust px value if needed */}
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.details.name || '-'}</td> 
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.details.register || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedNurse || appointment?.assessment?.submittedNurse || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.assessment?.bookedDoctor||appointment?.consultation?.bookedDoctor|| '-'}</td>
