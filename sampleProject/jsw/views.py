@@ -2933,67 +2933,113 @@ def add_or_update_medical_certificate(request):
         logger.exception(f"Error saving medical certificate for MRD {data.get('mrdNo', 'Unknown')}")
         return JsonResponse({"error": f"An internal server error occurred: {str(e)}"}, status=500)
 
+import json
+import logging
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from django.utils.dateparse import parse_date
+from datetime import date
+from .models import Appointment  # Import your model
+
+logger = logging.getLogger(__name__)
+
+def parse_date_internal(date_str):
+    """Helper to safely parse dates."""
+    if not date_str:
+        return None
+    try:
+        return parse_date(date_str)
+    except Exception:
+        return None
+
 @csrf_exempt
 def BookAppointment(request):
-    """Books a new appointment, linking via AADHAR."""
+    """Books a new appointment with corrected Register/Purpose mapping."""
     if request.method == "POST":
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+            data = json.loads(request.body.decode('utf-8'))
 
-            aadhar = data.get("aadharNo") # Expect Aadhar
-            employee_id = data.get("employeeId") # Accept emp_no if sent
-
+            # 1. Basic Validation
+            aadhar = data.get("aadharNo")
             if not aadhar:
-                 logger.warning("BookAppointment failed: Aadhar Number (aadharNo) is required.")
                  return JsonResponse({"error": "Aadhar Number (aadharNo) is required"}, status=400)
 
             appointment_date_str = data.get("appointmentDate")
             appointment_date_obj = parse_date_internal(appointment_date_str)
             if not appointment_date_obj:
-                logger.error(f"BookAppointment failed: Invalid appointment date format: {appointment_date_str}. Use YYYY-MM-DD.")
                 return JsonResponse({"error": "Invalid appointment date format. Use YYYY-MM-DD."}, status=400)
 
-            # Generate Appointment Number (ensure atomicity if high concurrency)
+            # 2. Generate Appointment Number
             with transaction.atomic():
                 existing_appointments = Appointment.objects.filter(date=appointment_date_obj).select_for_update().count()
                 next_appointment_number = existing_appointments + 1
                 appointment_no_gen = f"{next_appointment_number:04d}{appointment_date_obj.strftime('%d%m%Y')}"
 
+            # 3. Prepare Data Payload
             appointment_data = {
-                'appointment_no': appointment_no_gen, 'booked_date': date.today(),
-                'role': data.get("role", "Unknown"), 'aadhar': aadhar, 'emp_no': employee_id,
-                'name': data.get("name", "Unknown"), 'organization_name': data.get("organization", ""),
-                'contractor_name': data.get("contractorName", ""), 'purpose': data.get("purpose", "Unknown"),
-                'date': appointment_date_obj, 'time': data.get("time", ""),
-                'booked_by': data.get("bookedBy", "System"),
-                'submitted_by_nurse': data.get("submitted_by_nurse", ""),
-                'submitted_Dr': data.get("submitted_Dr", ""), # Check model field name case
-                'consultated_Dr': data.get("consultedDoctor", ""), # Check model field name case
+                'appointment_no': appointment_no_gen, 
+                'booked_date': date.today(),
+                
+                # --- Classification Mapping ---
+                'role': data.get("role", "Employee"),         # JSON: type
+                'visit_type': data.get("type_of_visit", ""),  # JSON: type_of_visit
+                'register': data.get("register", ""),         # JSON: register (Specific)
+                'purpose': data.get("purpose", ""),           # JSON: purpose (Broad Category)
+                
+                # --- Identity ---
+                'aadhar': aadhar, 
+                'emp_no': data.get("employeeId", ""),
+                'name': data.get("name", "Unknown"), 
+                'organization_name': data.get("organization", ""),
+                'contractor_name': data.get("contractorName", ""), 
                 'employer': data.get("employer", ""),
-                'status': Appointment.StatusChoices.INITIATE # Default status
+                
+                # --- Time ---
+                'date': appointment_date_obj, 
+                'time': data.get("time", ""),
+                
+                # --- Personnel ---
+                'booked_by': data.get("bookedBy", ""),
+                'submitted_by_nurse': data.get("submitted_by_nurse", ""),
+                'submitted_Dr': data.get("submitted_Dr", ""), 
+                'consultated_Dr': data.get("consultedDoctor", ""), 
+                
+                # --- Conditional Fields ---
+                'year': data.get("year", ""),
+                'batch': data.get("batch", ""),
+                'hospital_name': data.get("hospitalName", ""),
+                'camp_name': data.get("campName", ""),
+                'contract_name': data.get("contractName", ""),
+                'prev_contract_name': data.get("prevcontractName", ""),
+                'old_emp_no': data.get("old_emp_no", ""),
+                'bp_sugar_status': data.get("bp_sugar_status", ""),
+                'bp_sugar_chart_reason': data.get("bp_sugar_chart_reason", ""),
+                'followup_reason': data.get("followupConsultationReason", ""),
+                'other_followup_reason': data.get("otherfollowupConsultationReason", ""),
+                'other_purpose': data.get("otherPurpose", ""), # Text input if register="Other"
+                
+                'status': Appointment.StatusChoices.INITIATE
             }
-            # Filter None before create
-            filtered_appointment_data = {k:v for k,v in appointment_data.items() if v is not None}
 
+            filtered_appointment_data = {k: v for k, v in appointment_data.items() if v is not None}
             appointment = Appointment.objects.create(**filtered_appointment_data)
 
-            logger.info(f"Appointment {appointment.appointment_no} booked successfully for Aadhar {appointment.aadhar} on {appointment.date}. ID: {appointment.id}")
+            logger.info(f"Appointment {appointment.appointment_no} booked.")
+            
             return JsonResponse({
-                "message": f"Appointment booked successfully for {appointment.name} on {appointment.date}.",
+                "message": f"Appointment booked successfully for {appointment.name}.",
                 "appointment_no": appointment.appointment_no,
                 "id": appointment.id
             }, status=201)
 
         except json.JSONDecodeError:
-            logger.error("BookAppointment failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            logger.exception("BookAppointment failed: An unexpected error occurred.")
-            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+            logger.exception("BookAppointment failed.")
+            return JsonResponse({"error": "Internal server error", "detail": str(e)}, status=500)
     else:
-        response = JsonResponse({"error": "Invalid request. Use POST."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
 # Use GET for fetching data
 @csrf_exempt

@@ -1368,7 +1368,13 @@ class MRIReport(BaseModel):
     def __str__(self):
         return f"MRI Report {self.id} for Emp {self.emp_no}"
 
-# --- Appointment Model --- *MODIFIED*
+from django.db import models
+from datetime import date
+
+# Assuming BaseModel is defined elsewhere
+from django.db import models
+from datetime import date
+
 class Appointment(BaseModel):
     class StatusChoices(models.TextChoices):
         INITIATE = 'initiate', 'Initiate'
@@ -1376,32 +1382,61 @@ class Appointment(BaseModel):
         COMPLETED = 'completed', 'Completed'
         DEFAULT = 'default', 'Default'
 
-    appointment_no = models.TextField(max_length = 255, blank=True)
-    booked_date = models.DateField()
+    # Core Fields
+    appointment_no = models.TextField(max_length=255, blank=True)
+    booked_date = models.DateField(default=date.today)
     mrdNo = models.TextField(max_length=255, blank=True)
-    role = models.TextField(max_length=100 , blank=True)
+    
+    # Classification
+    role = models.TextField(max_length=100, blank=True) # e.g., "Employee"
+    visit_type = models.CharField(max_length=50, blank=True, null=True) # e.g., "Preventive"
+    
+    # The Fix: Separate Register and Purpose
+    register = models.TextField(blank=True, null=True) # Specific: "Preventive - Follow Up Visits"
+    purpose = models.TextField(blank=True, null=True)  # Broad Category: "Follow Up Visits"
+    
+    # Identity
     emp_no = models.TextField(max_length=255, blank=True)
-    # aadhar_no = models.TextField(max_length=225, blank=True) # Original aadhar_no
-    # Let's use the consistent name 'aadhar'
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added/Renamed Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     name = models.TextField(max_length=100, blank=True)
     organization_name = models.TextField(max_length=100, blank=True)
     contractor_name = models.TextField(max_length=100, blank=True)
-    purpose = models.TextField()
+    
+    # Date & Time
     date = models.DateField()
     time = models.TextField(max_length=225, blank=True)
+    
+    # Personnel
     booked_by = models.TextField(max_length=255, blank=True)
     submitted_by_nurse = models.TextField(max_length=255, blank=True)
     submitted_Dr = models.TextField(max_length=255, blank=True)
-    consultated_Dr =models.TextField(max_length=100, blank=True)
+    consultated_Dr = models.TextField(max_length=100, blank=True)
     employer = models.TextField(max_length=255, blank=True)
+    
     status = models.CharField(
         max_length=20,
         choices=StatusChoices.choices,
         default=StatusChoices.INITIATE
     )
 
-    def __str__(self): # Changed from str to __str__
+    # --- CONDITIONAL FIELDS ---
+    year = models.CharField(max_length=20, blank=True, null=True)
+    batch = models.CharField(max_length=50, blank=True, null=True)
+    hospital_name = models.TextField(blank=True, null=True)
+    camp_name = models.TextField(blank=True, null=True)
+    
+    contract_name = models.TextField(blank=True, null=True)
+    prev_contract_name = models.TextField(blank=True, null=True)
+    old_emp_no = models.TextField(blank=True, null=True)
+
+    bp_sugar_status = models.CharField(max_length=100, blank=True, null=True)
+    bp_sugar_chart_reason = models.CharField(max_length=100, blank=True, null=True)
+
+    followup_reason = models.TextField(blank=True, null=True)
+    other_followup_reason = models.TextField(blank=True, null=True)
+    other_purpose = models.TextField(blank=True, null=True)
+
+    def __str__(self):
         apt_date_str = self.date.strftime('%Y-%m-%d') if self.date else 'N/A'
         return f"Appointment for {self.name} ({self.emp_no or 'N/A'}) on {apt_date_str}"
 
