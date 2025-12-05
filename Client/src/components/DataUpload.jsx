@@ -258,7 +258,7 @@ const DataUpload = () => {
                                 disabled={isSubmitting}
                             >
                                 <option value="Employee">Employee</option>
-                                <option value="Associate">Associate</option>
+                                <option value="Contractor">Contractor</option>
                                 <option value="Visitor">Visitor</option>
                             </select>
                         </div>
