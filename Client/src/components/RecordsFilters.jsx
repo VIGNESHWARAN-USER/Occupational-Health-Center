@@ -460,11 +460,11 @@ else if (key.startsWith('investigation_')) {
                             return false; 
                         }
                     }
-                }
+                }   
                  else if (['drugAllergy', 'foodAllergy', 'otherAllergies'].includes(key)) {
                      let allergyType = ''; if (key === 'drugAllergy') allergyType = 'drug'; else if (key === 'foodAllergy') allergyType = 'food'; else allergyType = 'others';
                      const allergyData = employee.medicalhistory?.allergy_fields?.[allergyType]; if (!allergyData || allergyData.yesNo?.toLowerCase() !== value.toLowerCase()) return false;
-                 }
+                }
                  else if (key === 'surgicalHistory') {
                      const hasSurg = employee.medicalhistory?.surgical_history && Array.isArray(employee.medicalhistory.surgical_history.children) && employee.medicalhistory.surgical_history.children.length > 0;
                      if ((value === 'Yes' && !hasSurg) || (value === 'No' && hasSurg)) return false;
