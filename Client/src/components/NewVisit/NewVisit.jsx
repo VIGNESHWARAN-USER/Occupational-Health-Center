@@ -222,6 +222,14 @@ const NewVisit = () => {
     }));
   };
   const [mrdNo, setMRDNo] = useState(mrdNumber);
+  console
+  const handleRevert = async () => {
+    const response = await axios.post('http://localhost:8000/update-status/', {
+      id: appointment.mrdNo || false,
+      status: 'initiate'
+    });
+      navigate("../appointments");
+  };
   
   const handleSubmitEntries = async (e) => {
     e.preventDefault();
@@ -1447,7 +1455,7 @@ const NewVisit = () => {
           </div>
         );
       case "Fitness":
-        return <Fitness data={data} register = {register} type={visit} mrdNo={mrdNo} />;
+        return <Fitness data={data} register = {register} type={visit} mrdNo={mrdNo} reference={true} appointment={appointment} />;
       case "Investigations":
         return <Investigation data={singleData} mrdNo={mrdNo} />;
       case "Vaccination":
@@ -1643,7 +1651,17 @@ const NewVisit = () => {
                       >
                         Clear
                       </button>
-                      <button
+                      {(accessLevel === "doctor") ?(
+                        <button
+                        disabled={loading1 === true}
+                        onClick={handleRevert}
+                        className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        
+                Revert
+              
+                      </button>
+                      ):(<button
                         disabled={loading1 === true}
                         onClick={handleSubmitEntries}
                         className="w-full bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1651,7 +1669,7 @@ const NewVisit = () => {
                         
                 Add Entry
               
-                      </button>
+                      </button>)}
                     </div>
                   </div>
                 </div>

@@ -1893,12 +1893,12 @@ def add_consultation(request):
     pass
 
 
-# ==============================================================================
-# CORRECTED FITNESS TEST VIEW
-# ==============================================================================
 @csrf_exempt
 def fitness_test(request):
-    """Adds or updates fitness assessment data based on AADHAR, MRD number and today's date."""
+    """
+    Adds or updates fitness assessment data based on MRD number.
+    If accessLevel is 'doctor', marks status as COMPLETED.
+    """
     model_class = FitnessAssessment
     log_prefix = "fitness_test"
     success_noun = "Fitness test details"
@@ -1911,7 +1911,9 @@ def fitness_test(request):
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo')
             accessLevel = data.get('accessLevel')
-            # Assuming your BaseModel provides an entry_date field on creation
+            
+            # entry_date is still calculated for data recording, 
+            # but no longer used as a primary lookup key
             entry_date = date.today()
 
             if not aadhar:
@@ -1930,15 +1932,21 @@ def fitness_test(request):
                     except json.JSONDecodeError: return []
                 return []
 
-            # Prepare defaults dictionary with keys matching the FitnessAssessment model fields EXACTLY
+            # ---------------------------------------------------------
+            # NURSE LOGIC
+            # ---------------------------------------------------------
             if accessLevel == "nurse":
                 defaults = {
                     'emp_no': data.get("emp_no"),
                     'aadhar': data.get("aadhar"),
                     'employer': data.get("employer"),
-                    'submittedNurse': data.get("submittedDoctor"),
-                    'mrdNo': data.get("mrdNo"),
+                    'entry_date': entry_date, # Save date, but don't use for lookup
+                    
+                    'submittedNurse': data.get("submittedDoctor"), # Frontend often sends current user as submittedDoctor
                     'bookedDoctor': data.get("bookedDoctor"),
+                    
+                    # Status remains default or IN_PROGRESS for nurse (optional, here left as is to not override doctor)
+                    # 'status': model_class.StatusChoices.IN_PROGRESS, 
 
                     # Basic Tests
                     'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
@@ -1952,13 +1960,10 @@ def fitness_test(request):
                     # Job & Fitness Status
                     'job_nature': parse_json_field(data.get("job_nature")),
                     'overall_fitness': data.get("overall_fitness"),
-                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
+                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")),
 
-                    # --- CORRECTED KEYS ---
-                    # Changed keys from snake_case to camelCase to match the model definition
                     'otherJobNature': data.get("other_job_nature"), 
                     'conditionalotherJobNature': data.get("conditional_other_job_nature"),
-
                     'special_cases': data.get('special_cases'),
 
                     # Examinations
@@ -1966,20 +1971,33 @@ def fitness_test(request):
                     'systematic_examination': data.get("systematic_examination"),
                     'eye_exam_fit_status': data.get("eye_exam_fit_status"),
                     
-                    # Comments & Validity
                     'comments': data.get("comments"),
                     'validity': validity_date,
-
-                    # Follow-up History
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
                 }
+
+                # Update Appointment side-effect
+                if data.get('reference'):
+                    appointment_data = Appointment.objects.filter(mrdNo=data.get('mrdNo')).first()
+                    if appointment_data:
+                        appointment_data.submitted_by_nurse = data.get('submittedDoctor')
+                        appointment_data.submitted_Dr = data.get('bookedDoctor')
+                        appointment_data.save()
+
+            # ---------------------------------------------------------
+            # DOCTOR LOGIC
+            # ---------------------------------------------------------
             elif accessLevel == "doctor":
                 defaults = {
                     'emp_no': data.get("emp_no"),
                     'aadhar': data.get("aadhar"),
                     'employer': data.get("employer"),
+                    'entry_date': entry_date, 
+                    
                     'submittedDoctor': data.get("submittedDoctor"),
-                    'mrdNo': data.get("mrdNo"),
+                    
+                    # --- CHANGE: Update Status to COMPLETED ---
+                    'status': model_class.StatusChoices.COMPLETED,
 
                     # Basic Tests
                     'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
@@ -1993,13 +2011,10 @@ def fitness_test(request):
                     # Job & Fitness Status
                     'job_nature': parse_json_field(data.get("job_nature")),
                     'overall_fitness': data.get("overall_fitness"),
-                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")), # Key matches model typo
+                    'conditional_fit_feilds': parse_json_field(data.get("conditional_fit_feilds")),
 
-                    # --- CORRECTED KEYS ---
-                    # Changed keys from snake_case to camelCase to match the model definition
                     'otherJobNature': data.get("other_job_nature"), 
                     'conditionalotherJobNature': data.get("conditional_other_job_nature"),
-
                     'special_cases': data.get('special_cases'),
 
                     # Examinations
@@ -2007,46 +2022,55 @@ def fitness_test(request):
                     'systematic_examination': data.get("systematic_examination"),
                     'eye_exam_fit_status': data.get("eye_exam_fit_status"),
                     
-                    # Comments & Validity
                     'comments': data.get("comments"),
                     'validity': validity_date,
-
-                    # Follow-up History
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []),
                 }
 
-            print(data)
-            # Filter out any keys that were not provided in the request
+                # Update Appointment side-effect
+                if data.get('reference'):
+                    appointment_data = Appointment.objects.filter(mrdNo=data.get('mrdNo')).first()
+                    if appointment_data:
+                        appointment_data.consultated_Dr = data.get('submittedDoctor')
+                        appointment_data.status = Appointment.StatusChoices.COMPLETED
+                        appointment_data.save()
+            
+            else:
+                # Fallback for unknown access level (optional)
+                defaults = {}
+
+            # Filter out None values
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
-            # --- Update Dashboard visitOutcome (Side effect) ---
+            # --- Update Dashboard (Side effect) ---
             overall_fitness_status = data.get("overall_fitness")
             if overall_fitness_status:
                  try:
+                     # Note: Dashboard might still look up by aadhar/date, check your dashboard logic
                      dashboard_entry = Dashboard.objects.filter(aadhar=aadhar, date=entry_date).first()
                      if dashboard_entry:
                           dashboard_entry.visitOutcome = overall_fitness_status
                           dashboard_entry.save(update_fields=['visitOutcome'])
-                          logger.info(f"Dashboard visitOutcome updated to '{overall_fitness_status}' for aadhar: {aadhar} on {entry_date}")
                  except Exception as db_e:
-                      logger.error(f"Error updating Dashboard outcome for aadhar {aadhar}: {db_e}", exc_info=True)
+                      logger.error(f"Error updating Dashboard outcome: {db_e}")
 
             # --- Update or Create Fitness Assessment ---
-            # Using aadhar and entry_date as unique identifiers for the record
+            # CHANGE: Lookup strictly by mrdNo. 
+            # This ensures that if the record exists for this Visit ID, it updates it.
             instance, created = model_class.objects.update_or_create(
-                aadhar=aadhar,
-                entry_date=entry_date, # Assumes BaseModel provides this field
+                mrdNo=mrd_no,
                 defaults=filtered_defaults
             )
+
             message = f"{success_noun} {'added' if created else 'updated'} successfully"
-            logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. ID: {instance.pk}")
+            logger.info(f"{log_prefix} successful. Created: {created}. ID: {instance.pk}")
             return JsonResponse({"message": message, "id": instance.pk}, status=201 if created else 200)
 
         except json.JSONDecodeError:
-            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+            logger.error(f"{log_prefix} failed: Invalid JSON data.")
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
-            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            logger.exception(f"{log_prefix} failed: An unexpected error occurred.")
             return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
         response = JsonResponse({"error": "Request method must be POST"}, status=405)
@@ -3087,52 +3111,37 @@ def get_appointments(request):
         return response
 
 @csrf_exempt
-def update_appointment_status(request):
+def update_status(request):
     """Updates the status of an appointment based on its ID."""
     # Should be PUT or PATCH ideally
     if request.method == "POST":
         appointment_id = None
         try:
             data = json.loads(request.body.decode('utf-8')) # Decode explicitly
-            appointment_id = data.get("id")
-            new_status = data.get("status") # Allow setting specific status
+            id = data.get("id")
+            print(id)
+            new_status = data.get("status") 
 
-            if not appointment_id:
+            if not id:
                  return JsonResponse({"success": False, "message": "Appointment ID ('id') is required."}, status=400)
 
-            appointment = get_object_or_404(Appointment, id=appointment_id)
-            current_status = appointment.status
-
-            if new_status is None: # Cycle logic if no specific status provided
-                if current_status == Appointment.StatusChoices.INITIATE:
-                    next_status = Appointment.StatusChoices.IN_PROGRESS
-                elif current_status == Appointment.StatusChoices.IN_PROGRESS:
-                    next_status = Appointment.StatusChoices.COMPLETED
-                else:
-                    logger.warning(f"Cannot cycle status further for appointment ID {appointment_id}. Current status: {current_status}")
-                    return JsonResponse({"success": False, "message": "Cannot update status further from current state."}, status=400)
-                appointment.status = next_status
-            else: # Set specific status if provided
-                 valid_statuses = [choice[0] for choice in Appointment.StatusChoices.choices]
-                 if new_status in valid_statuses:
-                      # Add logic here to prevent invalid transitions if needed
-                      appointment.status = new_status
-                 else:
-                      logger.warning(f"Invalid status value '{new_status}' provided for appointment ID {appointment_id}.")
-                      return JsonResponse({"success": False, "message": f"Invalid status value: {new_status}"}, status=400)
-
-            appointment.save(update_fields=['status'])
-            logger.info(f"Appointment status updated successfully for ID {appointment_id}. New status: {appointment.status}")
-            return JsonResponse({"success": True, "message": "Status updated", "status": appointment.status})
+            fitness = get_object_or_404(FitnessAssessment, mrdNo=id)
+            if new_status == "inprogress" :
+                fitness.status = FitnessAssessment.StatusChoices.IN_PROGRESS
+            elif new_status == "initiate":
+                fitness.status = FitnessAssessment.StatusChoices.INITIATE
+            fitness.save()
+            logger.info(f"fitness status updated successfully for ID {id}. New status: {fitness.status}")
+            return JsonResponse({"success": True, "message": "Status updated", "status": fitness.status})
 
         except Http404:
-            logger.warning(f"update_appointment_status failed: Appointment with ID {appointment_id} not found.")
-            return JsonResponse({"success": False, "message": "Appointment not found"}, status=404)
+            logger.warning(f"update_fitness_status failed: fitness with ID {id} not found.")
+            return JsonResponse({"success": False, "message": "fitness not found"}, status=404)
         except json.JSONDecodeError:
-            logger.error("update_appointment_status failed: Invalid JSON data.", exc_info=True)
+            logger.error("update_fitness_status failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({"success": False, "message": "Invalid JSON data"}, status=400)
         except Exception as e:
-            logger.exception(f"update_appointment_status failed for ID {appointment_id or 'Unknown'}: An unexpected error occurred.")
+            logger.exception(f"update_fitness_status failed for ID {id or 'Unknown'}: An unexpected error occurred.")
             return JsonResponse({"success": False, "message": "An unexpected server error occurred.", "detail": str(e)}, status=500)
     else:
         response = JsonResponse({"error": "Invalid request method (use POST/PUT/PATCH)."}, status=405)

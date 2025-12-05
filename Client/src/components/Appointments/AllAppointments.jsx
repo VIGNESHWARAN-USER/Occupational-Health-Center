@@ -105,7 +105,7 @@ const AllAppointments = () => {
             return empNoMatch || nameMatch;
         });
     }, [appointments, searchQuery]);
-
+    console.log(filteredAppointments);
     const handleNavigate = async (appointment) => {
         console.log();
             navigate("../newvisit", { state: { appointment: appointment, reference: true} });

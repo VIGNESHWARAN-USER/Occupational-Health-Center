@@ -101,7 +101,10 @@ const CurrentFootfalls = () => {
   console.log(appointments)
   // handleStatusChange - remains the same
   const handleStatusChange = async (appointment) => {
-    console.log("Navigating to New Visit with appointment:", appointment.details);
+    const response = await axios.post('http://localhost:8000/update-status/', {
+      id: appointment.details.mrdNo || false,
+      status: 'inprogress'
+    });
       navigate("../newvisit", { state: { appointment: appointment.details, reference: true } });
   };
 
@@ -236,6 +239,7 @@ const CurrentFootfalls = () => {
               <th className="px-3 py-2 font-semibold text-left text-xs">Dr Submit</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Consult Dr</th>
                 
+              <th className="px-3 py-2 font-semibold text-center text-xs">Status</th>
               <th className="px-3 py-2 font-semibold text-center text-xs">Action</th>
             </tr>
           </thead>
@@ -264,14 +268,23 @@ const CurrentFootfalls = () => {
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedNurse || appointment?.assessment?.submittedNurse || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.assessment?.bookedDoctor||appointment?.consultation?.bookedDoctor|| '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedDoctor || appointment?.assessment?.submittedDoctor || '-'}</td>
-                      
+                      <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment?.consultation?.submittedDoctor || appointment?.assessment?.status.toUpperCase() || '-'}</td>
                       <td className="px-3 py-2 text-xs text-gray-700 text-center">
-                        <button
-                          className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center bg-green-600 text-white opacity-70`}
-                          onClick={() => handleStatusChange(appointment)}
-                        >
-                          Open
-                        </button>
+                                        <button
+                                            className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center ${
+                                                appointment.assessment?.status === "initiate" ? "bg-red-500 text-white hover:bg-red-600" :
+                                                appointment.assessment?.status === "inprogress" ? "bg-yellow-500 text-white hover:bg-yellow-600" :
+                                                "bg-green-500 text-white cursor-not-allowed opacity-70"
+                                            }`}
+                                            onClick={() => handleStatusChange(appointment)}
+                                            disabled={appointment.assessment?.status === 'completed'}
+                                        >
+                                            {appointment.assessment?.status === "initiate" ? "Initiate" :
+                                                appointment.assessment?.status === "inprogress" ? "View" :
+                                                "Completed"}
+                                        </button>
+                                    </td>
+                      <td className="px-3 py-2 text-xs text-gray-700 text-center">
                       </td>
                     </tr>
                   ))

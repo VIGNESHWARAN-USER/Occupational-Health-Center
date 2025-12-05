@@ -192,7 +192,8 @@ const allFitnessTestsConfig = [
     { key: "Psychological_zollingar", displayName: "Psychological - Zollinger", options: ["Normal", "Abnormal"] }
 ];
 
-const FitnessPage = ({ data, mrdNo, register }) => {
+const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
+    console.log("FitnessPage props:", { reference, appointment });
     const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
     const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
@@ -214,7 +215,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
     };
 
     const [doctors, setdoctors] = useState([])
-    console.log(doctors)
+    
  useEffect(() => {
     const fetchDetails = async () => {
         try {
@@ -310,9 +311,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                     loadedFitnessData[test.key] = assessmentData[test.key] || "";
                 });
                 setFitnessFormData(loadedFitnessData);
-
-                setSelectedOptions(parseJsonArray(assessmentData.job_nature));
-                setConditionalOptions(parseJsonArray(assessmentData.conditional_fit_feilds));
+                console.log(assessmentData.job_nature)
+                setSelectedOptions(assessmentData.job_nature);
+                setConditionalOptions(assessmentData.conditional_fit_feilds);
                 setOverallFitness(assessmentData.overall_fitness || "");
                 setComments(assessmentData.comments || "");
                 setSystematicExamination(assessmentData.systematic_examination || "");
@@ -532,7 +533,9 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             conditional_other_job_nature: conditionalotherJobNature,
             follow_up_mrd_history:previousVisits,
             bookedDoctor: bookedDoctor,
-            accessLevel
+            accessLevel,
+            reference,
+            appointmentId: appointment?.id || null,
         };
         await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
     };
@@ -716,7 +719,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
     const handleAddPreviousVisit = () => {
     setPreviousVisits(prev => [...prev, { id: Date.now(), mrd: '' }]);
   };
-
+  console.log(data)
   const handleRemovePreviousVisit = (id) => {
     setPreviousVisits(prev => prev.filter(visit => visit.id !== id));
   };
@@ -849,8 +852,8 @@ const FitnessPage = ({ data, mrdNo, register }) => {
                         {eyeExamFitStatusOptions.map(option => (<option key={option} value={option}>{option}</option>))}
                     </select>
                 </div>
-            </div>
-
+            </div>  
+            
             <div className="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-200 mb-6 md:mb-8">
                 <div className="mb-6">
                     <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-700">Fitness applied for (Job nature)</h2>

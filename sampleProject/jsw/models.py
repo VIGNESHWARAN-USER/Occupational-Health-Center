@@ -1460,6 +1460,12 @@ class FitnessAssessment(BaseModel):
         UNFIT = 'unfit', 'Unfit'
         CONDITIONAL = 'conditional', 'Conditional Fit'
 
+    class StatusChoices(models.TextChoices):
+        INITIATE = 'initiate', 'Initiate'
+        IN_PROGRESS = 'inprogress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+        DEFAULT = 'default', 'Default'
+
     # --- Fields ---
     emp_no = models.CharField(max_length=50) # Consider making this non-nullable if always required
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
@@ -1498,7 +1504,11 @@ class FitnessAssessment(BaseModel):
     job_nature = models.JSONField(blank=True, null=True)
     overall_fitness = models.CharField(max_length=20, choices=OverallFitnessChoices.choices, blank=True, null=True)
     conditional_fit_feilds = models.JSONField(blank=True, null=True)
-    
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.INITIATE
+    )
     submittedDoctor = models.CharField(max_length=255, blank=True, null=True)
     submittedNurse = models.CharField(max_length=255, blank=True, null=True)
     bookedDoctor = models.CharField(max_length=255, blank=True, null=True)
