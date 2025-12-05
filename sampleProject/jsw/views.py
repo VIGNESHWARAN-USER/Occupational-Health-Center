@@ -2166,24 +2166,28 @@ def add_significant_notes(request):
     model_class = SignificantNotes
     log_prefix = "add_significant_notes"
     success_noun = "Significant Notes"
+    print("hi")
     if request.method == "POST":
         aadhar = None
         try:
             data = json.loads(request.body.decode('utf-8')) # Decode explicitly
             aadhar = data.get('aadhar')
+            print(aadhar)
             entry_date = date.today()
             if not aadhar:
                 logger.warning(f"{log_prefix} failed: Aadhar required")
                 return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
 
+            print(data.get('mrdNo'))
             mrd_number = data.get('mrdNo')
+            print(mrd_number)
             defaults = {
                 'healthsummary': data.get('healthsummary'), 'remarks': data.get('remarks'),
                 'communicable_disease': data.get('communicable_disease'),
                 'incident_type': data.get('incident_type'), 'incident': data.get('incident'),
                 'illness_type': data.get('illness_type'),
                 'emp_no': data.get('emp_no'),'mrdNo': data.get('mrdNo'),
-            # Store if provided
+                # Store if provided
                 # Add submitted_by if needed
             }
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
@@ -2201,8 +2205,9 @@ def add_significant_notes(request):
                  except Exception as db_e:
                       logger.error(f"Error updating Dashboard outcome from Sig Notes for aadhar {aadhar}: {db_e}", exc_info=True)
 
+            print(mrd_number)
             instance, created = model_class.objects.update_or_create(
-                aadhar=aadhar,mrd_number=mrd_number, entry_date=entry_date, defaults=filtered_defaults
+                aadhar=aadhar,mrdNo=mrd_number, entry_date=entry_date, defaults=filtered_defaults
             )
             message = f"{success_noun} {'added' if created else 'updated'} successfully"
             logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. ID: {instance.pk}")
@@ -2221,7 +2226,6 @@ def add_significant_notes(request):
         return response
 
 @csrf_exempt
-
 def get_notes(request, aadhar):
     """Fetches significant notes and the LATEST employee status based on AADHAR, with debug logging."""
     if request.method == 'GET':
@@ -3665,7 +3669,7 @@ def delete_file(request):
                      return JsonResponse({'message': 'File reference removed, but error deleting from storage.', 'error_detail': str(e)}, status=500)
             else:
                  # No file was associated with the field
-                 return JsonResponse({'message': 'No file associated with this type to delete.'}, status=200)
+                 return JsonResponse({'message': 'No file Contractor with this type to delete.'}, status=200)
         except Http404: return JsonResponse({'error': 'Camp not found'}, status=404)
         except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON.'}, status=400)
         except Exception as e:
@@ -5751,7 +5755,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
         'Contact Details_Residential Country': 'residential_country',
     })
 
-    if excel_data_type == 'employee' or excel_data_type == 'associate':
+    if excel_data_type == 'employee' or excel_data_type == 'contractor':
         # Mappings specific to Employee and Associate
         mapping.update({
             'Employment Details_Contractor Status': 'contractor_status',
@@ -5791,7 +5795,7 @@ def hrupload(request, data_type):
     if request.method == 'POST':
         try:
             data_type = data_type.lower()
-            if data_type not in ['employee', 'associate', 'visitor']:
+            if data_type not in ['employee', 'contractor', 'visitor']:
                 return JsonResponse({"error": "Invalid data type specified."}, status=400)
 
             if 'file' not in request.FILES:

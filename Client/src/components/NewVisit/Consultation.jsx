@@ -679,7 +679,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
 
       {/* Significant Notes Component */}
       <div className="border-t pt-6 mt-8">
-             <SignificantNotes data={data} type={type} />
+             <SignificantNotes data={data} type={type} mrdNo={mrdNo} />
         </div>
     </div>
   );

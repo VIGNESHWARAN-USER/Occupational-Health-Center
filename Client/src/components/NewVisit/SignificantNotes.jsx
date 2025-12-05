@@ -109,7 +109,7 @@ const HistoryList = ({ title, notes, fieldKey, isLoading, error }) => {
 };
 
 
-const SignificantNotes = ({ data, type }) => {
+const SignificantNotes = ({ data, type, mrdNo}) => {
   // --- States for current input ---
   const [healthsummary, setHealthsummary] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -269,6 +269,7 @@ const SignificantNotes = ({ data, type }) => {
       incident_type: incidentType || null,
       incident: incident || null,
       illness_type: illnessType || null,
+      mrdNo: mrdNo || null,
     };
     try {
       const response = await axios.post("http://localhost:8000/significant_notes/add/", significantNotesData);
