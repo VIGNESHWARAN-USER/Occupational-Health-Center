@@ -159,7 +159,7 @@ const DataUpload = () => {
         try {
             const response = await axios.post(uploadUrl, formData);
 
-            setSuccessMessage(response.data?.message || `${formVal} (${hrDataType}) uploaded successfully!`);
+            alert(response.data?.message || `${formVal} (${hrDataType}) uploaded successfully!`);
             resetState();
         } catch (err) {
             console.error("Error uploading file:", err.response || err);

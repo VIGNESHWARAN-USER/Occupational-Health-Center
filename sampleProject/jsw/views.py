@@ -2202,7 +2202,7 @@ def add_significant_notes(request):
                       logger.error(f"Error updating Dashboard outcome from Sig Notes for aadhar {aadhar}: {db_e}", exc_info=True)
 
             instance, created = model_class.objects.update_or_create(
-                aadhar=aadhar, entry_date=entry_date, defaults=filtered_defaults
+                aadhar=aadhar,mrd_number=mrd_number, entry_date=entry_date, defaults=filtered_defaults
             )
             message = f"{success_noun} {'added' if created else 'updated'} successfully"
             logger.info(f"{log_prefix} successful for aadhar {aadhar}. Created: {created}. ID: {instance.pk}")
@@ -5754,8 +5754,8 @@ def map_excel_headers_to_model_fields(excel_data_type):
     if excel_data_type == 'employee' or excel_data_type == 'associate':
         # Mappings specific to Employee and Associate
         mapping.update({
-            'Employment Details_Contract_Status': 'contract_status',
-            'Employment Details_Contract Number': 'contractName',
+            'Employment Details_Contractor Status': 'contractor_status',
+            # 'Employment Details_Contractor Number': 'contractorName',
             'Employment Details_Current Employer': 'employer',
             'Employment Details_Current Designation_Location': 'location', # Combined header
             'Employment Details_Designation': 'designation',
@@ -5768,6 +5768,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
             'Employment Details_Previous Employer': 'previousemployer',
             'Employment Details_Previous Location': 'previouslocation',
             'Employment Details_Employee Number': 'emp_no',
+            'Employment Details_Employee Status': 'employee_status',
         })
     elif excel_data_type == 'visitor':
         # Mappings specific to Visitor
