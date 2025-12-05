@@ -2072,7 +2072,8 @@ class SignificantNotes(BaseModel):
     ILLNESS_TYPE_CHOICES = [('Occupational Illness', 'Occupational Illness'), ('Occupational Disease', 'Occupational Disease'), ('', 'Select...'),]
 
     emp_no = models.CharField(max_length=20, blank=True, null=True)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True) 
     healthsummary = models.JSONField(default=list, blank=True, null=True)
     remarks = models.JSONField(default=list, blank=True, null=True)
     communicable_disease = models.CharField(max_length=50, choices=COMMUNICABLE_DISEASE_CHOICES, blank=True, null=True, default='', verbose_name="Communicable Disease")

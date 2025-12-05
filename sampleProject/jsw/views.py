@@ -1093,6 +1093,13 @@ def addEntries(request):
                 date=entry_date,
                 **dashboard_defaults_filtered
             )
+        
+        if data.get('reference'):
+            appointment_data = Appointment.objects.filter(id=data.get('appointmentId')).first()
+            if appointment_data:
+                appointment_data.mrdNo = employee_entry.mrdNo
+                appointment_data.status = Appointment.StatusChoices.IN_PROGRESS
+                appointment_data.save()
 
         message = f"Entry added successfully. MRD: {employee_entry.mrdNo}"
         return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": aadhar}, status=200)
