@@ -288,7 +288,7 @@ const AllAppointments = () => {
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[140px] bg-white group-hover:bg-gray-50 z-10">{appointment.name || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.organization_name || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.contractor_name || '-'}</td>
-                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.purpose || '-'}</td>
+                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.register || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.date || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.time || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.booked_by || '-'}</td>

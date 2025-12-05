@@ -232,10 +232,10 @@ const CurrentFootfalls = () => {
               <th className="px-3 py-2 font-semibold text-left text-xs">Aadhar No.</th>
               <th className="px-3 py-2 font-semibold text-left text-xs sticky left-[140px] bg-blue-50 z-10">Name</th> {/* Adjust px value if needed */}
               <th className="px-3 py-2 font-semibold text-left text-xs">Purpose</th>
-              <th className="px-3 py-2 font-semibold text-left text-xs">Nurse Submit</th>
+              <th className="px-3 py-2 font-semibold text-left text-xs">Submitted Nurse</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Dr Submit</th>
               <th className="px-3 py-2 font-semibold text-left text-xs">Consult Dr</th>
-              
+                
               <th className="px-3 py-2 font-semibold text-center text-xs">Action</th>
             </tr>
           </thead>

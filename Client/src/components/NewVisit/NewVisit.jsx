@@ -564,67 +564,93 @@ const NewVisit = () => {
     const initialize = async () => {
       setLoading(true);
       console.log("Initializing with reference and appointment:", reference, appointment);
-      // Check if we have reference data passed from the dashboard/booking
+
       if (reference && appointment) {
         
-        // 1. Fill Basic Details
-        setSearchId(appointment.aadhar || "");
+        // 1. Basic Details
+        setSearchId(appointment.aadhar || appointment.aadharNo || "");
         setMRDNo(appointment.mrdNo || "");
-        
-        // 2. Identify the Register value
-        // Note: The booking form saves "Pre employment" in 'purpose', 
-        // but on this page, "Pre employment" is the 'Register' field.
-        const targetRegister = appointment.purpose; 
-        
-        let foundType = "";
-        let foundVisit = "";
-        let foundPurpose = ""; // This is the read-only Purpose (e.g., Medical Examination)
 
+        // 2. Classification (Priority: New Backend Keys -> Fallback)
         
-        const typesToSearch = appointment.role 
-            ? [appointment.role] 
-            : Object.keys(dataMapping);
+        // 'register' is the specific value (e.g. "Preventive - Follow Up Visits")
+        // If appointment.register is empty (legacy data), fall back to appointment.purpose
+        const targetRegister = appointment.register || appointment.purpose || "";
+        
+        // 'purpose' is the Broad Category (e.g. "Follow Up Visits")
+        // If strictly using new backend, this is in appointment.purpose. 
+        // If legacy data used purpose for register, this might need derivation, 
+        // but typically we can just use what's there or leave it broad.
+        const targetPurpose = appointment.purpose || ""; 
 
-        let isFound = false;
-        //console.log(typesToSearch)
-        for (const typeKey of typesToSearch) {
-            
-            if (!dataMapping[typeKey]) continue; 
+        const targetType = appointment.role || ""; // Employee, Visitor...
+        
+        // Backend sends 'visit_type', JSON reference had 'type_of_visit'. Checking both.
+        const targetVisit = appointment.visit_type || appointment.type_of_visit || ""; 
 
-            
-            for (const visitKey of Object.keys(dataMapping[typeKey])) {
-                const registersMap = dataMapping[typeKey][visitKey];
-                console.log(visitKey, registersMap, targetRegister, registersMap.hasOwnProperty(targetRegister));
-                
-                if (registersMap && registersMap.hasOwnProperty(targetRegister)) {
-                    foundType = typeKey;       // e.g., "Employee"
-                    foundVisit = visitKey;     // e.g., "Preventive"
-                    foundPurpose = registersMap[targetRegister]; // e.g., "Medical Examination"
-                    isFound = true;
-                    break;
-                }
-            }
-            if (isFound) break;
+        // 3. Update States Directly
+        setType(targetType);
+        setVisit(targetVisit);
+        setRegister(targetRegister);
+        setPurpose(targetPurpose);
+
+        // Sync Dashboard Data (for dropdown rendering)
+        setFormDataDashboard({
+            typeofVisit: targetVisit,
+            category: targetType,
+            register: targetRegister,
+            purpose: targetPurpose
+        });
+
+        // ---------------------------------------------------------
+        // 4. Autofill Conditional Fields (Based on targetRegister)
+        // ---------------------------------------------------------
+
+        // A. Annual / Periodical Fields
+        if (targetRegister === "Annual / Periodical" || targetRegister === "Periodical (Food Handler)") {
+            setAnnualPeriodicalFields({
+                year: appointment.year || "",
+                batch: appointment.batch || "",
+                hospitalName: appointment.hospital_name || appointment.hospitalName || ""
+            });
         }
 
-        // 4. Update State
-        if (isFound) {
-            setType(foundType);
-            setVisit(foundVisit);
-            setRegister(targetRegister);
-            setPurpose(foundPurpose);
-
-            // Sync dashboard data so dropdowns render correctly
-            setFormDataDashboard({
-                typeofVisit: foundVisit,
-                category: foundType,
-                register: targetRegister,
-                purpose: foundPurpose
+        // B. Camps & Contract Fields 
+        if (targetRegister.startsWith("Camps") || targetRegister.startsWith("Pre Placement")) {
+            setCampFields({
+                campName: appointment.camp_name || appointment.campName || "",
+                hospitalName: appointment.hospital_name || appointment.hospitalName || "",
+                contractName: appointment.contract_name || appointment.contractName || "",
+                prevcontractName: appointment.prev_contract_name || appointment.prevcontractName || "",
+                old_emp_no: appointment.old_emp_no || "" 
             });
-        } else {
-            // Fallback: Just fill what we have if mapping fails
-            setRegister(targetRegister);
-            if(appointment.role) setType(appointment.role);
+        }
+
+        // C. BP Sugar Status
+        if (targetRegister.startsWith("BP Sugar Check")) {
+            setBpSugarStatus(appointment.bp_sugar_status || "");
+        }
+
+        // D. BP Sugar Chart Reason
+        if (targetRegister.startsWith("BP Sugar Chart")) {
+            setBpSugarChartReason(appointment.bp_sugar_chart_reason || "");
+        }
+
+        // E. Follow Up Logic
+        if (targetRegister.includes("Follow Up")) {
+            // Check backend snake_case keys first
+            setFollowupConsultationReason(
+                appointment.followup_reason || appointment.followupConsultationReason || ""
+            );
+            
+            setotherfollowupConsultationReason(
+                appointment.other_followup_reason || appointment.otherfollowupConsultationReason || ""
+            );
+        }
+
+        // F. Other Register Custom Text
+        if (targetRegister === "Other") {
+            setOtherRegister(appointment.other_purpose || appointment.otherPurpose || "");
         }
       }
 
@@ -632,7 +658,7 @@ const NewVisit = () => {
     };
 
     initialize();
-  }, [reference, appointment]); // Dependencies to run when data exists
+  }, [reference, appointment]);
   
 
   
@@ -1149,7 +1175,7 @@ const NewVisit = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 ">Work Area</label>
+                    <label className="block text-sm font-medium text-gray-700 ">Work Station</label>
                     <input
                       name="workarea"
                       value={formData.workarea || ''}
