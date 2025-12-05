@@ -756,7 +756,7 @@ const FitnessPage = ({ data, mrdNo, register }) => {
             />
         )}
 
-        { register === "Follow Up Visits" && (
+        { register === "Preventive - Follow Up Visits" && (
     <div className="mt-6 mb-8 p-4 border rounded-lg bg-white shadow-sm">
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-800">Previous Visit References</h2>

@@ -144,7 +144,7 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Follow Up Visits (Preventive)":"Follow Up Visits",
+        "Preventive - Follow Up Visits":"Follow Up Visits",
         "Preventive Other": "Other",
       },
       Curative: {
@@ -152,7 +152,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits (Curative)": "Follow Up Visits",
+        "Curative - Follow Up Visits": "Follow Up Visits",
         "BP Sugar Chart": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -176,7 +176,7 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave",
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Preventive Follow Up Visits":"Follow Up Visits",
+        "Preventive - Follow Up Visits":"Follow Up Visits",
         "Preventive Other": "Other",
       },
       Curative: {
@@ -184,7 +184,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits (Curative)": "Outpatient",
+        "Curative - Follow Up Visits": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -196,14 +196,14 @@ const NewVisit = () => {
       Preventive: {
         "Fitness": "Fitness",
         "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Preventive Follow Up Visits":"Follow Up Visits",
+        "Preventive - Follow Up Visits":"Follow Up Visits",
       },
       Curative: {
         "Illness": "Outpatient",
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Follow Up Visits (Curative)": "Outpatient",
+        "Curative - Follow Up Visits": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -317,7 +317,7 @@ const NewVisit = () => {
       }
     }
 
-    if (register.startsWith("Curative Follow Up Visits")) {
+    if (register.startsWith("Curative - Follow Up Visits")) {
         if (!followupConsultationReason) {
           alert("Please select a Followup Consultation reason.");
           setLoading1(false);
@@ -402,7 +402,7 @@ const NewVisit = () => {
       };
     }
 
-    if (register.startsWith("Curative Follow Up Visits")) {
+    if (register.startsWith("Curative - Follow Up Visits")) {
       submissionData.extraData = {
         ...submissionData.extraData,
         purpose: followupConsultationReason,
@@ -1844,7 +1844,7 @@ const NewVisit = () => {
                   </div>
                 )}
 
-                {register.startsWith("Curative Follow Up Visits") && (
+                {(register.startsWith("Curative - Follow Up Visits") || register.startsWith("Preventive - Follow Up Visits")) && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Followup Consultation</label>
