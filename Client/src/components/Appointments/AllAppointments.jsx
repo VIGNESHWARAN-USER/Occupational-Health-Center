@@ -117,7 +117,7 @@ const AllAppointments = () => {
         const data = filteredAppointments.map(appointment => ({
             'Appt No.': appointment.appointment_no || '-',
             'Booked Date': appointment.booked_date || '-',
-            'MRD No.': appointment.mrd_no || '-',
+            'MRD No.': appointment.mrdNo || '-',
             'Role': appointment.role || '-',
             'Emp No.': appointment.emp_no || '-',
             'Aadhar No.': appointment.aadhar || '-',
@@ -281,7 +281,7 @@ const AllAppointments = () => {
                                 <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition group">
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-0 bg-white group-hover:bg-gray-50 z-10">{appointment.appointment_no || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.booked_date || '-'}</td>
-                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.mrd_no || '-'}</td>
+                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.mrdNo || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.role || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-[70px] bg-white group-hover:bg-gray-50 z-10">{appointment.emp_no || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.aadhar || '-'}</td>

@@ -332,6 +332,8 @@ const NewVisit = () => {
 
     
     const submissionData = {
+      reference: reference || false,
+      appointmentId: appointment ? appointment.id : null,
       formDataDashboard: {
         typeofVisit: visit,
         category: type,
@@ -409,15 +411,6 @@ const NewVisit = () => {
     }
 
     try {
-       const response1 = await fetch("http://localhost:8000/update-appointment-status/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: appointment.id }),
-            });
-            const data = await response1.json();
-            if (data.status !== "success") {
-                alert("Failed to update appointment status.");
-              }
       console.log("Submitting Data:", submissionData);
       const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
