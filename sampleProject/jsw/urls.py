@@ -93,7 +93,7 @@ urlpatterns = [
     path('uploadAppointment/', views.uploadAppointment, name='uploadAppointment'),
     path('appointments/', views.get_appointments, name='get_appointments'),
     path('currentfootfalls/', views.get_currentfootfalls, name='get_currentfootfalls'),
-    path('update-appointment-status/', views.update_appointment_status, name='update_appointment_status'),
+    path('update-status/', views.update_status, name='update_appointment_status'),
 
     # Prescriptions (Using Aadhar / ID)
     path('prescriptions/add/', views.add_prescription, name='add_prescription'),
