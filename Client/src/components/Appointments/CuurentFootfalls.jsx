@@ -101,7 +101,7 @@ const CurrentFootfalls = () => {
   console.log(appointments)
   // handleStatusChange - remains the same
   const handleStatusChange = async (appointment) => {
-      navigate("../newvisit", { state: { search: appointment.details.aadhar,mrdNumber: appointment.details.mrdNo,type1:appointment.details.type, type_of_visit1:appointment.details.type_of_visit, purpose1:appointment.details.purpose, register1:appointment.details.register, reference: true } });
+      navigate("../newvisit", { state: { appointment: appointment, reference: true } });
   };
 
 

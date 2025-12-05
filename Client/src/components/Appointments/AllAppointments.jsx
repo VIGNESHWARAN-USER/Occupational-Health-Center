@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 
 const AllAppointments = () => {
     const [appointments, setAppointments] = useState([]);
@@ -104,31 +106,9 @@ const AllAppointments = () => {
         });
     }, [appointments, searchQuery]);
 
-    const handleStatusChange = async (appointment) => {
-        if (appointment.status !== "initiate") {
-            navigate("../newvisit", { state: { search: appointment.aadhar, reference: true } });
-            return;
-        }
-        try {
-            const response = await fetch("http://localhost:8000/update-appointment-status/", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id: appointment.id }),
-            });
-            const data = await response.json();
-            if (data.success) {
-                setAppointments((prevAppointments) =>
-                    prevAppointments.map((prevApp) =>
-                        prevApp.id === appointment.id ? { ...prevApp, status: data.status } : prevApp
-                    )
-                );
-                navigate("../newvisit", { state: { data: appointment.aadhar, reference: true } });
-            } else {
-                console.error("Failed to update appointment:", data.message);
-            }
-        } catch (error) {
-            console.error("Error updating appointment:", error);
-        }
+    const handleNavigate = async (appointment) => {
+        console.log();
+            navigate("../newvisit", { state: { appointment: appointment, reference: true} });
     };
 
     const numberOfColumns = 18;
@@ -290,9 +270,10 @@ const AllAppointments = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={numberOfColumns} className="text-center py-6">
-                                    <div className="inline-block h-8 w-8 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]" role="status">
-                                        <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">Loading...</span>
-                                    </div>
+                                    <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-xl border border-dashed border-gray-300">
+                                          <FontAwesomeIcon icon={faSpinner} spin className="text-5xl text-blue-500 mb-4" />
+                                          <p className="text-gray-600 font-semibold text-lg animate-pulse">Searching Appointments...</p>
+                                        </div>
                                 </td>
                             </tr>
                         ) : filteredAppointments.length > 0 ? (
@@ -314,7 +295,7 @@ const AllAppointments = () => {
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.submitted_by_nurse || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.submitted_Dr || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.consultated_Dr || '-'}</td>
-                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.status || '-'}</td>
+                                    <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.status.toUpperCase() || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-center">
                                         <button
                                             className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center ${
@@ -322,7 +303,7 @@ const AllAppointments = () => {
                                                 appointment.status === "inprogress" ? "bg-yellow-500 text-white hover:bg-yellow-600" :
                                                 "bg-green-500 text-white cursor-not-allowed opacity-70"
                                             }`}
-                                            onClick={() => handleStatusChange(appointment)}
+                                            onClick={() => handleNavigate(appointment)}
                                             disabled={appointment.status === 'completed'}
                                         >
                                             {appointment.status === "initiate" ? "Initiate" :

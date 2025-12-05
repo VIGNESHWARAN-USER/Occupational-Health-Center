@@ -19,8 +19,8 @@ const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
   const navigate = useNavigate();
 
-  const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,reference} = useLocation().state || "";
-  console.log(search,mrdNumber, reference,type1, type_of_visit1, register1, purpose1)
+  const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,appointment, reference} = useLocation().state || "";
+  console.log(search,mrdNumber, reference,type1, type_of_visit1, register1, purpose1, appointment)
 
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
@@ -53,11 +53,10 @@ const NewVisit = () => {
   // States for dynamic form fields
   const [followupConsultationReason, setFollowupConsultationReason] = useState(""); 
   const [otherfollowupConsultationReason, setotherfollowupConsultationReason] = useState("");
-  const [bpSugarStatus, setBpSugarStatus] = useState(""); // State for BP Sugar Check
-  const [bpSugarChartReason, setBpSugarChartReason] = useState(""); // State for BP Sugar Chart
+  const [bpSugarStatus, setBpSugarStatus] = useState(""); 
+  const [bpSugarChartReason, setBpSugarChartReason] = useState(""); 
 
 
-  //New states
   const [annualPeriodicalFields, setAnnualPeriodicalFields] = useState({
     year: "",
     batch: "",
@@ -145,7 +144,7 @@ const NewVisit = () => {
         "Fitness After Personal Long Leave": "Fitness After Personal Long Leave", 
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
-        "Preventive Follow Up Visits":"Follow Up Visits",
+        "Follow Up Visits (Preventive)":"Follow Up Visits",
         "Preventive Other": "Other",
       },
       Curative: {
@@ -153,7 +152,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Curative Follow Up Visits": "Follow Up Visits",
+        "Follow Up Visits (Curative)": "Follow Up Visits",
         "BP Sugar Chart": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -185,7 +184,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Curative Follow Up Visits": "Outpatient",
+        "Follow Up Visits (Curative)": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -204,7 +203,7 @@ const NewVisit = () => {
         "Over Counter Illness": "Outpatient",
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
-        "Curative Follow Up Visits": "Outpatient",
+        "Follow Up Visits (Curative)": "Outpatient",
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
@@ -410,6 +409,15 @@ const NewVisit = () => {
     }
 
     try {
+       const response1 = await fetch("http://localhost:8000/update-appointment-status/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: appointment.id }),
+            });
+            const data = await response1.json();
+            if (data.status !== "success") {
+                alert("Failed to update appointment status.");
+              }
       console.log("Submitting Data:", submissionData);
       const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
         headers: {
@@ -482,10 +490,10 @@ const NewVisit = () => {
       const resultData = response.data.data;
 
       if (resultData && resultData.length > 0) {
-        // --- DATA FOUND ---
-        const latestEmployee = resultData[0];
         
-        // Reset MRD for new visit
+        const latestEmployee = resultData[0];
+        console.log(latestEmployee);
+        
         latestEmployee.mrdNo = ""; 
 
         // Update all states
@@ -562,29 +570,79 @@ const NewVisit = () => {
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
-      
-      
-      if (reference && search) {
-        setSearchId(search);
+
+      // Check if we have reference data passed from the dashboard/booking
+      if (reference && appointment) {
+        
+        // 1. Fill Basic Details
+        setSearchId(appointment.aadhar || "");
+        setMRDNo(appointment.mrdNo || "");
+        
+        // 2. Identify the Register value
+        // Note: The booking form saves "Pre employment" in 'purpose', 
+        // but on this page, "Pre employment" is the 'Register' field.
+        const targetRegister = appointment.purpose; 
+        
+        let foundType = "";
+        let foundVisit = "";
+        let foundPurpose = ""; // This is the read-only Purpose (e.g., Medical Examination)
+
+        
+        const typesToSearch = appointment.role 
+            ? [appointment.role] 
+            : Object.keys(dataMapping);
+
+        let isFound = false;
+        //console.log(typesToSearch)
+        for (const typeKey of typesToSearch) {
+            
+            if (!dataMapping[typeKey]) continue; 
+
+            
+            for (const visitKey of Object.keys(dataMapping[typeKey])) {
+                const registersMap = dataMapping[typeKey][visitKey];
+                console.log(visitKey, registersMap, targetRegister, registersMap.hasOwnProperty(targetRegister));
+                
+                if (registersMap && registersMap.hasOwnProperty(targetRegister)) {
+                    foundType = typeKey;       // e.g., "Employee"
+                    foundVisit = visitKey;     // e.g., "Preventive"
+                    foundPurpose = registersMap[targetRegister]; // e.g., "Medical Examination"
+                    isFound = true;
+                    break;
+                }
+            }
+            if (isFound) break;
+        }
+
+        // 4. Update State
+        if (isFound) {
+            setType(foundType);
+            setVisit(foundVisit);
+            setRegister(targetRegister);
+            setPurpose(foundPurpose);
+
+            // Sync dashboard data so dropdowns render correctly
+            setFormDataDashboard({
+                typeofVisit: foundVisit,
+                category: foundType,
+                register: targetRegister,
+                purpose: foundPurpose
+            });
+        } else {
+            // Fallback: Just fill what we have if mapping fails
+            setRegister(targetRegister);
+            if(appointment.role) setType(appointment.role);
+        }
       }
-      
-      
-      if (reference) {
-        if (mrdNumber) setMRDNo(mrdNumber);
-        if (type1) setType(type1);
-        if (type_of_visit1) setVisit(type_of_visit1);
-        if (register1) setRegister(register1);
-        if (purpose1) setPurpose(purpose1);
-      }
-      
+
       setLoading(false);
     };
 
     initialize();
-  }, []);
+  }, [reference, appointment]); // Dependencies to run when data exists
   
 
-  // Update Register options and Purpose dynamically
+  
   const getRegisterOptions = () => {
     return Object.keys(dataMapping[type]?.[visit] || {});
   };
@@ -595,8 +653,6 @@ const NewVisit = () => {
       const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
       setPurpose(autoPurpose);
       setFormDataDashboard(prev => ({ ...prev, register: selectedRegister, purpose: autoPurpose }));
-  
-      // Reset additional fields when register changes
       setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
       setCampFields({ campName: "", hospitalName: "" });
       setFollowupConsultationReason(""); 
@@ -610,8 +666,6 @@ const NewVisit = () => {
       const autoPurpose = dataMapping[type]?.[visit]?.[selectedRegister] || "";
       setPurpose(autoPurpose);
       setFormDataDashboard(prev => ({ ...prev, otherRegister: selectedRegister, purpose: autoPurpose }));
-
-      // Reset additional fields when register changes
       setAnnualPeriodicalFields({ year: "", batch: "", hospitalName: "" });
       setCampFields({ campName: "", hospitalName: "" });
     };
@@ -620,19 +674,19 @@ const NewVisit = () => {
       const selectedType = e.target.value;
       console.log("Selected Type:", selectedType);
       setType(selectedType);
-      setRegister(""); // Reset register
+      setRegister(""); 
       setOtherRegister
-      setPurpose("");   // Reset purpose
-      setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", setOtherRegister:"", purpose: "" })); // Update dashboard data and reset
+      setPurpose("");   
+      setFormDataDashboard(prev => ({ ...prev, category: selectedType, register: "", setOtherRegister:"", purpose: "" })); 
     };
   
     const handleVisitChange = (e) => {
       const selectedVisit = e.target.value;
       setVisit(selectedVisit);
       setActiveTab("BasicDetails");
-      setRegister(""); // Reset register
-      setPurpose("");   // Reset purpose
-      setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); // Update dashboard data and reset
+      setRegister(""); 
+      setPurpose("");   
+      setFormDataDashboard(prev => ({ ...prev, typeofVisit: selectedVisit, register: "", purpose: "" })); 
     };
 
   const [age, setAge] = useState('');
@@ -670,11 +724,10 @@ const NewVisit = () => {
     
     visit === "Curative" && { id: "Prescription", label: "Prescription" },
     
-  ].filter(Boolean); // Filter out any `false` or `null` values (from the conditional rendering) 
+  ].filter(Boolean); 
 
 
   const handleProfileIconClick = () => {
-    // Toggle webcam state
     setProfileImage(null)
     setUploadedImage(null)
     setIsWebcamActive(!isWebcamActive);
