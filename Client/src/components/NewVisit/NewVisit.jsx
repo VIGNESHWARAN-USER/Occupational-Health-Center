@@ -22,6 +22,8 @@ const NewVisit = () => {
   const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,appointment, reference, fieldType} = useLocation().state || "";
   console.log(fieldType)
 
+  const [isUpdated, setIsUpdated] = useState(false);
+  const [isFrozen, setIsFrozen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
   const [type, setType] = useState("");
@@ -215,12 +217,20 @@ const NewVisit = () => {
   
   const [loading1, setLoading1] = useState(false);
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevFormData => ({
-      ...prevFormData,
-      [name]: value
-    }));
-  };
+  const { name, value } = e.target;
+
+  setFormData(prev => {
+    const updated = { ...prev, [name]: value };
+
+    // Check if any field changed from previous value
+    if (prev[name] !== value) {
+      setIsUpdated(true);
+    }
+
+    return updated;
+  });
+};
+
   
   
   const [mrdNo, setMRDNo] = useState(mrdNumber);
@@ -236,220 +246,227 @@ const NewVisit = () => {
   };
   
   const handleSubmitEntries = async (e) => {
-    e.preventDefault();
-    setLoading1(true);
+  e.preventDefault();
+  setLoading1(true);
 
-    // Validate required fields
-    if (!formData.aadhar) {
-      alert("Please search and get employee data by Aadhar number first");
+  // Validate required fields
+  if (!formData.aadhar) {
+    alert("Please search and get employee data by Aadhar number first");
+    setLoading1(false);
+    return;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const hasEntryToday = formData.entry_date === today && formData.mrdNo !== "";
+
+  const confirm = window.confirm(
+    hasEntryToday
+      ? "This employee has already been registered in the system for today. Are you sure you want to submit another footfall?"
+      : "Are you sure you want to submit the entry as footfall?"
+  );
+  if (!confirm) {
+    setLoading1(false);
+    return;
+  }
+
+  // Required selections
+  if (!type) {
+    alert("Please select Type");
+    setLoading1(false);
+    return;
+  }
+  if (!visit) {
+    alert("Please select Type of Visit");
+    setLoading1(false);
+    return;
+  }
+  if (!register) {
+    alert("Please select Register");
+    setLoading1(false);
+    return;
+  }
+
+  // Extra validations
+  if (
+    register === "Annual / Periodical" ||
+    register === "Periodical (Food Handler)"
+  ) {
+    if (
+      !annualPeriodicalFields.year ||
+      !annualPeriodicalFields.batch ||
+      !annualPeriodicalFields.hospitalName
+    ) {
+      alert("Please fill all Annual/Periodical fields");
       setLoading1(false);
       return;
     }
+  }
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-
-    // Check if employee has any entries for today
-    const hasEntryToday = formData.entry_date === today && formData.mrdNo !== "";
-
-    const message1 = "Are you sure you want to submit the entry as footfall?";
-    const message2 = "This employee has already been registered in the system for today. Are you sure you want to submit the entry as another footfall?";
-    
-    const confirm = window.confirm(hasEntryToday ? message2 : message1);
-    if (!confirm) {
+  if (register.startsWith("Camps")) {
+    if (!campFields.campName || !campFields.hospitalName) {
+      alert("Please fill all Camp fields");
       setLoading1(false);
       return;
     }
-    
-    // Validate required selections
-    if (!type) {
-      alert("Please select Type");
+  }
+
+  if (register.startsWith("Pre Placement Same Contract")) {
+    if (!campFields.contractName) {
+      alert("Please fill Contract Name");
       setLoading1(false);
       return;
     }
+  }
 
-    if (!visit) {
-      alert("Please select Type of Visit");
+  if (register.startsWith("Pre Placement Contract change")) {
+    if (!campFields.prevcontractName || !campFields.old_emp_no) {
+      alert("Please fill all Contract Change Fields");
       setLoading1(false);
       return;
     }
+  }
 
-    if (!register) {
-      alert("Please select Register");
+  if (register.startsWith("BP Sugar Check")) {
+    if (!bpSugarStatus) {
+      alert("Please select Patient Status");
       setLoading1(false);
       return;
     }
+  }
 
-    
-    if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
-      if (!annualPeriodicalFields.year || !annualPeriodicalFields.batch || !annualPeriodicalFields.hospitalName) {
-        alert("Please fill all Annual/Periodical fields (Year, Batch, Hospital Name)");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("Camps")) {
-      if (!campFields.campName || !campFields.hospitalName) {
-        alert("Please fill all Camp fields (Camp Name, Hospital Name)");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("Pre Placement Same Contract")) {
-      if (!campFields.contractName) {
-        alert("Please fill Contract Name");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("Pre Placement Contract change")) {
-      if (!campFields.prevcontractName || !campFields.old_emp_no) {
-        alert("Please fill all Pre Placement Contract Change fields (Previous Contract Name, Employee Number)");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("BP Sugar Check")) {
-      if (!bpSugarStatus) {
-        alert("Please select Patient Status");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
-      if (!bpSugarChartReason) {
-        alert("Please select Job Nature (Reason)");
-        setLoading1(false);
-        return;
-      }
-    }
-
-    if (register.startsWith("Curative - Follow Up Visits")) {
-        if (!followupConsultationReason) {
-          alert("Please select a Follow up Consultation reason.");
-          setLoading1(false);
-          return;
-        }
-        if (followupConsultationReason.endsWith("Others") && !otherfollowupConsultationReason.trim()) {
-          alert("Please specify the reason in the 'Other Consultation Reason' field.");
-          setLoading1(false);
-          return;
-        }
-    }
-
-    
-    const submissionData = {
-      reference: reference || false,
-      appointmentId: appointment ? appointment.id : null,
-      formDataDashboard: {
-        typeofVisit: visit,
-        category: type,
-        register: register,
-        purpose: purpose
-      },
-      extraData: {
-        
-      },
-      formData: {
-        ...formData,
-        entry_date: today,
-        type: type,
-        type_of_visit: visit,
-        register: register,
-        purpose: purpose,
-        profilepic: uploadedImage || profileImage 
-      },
-      
-    };
-
-    
-    if (register === "Annual / Periodical" || register === "Periodical (Food Handler)") {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        year: annualPeriodicalFields.year,
-        batch: annualPeriodicalFields.batch,
-        hospitalName: annualPeriodicalFields.hospitalName
-      };
-    }
-
-    if (register.startsWith("Camps")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        campName: campFields.campName,
-        hospitalName: campFields.hospitalName
-      };
-    }
-
-    if (register.startsWith("Pre Placement Same Contract")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        contractName: campFields.contractName
-      };
-    }
-
-    if (register.startsWith("Pre Placement Contract change")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        prevcontractName: campFields.prevcontractName,
-        old_emp_no: campFields.old_emp_no
-      };
-    }
-
-    if (register.startsWith("BP Sugar Check")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        status: bpSugarStatus
-      };
-    }
-
-    if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        reason: bpSugarChartReason
-      };
-    }
-
-    if (register.startsWith("Curative - Follow Up Visits")) {
-      submissionData.extraData = {
-        ...submissionData.extraData,
-        purpose: followupConsultationReason,
-        ...(followupConsultationReason.endsWith("Others") && { purpose_others: otherfollowupConsultationReason })
-      };
-    }
-
-    try {
-      console.log("Submitting Data:", submissionData);
-      const response = await axios.post("http://localhost:8000/addEntries", submissionData, {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
-
-      if (response.status === 200) {
-        console.log("MRD Number:", response.data.mrdNo);
-        setMRDNo(response.data.mrdNo);
-        setFormData(prev => ({...prev, mrdNo: response.data.mrdNo}));
-        setdata([{...formData, mrdNo: response.data.mrdNo}]);
-        alert("Data submitted successfully!");
-      } else {
-        alert("Something went wrong!");
-      }
-    } catch (error) {
-      if (error.response && error.response.status === 400) {
-        alert(error.response.data.error);
-      } else {
-        console.error("Error submitting form:", error);
-        alert("Error submitting data!");
-      }
-    } finally {
+  if (register.startsWith("BP Sugar Chart")) {
+    if (!bpSugarChartReason) {
+      alert("Please select Reason");
       setLoading1(false);
+      return;
     }
+  }
+
+  if (register.startsWith("Curative - Follow Up Visits")) {
+    if (!followupConsultationReason) {
+      alert("Please select a Followup Reason");
+      setLoading1(false);
+      return;
+    }
+    if (
+      followupConsultationReason.endsWith("Others") &&
+      !otherfollowupConsultationReason.trim()
+    ) {
+      alert("Please specify Other Consultation Reason");
+      setLoading1(false);
+      return;
+    }
+  }
+
+  // Build submission data
+  const submissionData = {
+    reference: reference || false,
+    appointmentId: appointment ? appointment.id : null,
+    formDataDashboard: {
+      typeofVisit: visit,
+      category: type,
+      register: register,
+      purpose: purpose,
+    },
+    extraData: {},
+    formData: {
+      ...formData,
+      entry_date: today,
+      type: type,
+      type_of_visit: visit,
+      register: register,
+      purpose: purpose,
+      profilepic: uploadedImage || profileImage,
+    },
   };
+
+  // Add extra fields based on register
+  if (
+    register === "Annual / Periodical" ||
+    register === "Periodical (Food Handler)"
+  ) {
+    submissionData.extraData = {
+      year: annualPeriodicalFields.year,
+      batch: annualPeriodicalFields.batch,
+      hospitalName: annualPeriodicalFields.hospitalName,
+    };
+  }
+
+  if (register.startsWith("Camps")) {
+    submissionData.extraData = {
+      campName: campFields.campName,
+      hospitalName: campFields.hospitalName,
+    };
+  }
+
+  if (register.startsWith("Pre Placement Same Contract")) {
+    submissionData.extraData = {
+      contractName: campFields.contractName,
+    };
+  }
+
+  if (register.startsWith("Pre Placement Contract change")) {
+    submissionData.extraData = {
+      prevcontractName: campFields.prevcontractName,
+      old_emp_no: campFields.old_emp_no,
+    };
+  }
+
+  if (register.startsWith("BP Sugar Check")) {
+    submissionData.extraData = {
+      status: bpSugarStatus,
+    };
+  }
+
+  if (register.startsWith("BP Sugar Chart")) {
+    submissionData.extraData = {
+      reason: bpSugarChartReason,
+    };
+  }
+
+  if (register.startsWith("Curative - Follow Up Visits")) {
+    submissionData.extraData = {
+      purpose: followupConsultationReason,
+      ...(followupConsultationReason.endsWith("Others") && {
+        purpose_others: otherfollowupConsultationReason,
+      }),
+    };
+  }
+
+  // Submit data to backend
+  try {
+    const response = await axios.post(
+      "http://localhost:8000/addEntries",
+      submissionData,
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    if (response.status === 200) {
+      const mrd = response.data.mrdNo;
+
+      setMRDNo(mrd);
+      setFormData((prev) => ({ ...prev, mrdNo: mrd }));
+      setdata([{ ...formData, mrdNo: mrd }]);
+
+      alert("Data submitted successfully!");
+
+      // 🚨 IMPORTANT — FREEZE ALL FIELDS AFTER MRD IS GENERATED
+      setIsFrozen(true);
+    } else {
+      alert("Something went wrong!");
+    }
+  } catch (error) {
+    if (error.response && error.response.status === 400) {
+      alert(error.response.data.error);
+    } else {
+      console.error("Error submitting form:", error);
+      alert("Error submitting data!");
+    }
+  } finally {
+    setLoading1(false);
+  }
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1453,9 +1470,16 @@ const NewVisit = () => {
               </div>
             </div>
 
-            <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-              Add Basic Details
-            </button>
+            <button
+  onClick={handleSubmit}
+  disabled={!isUpdated}
+  className={`mt-8 px-6 py-3 rounded-lg transition duration-300
+    ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
+  `}
+>
+  Add Basic Details
+</button>
+
             </div>)}
           </div>
         );
@@ -1688,6 +1712,7 @@ const NewVisit = () => {
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                       value={type}
                       onChange={handleTypeChange}
+                      disabled = {isFrozen}
                     >
                       <option value="">Select Type</option>
                       <option>Employee</option>
@@ -1705,6 +1730,7 @@ const NewVisit = () => {
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                       value={visit}
                       onChange={handleVisitChange}
+                      disabled = { isFrozen}
                     >
                       <option value="">Select Visit Type</option>
                       <option>Preventive</option>
@@ -1721,6 +1747,7 @@ const NewVisit = () => {
                       className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm"
                       value={register}
                       onChange={handleRegisterChange}
+                      disabled = {isFrozen}
                     >
                       <option value="">Select Register</option>
                       {getRegisterOptions().map((option) => (

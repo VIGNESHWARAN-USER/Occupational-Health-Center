@@ -1907,7 +1907,7 @@ const VaccinationForm = ({ addFilter }) => {
 
         {/* Disease */}
         <div>
-          <label htmlFor="d-v-f">Disease</label>
+          <label htmlFor="d-v-f">Vaccine Against</label>
           <select
             name="disease"
             id="d-v-f"
