@@ -1417,59 +1417,82 @@ def fetchVisitDataWithDate(request, aadhar, date_str):
     logger.warning(f"fetchVisitDataWithDate failed for aadhar {aadhar}: Invalid request method. Only GET allowed.")
     return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
+import json
+import logging
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
+from django.db import transaction
+
+# Assuming these imports exist in your project
+# from .models import employee_details
+# from .utils import parse_date_internal
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def update_employee_status(request):
     """Creates a NEW employee_details record for TODAY with updated status fields, based on the last known record."""
     if request.method == 'POST':
-        aadhar = None # Initialize for logging
+        aadhar = None  # Initialize for logging safety
         try:
             data = json.loads(request.body)
-            logger.debug(f"Received data for update_employee_status: {data}")
+            logger.debug(f"Received data for update_status: {data}")
 
-            aadhar = data.get('aadhar')
-            employee_status_val = data.get('employee_status')
+            aadhar = data.get('identifier')
+            status_val = data.get('status')
             date_since_str = data.get('date_since')
-            transfer_details_val = data.get('transfer_details', '') # Default to empty
-            other_reason_details_val = data.get('other_reason_details', '') # Default to empty
+            transfer_details_val = data.get('transfer_details', '')  # Default to empty
+            other_reason_details_val = data.get('other_reason_details', '')  # Default to empty
 
-            if not aadhar or not employee_status_val or not date_since_str:
-                logger.warning("update_employee_status failed: Missing aadhar, employee_status, or date_since.")
-                return JsonResponse({'success': False, 'message': 'Please provide aadhar, employee_status and date_since.'}, status=400)
+            # Debug print (Optional: remove for production)
+            print("Aadhar : ", aadhar, "status : ", status_val, "date_since : ", date_since_str)
 
+            if not aadhar or not status_val or not date_since_str:
+                logger.warning("update_status failed: Missing aadhar, status, or date_since.")
+                return JsonResponse({'success': False, 'message': 'Please provide aadhar, status and date_since.'}, status=400)
+
+            # Ensure parse_date_internal helper function is imported or defined
             date_since_obj = parse_date_internal(date_since_str)
             if not date_since_obj:
-                logger.warning(f"update_employee_status failed for aadhar {aadhar}: Invalid date_since format.")
+                logger.warning(f"update_status failed for aadhar {aadhar}: Invalid date_since format.")
                 return JsonResponse({'success': False, 'message': 'Invalid date_since format. Use YYYY-MM-DD.'}, status=400)
 
             # Find the most recent entry for this aadhar
             last_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
 
             if not last_entry:
-                 logger.warning(f"update_employee_status failed: Cannot create new entry as no previous record found for aadhar {aadhar}.")
-                 # Option: Could create a minimal new record here if desired, but original logic needed a base.
-                 return JsonResponse({'success': False, 'message': 'No previous employee record found to base the new status entry on.'}, status=404)
+                logger.warning(f"update_status failed: Cannot create new entry as no previous record found for aadhar {aadhar}.")
+                return JsonResponse({'success': False, 'message': 'No previous employee record found to base the new status entry on.'}, status=404)
 
-            # Create a new entry based on the last one, updating status fields
-            new_entry_data = model_to_dict(last_entry, exclude=['id', 'pk', 'entry_date']) # Exclude keys, entry_date
-            new_entry_data['entry_date'] = date.today() # Set to today
-            new_entry_data['employee_status'] = employee_status_val
+            # Create a new entry based on the last one, excluding primary keys and old date
+            new_entry_data = model_to_dict(last_entry, exclude=['id', 'pk', 'entry_date'])
+            
+            # Update specific fields
+            new_entry_data['entry_date'] = date.today()  # Set to today
+            new_entry_data['status'] = status_val
             new_entry_data['since_date'] = date_since_obj
             new_entry_data['transfer_details'] = transfer_details_val
             new_entry_data['other_reason_details'] = other_reason_details_val
-            # Important: Reassign FileField/ImageField if copying is needed
-            # model_to_dict doesn't handle files. Manually copy reference.
+            new_entry_data['aadhar'] = aadhar 
+
+            # Important: model_to_dict skips FileFields/ImageFields. 
+            # Manually copy the reference from the old object to the new dict.
             new_entry_data['profilepic'] = last_entry.profilepic
 
-            # Create the new record
-            new_entry = employee_details.objects.create(aadhar=aadhar, **new_entry_data)
+            # --- FIX IS HERE ---
+            # We removed 'aadhar=aadhar' because 'aadhar' is already inside the new_entry_data dictionary.
+            new_entry = employee_details.objects.create(**new_entry_data)
+            
             logger.info(f"Created new status entry (ID: {new_entry.id}) for aadhar {aadhar} based on last entry (ID: {last_entry.id}).")
             return JsonResponse({'success': True, 'message': 'New status entry created successfully for today.'})
 
         except json.JSONDecodeError:
-             logger.error("update_employee_status failed: Invalid JSON.", exc_info=True)
-             return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
+            logger.error("update_status failed: Invalid JSON.", exc_info=True)
+            return JsonResponse({'success': False, 'message': 'Invalid JSON data.'}, status=400)
         except Exception as e:
-            logger.exception(f"update_employee_status failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            logger.exception(f"update_status failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
             return JsonResponse({'success': False, 'message': 'An internal server error occurred.'}, status=500)
     else:
         response = JsonResponse({'error': 'Invalid request method. Only POST allowed.'}, status=405)
@@ -2318,59 +2341,74 @@ def add_significant_notes(request):
         response['Allow'] = 'POST'
         return response
 
+import json
+import logging
+from datetime import date, datetime
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+# from .models import SignificantNotes, employee_details 
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
-def get_notes(request, aadhar):
-    """Fetches significant notes and the LATEST employee status based on AADHAR, with debug logging."""
+def get_notes(request, aadhar): 
+    """
+    Fetches significant notes and the FULL employment status history.
+    Argument name is 'aadhar' to match urls.py, but treated as a generic identifier.
+    """
     if request.method == 'GET':
         try:
-            # Log incoming parameter
-            print(f"[DEBUG] get_notes called with AADHAR: {aadhar}")
-            logger.info(f"get_notes called with AADHAR: {aadhar}")
+            # Alias 'aadhar' to 'identifier' for clarity if you use this for other IDs later
+            identifier = aadhar 
+            
+            logger.info(f"get_notes called with Identifier: {identifier}")
 
-            # Fetch notes for the specific AADHAR
-            notes = list(SignificantNotes.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').values())
-            print(f"[DEBUG] Notes fetched: {notes}")
-            logger.info(f"Fetched {len(notes)} notes for aadhar {aadhar}")
+            # 1. Fetch Significant Notes
+            # Using 'identifier' to filter (assuming the column in DB is 'aadhar')
+            notes_queryset = SignificantNotes.objects.filter(aadhar=identifier).order_by('-entry_date', '-id').values()
+            notes_list = list(notes_queryset)
 
-            # Convert entry_date to string
-            for note in notes:
-                if isinstance(note.get('entry_date'), date):
+            # Convert date objects to strings
+            for note in notes_list:
+                if note.get('entry_date') and isinstance(note['entry_date'], (date, datetime)):
                     note['entry_date'] = note['entry_date'].isoformat()
 
-            # Fetch the latest employee status entry
-            latest_employee_entry = employee_details.objects.filter(aadhar=aadhar).order_by('-entry_date', '-id').first()
-            print(f"[DEBUG] Latest employee entry: {latest_employee_entry}")
+            # 2. Fetch Employment Status History (All records)
+            status_queryset = employee_details.objects.filter(aadhar=identifier).order_by('-entry_date', '-id').values()
+            status_list = list(status_queryset)
             
-            emp_status_data = {}
-            if latest_employee_entry:
-                emp_status_data = {
-                    'employee_status': latest_employee_entry.employee_status,
-                    'since_date': latest_employee_entry.since_date.isoformat() if latest_employee_entry.since_date else None,
-                    'transfer_details': latest_employee_entry.transfer_details,
-                    'other_reason_details': latest_employee_entry.other_reason_details
-                }
-                print(f"[DEBUG] Status data: {emp_status_data}")
-                logger.info(f"Latest status for aadhar {aadhar}: {emp_status_data}")
-            else:
-                print("[DEBUG] No status entry found for this AADHAR")
-                logger.info(f"No employee status found for aadhar {aadhar}")
+            # Process status list
+            for status in status_list:
+                # Convert dates
+                if status.get('entry_date') and isinstance(status['entry_date'], (date, datetime)):
+                    status['entry_date'] = status['entry_date'].isoformat()
+                
+                if status.get('since_date') and isinstance(status['since_date'], (date, datetime)):
+                    status['since_date'] = status['since_date'].isoformat()
 
-            # Log final response
-            response_data = {'notes': notes, 'status': emp_status_data}
-            print(f"[DEBUG] Returning data: {response_data}")
-            logger.info(f"Returning notes and status for aadhar {aadhar}")
+                # Normalize fields
+                status['status'] = status.get('status', 'Active')
+                status['transfer_details'] = status.get('transfer_details', '')
+                status['other_reason_details'] = status.get('other_reason_details', '')
 
-            return JsonResponse(response_data)
+            # 3. Construct Response
+            response_data = {
+                'notes': notes_list,
+                'status_history': status_list,
+                'message': 'Data fetched successfully'
+            }
+            
+            if not notes_list and not status_list:
+                response_data['message'] = "No records found for this identifier."
+
+            return JsonResponse(response_data, status=200)
 
         except Exception as e:
-            print(f"[ERROR] Exception in get_notes: {e}")
-            logger.exception(f"get_notes failed for aadhar {aadhar}: An unexpected error occurred.")
+            logger.exception(f"get_notes failed for identifier {identifier}")
             return JsonResponse({'error': "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
-        print(f"[DEBUG] Invalid request method: {request.method}")
-        response = JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
-        response['Allow'] = 'GET'
-        return response
+        return JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
+
 
 # Generic form creation handler
 def _create_form(request, model_class, form_name, required_fields=None):
@@ -5911,7 +5949,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
             'Employment Details_Previous Employer': 'previousemployer',
             'Employment Details_Previous Location': 'previouslocation',
             'Employment Details_Employee Number': 'emp_no',
-            'Employment Details_Employee Status': 'employee_status',
+            'Employment Details_Status': 'status',
         })
     elif excel_data_type == 'visitor':
         # Mappings specific to Visitor
