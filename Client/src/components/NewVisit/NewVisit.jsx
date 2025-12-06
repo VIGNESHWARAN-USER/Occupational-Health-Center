@@ -153,7 +153,7 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Curative - Follow Up Visits": "Follow Up Visits",
-        "BP Sugar Chart": "Outpatient",
+        "BP Sugar Chart (Abormal Value)": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
@@ -317,7 +317,7 @@ const NewVisit = () => {
       }
     }
 
-    if (register.startsWith("BP Sugar Chart")) {
+    if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
       if (!bpSugarChartReason) {
         alert("Please select Job Nature (Reason)");
         setLoading1(false);
@@ -327,7 +327,7 @@ const NewVisit = () => {
 
     if (register.startsWith("Curative - Follow Up Visits")) {
         if (!followupConsultationReason) {
-          alert("Please select a Followup Consultation reason.");
+          alert("Please select a Follow up Consultation reason.");
           setLoading1(false);
           return;
         }
@@ -403,7 +403,7 @@ const NewVisit = () => {
       };
     }
 
-    if (register.startsWith("BP Sugar Chart")) {
+    if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
       submissionData.extraData = {
         ...submissionData.extraData,
         reason: bpSugarChartReason
@@ -639,8 +639,8 @@ const NewVisit = () => {
             setBpSugarStatus(appointment.bp_sugar_status || "");
         }
 
-        // D. BP Sugar Chart Reason
-        if (targetRegister.startsWith("BP Sugar Chart")) {
+        // D. BP Sugar Chart (Abormal Value) Reason
+        if (targetRegister.startsWith("BP Sugar Chart (Abormal Value)")) {
             setBpSugarChartReason(appointment.bp_sugar_chart_reason || "");
         }
 
@@ -741,8 +741,9 @@ const NewVisit = () => {
     { id: "BasicDetails", label: "Basic Details" },
     { id: "Vitals", label: "Vitals" },
     { id: "MedicalHistory", label: "Medical/Surgical/Personal History" },
-    { id: "Investigations", label: "Investigations" },
     { id: "Vaccination", label: "Vaccination" },
+    { id: "Investigations", label: "Investigations" },
+    
     visit === "Preventive" && register !== "Camps (Optional)" && { id: "Fitness", label: "Fitness" },
 
     
@@ -1869,7 +1870,7 @@ const NewVisit = () => {
                 )}
 
 
-                {register.startsWith("BP Sugar Chart") && (
+                {register.startsWith("BP Sugar Chart (Abormal Value)") && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
                       <label className="block text-gray-700 text-sm font-bold mb-2">Job Nature (Reason)</label>
@@ -1891,7 +1892,7 @@ const NewVisit = () => {
                 {(register.startsWith("Curative - Follow Up Visits") || register.startsWith("Preventive - Follow Up Visits")) && (
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <label className="block text-gray-700 text-sm font-bold mb-2">Followup Consultation</label>
+                      <label className="block text-gray-700 text-sm font-bold mb-2">Follow Up of</label>
                       {(() => {
                         if (type === "Visitor" && visit === "Curative" ) {
                           return (
@@ -1906,7 +1907,7 @@ const NewVisit = () => {
                                 <option>Over Counter illness</option>
                                 <option>Injury</option>
                                 <option>Over Counter Injury</option>
-                                <option>BP Sugar Chart</option>
+                                <option>BP Sugar Chart (Abormal Value) (Abormal Value)</option>
                                 <option>Injury Outside the Premises</option>
                                 <option>Over Counter Injury Outside the Premises</option>
                                 <option>Cure Others</option>
@@ -1927,7 +1928,7 @@ const NewVisit = () => {
                                 <option>Over Counter illness</option>
                                 <option>Injury</option>
                                 <option>Over Counter Injury</option>
-                                <option>BP Sugar Chart</option>
+                                <option>BP Sugar Chart (Abormal Value)</option>
                                 <option>Injury Outside the Premises</option>
                                 <option>Over Counter Injury Outside the Premises</option>
                                 <option>Cure Others</option>
@@ -1963,7 +1964,7 @@ const NewVisit = () => {
                                 <option>Over Counter illness</option>
                                 <option>Injury</option>
                                 <option>Over Counter Injury</option>
-                                <option>BP Sugar Chart</option>
+                                <option>BP Sugar Chart (Abormal Value)</option>
                                 <option>Injury Outside the Premises</option>
                                 <option>Over Counter Injury Outside the Premises</option>
                                 <option>Cure Others</option>

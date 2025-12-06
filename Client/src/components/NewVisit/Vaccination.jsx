@@ -320,7 +320,7 @@ const Vaccination = ({ data, mrdNo }) => {
                     htmlFor={`disease_name_${vIndex}`}
                     className="block text-sm font-medium text-gray-700 mb-1"
                   >
-                    Vaccine<span className="text-red-500">*</span>
+                    Vaccine against<span className="text-red-500">*</span>
                   </label>
 
                   <select
