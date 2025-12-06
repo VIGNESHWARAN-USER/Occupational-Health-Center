@@ -19,8 +19,8 @@ const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
   const navigate = useNavigate();
 
-  const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,appointment, reference} = useLocation().state || "";
-  console.log(search,mrdNumber, reference,type1, type_of_visit1, register1, purpose1, appointment)
+  const {search, mrdNumber,type1, type_of_visit1, register1, purpose1 ,appointment, reference, fieldType} = useLocation().state || "";
+  console.log(fieldType)
 
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
@@ -221,12 +221,16 @@ const NewVisit = () => {
       [name]: value
     }));
   };
+  
+  
   const [mrdNo, setMRDNo] = useState(mrdNumber);
-  console
+  
   const handleRevert = async () => {
     const response = await axios.post('http://localhost:8000/update-status/', {
       id: appointment.mrdNo || false,
-      status: 'initiate'
+      status: 'initiate',
+      field: fieldType,
+      doctor: localStorage.getItem('userData') || 'Unknown'
     });
       navigate("../appointments");
   };
@@ -1465,7 +1469,7 @@ const NewVisit = () => {
       case "MedicalHistory":
         return <MedicalHistory data={data}  mrdNo={mrdNo}/>;
       case "Consultation":
-        return <Consultation data={data} type={visit} register = {register}  mrdNo={mrdNo}/>;
+        return <Consultation data={data} type={visit} register = {register}  mrdNo={mrdNo} reference={true} appointment={appointment}/>;
       case "Prescription":
         return <Prescription data={data} condition={false} register = {register}  mrdNo={mrdNo}/>;
       case "formFields":

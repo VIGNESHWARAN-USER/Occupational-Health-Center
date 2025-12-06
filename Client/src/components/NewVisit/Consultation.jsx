@@ -115,7 +115,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
 };
 
 
-const Consultation = ({ data, type, mrdNo, register }) => {
+const Consultation = ({ data, type, mrdNo, register, reference, appointment }) => {
   // --- State Variables ---
   const [complaints, setComplaints] = useState('');
   const [examination, setExamination] = useState('');
@@ -284,7 +284,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
     // This prevents carrying over the full history from previous consultations.
     const currentSessionHistory = [...new Set([...newMrds, mrdNo])];
 
-
+    console.log(submittedDoctor, bookedDoctor)
     setIsSubmitting(true);
     const consultationPayload = {
       aadhar: emp_no,
@@ -314,6 +314,7 @@ const Consultation = ({ data, type, mrdNo, register }) => {
       shifting_required: shiftingRequired,
       shifting_notes: shiftingRequired === 'yes' ? shiftingNotes : '',
       ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '',
+      reference: reference || false,
       // --- UPDATED: Send only the current session's MRD history in the payload ---
       follow_up_mrd_history: currentSessionHistory,
     };

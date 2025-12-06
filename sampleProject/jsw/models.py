@@ -1467,7 +1467,7 @@ class FitnessAssessment(BaseModel):
         DEFAULT = 'default', 'Default'
 
     # --- Fields ---
-    emp_no = models.CharField(max_length=50) # Consider making this non-nullable if always required
+    emp_no = models.CharField(max_length=50, null=True) # Consider making this non-nullable if always required
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     employer = models.TextField(blank=True, null=True)
 
@@ -1623,7 +1623,19 @@ from django.utils import timezone
 
 class Consultation(models.Model):
     # --- Identifiers ---
-    emp_no = models.CharField(max_length=50, blank=True, null=True, db_index=True)
+
+    class StatusChoices(models.TextChoices):
+        INITIATE = 'initiate', 'Initiate'
+        IN_PROGRESS = 'inprogress', 'In Progress'
+        COMPLETED = 'completed', 'Completed'
+        DEFAULT = 'default', 'Default'
+
+    status = models.CharField(
+        max_length=20,
+        choices=StatusChoices.choices,
+        default=StatusChoices.INITIATE
+    )
+    emp_no = models.CharField(max_length=50, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.CharField(max_length=255, blank=True, null=True)
     entry_date = models.DateField(default=timezone.now)
@@ -1673,7 +1685,6 @@ class Consultation(models.Model):
     bookedDoctor = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
-        unique_together = ('aadhar', 'entry_date') # Changed to aadhar for better uniqueness
         ordering = ['-entry_date', '-id']
 
     def __str__(self):

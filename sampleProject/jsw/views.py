@@ -226,61 +226,75 @@ def create_default_members(request):
 
     try:
         default_members = [
+            # {
+            #     "email": "2k22cse162@kiot.ac.in",
+            #     "role": "nurse",
+            #     "employee_number": "900001",
+            #     "aadhar": "123456789001",
+            #     "memberType": "ohc",
+            #     "phone_number": "9000000001",
+            #     "name": "VICKY",
+            #     "designation": "nurse",
+            #     "date_exited": None,
+            #     "doj": "2025-11-28",
+            #     "job_nature": "nurse",
+            #     "password": "nurse"
+            # },
+            # {
+            #     "email": "2k22cse163@kiot.ac.in",
+            #     "role": "doctor",
+            #     "employee_number": "900002",
+            #     "aadhar": "123456789003",
+            #     "memberType": "ohc",
+            #     "phone_number": "9000000002",
+            #     "name": "VIGNESHWARAN",
+            #     "designation": "doctor",
+            #     "date_exited": None,
+            #     "doj": "2025-11-28",
+            #     "job_nature": "doctor",
+            #     "password": "doctor"
+            # },
+            # {
+            #     "email": "2k22cse124@kiot.ac.in",
+            #     "role": "admin",
+            #     "employee_number": "900003",
+            #     "aadhar": "123456789002",
+            #     "memberType": "ohc",
+            #     "phone_number": "9600207797",
+            #     "name": "RAMESH",
+            #     "designation": "admin",
+            #     "date_exited": "2025-11-28",
+            #     "doj": "2025-11-28",
+            #     "job_nature": "admin",
+            #     "password": "admin"
+            # },
+            # {
+            #     "email": "2k22cse114@kiot.ac.in",
+            #     "role": "pharma",
+            #     "employee_number": "900004",
+            #     "aadhar": "123456789004",
+            #     "memberType": "ohc",
+            #     "phone_number": "9000000004",
+            #     "name": "PRAMOTH",
+            #     "designation": "pharma",
+            #     "date_exited": None,
+            #     "doj": "2025-11-28",
+            #     "job_nature": "pharmacy",
+            #     "password": "pharma"
+            # }
             {
-                "email": "2k22cse162@kiot.ac.in",
-                "role": "nurse",
-                "employee_number": "900001",
-                "aadhar": "123456789001",
-                "memberType": "ohc",
-                "phone_number": "9000000001",
-                "name": "VICKY",
-                "designation": "nurse",
-                "date_exited": None,
-                "doj": "2025-11-28",
-                "job_nature": "nurse",
-                "password": "nurse"
-            },
-            {
-                "email": "2k22cse163@kiot.ac.in",
+                "email": "2k22cse117@kiot.ac.in",
                 "role": "doctor",
-                "employee_number": "900002",
-                "aadhar": "123456789003",
+                "employee_number": "900005",
+                "aadhar": "123456789004",
                 "memberType": "ohc",
-                "phone_number": "9000000002",
-                "name": "VIGNESHWARAN",
-                "designation": "doctor",
+                "phone_number": "9000000005",
+                "name": "PRAVEEN",
+                "designation": "pharma",
                 "date_exited": None,
                 "doj": "2025-11-28",
                 "job_nature": "doctor",
                 "password": "doctor"
-            },
-            {
-                "email": "2k22cse124@kiot.ac.in",
-                "role": "admin",
-                "employee_number": "900003",
-                "aadhar": "123456789002",
-                "memberType": "ohc",
-                "phone_number": "9600207797",
-                "name": "RAMESH",
-                "designation": "admin",
-                "date_exited": "2025-11-28",
-                "doj": "2025-11-28",
-                "job_nature": "admin",
-                "password": "admin"
-            },
-            {
-                "email": "2k22cse114@kiot.ac.in",
-                "role": "pharma",
-                "employee_number": "900004",
-                "aadhar": "123456789004",
-                "memberType": "ohc",
-                "phone_number": "9000000004",
-                "name": "PRAMOTH",
-                "designation": "pharma",
-                "date_exited": None,
-                "doj": "2025-11-28",
-                "job_nature": "pharmacy",
-                "password": "pharma"
             }
         ]
 
@@ -2104,29 +2118,64 @@ logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def add_consultation(request):
-    """Adds or updates consultation data based on AADHAR and today's date."""
+    """
+    Adds or updates consultation data based on MRD number.
+    If accessLevel is 'doctor', marks status as COMPLETED.
+    """
     if request.method == "POST":
         aadhar = None
+        mrd_no = None
         try:
             data = json.loads(request.body.decode('utf-8'))
             logger.debug(f"Received data for consultation: {json.dumps(data)[:500]}...")
             
             aadhar = data.get('aadhar')
-            entry_date = date.today()
+            mrd_no = data.get('mrdNo') # Primary lookup key
             accessLevel = data.get('accessLevel') 
-            if not aadhar or not accessLevel:
+            entry_date = date.today()
+
+            if not aadhar:
                 logger.warning("add_consultation failed: Aadhar required")
                 return JsonResponse({'status': 'error', 'message': 'Aadhar number (aadhar) is required'}, status=400)
+            if not mrd_no:
+                logger.warning("add_consultation failed: MRD required")
+                return JsonResponse({'status': 'error', 'message': 'MRD number (mrdNo) is required'}, status=400)
 
+            # ---------------------------------------------------------
+            # DOCTOR LOGIC
+            # ---------------------------------------------------------
             if accessLevel == "doctor":
                 defaults = {
-                    'complaints': data.get('complaints'), 'examination': data.get('examination'),
-                    'systematic': data.get('systematic'), 'lexamination': data.get('lexamination'),
-                    'diagnosis': data.get('diagnosis'), 'procedure_notes': data.get('procedure_notes'),
-                    'obsnotes': data.get('obsnotes'), 'investigation_details': data.get('investigation_details'),
-                    'advice': data.get('advice'), 'follow_up_date': parse_date_internal(data.get('follow_up_date')),
-                    'case_type': data.get('case_type'), 'illness_or_injury': data.get('illness_or_injury'),
-                    'other_case_details': data.get('other_case_details'), 'notifiable_remarks': data.get('notifiable_remarks'),
+                    # Identifiers (Saved, not looked up)
+                    'aadhar': aadhar,
+                    'entry_date': entry_date,
+                    'emp_no': data.get('emp_no'),
+                    
+                    # Personnel
+                    'submittedDoctor': data.get("submittedDoctor"),
+                    
+                    # --- NEW: Status Logic ---
+                    'status': Consultation.StatusChoices.COMPLETED,
+
+                    # Clinical Data
+                    'complaints': data.get('complaints'), 
+                    'examination': data.get('examination'),
+                    'systematic': data.get('systematic'), 
+                    'lexamination': data.get('lexamination'),
+                    'diagnosis': data.get('diagnosis'), 
+                    'procedure_notes': data.get('procedure_notes'),
+                    'obsnotes': data.get('obsnotes'), 
+                    'investigation_details': data.get('investigation_details'),
+                    'advice': data.get('advice'), 
+                    'follow_up_date': parse_date_internal(data.get('follow_up_date')),
+                    
+                    # Case Details
+                    'case_type': data.get('case_type'), 
+                    'illness_or_injury': data.get('illness_or_injury'),
+                    'other_case_details': data.get('other_case_details'), 
+                    'notifiable_remarks': data.get('notifiable_remarks'),
+                    
+                    # Referral & Shifting
                     'referral': data.get('referral'),
                     'hospital_name': data.get('hospital_name') if data.get('referral') == 'yes' else None,
                     'speciality': data.get('speciality') if data.get('referral') == 'yes' else None,
@@ -2134,36 +2183,56 @@ def add_consultation(request):
                     'shifting_required': data.get('shifting_required'),
                     'shifting_notes': data.get('shifting_notes') if data.get('shifting_required') == 'yes' else None,
                     'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else None,
+                    
                     'special_cases': data.get('special_cases'),
-                    'submittedDoctor': data.get("submittedDoctor"),
-                    'emp_no': data.get('emp_no'),
-                    'mrdNo': data.get('mrdNo'),
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
                 }
+
+                # Update Appointment Side-effect
+                if data.get('reference'):
+                    appointment_data = Appointment.objects.filter(mrdNo=mrd_no).first()
+                    if appointment_data:
+                        appointment_data.consultated_Dr = data.get('submittedDoctor')
+                        appointment_data.status = Appointment.StatusChoices.COMPLETED
+                        appointment_data.save()
+            
+            # ---------------------------------------------------------
+            # NURSE LOGIC
+            # ---------------------------------------------------------
             else:
                 defaults = {
-                    'submittedNurse': data.get("submittedDoctor"),
-                    'bookedDoctor': data.get("bookerDoctor"),
+                    # Identifiers (Saved, not looked up)
+                    'aadhar': aadhar,
+                    'entry_date': entry_date,
                     'emp_no': data.get('emp_no'),
-                    'mrdNo': data.get('mrdNo'),
-                    'submittedNurse': data.get("submittedDoctor"),
+
+                    # Personnel
+                    'submittedNurse': data.get("submittedDoctor"), # Assuming nurse uses same field name in frontend
                     'bookedDoctor': data.get("bookedDoctor"),
+                    
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
                 }
+
+                # Update Appointment Side-effect
+                if data.get('reference'):
+                    appointment_data = Appointment.objects.filter(mrdNo=mrd_no).first()
+                    if appointment_data:
+                        appointment_data.submitted_by_nurse = data.get('submittedDoctor')
+                        appointment_data.submitted_Dr = data.get('bookedDoctor')
+                        appointment_data.save()
             
-            # The existing logic to filter out None values works perfectly here
+            # The existing logic to filter out None values
             filtered_defaults = {k: v for k, v in defaults.items() if v is not None}
 
-            # Use update_or_create to find a record by aadhar and today's date
-            # and update it with the new data, or create a new one.
+            # --- KEY CHANGE: Lookup strictly by mrdNo ---
             instance, created = Consultation.objects.update_or_create(
-                aadhar=aadhar,
-                entry_date=entry_date,
+                mrdNo=mrd_no,
                 defaults=filtered_defaults
             )
 
             message = f"Consultation {'added' if created else 'updated'} successfully"
-            logger.info(f"Consultation successful for aadhar {aadhar}. Created: {created}. ID: {instance.id}")
+            logger.info(f"Consultation successful. Created: {created}. ID: {instance.id}")
+            
             return JsonResponse({
                 'status': 'success', 'message': message,
                 'consultation_id': instance.id, 'created': created
@@ -2173,13 +2242,13 @@ def add_consultation(request):
             logger.error("add_consultation failed: Invalid JSON data.", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
         except ValidationError as e:
-            logger.error(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: Validation error: {e.message_dict}", exc_info=True)
+            logger.error(f"add_consultation failed: Validation error: {e.message_dict}", exc_info=True)
             return JsonResponse({'status': 'error', 'message': 'Validation Error', 'details': e.message_dict}, status=400)
         except IntegrityError as e:
-             logger.error(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: Integrity error: {e}", exc_info=True)
+             logger.error(f"add_consultation failed: Integrity error: {e}", exc_info=True)
              return JsonResponse({'status': 'error', 'message': 'Database integrity error.'}, status=409)
         except Exception as e:
-            logger.exception(f"add_consultation failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
+            logger.exception(f"add_consultation failed: An unexpected error occurred.")
             return JsonResponse({'status': 'error', 'message': 'An internal server error occurred.', 'detail': str(e)}, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method. Use POST.'}, status=405)
@@ -3117,22 +3186,37 @@ def update_status(request):
     if request.method == "POST":
         appointment_id = None
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+            data = json.loads(request.body.decode('utf-8')) 
             id = data.get("id")
-            print(id)
-            new_status = data.get("status") 
-
+            field = data.get("field")
+            doctor = data.get("doctor")
+            status_val = data.get("status") 
+            print(id, field, doctor, status_val)
             if not id:
                  return JsonResponse({"success": False, "message": "Appointment ID ('id') is required."}, status=400)
 
-            fitness = get_object_or_404(FitnessAssessment, mrdNo=id)
-            if new_status == "inprogress" :
-                fitness.status = FitnessAssessment.StatusChoices.IN_PROGRESS
-            elif new_status == "initiate":
-                fitness.status = FitnessAssessment.StatusChoices.INITIATE
-            fitness.save()
-            logger.info(f"fitness status updated successfully for ID {id}. New status: {fitness.status}")
-            return JsonResponse({"success": True, "message": "Status updated", "status": fitness.status})
+            if field == "assessment":
+                print("Hello")
+                fitness = get_object_or_404(FitnessAssessment, mrdNo=id)
+                if status_val == "inprogress" :
+                    fitness.status = FitnessAssessment.StatusChoices.IN_PROGRESS
+                    fitness.submittedDoctor = doctor
+                elif status_val == "initiate":
+                    fitness.status = FitnessAssessment.StatusChoices.INITIATE
+                    fitness.submittedDoctor = ""
+                fitness.save()
+            elif field == "consultation":
+                print("Hii")
+                fitness = get_object_or_404(Consultation, mrdNo=id)
+                if status_val == "inprogress" :
+                    fitness.status = Consultation.StatusChoices.IN_PROGRESS
+                    fitness.submittedDoctor = doctor
+                elif status_val == "initiate":
+                    fitness.status = Consultation.StatusChoices.INITIATE
+                    fitness.submittedDoctor = ""
+                fitness.save()
+            logger.info(f"fitness status updated successfully for ID {id}. New status: {status_val}")
+            return JsonResponse({"success": True, "message": "Status updated", "status": status_val})
 
         except Http404:
             logger.warning(f"update_fitness_status failed: fitness with ID {id} not found.")
