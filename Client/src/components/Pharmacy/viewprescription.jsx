@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Sidebar from "../Sidebar";
 import Prescription from '../NewVisit/Prescription';
+import { FaEraser } from "react-icons/fa";
 
 function Viewprescription() {
     const [prescriptions, setPrescriptions] = useState([]);
@@ -281,10 +282,10 @@ function Viewprescription() {
     };
 
     return (
-        <div className="flex h-screen bg-gray-100">
+        <div className="flex h-screen">
             <Sidebar />
             <div className="flex-1 p-4 overflow-y-auto">
-                <h1 className="text-2xl font-semibold mb-4">View Prescriptions</h1>
+                <h1 className="text-2xl font-semibold mb-4 text-center">View Prescriptions</h1>
 
                 {error && !loading && (
                     <div className="my-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -294,14 +295,14 @@ function Viewprescription() {
 
                 <div className="mb-4">
                     <button
-                        className={`font-bold py-2 px-4 rounded mr-2 ${!showIssued ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}`}
+                        className={`font-bold py-2 px-4 rounded mr-2 ${!showIssued ? 'bg-blue-500 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-300'}`}
                         onClick={handleShowPending}
                         disabled={loading || isUpdating}
                     >
                         Pending ({pendingCount})
                     </button>
                     <button
-                        className={`font-bold py-2 px-4 rounded ${showIssued ? 'bg-green-500 text-white shadow-md' : 'bg-gray-300 text-gray-700 hover:bg-gray-400'}`}
+                        className={`font-bold py-2 px-4 rounded ${showIssued ? 'bg-green-500 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-300'}`}
                         onClick={handleShowIssued}
                         disabled={loading || isUpdating}
                     >
@@ -333,12 +334,13 @@ function Viewprescription() {
                                 min={fromDate || undefined} 
                             />
                         </div>
-                        <button 
-                            className="bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-1 px-3 rounded text-sm" 
-                            onClick={clearDateFilter} 
-                            disabled={!fromDate && !toDate}
+                        <button
+                        className="bg-gray-400 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={clearDateFilter}
+                        disabled={!fromDate && !toDate}
                         >
-                            Clear Dates
+                        <FaEraser size={12} />
+                        Clear Dates
                         </button>
                     </div>
                 )}

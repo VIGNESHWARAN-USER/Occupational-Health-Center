@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../Sidebar";
 import axios from "axios";
 import * as XLSX from "xlsx";
+import { FaDownload } from "react-icons/fa";
 
 const CurrentStock = () => {
   const [stockData, setStockData] = useState([]);
@@ -27,7 +28,6 @@ const CurrentStock = () => {
     doArchiveAndFetch();
   }, []);
 
-  // Handle search input
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
@@ -37,8 +37,8 @@ const CurrentStock = () => {
     } else {
       const filtered = stockData.filter(
         (item) =>
-          item.brand_name.toLowerCase().startsWith(value) ||
-          item.chemical_name.toLowerCase().startsWith(value)
+          item.brand_name.toLowerCase().includes(value) ||
+          item.chemical_name.toLowerCase().includes(value)
       );
       setFilteredData(filtered);
     }
@@ -46,20 +46,41 @@ const CurrentStock = () => {
 
   // Excel Export
   const handleDownloadExcel = () => {
+    if (!stockData || stockData.length === 0) {
+      alert("No stock available to download.");
+      return;
+    }
+
+    // Format date
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    // Format time
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // convert 24hr → 12hr, replace 0 with 12
+    
+    const timeFormatted = `${hours}.${minutes} ${ampm}`;
+
+    const fileName = `Pharmacy Current Stock - ${day}-${month}-${year} @ ${timeFormatted}.xlsx`;
+
+    // Create excel
     const ws = XLSX.utils.json_to_sheet(stockData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "StockData");
-    XLSX.writeFile(wb, "Pharmacy_Current_Stock.xlsx");
+
+    XLSX.writeFile(wb, fileName);
   };
 
   return (
     <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
-          Pharmacy Current Stock
-        </h2>
-
+        
         {/* Search & Download Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
           <input
@@ -71,35 +92,39 @@ const CurrentStock = () => {
           />
           <button
             onClick={handleDownloadExcel}
-            className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg shadow"
           >
-            Download Excel
+            <FaDownload size={15} />
+            <span>Download Excel</span>
           </button>
         </div>
+        <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center"> Pharmacy Current Stock</h2>
 
-        {/* Loading & Error Handling */}
-        {loading ? (
-          <p className="text-gray-600">Loading...</p>
-        ) : error ? (
-          <p className="text-red-500">{error}</p>
-        ) : (
-          <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-blue-600 text-white">
-                  <th className="p-3 text-left">Medicine Form</th>
-                  <th className="p-3 text-left">Brand Name</th>
-                  <th className="p-3 text-left">Chemical Name</th>
-                  <th className="p-3 text-left">Dose/Volume</th>
-                  <th className="p-3 text-left">Entry Date</th>
-                  <th className="p-3 text-left">Total Quantity</th>
-                  <th className="p-3 text-left">Current Quantity</th>
-                  <th className="p-3 text-left">Expiry Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.length > 0 ? (
-                  filteredData.map((item, index) => (
+          {/* Loading & Error Handling */}
+          {loading ? (
+            <p className="text-gray-600 text-center">Loading...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : filteredData.length === 0 ? (
+              <p className="text-center text-gray-500">No stock available.</p>
+          ) :(
+            
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-blue-600 text-white">
+                    <th className="p-3 text-left">Medicine Form</th>
+                    <th className="p-3 text-left">Brand Name</th>
+                    <th className="p-3 text-left">Chemical Name</th>
+                    <th className="p-3 text-left">Dose/Volume</th>
+                    <th className="p-3 text-left">Entry Date</th>
+                    <th className="p-3 text-left">Total Quantity</th>
+                    <th className="p-3 text-left">Current Quantity</th>
+                    <th className="p-3 text-left">Expiry Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((item, index) => (
                     <tr key={index} className="border-b">
                       <td className="p-3">{item.medicine_form}</td>
                       <td className="p-3 font-bold">{item.brand_name}</td>
@@ -107,21 +132,20 @@ const CurrentStock = () => {
                       <td className="p-3">{item.dose_volume}</td>
                       <td className="p-3">{item.entry_date}</td>
                       <td className="p-3 font-bold">{item.total_quantity}</td>
-                      <td className="p-3 text-green-600 font-semibold">{item.quantity_expiry}</td>
+                      <td className={`p-3 font-semibold ${
+                        item.quantity_expiry <= 10 ? 'text-red-600' : 
+                        item.quantity_expiry <= 30 ? 'text-yellow-500' : 'text-green-600'
+                      }`}>
+                        {item.quantity_expiry}
+                      </td>
                       <td className="p-3">{item.expiry_date}</td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="8" className="p-4 text-center text-gray-500">
-                      No stock available
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                  ))}
+                </tbody>
+              </table>
+            )}
+        </div>
+        
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import axios from "axios";
 import Sidebar from "../Sidebar";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { FaFilter, FaEraser, FaDownload, FaPlus} from "react-icons/fa";
 import { debounce } from "lodash";
 
 const formatDate = (isoDate) => {
@@ -165,6 +166,11 @@ const DiscardedMedicines = () => {
   };
 
   const handleDownloadExcel = () => {
+    if (!discardedMedicines || discardedMedicines.length === 0) {
+      alert("No discarded medicine records available to download.");
+      return;
+    }
+
     const dataToExport = discardedMedicines.map((item) => ({
       Form: item.medicine_form,
       Chemical: item.chemical_name,
@@ -172,17 +178,32 @@ const DiscardedMedicines = () => {
       Dose: item.dose_volume,
       Quantity: item.quantity,
       "Discarded Date": formatDate(item.entry_date),
-      "Expiry Date": item.expiry_date,
+      "Expiry Date": formatDate(item.expiry_date),
       Reason: item.reason,
     }));
 
+    // ---------- Generate Filename with Date & Time ----------
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    const formattedTime = `${hours}.${minutes} ${ampm}`;
+
+    const fileName = `Discarded Medicines - ${day}-${month}-${year} @ ${formattedTime}.xlsx`;
+
+    // ---------- Create Excel File ----------
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Discarded Medicines");
 
-    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
-    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
-    saveAs(data, "Discarded_Medicines.xlsx");
+    XLSX.writeFile(workbook, fileName);
   };
 
   return (
@@ -192,21 +213,54 @@ const DiscardedMedicines = () => {
         {!showForm ? (
           <div>
             <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-              <button className="bg-blue-600 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg" onClick={() => setShowForm(true)}>
+              <button 
+                className="bg-blue-600 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2" 
+                onClick={() => setShowForm(true)}
+              >
+                <FaPlus size={14} />
                 Add Discarded Medicine
               </button>
+
               <div className="flex flex-wrap items-center gap-2">
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border rounded px-2 py-1" />
+                <input 
+                  type="date" 
+                  value={fromDate} 
+                  onChange={(e) => setFromDate(e.target.value)} 
+                  className="border rounded px-2 py-1" 
+                />
                 <span className="text-gray-700">to</span>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border rounded px-2 py-1" />
-                <button onClick={fetchDiscardedMedicines} className="bg-blue-600 hover:bg-blue-800 text-white px-3 py-1 rounded">
+                <input 
+                  type="date" 
+                  value={toDate} 
+                  onChange={(e) => setToDate(e.target.value)} 
+                  className="border rounded px-2 py-1" 
+                />
+
+                {/* Filter button with icon */}
+                <button 
+                  onClick={fetchDiscardedMedicines} 
+                  className="bg-blue-600 hover:bg-blue-800 text-white px-3 py-1 rounded flex items-center gap-2"
+                >
+                  <FaFilter size={12} />
                   Filter
                 </button>
-                <button onClick={handleClearFilters} className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded">
+
+                {/* Clear button with icon */}
+                <button 
+                  onClick={handleClearFilters} 
+                  className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded flex items-center gap-2"
+                >
+                  <FaEraser size={12} />
                   Clear
                 </button>
               </div>
-              <button onClick={handleDownloadExcel} className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow">
+
+              {/* Download button with icon */}
+              <button 
+                onClick={handleDownloadExcel} 
+                className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow flex items-center gap-2"
+              >
+                <FaDownload size={14} />
                 Download Excel
               </button>
             </div>
@@ -215,6 +269,8 @@ const DiscardedMedicines = () => {
               <h2 className="text-2xl font-bold mb-4 text-center">Discarded Medicines</h2>
               {loading ? (
                 <p className="text-center text-gray-500">Loading...</p>
+              ) : discardedMedicines.length === 0 ? (
+              <p className="text-center text-gray-500">No discarded medicines recorded.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">

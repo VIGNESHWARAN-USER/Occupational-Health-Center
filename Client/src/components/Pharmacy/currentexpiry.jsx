@@ -48,15 +48,18 @@ const CurrentExpiry = () => {
     <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Current Expiry Medicines</h2>
+        <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Current Expiry Medicines</h2>
 
         {/* Loading & Error Handling */}
         {loading ? (
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 text-center">Loading...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
-        ) : (
-          <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+        ) : expiryStock.length === 0 ? (
+              <p className="text-center text-gray-500">No expiring medicines next month.</p>
+          ) :(
+          
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-red-600 text-white">
@@ -70,8 +73,7 @@ const CurrentExpiry = () => {
                 </tr>
               </thead>
               <tbody>
-                {expiryStock.length > 0 ? (
-                  expiryStock.map((item, index) => (
+                {expiryStock.map((item, index) => (
                     <tr key={index} className="border-b">
                       <td className="p-3">{item.medicine_form}</td>
                       <td className="p-3 font-bold">{item.brand_name}</td>
@@ -94,18 +96,12 @@ const CurrentExpiry = () => {
                         )}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="p-4 text-center text-gray-500">
-                      No expiring medicines next month.
-                    </td>
-                  </tr>
-                )}
+                  ))}
               </tbody>
             </table>
-          </div>
+          
         )}
+        </div>
       </div>
     </div>
   );

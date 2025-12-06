@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from "../Sidebar"; // Adjust path if needed
 import * as XLSX from 'xlsx';
+import { FaDownload, FaSave } from "react-icons/fa";
 
 // --- Helper Functions ---
 const getDaysInMonth = (year, month) => {
@@ -380,50 +381,100 @@ const PrescriptionIn = () => {
 
   // --- Render Logic ---
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto  p-4 md:p-6">
            {/* Header Section */}
-           <div className="mb-4 p-4 bg-white rounded shadow-sm">
-                <div className="flex justify-between items-center flex-wrap gap-y-2">
-                    {/* Titles & Month Navigation */}
-                    <div className='flex items-center gap-4 flex-wrap mb-2 md:mb-0'>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 order-1">
-                            Daily Usage
-                        </h1>
-                        <div className="flex items-center gap-2 order-3 md:order-2">
-                             <button onClick={handlePreviousMonth} title="Previous Month" className="p-1 rounded hover:bg-gray-200 disabled:opacity-50" disabled={isLoading || isUpdating}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                            <h2 className="text-lg md:text-xl font-semibold text-gray-700 text-center w-36 min-w-[9rem]"> {/* Min width */}
-                                {displayedMonthInfo.monthName} {displayedMonthInfo.year}
-                            </h2>
-                             <button onClick={handleNextMonth} title="Next Month" className="p-1 rounded hover:bg-gray-200 disabled:opacity-50" disabled={isNextMonthDisabled() || isLoading || isUpdating}>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            </button>
-                             <button onClick={handleCurrentMonth} title="Go to Current Month" className="ml-2 px-2 py-1 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-50" disabled={isLoading || isUpdating}>
-                                Today
-                            </button>
-                        </div>
-                    </div>
-                    {/* Actions & Status */}
-                    <div className='flex items-center flex-wrap gap-2 justify-end flex-grow md:flex-grow-0 order-2 md:order-3'>
-                        <div className="w-full md:w-auto text-right mb-2 md:mb-0 md:mr-2 order-first md:order-none min-h-[1.25rem]"> {/* Min height for status */}
-                            {isUpdating && <span className="text-blue-600 italic text-sm">Updating...</span>}
-                            {error && <span className="text-red-600 font-semibold text-sm">Error: {error}</span>}
-                            {updateStatus && <span className="text-green-600 font-semibold text-sm">{updateStatus}</span>}
-                        </div>
-                        <button onClick={handleUpdateDatabase} className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm ${isUpdating || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={isUpdating || isLoading}>
-                            {isUpdating ? 'Saving...' : "Update Today's Count"}
-                        </button>
-                        <button onClick={handleExportToExcel} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm" disabled={isLoading || isUpdating}>
-                            Export to Excel
-                        </button>
-                        <input type="text" placeholder="Search Chemical or Brand" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="p-2 border border-gray-300 rounded w-full md:w-56 lg:w-64 text-sm"/>
-                    </div>
+          <div className="mb-4 p-4 bg-white rounded shadow-sm">
+            <div className="flex justify-between items-center flex-wrap gap-y-2">
+
+              {/* Titles & Month Navigation */}
+              <div className="flex items-center gap-4 flex-wrap mb-2 md:mb-0">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 order-1">
+                  Daily Usage
+                </h1>
+
+                <div className="flex items-center gap-2 order-3 md:order-2">
+                  <button
+                    onClick={handlePreviousMonth}
+                    title="Previous Month"
+                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
+                    disabled={isLoading || isUpdating}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-700 text-center w-36 min-w-[9rem]">
+                    {displayedMonthInfo.monthName} {displayedMonthInfo.year}
+                  </h2>
+
+                  <button
+                    onClick={handleNextMonth}
+                    title="Next Month"
+                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
+                    disabled={isNextMonthDisabled() || isLoading || isUpdating}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600"
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={handleCurrentMonth}
+                    title="Go to Current Month"
+                    className="ml-2 px-2 py-1 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                    disabled={isLoading || isUpdating}
+                  >
+                    Today
+                  </button>
                 </div>
-           </div>
+              </div>
+
+              {/* Actions & Status */}
+              <div className="flex items-center flex-wrap gap-2 justify-end flex-grow md:flex-grow-0 order-2 md:order-3">
+
+                <div className="w-full md:w-auto text-right mb-2 md:mb-0 md:mr-2 order-first md:order-none min-h-[1.25rem]">
+                  {isUpdating && <span className="text-blue-600 italic text-sm">Updating...</span>}
+                  {error && <span className="text-red-600 font-semibold text-sm">Error: {error}</span>}
+                  {updateStatus && <span className="text-green-600 font-semibold text-sm">{updateStatus}</span>}
+                </div>
+
+                {/* Update Button */}
+                <button
+                  onClick={handleUpdateDatabase}
+                  className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm flex items-center gap-2 ${isUpdating || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isUpdating || isLoading}
+                >
+                  <FaSave size={14} />
+                  {isUpdating ? "Saving..." : "Update Today's Count"}
+                </button>
+
+                {/* Export Button */}
+                <button
+                  onClick={handleExportToExcel}
+                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm flex items-center gap-2"
+                  disabled={isLoading || isUpdating}
+                >
+                  <FaDownload size={14} />
+                  Export to Excel
+                </button>
+
+                {/* Search Field */}
+                <input
+                  type="text"
+                  placeholder="Search Chemical or Brand"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="p-2 border border-gray-300 rounded w-full md:w-56 lg:w-64 text-sm"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Loading / No Data / Error Messages */}
           {isLoading && <div className="text-center py-10 text-gray-600">Loading data for {displayedMonthInfo.monthName} {displayedMonthInfo.year}...</div>}

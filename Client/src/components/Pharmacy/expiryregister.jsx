@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "../Sidebar";
 import axios from "axios";
 import * as XLSX from "xlsx";
+import { FaDownload, FaFilter, FaEraser } from "react-icons/fa";
 
 const ExpiryRegister = () => {
   const [expiryRegister, setExpiryRegister] = useState([]);
@@ -49,21 +50,44 @@ const ExpiryRegister = () => {
   };
 
   const handleDownloadExcel = () => {
+    if (!expiryRegister || expiryRegister.length === 0) {
+      alert("No expiry records available to download.");
+      return;
+    }
+
     const dataToExport = expiryRegister.map((item) => ({
       "Medicine Form": item.medicine_form,
       "Brand Name": item.brand_name,
       "Chemical Name": item.chemical_name,
       "Dose/Volume": item.dose_volume,
       "Quantity": item.quantity,
-      "Total_quantity":item.Total_quantity,
+      "Total Quantity": item.total_quantity || item.Total_quantity, // fallback safety
       "Expiry Date": formatDate(item.expiry_date),
       "Removed Date": formatDate(item.removed_date),
     }));
 
+    // ---- Generate formatted timestamp ----
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    const timeFormatted = `${hours}.${minutes} ${ampm}`;
+
+    const fileName = `Pharmacy Expiry Register - ${day}-${month}-${year} @ ${timeFormatted}.xlsx`;
+
+    // ---- Create and Save Excel ----
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ExpiryRegister");
-    XLSX.writeFile(wb, "Filtered_Expiry_Register.xlsx");
+
+    XLSX.writeFile(wb, fileName);
   };
 
   return (
@@ -88,14 +112,17 @@ const ExpiryRegister = () => {
           />
           <button
             onClick={fetchExpiryRegister}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded"
           >
+            <FaFilter size={14} />
             Filter
           </button>
+
           <button
             onClick={handleClearFilters}
-            className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
+            className="flex items-center gap-2 bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
           >
+            <FaEraser size={14} />
             Clear
           </button>
         </div>
@@ -104,22 +131,26 @@ const ExpiryRegister = () => {
         <div className="flex justify-end">
           <button
             onClick={handleDownloadExcel}
-            className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
+            className="flex items-center gap-2 bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
           >
-            Download Excel
+            <FaDownload size={16} />
+            <span>Download Excel</span>
           </button>
         </div>
+
       </div>
 
         {/* Table Section */}
-        
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
+            <h2 className="text-2xl font-bold mb-4 text-center">Expiry Register</h2>  
         {loading ? (
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 text-center">Loading...</p>
         ) : error ? (
           <p className="text-red-500">{error}</p>
-        ) : (
-          <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">Expiry Register</h2>
+        ) : expiryRegister.length === 0 ? (
+              <p className="text-center text-gray-500">No expired medicines recorded.</p>
+          ) : (
+          
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-blue-600 text-white">
@@ -134,8 +165,7 @@ const ExpiryRegister = () => {
                 </tr>
               </thead>
               <tbody>
-                {expiryRegister.length > 0 ? (
-                  expiryRegister.map((item, index) => (
+                  {expiryRegister.map((item, index) => (
                     <tr key={index} className="border-b">
                       <td className="p-3">{item.medicine_form}</td>
                       <td className="p-3 font-bold">{item.brand_name}</td>
@@ -148,18 +178,12 @@ const ExpiryRegister = () => {
                         {formatDate(item.removed_date)}
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="7" className="p-4 text-center text-gray-500">
-                      No expired medicines recorded.
-                    </td>
-                  </tr>
-                )}
+                  ))}
               </tbody>
             </table>
-          </div>
-        )}
+          
+          )}
+        </div>
       </div>
     </div>
   );
