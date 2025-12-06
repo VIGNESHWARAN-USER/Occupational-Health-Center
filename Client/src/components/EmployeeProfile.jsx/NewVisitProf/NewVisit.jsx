@@ -13,8 +13,8 @@ const NewVisit = ({data}) => {
     { id: "DocBasicDetails", label: "Basic Details" },
     { id: "DocVitals", label: "Vitals" },
     { id: "DocMedicalHistory", label: "Medical/Surgical/Personal History" },
-    { id: "DocInvestigations", label: "Investigations" },
     { id: "DocVaccination", label: "Vaccination" },
+    { id: "DocInvestigations", label: "Investigations" },
     { id: "Visithistory", label: "Visit History" },
   ];
 

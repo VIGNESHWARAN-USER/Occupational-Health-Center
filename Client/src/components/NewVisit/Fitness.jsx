@@ -195,7 +195,7 @@ const allFitnessTestsConfig = [
 const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
     console.log("FitnessPage props:", { reference, appointment });
     const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
-    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescuer", "Fire Rescuer", "Lone Worker", "Fisher Man", "Snake Catcher", "Others"];
+    const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue", "Lone Work", "Fisher Man", "Snake Catch", "Pest Control", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
     const eyeExamFitStatusOptions = ['Fit', 'Fit when newly prescribed glass', 'Fit with existing glass', 'Fit with an advice to change existing glass with newly prescribed glass', 'Unfit'];
 
@@ -919,8 +919,13 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
                                 <h3 className="text-md font-semibold text-gray-700">Conditionally Fit For (Select applicable)</h3>
                                 <select value="" onChange={handleConditionalSelectChange} disabled={!data?.[0]?.aadhar || isSubmitting} className={selectClass}>
                                     <option value="" disabled>-- Select an option to add --</option>
-                                    <option value="Ground Work">Ground Work</option>
                                     {allOptions.map((option, index) => (<option key={index} value={option} disabled={conditionalOptions.includes(option)}>{option}</option>))}
+                                    <option value="Ground Work">Ground Work</option>
+                                    <option value="Clerical/Desk Work">Clerical/Desk Work</option>
+                                    <option value="Less Strenous Duty">Less Strenous Duty</option>
+                                    <option value="Day Duty Only">Day Duty Only</option>
+                                    <option value="Non Manufacturing Zone">Non Manufacturing Zone</option>
+                                    
                                 </select>
                                 <div className="flex flex-wrap gap-2 min-h-[30px]">
                                     {conditionalOptions.length > 0 ? (

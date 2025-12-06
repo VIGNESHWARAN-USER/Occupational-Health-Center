@@ -196,7 +196,7 @@ const RecordsFilters = () => {
                 if (existingIndex !== -1) { updatedFilters[existingIndex] = filterObject; }
                 else { updatedFilters.push(filterObject); }
             });
-             setSelectedSection(null);
+             //setSelectedSection(null);
             return updatedFilters;
         });
     };
@@ -1074,15 +1074,31 @@ const EmployementStatus = ({ addFilter }) => {
     const [formData, setFormData] = useState({ status: "", from: "", to: "", transferred_to: "", });
     const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = () => {
-        const { status, from, to, transferred_to } = formData; let filteredData = {}; if (!status) { alert("Please select status."); return; }
-        filteredData.status = status; if (status === 'Transferred To' && transferred_to) { filteredData.transferred_to = transferred_to; }
+        const { status, from, to, transferred_to } = formData; 
+        let filteredData = {}; 
+        if (!status) { alert("Please select status."); return; }
+        filteredData.status = status; 
+        if (status === 'Transferred To' && transferred_to) { filteredData.transferred_to = transferred_to; }
         else if (status !== 'Transferred To') { if (from && to && new Date(from) > new Date(to)) { alert("'From Date' > 'To Date'."); return; } if (from) filteredData.from = from; if (to) filteredData.to = to; }
         else if (status === 'Transferred To' && !transferred_to) { alert("Enter location for 'Transferred To'."); return; }
         if (Object.keys(filteredData).length > 0 && filteredData.status) { addFilter(filteredData); } else { alert("Provide valid criteria."); }
         setFormData({ status: "", from: "", to: "", transferred_to: "" });
     };
     const showTransferredTo = formData.status === "Transferred To"; const showDateRange = formData.status && !showTransferredTo; const isSubmitDisabled = !formData.status || (showTransferredTo && !formData.transferred_to);
-    return (<div className="space-y-4"> <div> <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">Status</label> <select name="status" id="status-filter" value={formData.status} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"> <option value="">Select Status</option> <option value="Active">Active</option> <option value="Transferred To">Transferred To</option> <option value="Resigned">Resigned</option> <option value="Retired">Retired</option> <option value="Deceased">Deceased</option> <option value="Unauthorised Absence">Unauthorised Absence</option> <option value="Other">Other</option> </select> </div> {showTransferredTo && (<div> <label htmlFor="transferred_to-filter" className="block text-sm font-medium text-gray-700 mb-1">Transferred To Dept/Location</label> <input type="text" id="transferred_to-filter" name="transferred_to" value={formData.transferred_to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Department/Location"/> </div>)} {showDateRange && (<div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="from-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since From</label> <input type="date" id="from-date-filter" name="from" value={formData.from} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" max={new Date().toISOString().split("T")[0]}/> </div> <div> <label htmlFor="to-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since To</label> <input type="date" id="to-date-filter" name="to" value={formData.to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min={formData.from || undefined} max={new Date().toISOString().split("T")[0]}/> </div> </div>)} <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50" disabled={isSubmitDisabled}>Add Employment Status Filter</button> </div>);
+    return (<div className="space-y-4"> 
+    <div> 
+        <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">Status</label> 
+        <select name="status" id="status-filter" value={formData.status} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"> 
+            <option value="">Select Status</option> 
+            <option value="Active">Active</option>
+             <option value="Transferred To">Transferred To</option> 
+             <option value="Resigned">Resigned</option> 
+             <option value="Retired">Retired</option> 
+             <option value="Deceased">Deceased</option>
+              <option value="Unauthorised Absence">Unauthorised Absence</option> 
+              <option value="Other">Other</option> </select> 
+        </div> 
+        {showTransferredTo && (<div> <label htmlFor="transferred_to-filter" className="block text-sm font-medium text-gray-700 mb-1">Transferred To Dept/Location</label> <input type="text" id="transferred_to-filter" name="transferred_to" value={formData.transferred_to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter Department/Location"/> </div>)} {showDateRange && (<div className="grid grid-cols-2 gap-4"> <div> <label htmlFor="from-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since From</label> <input type="date" id="from-date-filter" name="from" value={formData.from} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" max={new Date().toISOString().split("T")[0]}/> </div> <div> <label htmlFor="to-date-filter" className="block text-sm font-medium text-gray-700 mb-1">Date Since To</label> <input type="date" id="to-date-filter" name="to" value={formData.to} onChange={handleChange} className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" min={formData.from || undefined} max={new Date().toISOString().split("T")[0]}/> </div> </div>)} <button onClick={handleSubmit} className="w-full mt-2 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50" disabled={isSubmitDisabled}>Add Employment Status Filter</button> </div>);
 };
 const PersonalDetails = ({ addFilter }) => {
     const [formData, setFormData] = useState({
