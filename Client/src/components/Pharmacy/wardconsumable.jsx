@@ -3,6 +3,7 @@ import axios from "axios";
 import { debounce } from "lodash";
 import Sidebar from "../Sidebar";
 import * as XLSX from 'xlsx';
+import { FaPlus, FaFilter, FaEraser, FaDownload } from "react-icons/fa";
 
 const WardConsumables = () => {
   const [showForm, setShowForm] = useState(false);
@@ -58,6 +59,11 @@ const WardConsumables = () => {
   };
 
   const handleDownloadExcel = () => {
+    if (!wardConsumables || wardConsumables.length === 0) {
+      alert("No ward consumables record available to download.");
+      return;
+    }
+
     const formattedData = wardConsumables.map(item => ({
       ...item,
       consumed_date: new Date(item.consumed_date).toLocaleDateString("en-GB", {
@@ -66,11 +72,28 @@ const WardConsumables = () => {
         year: "numeric",
       }),
     }));
-  
+
+    // ---------- Generate Filename ----------
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    const formattedTime = `${hours}.${minutes} ${ampm}`;
+    const fileName = `Ward Consumables - ${day}-${month}-${year} @ ${formattedTime}.xlsx`;
+
+    // ---------- Create Excel ----------
     const worksheet = XLSX.utils.json_to_sheet(formattedData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "WardConsumables");
-    XLSX.writeFile(workbook, "WardConsumables.xlsx");
+
+    XLSX.writeFile(workbook, fileName);
   };
   
 
@@ -217,11 +240,12 @@ const WardConsumables = () => {
         {!showForm ? (
           <>
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-              {/* Left - Add Button */}
+              {/* Left - Add Button with Icon */}
               <button
                 onClick={handleShowForm}
-                className="bg-blue-600 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg"
+                className="bg-blue-600 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"
               >
+                <FaPlus size={14} />
                 Add Consumed Item
               </button>
 
@@ -240,31 +264,38 @@ const WardConsumables = () => {
                   onChange={(e) => setToDate(e.target.value)}
                   className="border border-gray-300 rounded px-2 py-1"
                 />
+
+                {/* Filter Button with Icon */}
                 <button
                   onClick={fetchWardConsumables}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded flex items-center gap-2"
                 >
+                  <FaFilter size={12} />
                   Filter
                 </button>
+
+                {/* Clear Button with Icon */}
                 <button
                   onClick={handleClearFilters}
-                  className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
+                  className="bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded flex items-center gap-2"
                 >
+                  <FaEraser size={12} />
                   Clear
                 </button>
               </div>
 
-              {/* Right - Download Button */}
+              {/* Right - Download Button with Icon */}
               <button
                 onClick={handleDownloadExcel}
-                className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
+                className="bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow flex items-center gap-2"
               >
+                <FaDownload size={14} />
                 Download Excel
               </button>
             </div>
 
             <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
-              <h2 className="text-xl font-bold mb-4 text-gray-700 text-center">Ward Consumables</h2>
+              <h2 className="text-2xl font-bold mb-4 text-center">Ward Consumables</h2>
               {loading ? (
                 <p className="text-center text-gray-500">Loading...</p>
               ) : wardConsumables.length === 0 ? (

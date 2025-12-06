@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Sidebar from "../Sidebar"; // Assuming correct path
 import axios from "axios";
 import * as XLSX from "xlsx";
+import { FaDownload, FaEraser } from "react-icons/fa";
 
 // Define API endpoints centrally
 const API_BASE_URL = "http://localhost:8000"; // Or your actual base URL
@@ -117,6 +118,13 @@ const StockHistory = () => {
     setSearchTerm(e.target.value);
   };
 
+  const handleClearFilters = () => {
+  setSearchTerm("");
+  setFromDate("");
+  setToDate("");
+  setFilteredData(stockData); // Reset table back to original full dataset
+};
+
   // Update from date state
   const handleFromDateChange = (e) => {
     setFromDate(e.target.value);
@@ -130,9 +138,9 @@ const StockHistory = () => {
   // Prepare FILTERED data and handle Excel Export
   const handleDownloadExcel = () => {
     // Use filteredData for export
-    if (filteredData.length === 0) {
-        alert("No data available to export based on current filters.");
-        return;
+    if (!filteredData || filteredData.length === 0) {
+      alert("No data available to export based on current filters.");
+      return;
     }
 
     const dataForExport = filteredData.map(item => ({
@@ -146,73 +154,129 @@ const StockHistory = () => {
       "Expiry Date": item.expiry_date,
     }));
 
+    // ---------- Generate Dynamic File Name with Date + Time ----------
+    const now = new Date();
+    const day = now.getDate().toString().padStart(2, "0");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = monthNames[now.getMonth()];
+    const year = now.getFullYear();
+
+    let hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    const formattedTime = `${hours}.${minutes} ${ampm}`;
+    const fileName = `Pharmacy Filtered Stock Report - ${day}-${month}-${year} @ ${formattedTime}.xlsx`;
+
+    // ---------- Create Sheet and Download ----------
     const ws = XLSX.utils.json_to_sheet(dataForExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "FilteredStockReport"); // Sheet name
-    XLSX.writeFile(wb, "Pharmacy_Filtered_Stock_Report.xlsx"); // Filename reflects filtered data
+    XLSX.utils.book_append_sheet(wb, ws, "FilteredStockReport");
+
+    XLSX.writeFile(wb, fileName);
   };
 
   // --- Render ---
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex">
       <Sidebar />
       <div className="flex-1 p-4 md:p-6 overflow-auto flex flex-col">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">
+        {/* <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
           Stock Report (Current & History)
-        </h2>
+        </h2> */}
 
         {/* Filters Row */}
-        <div className="mb-4 p-4 bg-white rounded-lg shadow flex flex-wrap items-end gap-4">
-          {/* Text Search */}
-          <div className="flex-grow min-w-[200px]">
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <input
-              id="search"
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange} // Updated handler
-              placeholder="Brand or Chemical Name..."
-              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150"
-            />
-          </div>
+        <div className="mb-4 p-4 bg-white rounded-lg shadow flex flex-col gap-4">
 
-          {/* From Date */}
-          <div className="flex-shrink-0">
-            <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">From Entry Date</label>
-            <input
-              id="fromDate"
-              type="date"
-              value={fromDate}
-              onChange={handleFromDateChange} // Updated handler
-              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150"
-            />
-          </div>
+          {/* Title INSIDE the box and centered */}
+          <h2 className="text-2xl font-bold text-gray-800 text-center">
+            Stock Report (Current & History)
+          </h2>
 
-          {/* To Date */}
-          <div className="flex-shrink-0">
-            <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">To Entry Date</label>
-            <input
-              id="toDate"
-              type="date"
-              value={toDate}
-              onChange={handleToDateChange} // Updated handler
-              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150"
-               // Optional: Set min attribute based on fromDate
-               min={fromDate}
-            />
-          </div>
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-end gap-4 justify-center">
 
-          {/* Download Button */}
-          <div className="flex-shrink-0">
-             {/* Label removed for button, aligned by items-end on container */}
-             <button
+            {/* Search Field */}
+            <div className="flex-grow min-w-[220px]">
+              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                Search
+              </label>
+              <input
+                id="search"
+                type="text"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                placeholder="Brand or Chemical Name..."
+                className="w-full p-2 border border-gray-300 rounded-md shadow-sm 
+                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </div>
+
+            {/* From Date */}
+            <div className="flex-shrink-0">
+              <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">
+                From Entry Date
+              </label>
+              <input
+                id="fromDate"
+                type="date"
+                value={fromDate}
+                onChange={handleFromDateChange}
+                className="p-2 border border-gray-300 rounded-md shadow-sm 
+                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </div>
+
+            {/* To Date */}
+            <div className="flex-shrink-0">
+              <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">
+                To Entry Date
+              </label>
+              <input
+                id="toDate"
+                type="date"
+                value={toDate}
+                min={fromDate}
+                onChange={handleToDateChange}
+                className="p-2 border border-gray-300 rounded-md shadow-sm 
+                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              />
+            </div>
+
+            {/* Button Row */}
+            <div className="flex items-center gap-3">
+
+              {/* Clear Filter Button */}
+              <button
+                onClick={handleClearFilters}
+                disabled={!fromDate && !toDate && !searchTerm}
+                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow 
+                flex items-center gap-2 transition duration-150 ${
+                  (!fromDate && !toDate && !searchTerm) ? "opacity-40 cursor-not-allowed" : ""
+                }`}
+              >
+                <FaEraser size={16} />
+                Clear
+              </button>
+
+              {/* Download Button */}
+              <button
                 onClick={handleDownloadExcel}
-                // Disable if loading or no FILTERED data
                 disabled={loading || filteredData.length === 0}
-                className={`bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-md shadow transition duration-150 ${loading || filteredData.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
+                className={`bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-md shadow 
+                flex items-center gap-2 transition duration-150 ${
+                  loading || filteredData.length === 0
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+              >
+                <FaDownload size={16} />
                 Download Excel
-            </button>
+              </button>
+
+            </div>
+
           </div>
         </div>
 
