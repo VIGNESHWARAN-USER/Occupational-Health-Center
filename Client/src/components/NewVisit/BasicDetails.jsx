@@ -16,6 +16,7 @@ import Prescription from "./Prescription";
 const NewVisit = () => {
   const accessLevel = localStorage.getItem('accessLevel');
   const navigate = useNavigate();
+  const [isUpdated, setIsUpdated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchId, setSearchId] = useState("");
   const [type, setType] = useState("Employee");
@@ -116,13 +117,21 @@ const NewVisit = () => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prevFormData => ({
-      ...prevFormData,
-      [name]: value
-    }));
-  };
+ const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  setFormData(prev => {
+    const updated = { ...prev, [name]: value };
+
+    // Check if any field changed from previous value
+    if (prev[name] !== value) {
+      setIsUpdated(true);
+    }
+
+    return updated;
+  });
+};
+
 
   const handleSubmitEntries = async (e) => {
     e.preventDefault();
@@ -431,7 +440,7 @@ const NewVisit = () => {
                 <input
                   name="identification_marks"
                   value={formData.identification_marks2}
-                  onChange={handleChange}
+                    onChange={handleChange}
                   type="text"
                   placeholder="Enter any visible identification marks"
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -692,9 +701,16 @@ const NewVisit = () => {
                   className="px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <button onClick={handleSubmit} className="mt-8 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
-              Add Basic Details
-            </button>
+             <button
+  onClick={handleSubmit}
+  disabled={!isUpdated}
+  className={`mt-8 px-6 py-3 rounded-lg transition duration-300
+    ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
+  `}
+>
+  Add Basic De\tails
+</button>
+
             </div>
       
       

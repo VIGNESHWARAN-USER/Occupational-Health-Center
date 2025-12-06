@@ -46,6 +46,7 @@ const BpStandardsModal = ({ isOpen, onClose }) => {
 
 // --- Main Vitals Form Component (Integrated) ---
 const VitalsForm = ({ data, type, mrdNo }) => {
+    const [isUpdated, setIsUpdated] = useState(false);
     const initialData = data?.[0] || {};
     console.log(initialData)
     console.log("VitalsForm mrdNo prop:", mrdNo);
@@ -135,9 +136,20 @@ const VitalsForm = ({ data, type, mrdNo }) => {
     useEffect(() => { const s = calculateRespRateStatus(formData.respiratory_rate); if (s !== formData.respiratory_rate_status) { setFormData(p => ({ ...p, respiratory_rate_status: s })); } }, [formData.respiratory_rate, formData.respiratory_rate_status]);
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prevData => ({ ...prevData, [name]: value }));
-    };
+  const { name, value } = e.target;
+
+  setFormData(prev => {
+    const updated = { ...prev, [name]: value };
+
+    // Check if any field changed from previous value
+    if (prev[name] !== value) {
+      setIsUpdated(true);
+    }
+
+    return updated;
+  });
+};
+
 
     const handleRemoveSelectedFile = (e, key) => {
         e.stopPropagation(); // Prevents opening the file browser
@@ -472,14 +484,25 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
                     <div className="mt-8 flex justify-end">
                         <button
-                            type="submit"
-                            className="bg-blue-600 text-white px-6 py-2 rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 text-base"
-                            disabled={!formData.aadhar}
-                            title={!formData.aadhar ? "Aadhar number is required to submit" : "Submit Vitals & Documents"}
-                        >
-                            Submit Vitals & Documents
-                        </button>
-                    </div>
+    type="submit"
+    className={`px-6 py-2 rounded-md shadow text-base transition duration-300 
+        ${(!formData.aadhar || !isUpdated)
+            ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+            : "bg-blue-600 text-white hover:bg-blue-700"
+        }`}
+    disabled={!formData.aadhar || !isUpdated}
+    title={
+        !formData.aadhar 
+            ? "Aadhar number is required to submit" 
+            : !isUpdated 
+                ? "Update any field to enable submit" 
+                : "Submit Vitals & Documents"
+    }
+>
+    Submit Vitals & Documents
+</button>
+
+                    </div>  
                 </form>
                 )}
             </div>
