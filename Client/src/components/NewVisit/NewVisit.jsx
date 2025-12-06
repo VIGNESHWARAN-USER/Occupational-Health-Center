@@ -155,7 +155,7 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Curative - Follow Up Visits": "Follow Up Visits",
-        "BP Sugar Chart (Abormal Value)": "Outpatient",
+        "BP Sugar Chart (Abormal Value) (Abormal Value)": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
@@ -334,7 +334,7 @@ const NewVisit = () => {
     }
   }
 
-  if (register.startsWith("BP Sugar Chart")) {
+  if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
     if (!bpSugarChartReason) {
       alert("Please select Reason");
       setLoading1(false);
@@ -344,7 +344,7 @@ const NewVisit = () => {
 
   if (register.startsWith("Curative - Follow Up Visits")) {
     if (!followupConsultationReason) {
-      alert("Please select a Followup Reason");
+      alert("Please select a Follow up Reason");
       setLoading1(false);
       return;
     }
@@ -418,7 +418,7 @@ const NewVisit = () => {
     };
   }
 
-  if (register.startsWith("BP Sugar Chart")) {
+  if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
     submissionData.extraData = {
       reason: bpSugarChartReason,
     };
