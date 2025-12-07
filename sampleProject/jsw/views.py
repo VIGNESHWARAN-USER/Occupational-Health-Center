@@ -4133,83 +4133,123 @@ def get_stock_history(request):
          response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
          response['Allow'] = 'GET'
          return response
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.db import transaction, models
+from django.db.models import F
+import json
+from datetime import datetime, date
+import logging
+
+# Ensure you import your models
+# from .models import PharmacyStock, PharmacyMedicine, PharmacyStockHistory
+
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def add_stock(request):
     """ Adds new stock to PharmacyStock and creates a corresponding history record. """
     if request.method == "POST":
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+            data = json.loads(request.body.decode('utf-8'))
             logger.debug(f"Add Stock Received Data: {data}")
 
+            # 1. Extract Common Data
             medicine_form = data.get("medicine_form")
-            brand_name = data.get("brand_name")
-            chemical_name = data.get("chemical_name")
-            dose_volume = data.get("dose_volume")
+            brand_name = data.get("brand_name") # Frontend sends 'Item Name' here for Sutures
             quantity_str = data.get("quantity")
             expiry_date_str = data.get("expiry_date") # Expect YYYY-MM
+            
+            # Extract these, but we might overwrite them based on category
+            chemical_name_input = data.get("chemical_name")
+            dose_volume_input = data.get("dose_volume")
 
-            # Validation
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str]):
-                return JsonResponse({"error": "All fields (medicine_form, brand_name, chemical_name, dose_volume, quantity, expiry_date [YYYY-MM]) are required"}, status=400)
+            # 2. Define Special Categories
+            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+
+            # 3. Conditional Logic
+            if medicine_form in special_categories:
+                # ✅ CASE 1: Sutures / Dressings
+                # Force Chemical and Dose to None (Database NULL)
+                chemical_name = None
+                dose_volume = None
+
+                # Validate only: Form, Item Name, Qty, Expiry
+                if not all([medicine_form, brand_name, quantity_str, expiry_date_str]):
+                    return JsonResponse({"error": "Item Name, Quantity, and Expiry Date are required."}, status=400)
+            
+            else:
+                # ✅ CASE 2: Standard Medicines (Tablets, Syrups, etc.)
+                # Use the inputs provided
+                chemical_name = chemical_name_input
+                dose_volume = dose_volume_input
+
+                # Validate ALL fields
+                if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str]):
+                    return JsonResponse({"error": "All fields (Form, Brand, Chemical, Dose, Qty, Expiry) are required"}, status=400)
+
+            # 4. Parse Quantity and Date
             try:
                 quantity = int(quantity_str)
                 if quantity <= 0: raise ValueError("Quantity must be positive")
             except (ValueError, TypeError):
                  return JsonResponse({"error": "Invalid quantity provided. Must be a positive integer."}, status=400)
+            
             try:
-                 # Parse YYYY-MM, assume last day of month for expiry or first? Use first for consistency.
+                 # Parse YYYY-MM. Default to 1st of the month.
                  expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
             except ValueError:
                  return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM."}, status=400)
 
             entry_date = date.today()
 
+            # 5. Database Operations
             with transaction.atomic():
-                # Ensure PharmacyMedicine entry exists (defines the medicine itself)
+                
+                # A. Handle Master Record (PharmacyMedicine)
+                # We assume PharmacyMedicine model also allows null=True for chemical/dose
                 medicine_entry, created = PharmacyMedicine.objects.get_or_create(
                     medicine_form=medicine_form,
                     brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume,
-                    defaults={'entry_date': entry_date} # Set entry date only if created
+                    chemical_name=chemical_name, # Will be None for Sutures
+                    dose_volume=dose_volume,     # Will be None for Sutures
+                    defaults={'entry_date': entry_date}
                 )
-                if created: logger.info(f"Created new PharmacyMedicine entry: ID {medicine_entry.id}")
-
-                # Add or update PharmacyStock
-                # Find existing stock for this specific batch (same expiry)
+                
+                # B. Handle Stock Record (PharmacyStock)
+                # Check for existing stock with same details AND expiry date
                 stock_item, stock_created = PharmacyStock.objects.select_for_update().get_or_create(
                     medicine_form=medicine_form,
                     brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume,
+                    chemical_name=chemical_name, # Will be None for Sutures
+                    dose_volume=dose_volume,     # Will be None for Sutures
                     expiry_date=expiry_date,
                     defaults={
                         'entry_date': entry_date,
                         'quantity': quantity,
-                        'total_quantity': quantity # Initial total quantity
+                        'total_quantity': quantity
                     }
                 )
-                if not stock_created:
-                    # If stock for this batch already exists, add to it
-                    stock_item.quantity = F('quantity') + quantity
-                    stock_item.total_quantity = F('total_quantity') + quantity # Increment total as well
-                    stock_item.entry_date = entry_date # Update entry date to reflect latest addition
-                    stock_item.save()
-                    logger.info(f"Updated existing PharmacyStock for batch: {stock_item.id}, Added: {quantity}")
-                else:
-                     logger.info(f"Created new PharmacyStock for batch: {stock_item.id}, Quantity: {quantity}")
 
-                # Add entry to PharmacyStockHistory for this addition
+                if not stock_created:
+                    # If batch exists, increase quantity
+                    stock_item.quantity = F('quantity') + quantity
+                    stock_item.total_quantity = F('total_quantity') + quantity
+                    stock_item.entry_date = entry_date 
+                    stock_item.save()
+                    logger.info(f"Updated Stock ID {stock_item.id}: Added {quantity}")
+                else:
+                     logger.info(f"Created Stock ID {stock_item.id}: Qty {quantity}")
+
+                # C. Handle History Record
                 PharmacyStockHistory.objects.create(
                     entry_date=entry_date,
                     medicine_form=medicine_form,
                     brand_name=brand_name,
-                    chemical_name=chemical_name,
-                    dose_volume=dose_volume,
-                    total_quantity=quantity, # Record the quantity added in this transaction
+                    chemical_name=chemical_name, # Stores None for Sutures
+                    dose_volume=dose_volume,     # Stores None for Sutures
+                    total_quantity=quantity,
                     expiry_date=expiry_date,
-                    # archive_date is null initially
                 )
 
             return JsonResponse({"message": "Stock added successfully"}, status=201)
@@ -4219,11 +4259,7 @@ def add_stock(request):
             logger.exception("Error in add_stock:")
             return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
     else:
-        response = JsonResponse({"error": "Invalid request method"}, status=405)
-        response['Allow'] = 'POST'
-        return response
-
-
+        return JsonResponse({"error": "Invalid request method"}, status=405)
 # --- Other Pharmacy helpers ---
 
 @csrf_exempt # Should be GET

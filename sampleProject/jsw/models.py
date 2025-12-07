@@ -1706,22 +1706,29 @@ class PharmacyStock(BaseModel):
         LOTIONS = "Lotions", "Lotions"
         POWDER = "Powder", "Powder"
         RESPULES = "Respules", "Respules"
-    medicine_form = models.CharField(max_length=20, choices=MedicineFormChoices.choices)
+        SUTURE_PROCEDURE = "Suture & Procedure Items", "Suture & Procedure Items"
+        DRESSING_ITEMS = "Dressing Items", "Dressing Items"
+
+    medicine_form = models.CharField(max_length=50, choices=MedicineFormChoices.choices)
     brand_name = models.CharField(max_length=255)
-    chemical_name = models.CharField(max_length=255)
-    dose_volume = models.CharField(max_length=50)
+    
+    # ✅ Changed: Made optional
+    chemical_name = models.CharField(max_length=255, blank=True, null=True)
+    dose_volume = models.CharField(max_length=50, blank=True, null=True)
+    
     total_quantity = models.PositiveIntegerField()
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
 
     def save(self, *args, **kwargs):
-        if not self.pk: # Only set total_quantity on initial creation
+        if not self.pk: 
             self.total_quantity = self.quantity
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.brand_name} ({self.chemical_name})"
-
+        if self.chemical_name:
+            return f"{self.brand_name} ({self.chemical_name})"
+        return self.brand_name
 # --- Expiry Register Model ---
 # No emp_no, so no aadhar added here
 class ExpiryRegister(BaseModel):
@@ -1788,17 +1795,35 @@ class AmbulanceConsumables(models.Model):
 # --- Pharmacy Medicine Model ---
 # No emp_no, so no aadhar added here
 class PharmacyMedicine(BaseModel):
-    MEDICINE_FORMS = [("Tablet", "Tablet"), ("Syrup", "Syrup"), ("Injection", "Injection"), ("Creams", "Creams"),("Lotions","Lotions"),("Powder","Powder"),("Respules","Respules"), ("Drops", "Drops"), ("Fluids", "Fluids"), ("Other", "Other"),]
-    medicine_form = models.CharField(max_length=20, choices=MEDICINE_FORMS)
+    MEDICINE_FORMS = [
+        ("Tablet", "Tablet"), 
+        ("Syrup", "Syrup"), 
+        ("Injection", "Injection"), 
+        ("Creams", "Creams"),
+        ("Lotions", "Lotions"),
+        ("Powder", "Powder"),
+        ("Respules", "Respules"), 
+        ("Drops", "Drops"), 
+        ("Fluids", "Fluids"), 
+        ("Other", "Other"),
+        # ✅ Added new categories to match PharmacyStock
+        ("Suture & Procedure Items", "Suture & Procedure Items"),
+        ("Dressing Items", "Dressing Items"),
+    ]
+    medicine_form = models.CharField(max_length=50, choices=MEDICINE_FORMS)
     brand_name = models.CharField(max_length=255)
-    chemical_name = models.CharField(max_length=255)
-    dose_volume = models.CharField(max_length=50)
+    
+    # ✅ Changed: Made optional
+    chemical_name = models.CharField(max_length=255, blank=True, null=True)
+    dose_volume = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         unique_together = ("brand_name", "chemical_name", "dose_volume")
 
     def __str__(self):
-        return f"{self.brand_name} ({self.chemical_name})"
+        if self.chemical_name:
+            return f"{self.brand_name} ({self.chemical_name})"
+        return self.brand_name
 
 from django.db import models
 
@@ -2151,17 +2176,24 @@ class SignificantNotes(BaseModel):
 # No emp_no, so no aadhar added here
 #Don't add the BaseModel Here.
 class PharmacyStockHistory(models.Model):
-    entry_date = models.DateField(default = timezone.now)
-    medicine_form = models.CharField(max_length=20)
-    brand_name = models.CharField(max_length=255)
-    chemical_name = models.CharField(max_length=255)
-    dose_volume = models.CharField(max_length=50)
-    total_quantity = models.PositiveIntegerField(default=0) # Quantity at time of archival
-    expiry_date = models.DateField()
+    entry_date = models.DateField(default=timezone.now)
     
+    # ✅ Changed: Increased max_length from 20 to 50 (Crucial for "Suture & Procedure Items")
+    medicine_form = models.CharField(max_length=50) 
+    
+    brand_name = models.CharField(max_length=255)
+    
+    # ✅ Changed: Made optional
+    chemical_name = models.CharField(max_length=255, blank=True, null=True)
+    dose_volume = models.CharField(max_length=50, blank=True, null=True)
+    
+    total_quantity = models.PositiveIntegerField(default=0)
+    expiry_date = models.DateField()
 
-    def __str__(self): # Corrected from _str_
-        return f"{self.brand_name} ({self.chemical_name}) - Archived History"
+    def __str__(self):
+        if self.chemical_name:
+            return f"{self.brand_name} ({self.chemical_name}) - Archived History"
+        return f"{self.brand_name} - Archived History"
     
 
 
