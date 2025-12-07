@@ -155,7 +155,7 @@ const Search = () => {
               </div>
               <h3 className="mt-3 text-lg font-bold text-gray-800 text-center">{emp.name || 'Unknown'}</h3>
               <span className="text-xs font-semibold px-3 py-1 bg-blue-100 text-blue-700 rounded-full mt-1 uppercase tracking-wide">
-                {emp.status || 'Staff'}
+                {emp.status || 'Unknown'}
               </span>
             </div>
 

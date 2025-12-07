@@ -1169,7 +1169,7 @@ def add_basic_details(request):
             'employee_status': data.get('employee_status'), 'since_date': parse_date_internal(data.get('since_date')),
             'transfer_details': data.get('transfer_details'), 'other_reason_details': data.get('other_reason_details'),
             'previousemployer':data.get('previousemployer'),'previouslocation':data.get('previouslocation'),
-            'contractor_status': data.get('contractor_status'),
+            'contractor_status': data.get('contractor_status'), 'status': data.get('status'), 'type': data.get('type'),
             
             # Visitor Fields
             'other_site_id': data.get('other_site_id'), 'organization': data.get('organization'),
@@ -2374,7 +2374,8 @@ def get_notes(request, aadhar):
                     note['entry_date'] = note['entry_date'].isoformat()
 
             # 2. Fetch Employment Status History (All records)
-            status_queryset = employee_details.objects.filter(aadhar=identifier).order_by('-entry_date', '-id').values()
+            status_queryset = employee_details.objects.filter(aadhar=identifier).exclude(status="").values('status', 'since_date').distinct().order_by('-since_date')
+
             status_list = list(status_queryset)
             
             # Process status list

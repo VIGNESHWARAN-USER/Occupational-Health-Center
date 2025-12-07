@@ -238,6 +238,7 @@ const EmployeeProfile = () => {
             // 2. Handle Status History
             if (Array.isArray(response.data.status_history)) {
                 setEmploymentHistoryState(response.data.status_history);
+                console.log("Employment History:", response.data.status_history);   
             } else {
                 // Fallback for empty or unexpected structure
                 setEmploymentHistoryState([]);
@@ -360,9 +361,9 @@ const EmployeeProfile = () => {
                     {/* Profile Header */}
                      <div className="flex flex-col items-center text-center md:w-1/5 space-y-2 mb-4 md:mb-0">
                          {employeeData.profilepic_url ? (
-                             <img src={employeeData.profilepic_url} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-blue-200" />
-                         ) : <FaUserCircle className="text-blue-600 text-7xl" />}
-                         <span className={`px-2 py-1 rounded text-xs font-bold text-white ${statusBgColor}`}>{statusText}</span>
+                             <img src={employeeData.profilepic_url} alt="Profile" className="w-32 h-32 rounded-full object-cover border-2 border-blue-200" />
+                         ) : <FaUserCircle className="text-blue-600 text-7xl w-32 h-32" />}
+                         <span className={`px-3 py-1 rounded text-xs font-bold text-white ${statusBgColor}`}>{statusText}</span>
                          <h2 className="text-xl font-bold text-blue-800">{employeeData.name}</h2>
                          <p className="text-sm text-gray-500">{employeeData.emp_no || employeeData.aadhar}</p>
                      </div>
