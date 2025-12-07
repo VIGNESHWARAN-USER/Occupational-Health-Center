@@ -122,7 +122,7 @@ class employee_details(BaseModel):
     otherRegister = models.CharField(max_length=255, blank=True) # For "Other" register type
 
     # <<< UPDATED/ADDED: Specific fields to replace generic 'reason' and 'status' >>>
-    status = models.CharField(max_length=255, blank=True, help_text="Patient status for BP Sugar Check")
+    status = models.CharField(max_length=255, default='Active')
     bp_sugar_chart_reason = models.CharField(max_length=255, blank=True, help_text="Reason for BP Sugar Chart")
     followup_reason = models.CharField(max_length=255, blank=True, help_text="Reason for Follow Up Visit")
     followup_other_reason = models.TextField(blank=True, help_text="Text for 'Other' reason in Follow Up")

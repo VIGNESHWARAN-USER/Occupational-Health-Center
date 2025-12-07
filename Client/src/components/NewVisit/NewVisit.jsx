@@ -450,7 +450,7 @@ const NewVisit = () => {
 
       alert("Data submitted successfully!");
 
-      // 🚨 IMPORTANT — FREEZE ALL FIELDS AFTER MRD IS GENERATED
+      
       setIsFrozen(true);
     } else {
       alert("Something went wrong!");
@@ -585,6 +585,7 @@ const NewVisit = () => {
     setUploadedImage(null);
     setIsNewEmployee(false);
     setMRDNo("");
+    setIsFrozen(false);
   };
 
   
