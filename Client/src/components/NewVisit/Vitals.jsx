@@ -482,27 +482,31 @@ const VitalsForm = ({ data, type, mrdNo }) => {
   </div>
 </section>
 
-                    <div className="mt-8 flex justify-end">
+                    <div className="mt-8 flex">
                         <button
-    type="submit"
-    className={`px-6 py-2 rounded-md shadow text-base transition duration-300 
-        ${(!formData.aadhar || !isUpdated)
-            ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-            : "bg-blue-600 text-white hover:bg-blue-700"
-        }`}
-    disabled={!formData.aadhar || !isUpdated}
-    title={
-        !formData.aadhar 
-            ? "Aadhar number is required to submit" 
-            : !isUpdated 
-                ? "Update any field to enable submit" 
-                : "Submit Vitals & Documents"
-    }
->
-    Submit Vitals & Documents
-</button>
+                        type="submit"
+                        className={`px-6 py-2 rounded-md shadow text-base transition duration-300 
+                            ${(!formData.aadhar || !isUpdated)
+                                ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                                : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
+                            disabled={!formData.aadhar || !isUpdated}
+                            title={
+                                !formData.aadhar 
+                                    ? "Aadhar number is required to submit" 
+                                    : !isUpdated 
+                                        ? "Update any field to enable submit" 
+                                        : "Submit Vitals & Documents"
+                            }
+                        >
+                            Submit Vitals & Documents
+                        </button>
+
 
                     </div>  
+                    <p className="text-sm text-gray-600">
+              * Press only if changes in the above details
+            </p>
                 </form>
                 )}
             </div>
