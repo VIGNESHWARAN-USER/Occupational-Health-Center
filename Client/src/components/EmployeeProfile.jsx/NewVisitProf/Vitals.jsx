@@ -313,7 +313,7 @@ const VitalsDetails = ({ data }) => {
 
                 {/* ==== MODIFICATION START: Updated Documents Section ==== */}
                 <section className="p-4 border rounded-lg bg-slate-50 shadow-sm">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Uploaded Documents</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-4 border-b border-gray-200 pb-2">Overall Uploaded Documents</h3>
                     
                     {docsLoading ? (
                          <div className="flex justify-center items-center py-6 text-blue-500">

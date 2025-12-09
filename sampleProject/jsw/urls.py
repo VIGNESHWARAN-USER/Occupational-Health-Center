@@ -27,8 +27,9 @@ urlpatterns = [
     path('addbasicdetails', views.add_basic_details, name = 'addDetails'),
     path('updateProfileImage/<str:aadhar>', views.uploadImage, name='upload_image'),
     path('visitData/<str:aadhar>', views.fetchVisitdata, name = 'fetchVisitdata'),
-    path('visitData/<str:aadhar>/<str:date_str>', views.fetchVisitDataWithDate, name = 'fetchVisitdataWithDate'),
+    path('visitDataWithMrd/<str:mrdNo>', views.fetchVisitDataWithDate, name = 'fetchVisitdataWithDate'),
     path('update_employee_status/', views.update_employee_status, name='update_employee_status'),
+    path('updateEmployeeData', views.update_employee_data, name='update_employee_data'),
 
     # Vitals & Investigations (Using Aadhar from payload)  
     path('addvitals', views.add_vital_details, name = 'addVitals'),

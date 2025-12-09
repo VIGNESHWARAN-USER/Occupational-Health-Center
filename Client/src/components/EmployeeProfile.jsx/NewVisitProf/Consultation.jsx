@@ -1,12 +1,10 @@
 // ConsultationDisplay.jsx
 import React, { useEffect, useState } from 'react';
-import moment from 'moment'; // For date formatting
+import moment from 'moment'; 
 
 // --- Reusable Detail Item Component ---
-// Renders a label and its value in a consistent styled format.
-// Handles empty values and multi-line text appropriately.
 const DetailItem = ({ label, value, isFullWidth = false, isTextArea = false }) => (
-    <div className={isFullWidth ? "md:col-span-2" : ""}> {/* Span 2 cols on medium screens if full width */}
+    <div className={isFullWidth ? "md:col-span-2" : ""}> 
         <label className="block text-sm font-medium text-gray-600 mb-1">{label}</label>
         <div className={`px-3 py-2 w-full bg-gray-50 border border-gray-200 rounded-md shadow-sm text-gray-800 text-sm min-h-[38px] ${isTextArea ? 'whitespace-pre-wrap' : 'flex items-center'}`}>
             {value !== null && value !== undefined && value !== '' ? (
@@ -20,11 +18,8 @@ const DetailItem = ({ label, value, isFullWidth = false, isTextArea = false }) =
 
 // --- Main Consultation Display Component ---
 const ConsultationDisplay = ({ data, type }) => {
-    console.log(data)
-    // State to hold the processed data for display
-    const [displayData, setDisplayData] = useState(data.consultation || null);
+    const [displayData, setDisplayData] = useState(null);
 
-    // Map case type values to readable labels (optional but good for display)
     const caseTypeLabels = {
         'occupationalillness': 'Occupational Illness',
         'occupationalinjury': 'Occupational Injury',
@@ -35,37 +30,51 @@ const ConsultationDisplay = ({ data, type }) => {
         'other': 'Other',
     };
 
-    // Process the incoming prop data when it's available or changes
     useEffect(() => {
         if (data) {
+            const consult = data;
             setDisplayData({
-                complaints: displayData.complaints || "N/A",
-                examination: displayData.examination || "N/A", // General Examination
-                lexamination: displayData.lexamination || "N/A", // Local Examination
-                diagnosis: displayData.diagnosis || "N/A", // Procedure Notes
-                obsnotes: displayData.obsnotes || "N/A", // Observation Notes
-                // Assuming 'advice' will be saved in the future based on entry form UI
-                advice: displayData.advice || "N/A", // Placeholder for Advice
-                case_type: caseTypeLabels[displayData.case_type] || displayData.case_type || "N/A", // Use label or raw value
-                illness_or_injury: displayData.illness_or_injury || "N/A", // This might need linking to case_type logic
-                other_case_details: displayData.other_case_details || "N/A",
-                investigation_details: displayData.investigation_details || "N/A", // Investigation
-                referral: displayData.referral ? (displayData.referral === 'yes' ? 'Yes' : 'No') : 'N/A', // Convert boolean/string to Yes/No
-                hospital_name: displayData.hospital_name || "N/A",
-                speaciality: displayData.speaciality || "N/A", // Speciality
-                doctor_name: displayData.doctor_name || "N/A", // Referred Doctor Name
-                follow_up_date: displayData.follow_up_date ? moment(displayData.follow_up_date).format('LL') : 'N/A', // Format date
-                submitted_by_doctor: displayData.submitted_by_doctor || "N/A",
-                submitted_by_nurse: displayData.submitted_by_nurse || "N/A",
-                // Notifiable remarks might be sensitive or internal, display if needed
-                // notifiable_remarks: consultationData.notifiable_remarks || "N/A",
+                complaints: consult.complaints || "N/A",
+                examination: consult.examination || "N/A", // General
+                systematic: consult.systematic || "N/A",   // ADDED: Systemic
+                lexamination: consult.lexamination || "N/A", // Local
+                diagnosis: consult.diagnosis || "N/A",       // FIXED: Mapped correctly
+                procedure_notes: consult.procedure_notes || "N/A", // ADDED: Mapped correctly
+                obsnotes: consult.obsnotes || "N/A",
+                advice: consult.advice || "N/A",
+                
+                // Case Details
+                case_type: caseTypeLabels[consult.case_type] || consult.case_type || "N/A",
+                other_case_details: consult.other_case_details || "N/A",
+                special_cases: consult.special_cases || "N/A", // ADDED
+                
+                // Investigation / Follow up
+                investigation_details: consult.investigation_details || "N/A",
+                follow_up_date: consult.follow_up_date ? moment(consult.follow_up_date).format('LL') : 'N/A',
+                follow_up_mrd_history: Array.isArray(consult.follow_up_mrd_history) && consult.follow_up_mrd_history.length > 0 
+                    ? consult.follow_up_mrd_history.join(', ') 
+                    : "N/A", // ADDED
+
+                // Referral
+                referral: consult.referral ? (consult.referral === 'yes' ? 'Yes' : 'No') : 'N/A',
+                hospital_name: consult.hospital_name || "N/A",
+                speaciality: consult.speciality || "N/A",
+                doctor_name: consult.doctor_name || "N/A",
+                
+                // Shifting / Ambulance (ADDED)
+                shifting_required: consult.shifting_required ? (consult.shifting_required === 'yes' ? 'Yes' : 'No') : 'N/A',
+                shifting_notes: consult.shifting_notes || "N/A",
+                ambulance_details: consult.ambulance_details || "N/A",
+
+                bookedDoctor: consult.bookedDoctor || "N/A",
+                submittedDoctor: consult.submittedDoctor || "N/A",
+                submittedNurse: consult.submittedNurse || "N/A",
             });
         } else {
-            setDisplayData(null); // Reset if no data
+            setDisplayData(null);
         }
-    }, [data]); // Re-run effect if the input data prop changes
+    }, [data]);
 
-    // Render loading or no data message
     if (!displayData) {
         return (
             <div className="mt-6 p-6 bg-white rounded-lg shadow text-center text-gray-500">
@@ -74,13 +83,11 @@ const ConsultationDisplay = ({ data, type }) => {
         );
     }
 
-    // Determine if the original case type was 'other' for conditional display
-    const wasOtherCaseType = data?.case_type === 'other';
-    // Determine if referral was 'yes' for conditional display
-    const needsReferral = data?.referral === 'yes';
-    // Determine if the type is visitor to hide referral section
+    // Logic for conditional sections
+    const wasOtherCaseType = data?.consultation?.case_type === 'other';
+    const needsReferral = data?.consultation?.referral === 'yes';
+    const needsShifting = data?.consultation?.shifting_required === 'yes';
     const isVisitor = type === 'Visitor';
-
 
     return (
         <div className="mt-6 p-6 bg-white rounded-lg shadow">
@@ -90,39 +97,59 @@ const ConsultationDisplay = ({ data, type }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                 <DetailItem label="Complaints" value={displayData.complaints} isTextArea={true} isFullWidth={true} />
                 <DetailItem label="General Examination" value={displayData.examination} isTextArea={true} isFullWidth={true} />
+                {/* ADDED: Systemic Exam */}
+                <DetailItem label="Systemic Examination" value={displayData.systematic} isTextArea={true} isFullWidth={true} />
                 <DetailItem label="Local Examination" value={displayData.lexamination} isTextArea={true} isFullWidth={true} />
-                <DetailItem label="Procedure Notes" value={displayData.diagnosis} isTextArea={true} isFullWidth={true} />
-                <DetailItem label="Observation Notes" value={displayData.obsnotes} isTextArea={true} isFullWidth={true} />
+                
+                {/* FIXED: Diagnosis and Procedure Notes split */}
+                <DetailItem label="Diagnosis Notes" value={displayData.diagnosis} isTextArea={true} isFullWidth={true} />
+                <DetailItem label="Procedure Notes" value={displayData.procedure_notes} isTextArea={true} isFullWidth={true} />
+                
+                <DetailItem label="Observation / Ward Notes" value={displayData.obsnotes} isTextArea={true} isFullWidth={true} />
             </div>
 
             {/* Case Details Section */}
             <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Case Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                 <DetailItem label="Case Type" value={displayData.case_type} />
-                {/* Conditionally display 'Other Case Details' */}
                 {wasOtherCaseType && (
                     <DetailItem label="Other Case Details" value={displayData.other_case_details} isFullWidth={true} />
                 )}
-                {/* You might want to display illness_or_injury depending on your logic */}
-                {/* <DetailItem label="Illness/Injury Type" value={displayData.illness_or_injury} /> */}
+                <DetailItem label="Special Cases" value={displayData.special_cases} />
             </div>
 
              {/* Actions / Recommendations Section */}
             <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Recommendations & Follow-up</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                 <DetailItem label="Investigation" value={displayData.investigation_details} isTextArea={true} isFullWidth={true} />
-                 {/* Display Advice if it's saved */}
                  <DetailItem label="Advice" value={displayData.advice} isTextArea={true} isFullWidth={true} />
                  <DetailItem label="Follow Up Date" value={displayData.follow_up_date} />
+                 {/* ADDED: Previous MRD History */}
+                 <DetailItem label="Reference MRD History" value={displayData.follow_up_mrd_history} isFullWidth={true} />
             </div>
 
-            {/* Referral Section - Conditionally Rendered */}
-            {!isVisitor && ( // Hide this whole section for visitors
+            {/* Shifting Section - ADDED */}
+            {(!isVisitor && displayData.shifting_required !== 'N/A') && (
+                <>
+                    <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Shifting & Ambulance</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
+                        <DetailItem label="Shifting Required?" value={displayData.shifting_required} />
+                        {needsShifting && (
+                            <>
+                                <DetailItem label="Shifting Notes" value={displayData.shifting_notes} isTextArea={true} />
+                                <DetailItem label="Ambulance / Consumables" value={displayData.ambulance_details} isTextArea={true} />
+                            </>
+                        )}
+                    </div>
+                </>
+            )}
+
+            {/* Referral Section */}
+            {!isVisitor && (
                 <>
                     <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Referral Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 mb-6">
                         <DetailItem label="Referral Needed?" value={displayData.referral} />
-                        {/* Only show hospital/doctor details if referral is 'Yes' */}
                         {needsReferral && (
                             <>
                                 <DetailItem label="Referred Hospital" value={displayData.hospital_name} />
@@ -133,10 +160,14 @@ const ConsultationDisplay = ({ data, type }) => {
                     </div>
                 </>
             )}
+
             <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Submission Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <DetailItem label="Consulted By (Doctor)" value={displayData.submitted_by_doctor} />
-                <DetailItem label="Submitted By (Nurse)" value={displayData.submitted_by_nurse} />
+            <div className="grid grid-cols-3 md:grid-cols-3 gap-x-6 gap-y-4">
+                
+                <DetailItem label="Submitted Nurse" value={displayData.submittedNurse} />
+                <DetailItem label="Booked Doctor" value={displayData.bookedDoctor} />                
+                <DetailItem label="Consulted Doctor" value={displayData.submittedDoctor} />
+
             </div>
 
         </div>
