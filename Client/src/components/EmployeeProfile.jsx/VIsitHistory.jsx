@@ -15,7 +15,7 @@ const VisitHistory = ({ data }) => {
     // State for data
     const [filteredData, setFilteredData] = useState([]);
     const [visitData, setVisitData] = useState([]); // This will hold the original, unfiltered data
-    
+    console.log(visitData)
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const aadhar = data.aadhar;
@@ -31,9 +31,9 @@ const VisitHistory = ({ data }) => {
                     `http://localhost:8000/visitData/${aadhar}`
                 );
                 const data = response.data.data || [];
-                console.log(data);
-                setVisitData(data); // Store the original data
-                setFilteredData(data); // Initially, display all data
+                setVisitData(data);
+                
+                setFilteredData(data);
             } catch (error) {
                 console.error("Error fetching visit data:", error);
                 setVisitData([]);
@@ -45,8 +45,7 @@ const VisitHistory = ({ data }) => {
         fetchVisitData();
     }, [aadhar]);
 
-    // ==== MODIFICATION START: Re-introduced applyFilter function ====
-    // This function is now triggered only by the "Apply" button click.
+    
     const applyFilter = () => {
         const filtered = visitData.filter((item) => {
             // 1. Filter by MRD No. search query
@@ -218,8 +217,8 @@ const VisitHistory = ({ data }) => {
                             <th className="px-6 py-3 text-left text-sm font-medium">MRD No.</th>
                             <th className="px-6 py-3 text-left text-sm font-medium">Purpose</th>
                             <th className="px-6 py-3 text-left text-sm font-medium">Visited Date</th>
-                            <th className="px-6 py-3 text-left text-sm font-medium">Visit Outcome</th>
-                            <th className="px-6 py-3 text-left text-sm font-medium">Uploads</th>
+                            <th className="px-6 py-3 text-left text-sm font-medium">Fitness Outcome</th>
+                            <th className="px-6 py-3 text-left text-sm font-medium">Consultation Outcome</th>
                             <th className="px-6 py-3 text-left text-sm font-medium">Details</th>
                         </tr>
                     </thead>
@@ -235,7 +234,7 @@ const VisitHistory = ({ data }) => {
                             </tr>
                         ) : filteredData.length > 0 ? (
                             filteredData.map((visit, index) => {
-                                // ... Table row mapping remains the same ...
+                                
                                 const uploadableFields = [
                                     'application_form', 'manual', 'self_declared',
                                     'consent', 'fc', 'report'
@@ -249,29 +248,14 @@ const VisitHistory = ({ data }) => {
                                     <tr key={index} className="hover:bg-gray-100 transition duration-200">
                                         <td className="px-6 py-4 whitespace-nowrap">{visit.mrdNo || "N/A"}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">{visit.register}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{visit.date}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">{visit.visitOutcome || "N/A"}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {availableUploads.length > 0 ? (
-                                                    availableUploads.map((fieldName, fieldIndex) => (
-                                                        <span 
-                                                            key={fieldIndex}
-                                                            className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full"
-                                                        >
-                                                            {formatFieldName(fieldName)}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-gray-500 text-sm">No uploads</span>
-                                                )}
-                                            </div>
-                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">{visit.entry_date}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">{visit.overall_fitness?.toUpperCase() || "-"}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">{visit.diagnosis?.toUpperCase() || "-"}</td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <button
                                                 onClick={() => {
                                                     navigate("../summary", {
-                                                        state: { aadhar: aadhar, date: visit.date, visit: visit },
+                                                        state: { mrdNo: visit.mrdNo },
                                                     });
                                                 }}
                                                 className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition duration-300"

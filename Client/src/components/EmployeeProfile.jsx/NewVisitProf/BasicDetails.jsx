@@ -1,21 +1,138 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import axios from 'axios';
 
-const DetailCard = ({ label, value, isTextArea = false }) => (
-    <div className={`${isTextArea ? 'col-span-1 md:col-span-3' : ''}`}>
-        <label className="block text-sm font-medium text-gray-500 mb-1">{label}</label>
-        <div className={`px-4 py-3 w-full bg-gray-100 border border-gray-200 rounded-lg shadow-sm text-gray-800 text-sm min-h-[44px] flex items-center ${isTextArea ? 'items-start' : ''}`}>
-            {value ? (
-                isTextArea ? <p className="whitespace-pre-wrap">{value}</p> : value
-            ) : (
-                <span className="text-gray-400 italic">N/A</span>
-            )}
-        </div>
-    </div>
+// --- Icons for UI (Pencil, Save, Cancel) ---
+const EditIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
 );
+const SaveIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><polyline points="20 6 9 17 4 12"></polyline></svg>
+);
+const CancelIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+);
+
+// --- UPDATED DETAIL CARD COMPONENT ---
+const DetailCard = ({ label, value, isTextArea = false, isEditable = false, onSave }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [inputValue, setInputValue] = useState(value || '');
+    const [loading, setLoading] = useState(false);
+
+    // Update local state if the parent prop value changes
+    useEffect(() => {
+        setInputValue(value || '');
+    }, [value]);
+
+    const handleSave = async () => {
+        if (!onSave) return;
+        setLoading(true);
+        // Trigger the save action passed from parent
+        await onSave(inputValue);
+        setLoading(false);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setInputValue(value || ''); // Revert to original
+        setIsEditing(false);
+    };
+
+    return (
+        <div className={`${isTextArea ? 'col-span-1 md:col-span-3' : ''}`}>
+            <label className="block text-sm font-medium text-gray-500 mb-1">{label}</label>
+            <div className={`relative px-4 py-3 w-full border rounded-lg shadow-sm text-sm min-h-[44px] flex items-center 
+                ${isTextArea ? 'items-start' : ''} 
+                ${isEditing ? 'bg-white border-blue-400 ring-2 ring-blue-50' : 'bg-gray-100 border-gray-200'}
+            `}>
+                
+                {/* EDIT MODE */}
+                {isEditing ? (
+                    <div className="flex w-full items-center gap-2">
+                        <input
+                            type="text"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            disabled={loading}
+                            className="w-full bg-transparent outline-none text-gray-800"
+                            autoFocus
+                        />
+                        <div className="flex items-center gap-1">
+                            <button 
+                                onClick={handleSave} 
+                                disabled={loading}
+                                className="p-1 hover:bg-green-100 rounded transition"
+                                title="Save"
+                            >
+                                {loading ? <span className="text-xs">...</span> : <SaveIcon />}
+                            </button>
+                            <button 
+                                onClick={handleCancel} 
+                                disabled={loading}
+                                className="p-1 hover:bg-red-100 rounded transition"
+                                title="Cancel"
+                            >
+                                <CancelIcon />
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                /* VIEW MODE */
+                    <div className="flex w-full justify-between items-center group">
+                        <div className="flex-grow text-gray-800">
+                            {value ? (
+                                isTextArea ? <p className="whitespace-pre-wrap">{value}</p> : value
+                            ) : (
+                                <span className="text-gray-400 italic">N/A</span>
+                            )}
+                        </div>
+                        {/* Edit Button (Only appears if isEditable is true) */}
+                        {isEditable && (
+                            <button 
+                                onClick={() => setIsEditing(true)} 
+                                className="ml-2 p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-100 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                                title="Edit Field"
+                            >
+                                <EditIcon />
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 const BasicDetails = ({ data }) => {
     
-    // 1. Normalize Role to handle 'contractor', 'Contractor', 'CONTRACTOR'
+    // Helper function to handle the update logic
+    // You would pass 'onUpdateData' from your parent page component to handle the actual API call
+    const handleFieldUpdate = async (fieldKey, newValue) => {
+        console.log(`Updating ${fieldKey} to:`, newValue);
+        
+        try {
+            
+            console.log("HII")
+            const respose = await axios.post("http://localhost:8000/updateEmployeeData",{
+                emp_no: data.emp_no,
+                field: fieldKey,
+                value: newValue,
+                aadhar: data.aadhar
+            });
+            if(fieldKey==="emp_no"){
+                data.emp_no=newValue;
+            }
+            else if(fieldKey==="mail_id_Office"){
+                data.mail_id_Office=newValue;
+            }
+            alert("Field updated successfully, Search again to see the changes.");
+        }
+        catch (error) {
+            console.error("Error updating field:", error);
+            alert("Failed to update the field. Please try again.");
+        }
+    };
+
+    // 1. Normalize Role
     const role = data?.role?.toLowerCase() || '';
     const isVisitor = role.includes('visitor');
     const isContractor = role.includes('contractor');
@@ -27,7 +144,7 @@ const BasicDetails = ({ data }) => {
         try {
             const birthDate = new Date(data.dob);
             const today = new Date();
-            if (isNaN(birthDate.getTime())) return 'Invalid Date'; // Simplified check
+            if (isNaN(birthDate.getTime())) return 'Invalid Date';
 
             let calculatedAge = today.getFullYear() - birthDate.getFullYear();
             const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -49,7 +166,7 @@ const BasicDetails = ({ data }) => {
             
             {/* --- SECTION 1: PERSONAL IDENTITY --- */}
             <div>
-                <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Basic Identity</h2>
+                <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Basic Details</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                     <DetailCard label="Full Name" value={data?.name} />
                     <DetailCard label="Role/Category" value={data?.role} />
@@ -62,7 +179,6 @@ const BasicDetails = ({ data }) => {
                     <DetailCard label="Identification Mark 1" value={data?.identification_marks1} />
                     <DetailCard label="Identification Mark 2" value={data?.identification_marks2} />
                     
-                    {/* Visitor Specific Identity Fields */}
                     {isVisitor && (
                         <>
                             <DetailCard label="Country ID" value={data?.country_id} />
@@ -73,26 +189,29 @@ const BasicDetails = ({ data }) => {
             </div>
 
             {/* --- SECTION 2: EMPLOYMENT / WORK DETAILS --- */}
-            {/* Render this section if it's NOT a visitor, OR if specific fields exist */}
             {(isContractor || isEmployee || data?.emp_no) && (
                 <div>
                     <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Employment & Work Details</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-                        <DetailCard label="Employee/Pass No" value={data?.emp_no} />
+                        
+                        {/* --- EDITABLE FIELD: Employee/Pass No --- */}
+                        <DetailCard 
+                            label="Employee/Pass No" 
+                            value={data?.emp_no} 
+                            isEditable={true}
+                            onSave={(val) => handleFieldUpdate('emp_no', val)}
+                        />
+
                         <DetailCard label="Designation" value={data?.designation} />
                         <DetailCard label="Department" value={data?.department} />
                         <DetailCard label="Nature of Job" value={data?.job_nature} />
                         
-                        {/* Dynamic Label based on role */}
                         <DetailCard label={isContractor ? "Contractor Agency" : "Employer Name"} value={data?.employer} />
                         
                         <DetailCard label="Work Location" value={data?.location} />
                         <DetailCard label="Date of Joining" value={data?.doj} />
                         
-                        {/* Fields usually specific to Employee, but shown if data exists */}
                         {(isEmployee || data?.moj) && <DetailCard label="Mode of Joining" value={data?.moj} />}
-                        
-                        {/* Fields usually specific to Contractor */}
                         {(isContractor || data?.contractor_status) && <DetailCard label="Contractor Status" value={data?.contractor_status} />}
                     </div>
                 </div>
@@ -113,8 +232,7 @@ const BasicDetails = ({ data }) => {
                 </div>
             )}
 
-            {/* --- SECTION 4: SAFETY, SECURITY & COMPLIANCE (Often Missing) --- */}
-            {/* Check if these exist in your entry form. If not, this section will hide gracefully. */}
+            {/* --- SECTION 4: SAFETY, SECURITY & COMPLIANCE --- */}
             {(data?.police_verification_no || data?.medical_validity || data?.safety_training_date) && (
                 <div>
                     <h2 className="text-xl font-semibold mb-4 text-gray-700 border-b pb-2">Statutory & Compliance</h2>
@@ -135,9 +253,15 @@ const BasicDetails = ({ data }) => {
                     <DetailCard label="Mobile (Personal)" value={data?.phone_Personal} />
                     <DetailCard label="Email (Personal)" value={data?.mail_id_Personal} />
                     <DetailCard label="Mobile (Office)" value={data?.phone_Office} />
-                    <DetailCard label="Email (Office)" value={data?.mail_id_Office} />
                     
-                    {/* Emergency Contact Group */}
+                    {/* --- EDITABLE FIELD: Email (Office) --- */}
+                    <DetailCard 
+                        label="Email (Office)" 
+                        value={data?.mail_id_Office} 
+                        isEditable={true}
+                        onSave={(val) => handleFieldUpdate('mail_id_Office', val)}
+                    />
+                    
                     <div className="md:col-span-3 mt-2 mb-2 border-t border-gray-100"></div>
                     <DetailCard label="Emergency Contact Name" value={data?.emergency_contact_person} />
                     <DetailCard label="Relation" value={data?.emergency_contact_relation} />
