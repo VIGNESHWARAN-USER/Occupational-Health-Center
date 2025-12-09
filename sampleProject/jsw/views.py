@@ -1964,6 +1964,7 @@ def fitness_test(request):
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo')
             accessLevel = data.get('accessLevel')
+            param = data.get('param')  # Unused in current logic
             
             # entry_date is still calculated for data recording, 
             # but no longer used as a primary lookup key
@@ -2050,7 +2051,7 @@ def fitness_test(request):
                     'submittedDoctor': data.get("submittedDoctor"),
                     
                     # --- CHANGE: Update Status to COMPLETED ---
-                    'status': model_class.StatusChoices.COMPLETED,
+                    'status': model_class.StatusChoices.PENDING if param == "hold" else model_class.StatusChoices.COMPLETED,
 
                     # Basic Tests
                     'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
@@ -2194,7 +2195,7 @@ def add_consultation(request):
                     'submittedDoctor': data.get("submittedDoctor"),
                     
                     # --- NEW: Status Logic ---
-                    'status': Consultation.StatusChoices.COMPLETED,
+                    'status': Consultation.StatusChoices.PENDING if data.get('param') == "hold" else Consultation.StatusChoices.COMPLETED,
 
                     # Clinical Data
                     'complaints': data.get('complaints'), 
@@ -2244,10 +2245,13 @@ def add_consultation(request):
                     'aadhar': aadhar,
                     'entry_date': entry_date,
                     'emp_no': data.get('emp_no'),
-
+                    'status': Consultation.StatusChoices.PENDING if data.get('param') == "hold" else Consultation.StatusChoices.IN_PROGRESS,
                     # Personnel
                     'submittedNurse': data.get("submittedDoctor"), # Assuming nurse uses same field name in frontend
                     'bookedDoctor': data.get("bookedDoctor"),
+                    'shifting_required': data.get('shifting_required'),
+                    'shifting_notes': data.get('shifting_notes') if data.get('shifting_required') == 'yes' else None,
+                    'ambulance_details': data.get('ambulance_details') if data.get('shifting_required') == 'yes' else None,
                     
                     'follow_up_mrd_history': data.get('follow_up_mrd_history', []) 
                 }
@@ -7184,6 +7188,114 @@ def get_currentfootfalls(request):
 
     except Exception as e:
         logger.exception("An error occurred in get_currentfootfalls") # More detailed logging
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Q
+from datetime import date
+import logging
+
+logger = logging.getLogger(__name__)
+
+@csrf_exempt
+def get_pendingfootfalls(request):
+    if request.method != "POST":
+        return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
+
+    try:
+        # --- Get filters ---
+        from_date_str = request.GET.get('fromDate')
+        to_date_str = request.GET.get('toDate')
+        purpose_str = request.GET.get('purpose')
+
+        # --- Base queryset ---
+        queryset = employee_details.objects.all()
+
+        if from_date_str:
+            queryset = queryset.filter(entry_date__gte=from_date_str)
+
+        if to_date_str:
+            queryset = queryset.filter(entry_date__lte=to_date_str)
+
+        if purpose_str:
+            queryset = queryset.filter(register=purpose_str)
+
+        # Default to today's data if no date filter
+        if not from_date_str and not to_date_str:
+            today = date.today()
+            queryset = queryset.filter(entry_date=today)
+
+        # --- Fetch ONLY pending MRD numbers ---
+        preventive_mrds = FitnessAssessment.objects.filter(
+            status="pending"
+        ).values_list('mrdNo', flat=True)
+
+        curative_mrds = Consultation.objects.filter(
+            status="pending"
+        ).values_list('mrdNo', flat=True)
+
+        # --- Filter footfalls by only pending MRDs ---
+        queryset = queryset.filter(
+            Q(type_of_visit='Preventive', mrdNo__in=preventive_mrds) |
+            Q(type_of_visit='Curative', mrdNo__in=curative_mrds)
+        )
+
+        # --- Fetch footfalls ---
+        footfalls = list(
+            queryset.order_by('-entry_date', '-id').values()
+        )
+
+        if not footfalls:
+            return JsonResponse({
+                'message': 'No pending footfalls found',
+                'data': []
+            }, status=200)
+
+        # --- Fetch pending related records ---
+        fitness_records = FitnessAssessment.objects.filter(
+            mrdNo__in=preventive_mrds,
+            status="pending"
+        ).values()
+
+        consultation_records = Consultation.objects.filter(
+            mrdNo__in=curative_mrds,
+            status="pending"
+        ).values()
+
+        # --- Map by MRD ---
+        fitness_map = {record['mrdNo']: record for record in fitness_records}
+        consultation_map = {record['mrdNo']: record for record in consultation_records}
+
+        # --- Build response ---
+        response_data = []
+        for footfall in footfalls:
+            mrd_number = footfall.get('mrdNo')
+
+            combined_record = {
+                'details': footfall,
+                'assessment': None,
+                'consultation': None
+            }
+
+            if footfall.get('type_of_visit') == 'Preventive':
+                combined_record['assessment'] = fitness_map.get(mrd_number)
+
+            elif footfall.get('type_of_visit') == 'Curative':
+                combined_record['consultation'] = consultation_map.get(mrd_number)
+
+            response_data.append(combined_record)
+
+        return JsonResponse(
+            {'data': response_data, 'message': 'Pending records fetched successfully'},
+            encoder=DjangoJSONEncoder,
+            status=200
+        )
+
+    except Exception as e:
+        logger.exception("Error in get_pendingfootfalls")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
 

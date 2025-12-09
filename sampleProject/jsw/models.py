@@ -1465,6 +1465,7 @@ class FitnessAssessment(BaseModel):
         IN_PROGRESS = 'inprogress', 'In Progress'
         COMPLETED = 'completed', 'Completed'
         DEFAULT = 'default', 'Default'
+        PENDING = 'pending', 'Pending'
 
     # --- Fields ---
     emp_no = models.CharField(max_length=50, null=True) # Consider making this non-nullable if always required
@@ -1628,6 +1629,7 @@ class Consultation(models.Model):
         IN_PROGRESS = 'inprogress', 'In Progress'
         COMPLETED = 'completed', 'Completed'
         DEFAULT = 'default', 'Default'
+        PENDING = 'pending', 'Pending'
 
     status = models.CharField(
         max_length=20,

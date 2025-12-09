@@ -491,9 +491,9 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
         const [bookedDoctor, setbookedDoctor] =  useState("")
 
     // --- AFTER (Corrected Code) ---
-    const handleFitnessSubmit = async () => {
+    const handleFitnessSubmit = async (param) => {
         const currentEmpNo = data?.[0]?.emp_no;
-
+        console.log(param)
         if (!mrdNo) {
             alert("Please submit the entries first to get MRD Number");
             return;
@@ -536,6 +536,7 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
             accessLevel,
             reference,
             appointmentId: appointment?.id || null,
+            param: param
         };
         await submitData(url, method, payload, "Fitness Assessment submitted successfully!", "Fitness Assessment Submission");
     };
@@ -964,9 +965,19 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
                     
                 )}
                 <div className="w-full flex justify-end mt-6 border-t pt-6">
+
+                    <button
+                        className={`bg-blue-600 me-4 text-white px-5 py-2 md:px-6 md:py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 font-medium text-sm md:text-base ${!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor") ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        onClick={()=> handleFitnessSubmit("hold")}
+                        disabled={!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor")}
+                        title={!data?.[0]?.aadhar ? "Cannot submit without employee data" : ((!overallFitness && accessLevel === "doctor") ? "Overall fitness status is required" : "Hold fitness assessment")}>
+                        {isSubmitting ? 'Holding...' : 'Hold Assessment'}
+                    </button>
+
+
                     <button
                         className={`bg-blue-600 text-white px-5 py-2 md:px-6 md:py-3 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 font-medium text-sm md:text-base ${!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor") ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        onClick={handleFitnessSubmit}
+                        onClick={() => handleFitnessSubmit("submit")}
                         disabled={!data?.[0]?.aadhar || isSubmitting || (!overallFitness && accessLevel === "doctor")}
                         title={!data?.[0]?.aadhar ? "Cannot submit without employee data" : ((!overallFitness && accessLevel === "doctor") ? "Overall fitness status is required" : "Submit fitness assessment")}>
                         {isSubmitting ? 'Submitting...' : 'Submit Fitness Assessment'}
