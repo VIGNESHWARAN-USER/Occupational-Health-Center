@@ -21,7 +21,7 @@ const AppointmentPage = () => {
           <div className="flex justify-between mb-8 items-center">
             <h2 className="text-4xl font-bold text-gray-800">Appointments</h2>
             <div>
-              {["Today's Appointments", "Book Appointment", "Upload Appointment"].map(
+              {["Appointments", "Pending Footfalls","Book Appointment", "Upload"].map(
                 (btnText, index) => (
                   <button
                     key={index}
@@ -43,15 +43,20 @@ const AppointmentPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            {formVal === "Today's Appointments" ? (
+            {formVal === "Appointments" ? (
               <AllAppointments />
             ) : formVal === "Book Appointment" ? (
               <BookAppointment />
-            ) : formVal === "Upload Appointment" ? (
+            ) : formVal === "Upload" ? (
               <UploadAppointmentPage />
-            ) : (
+            ) : formVal === "Pending Footfalls" ?
+            (
+              <CurrentFootfalls/>
+            )
+            :(
               <AllAppointments />
-            )}
+            )
+            }
           </motion.div>
         </div>
       </div>

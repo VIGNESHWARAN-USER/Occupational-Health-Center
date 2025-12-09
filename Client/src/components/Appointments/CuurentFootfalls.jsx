@@ -23,16 +23,22 @@ const CurrentFootfalls = () => {
     "Review"
   ];
 
-  // Fetch appointments based on date/purpose filters
+  
   useEffect(() => {
     fetchAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromDate, toDate, purpose]);
 
   const fetchAppointments = async () => {
     setLoading(true);
     try {
-      let url = "http://localhost:8000/currentfootfalls/";
+      let url
+      if(accessLevel === "nurse" ){
+        url = "http://localhost:8000/pendingfootfalls/";
+      }
+      else{
+      url = "http://localhost:8000/currentfootfalls/";
+      }
+      
       const params = new URLSearchParams();
 
       if (fromDate) params.append("fromDate", fromDate);
@@ -90,13 +96,36 @@ const CurrentFootfalls = () => {
 
   const handleStatusChange = async (appointment) => {
     const mrdNo = appointment.details?.mrdNo || appointment.consultation?.mrdNo;
-
+    const appointmentData = appointment.details || appointment.consultation;
+    const fieldType = !appointment.consultation ? "assessment" : "consultation";
     if (!mrdNo) {
       alert("Error: No MRD Number found for this appointment.");
       return;
     }
+    
+    if( appointment.consultation && appointment.consultation.status.toLowerCase() === 'pending'){
+      navigate("../newvisit", { 
+        state: { 
+          appointment: appointmentData, 
+          reference: true,
+          fieldType: fieldType
+        } 
+      });
+      return;
+    }
+    if( appointment.assessment && appointment.assessment.status.toLowerCase() === 'pending'){
+      navigate("../newvisit", { 
+        state: { 
+          appointment: appointmentData, 
+          reference: true,
+          fieldType: fieldType
+        } 
+      });
+      return;
+    }
+    
 
-    const fieldType = !appointment.consultation ? "assessment" : "consultation";
+    
 
     try {
       await axios.post('http://localhost:8000/update-status/', {
@@ -106,7 +135,7 @@ const CurrentFootfalls = () => {
         doctor: localStorage.getItem('userData') || 'Unknown'
       });
 
-      const appointmentData = appointment.details || appointment.consultation;
+      
 
       navigate("../newvisit", { 
         state: { 
@@ -122,7 +151,7 @@ const CurrentFootfalls = () => {
     }
   };
 
-
+  const accessLevel = localStorage.getItem('accessLevel');
   const numberOfColumns = 11; // Adjusted to match header count
 
   const getNoResultsMessage = () => {
@@ -151,7 +180,7 @@ const CurrentFootfalls = () => {
       {/* Header */}
       <div className="mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-800">
-          {`${purpose ? `${purpose} Appointments` : "All Appointments"}`}
+          {accessLevel === "nurse" && 'Pending Footfalls' || 'All Appointments'}
         </h1>
       </div>
 
@@ -255,21 +284,21 @@ const CurrentFootfalls = () => {
               </tr>
             ) : filteredAppointments.length > 0 ? (
                  filteredAppointments.map((appointment) => {
-                    // --- RBAC & Status Logic Calculation Start ---
+                    
                     const currentUser = localStorage.getItem("userData");
                     const activeRecord = appointment.consultation || appointment.assessment;
                     
-                    // Normalize Status
+                    
                     const rawStatus = activeRecord?.status || "initiate";
-                    const status = rawStatus.toLowerCase(); // Ensure comparison works
+                    const status = rawStatus.toLowerCase(); 
 
-                    // Determine Owner (Who initiated/is working on it)
+                    
                     const owner = activeRecord?.submittedDoctor;
 
-                    // Lock Logic
+                    
                     const isLocked = status === 'inprogress' && owner !== currentUser;
                     const isCompleted = status === 'completed';
-                    // --- RBAC & Status Logic Calculation End ---
+                   
 
                     return (
                         <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition group">
@@ -297,6 +326,8 @@ const CurrentFootfalls = () => {
                                         ? "bg-red-500 text-white hover:bg-red-600" 
                                         : status === "inprogress" 
                                             ? `bg-yellow-500 text-white ${isLocked ? "cursor-not-allowed opacity-50" : "hover:bg-yellow-600"}`
+                                            : status === "pending"?
+                                            `bg-yellow-500 text-white ${isLocked ? "cursor-not-allowed opacity-50" : "hover:bg-yellow-600"}`
                                             : "bg-green-500 text-white cursor-not-allowed opacity-70"
                                 }`}
                                 onClick={() => handleStatusChange(appointment)}
@@ -305,6 +336,7 @@ const CurrentFootfalls = () => {
                             >
                                 {status === "initiate" ? "Initiate" :
                                 status === "inprogress" ? "View" :
+                                status === "pending" ? "View" :
                                 "Completed"}
                             </button>
                         </td>
