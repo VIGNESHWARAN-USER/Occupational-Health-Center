@@ -146,7 +146,7 @@ const RenderForm27Display = ({ formData }) => {
 // --- Main Fitness Page Display Component (UPDATED) ---
 const Fitness = ({ data }) => {
   const fitnessAssessmentData = data;
-  
+console.log(fitnessAssessmentData)
   // Expanded state to hold all fitness assessment data
   const [displayData, setDisplayData] = useState({
     // Fitness Tests
@@ -185,6 +185,11 @@ const Fitness = ({ data }) => {
     form38: null,
     form39: null,
     form40: null,
+
+    //metadata
+    bookedDoctor: "N/A",
+    submittedDoctor: "N/A",
+    submittedNurse: "N/A",
   });
 
   useEffect(() => {
@@ -245,6 +250,11 @@ const Fitness = ({ data }) => {
             form38: data.form38 || null,
             form39: data.form39 || null,
             form40: data.form40 || null,
+
+            //metadata
+            bookedDoctor: fitnessAssessmentData.bookedDoctor || "N/A",
+            submittedDoctor: fitnessAssessmentData.submittedDoctor || "N/A",
+            submittedNurse: fitnessAssessmentData.submittedNurse || "N/A",
         });
     }
   }, [data, fitnessAssessmentData]); // Depend on the full data prop
@@ -347,6 +357,15 @@ const Fitness = ({ data }) => {
                 <RenderForm27Display formData={displayData.form27} />
             </div>
         )}
+
+        <h3 className="text-xl font-semibold mb-4 text-gray-700 border-t pt-4">Submission Information</h3>
+            <div className="grid grid-cols-3 md:grid-cols-3 gap-x-6 gap-y-4">
+                
+                <DetailItem label="Submitted Nurse" value={displayData.submittedNurse} />
+                <DetailItem label="Booked Doctor" value={displayData.bookedDoctor} />                
+                <DetailItem label="Consulted Doctor" value={displayData.submittedDoctor} />
+
+            </div>
 
     </div>
   );

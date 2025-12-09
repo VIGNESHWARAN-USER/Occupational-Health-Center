@@ -1329,35 +1329,16 @@ def fetchVisitdata(request, aadhar):
     # REST convention for fetching data is GET
     if request.method == "POST":
         try:
-            # 1. Fetch both datasets from the database
-            visit_data = list(Dashboard.objects.filter(aadhar=aadhar).order_by('-date').values())
-            vitals_data = list(vitals.objects.filter(aadhar=aadhar).order_by('-entry_date').values())
-
-            # 2. Create a lookup map for vitals using mrdNo for efficient matching.
-            # This maps each mrdNo to its corresponding vitals dictionary.
-            # We add a check to ensure we only map records that have an mrdNo.
-            vitals_map = {vital['mrdNo']: vital for vital in vitals_data if vital.get('mrdNo')}
-
-            # 3. Iterate through the visits and enrich them with the vitals data
-            for visit in visit_data:
-                # First, serialize any date objects to strings for JSON compatibility
-                if isinstance(visit.get('date'), date):
-                    visit['date'] = visit['date'].isoformat()
-                
-                # Get the mrdNo for the current visit
-                mrd_no = visit.get('mrdNo')
-                
-                # Find the matching vitals from the map using the mrdNo.
-                # .get() safely returns None if the mrdNo is not found in the map.
-                matching_vitals = vitals_map.get(mrd_no)
-
-                # Add the found vitals data to the visit record under a 'vitals' key.
-                # This is safer than a direct update() as it avoids key collisions.
-                visit['vitals'] = matching_vitals  # This will be None if no match was found
-
-            logger.info(f"Fetched and combined {len(visit_data)} visit records for aadhar: {aadhar}")
+            consultation_data = list(Consultation.objects.filter(aadhar=aadhar).filter(status = "completed").order_by('-entry_date').values())
+            fitness_data = list(FitnessAssessment.objects.filter(aadhar=aadhar).filter(status = "completed").order_by('-entry_date').values())
+            visit_data = []
+            for consult_data in consultation_data:
+                consult_data['register'] = Dashboard.objects.filter(mrdNo=consult_data['mrdNo']).values('register').first().get('register','')
+                fitness_data.append(consult_data)
+            for assessment_data in fitness_data:
+                assessment_data['register'] = Dashboard.objects.filter(mrdNo=assessment_data['mrdNo']).values('register').first().get('register','')
+                visit_data.append(assessment_data)
             
-            # 4. Return the single, combined dataset
             return JsonResponse({"message": "Visit data fetched successfully", "data": visit_data}, status=200)
 
         except Exception as e:
@@ -1368,21 +1349,34 @@ def fetchVisitdata(request, aadhar):
         # Corrected error message to align with the check
         return JsonResponse({"error": "Invalid request method. Please use GET."}, status=405)
 
+from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+import logging
+
+# Ensure you import your models and serialize_model_instance helper here
+# from .models import ... 
+# from .serializers import serialize_model_instance
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
-def fetchVisitDataWithDate(request, aadhar, date_str):
-    """Fetches the LATEST record ON OR BEFORE a specific date for an Aadhar across multiple models."""
+def fetchVisitDataWithDate(request, mrdNo):
+    """
+    Fetches all records associated with a specific Medical Record Number (MRD).
+    """
+    print("Hii")
     if request.method == "GET":
         try:
-            target_date_obj = parse_date_internal(date_str)
-            if not target_date_obj:
-                logger.warning(f"fetchVisitDataWithDate failed for aadhar {aadhar}: Invalid date format '{date_str}'. Use YYYY-MM-DD.")
-                return JsonResponse({"error": "Invalid date format. Use YYYY-MM-DD."}, status=400)
+            if not mrdNo:
+                return JsonResponse({"error": "MRD Number is required."}, status=400)
 
-            # List of models to query, mapping key name to model class
-            models_to_query = {
-                "employee": employee_details, "dashboard": Dashboard, "vitals": vitals,
-                "msphistory": MedicalHistory, "haematology": heamatalogy, "routinesugartests": RoutineSugarTests,
-                "renalfunctiontests_and_electrolytes": RenalFunctionTest, # Use the key name from fetchdata
+            # 1. Define models that contain Visit Data (linked by mrdNo)
+            # 'employee' is excluded here, we handle it separately
+            visit_models = {
+                "dashboard": Dashboard, "vitals": vitals,
+                "msphistory": MedicalHistory, "haematology": heamatalogy, 
+                "routinesugartests": RoutineSugarTests,
+                "renalfunctiontests_and_electrolytes": RenalFunctionTest, 
                 "lipidprofile": LipidProfile, "liverfunctiontest": LiverFunctionTest,
                 "thyroidfunctiontest": ThyroidFunctionTest, "coagulationtest": CoagulationTest,
                 "enzymesandcardiacprofile": EnzymesCardiacProfile, "urineroutine": UrineRoutineTest,
@@ -1392,30 +1386,52 @@ def fetchVisitDataWithDate(request, aadhar, date_str):
                 "significant_notes": SignificantNotes, "consultation": Consultation,
                 "prescription": Prescription, "form17": Form17, "form38": Form38,
                 "form39": Form39, "form40": Form40, "form27": Form27,
-                 # Added missing models from fetchdata
                 "autoimmunetest": AutoimmuneTest, "routinecultureandsensitive": CultureSensitivityTest,
                 "womenpack": WomensPack, "occupationalprofile": OccupationalProfile,
                 "otherstest": OthersTest, "xray": XRay, "ct": CTReport,
             }
 
-            employee_data = {}
+            response_data = {}
+            found_aadhar = None
 
-            # Fetch the latest record ON OR BEFORE the target date for each model
-            for key, model_class in models_to_query.items():
-                date_field = 'entry_date' if hasattr(model_class, 'entry_date') else 'date'
-                filter_kwargs = {'aadhar': aadhar, f'{date_field}__lte': target_date_obj}
-                instance = model_class.objects.filter(**filter_kwargs).order_by(f'-{date_field}', '-id').first()
-                employee_data[key] = serialize_model_instance(instance) # Use helper for serialization
+            # 2. Iterate through visit models to fetch data by MRD
+            for key, model_class in visit_models.items():
+                # We assume these models have an 'mrdNo' field
+                if hasattr(model_class, 'mrdNo'):
+                    instance = model_class.objects.filter(mrdNo=mrdNo).first()
+                    response_data[key] = serialize_model_instance(instance)
+                    
+                    # Capture the Aadhar from the first model where we find data 
+                    # (Usually Consultation or Vitals is the anchor)
+                    if instance and not found_aadhar and hasattr(instance, 'aadhar'):
+                        found_aadhar = instance.aadhar
+                else:
+                    # Fallback if a model in the list doesn't have mrdNo (shouldn't happen based on requirement)
+                    response_data[key] = None
 
-            logger.info(f"Fetched latest data on/before {date_str} for aadhar: {aadhar}")
-            return JsonResponse({"data": employee_data}, safe=False, status=200) # safe=False needed for top-level dict
+            # 3. Fetch Employee Details (Static Profile) using the found Aadhar
+            # Employee details usually don't have an mrdNo, they are linked by Aadhar
+            if found_aadhar:
+                employee_instance = employee_details.objects.filter(aadhar=found_aadhar).first()
+                response_data["employee"] = serialize_model_instance(employee_instance)
+            else:
+                response_data["employee"] = None
+                
+                # Optional: If no clinical data was found at all for this MRD
+                is_empty = all(v is None for v in response_data.values())
+                if is_empty:
+                     return JsonResponse({"message": "No records found for this MRD Number.", "data": {}}, status=404)
+
+            logger.info(f"Fetched data for MRD: {mrdNo}")
+            return JsonResponse({"data": response_data}, safe=False, status=200)
 
         except Exception as e:
-            logger.exception(f"fetchVisitDataWithDate failed for aadhar {aadhar}, date {date_str}: An unexpected error occurred.")
+            logger.exception(f"fetchVisitDataByMrd failed for MRD {mrdNo}: An unexpected error occurred.")
             return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
 
-    logger.warning(f"fetchVisitDataWithDate failed for aadhar {aadhar}: Invalid request method. Only GET allowed.")
+    logger.warning(f"fetchVisitDataByMrd failed: Invalid request method. Only GET allowed.")
     return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
+
 
 import json
 import logging
@@ -7526,4 +7542,46 @@ def get_worker_by_aadhar(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
     
+    return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+@csrf_exempt
+def update_employee_data(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            old_emp_no = data.get('emp_no')  # The ID to find the user
+            field = data.get('field')        # The column to change
+            new_value = data.get('value')    # The new value
+            aadhar = data.get('aadhar')
+
+            if not old_emp_no or not field:
+                return JsonResponse({'success': False, 'message': 'emp_no and field are required'}, status=400)
+
+            # 1. Check if the field actually exists on the model
+            # Note: We use the class/model itself to check fields, not an instance
+            model_fields = [f.name for f in employee_details._meta.get_fields()]
+            if field not in model_fields:
+                return JsonResponse({'success': False, 'message': f'Field {field} does not exist'}, status=400)
+
+            # 2. Use filter().update() 
+            # This generates a SQL UPDATE statement directly.
+            # It handles Primary Key updates correctly (renaming) and prevents "INSERT" behavior.
+            rows_affected = employee_details.objects.filter(aadhar=aadhar).update(**{field: new_value})
+
+            if rows_affected > 0:
+                return JsonResponse({'success': True, 'message': 'Updated successfully'}, status=200)
+            else:
+                return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+
+        except Exception as e:
+            # Print the error to your VS Code terminal so you can see it
+            print("SERVER ERROR:", str(e)) 
+            
+            # Check for specific DB errors (like duplicate entry)
+            if "UNIQUE constraint" in str(e) or "Duplicate entry" in str(e):
+                return JsonResponse({'success': False, 'message': f'Value "{new_value}" already exists for {field}.'}, status=400)
+                
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
     return JsonResponse({'error': 'Invalid method'}, status=405)

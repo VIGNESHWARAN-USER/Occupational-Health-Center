@@ -1471,8 +1471,7 @@ class FitnessAssessment(BaseModel):
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     employer = models.TextField(blank=True, null=True)
 
-    # --- NEW: Field for Follow-Up MRD History ---
-    # This field will store an array of MRD numbers, e.g., ["MRD001", "MRD002"]
+    
     follow_up_mrd_history = models.JSONField(
         default=list, 
         blank=True, 
@@ -1654,8 +1653,7 @@ class Consultation(models.Model):
     advice = models.TextField(blank=True, null=True)
     follow_up_date = models.DateField(blank=True, null=True)
 
-    # --- NEW: Field for Follow-Up MRD History ---
-    # This field will store an array of MRD numbers, e.g., ["MRD001", "MRD002"]
+    
     follow_up_mrd_history = models.JSONField(
         default=list, 
         blank=True, 

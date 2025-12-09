@@ -106,6 +106,7 @@
     };
 
     // State hooks
+    const [isHistoryUpdated, setIsHistoryUpdated] = useState(false);
     const [personalHistory, setPersonalHistory] = useState({ diet: "", paan: { yesNo: "", years: "" }, alcohol: { yesNo: "", years: "", frequency: "" }, smoking: { yesNo: "", years: "", perDay: "" } });
     const [medicalData, setMedicalData] = useState(initialMedicalData);
     const [femaleWorker, setFemaleWorker] = useState({ obstetricHistory: "", gynecologicalHistory: "" });
@@ -266,7 +267,13 @@
 
     // --- Handlers ---
 
+    const markHistoryAsUpdated = () => {
+      if (!isHistoryUpdated) setIsHistoryUpdated(true);
+    };
+
+
     const handlePersonalHistoryChange = (e) => {
+      markHistoryAsUpdated();
       const { name, value } = e.target;
       const keys = name.split('-');
       if (keys.length === 1) {
@@ -282,36 +289,44 @@
     };
 
     const handleAllergySelect = (allergyType) => {
+      markHistoryAsUpdated();
       const currentSelection = allergyFields[allergyType]?.yesNo;
       const newSelection = currentSelection === "yes" ? "no" : "yes";
       setAllergyFields((prev) => ({ ...prev, [allergyType]: { ...(prev[allergyType] || {}), yesNo: newSelection } }));
       if (newSelection === "no") { handleAllergyCommentChange(allergyType, ""); }
     };
     const handleAllergyCommentChange = (allergyType, comment) => {
+      markHistoryAsUpdated();
       setAllergyComments((prev) => ({ ...prev, [allergyType]: comment }));
     };
 
     const handleMedicalInputChange = (conditionKey, field, value) => {
+      markHistoryAsUpdated();
       setMedicalData((prev) => ({ ...prev, [conditionKey]: { ...(prev[conditionKey] || initialMedicalData[conditionKey]), [field]: value } }));
     };
 
     const handleSurgicalHistoryCommentChange = (comment) => {
+      markHistoryAsUpdated();
       setSurgicalHistory((prev) => ({ ...prev, comments: comment }));
     };
 
     const handleFamilyHistoryChange = (relativeKey, field, value) => {
+      markHistoryAsUpdated();
       setFamilyHistory((prev) => ({ ...prev, [relativeKey]: { ...(prev[relativeKey] || {}), [field]: value } }));
     };
 
     const handleFamilyMedicalConditionChange = (conditionKey, field, value) => {
+      markHistoryAsUpdated();
       setFamilyHistory(prev => ({ ...prev, [conditionKey]: { ...(prev[conditionKey] || initialFamilyHistory[conditionKey]), [field]: value } }));
     };
     const handleSelectionChange = (conditionKey, selectedOptions) => {
+      markHistoryAsUpdated();
       const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
       setConditions(prev => ({ ...prev, [conditionKey]: selectedValues }));
     };
 
     const handleChildInputChange = (index, field, value) => {
+      markHistoryAsUpdated();
       setChildrenData((prev) => {
         const updatedData = [...prev];
         updatedData[index] = { ...(updatedData[index] || defaultPerson), [field]: value };
@@ -322,6 +337,7 @@
     const removeChild = (index) => setChildrenData((prev) => prev.filter((_, i) => i !== index));
 
     const handleSpouseInputChange = (index, field, value) => {
+      markHistoryAsUpdated();
       setSpousesData((prev) => {
         const updatedData = [...prev];
         updatedData[index] = { ...(updatedData[index] || defaultPerson), [field]: value };
@@ -883,9 +899,22 @@
 
         {/* Submit Button */}
         <div className="mt-8 flex justify-end">
-          <button type="button" onClick={handleSubmit} style={buttonStyle} disabled={!isEditMode}>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            style={buttonStyle}
+            disabled={!isHistoryUpdated}
+            className={`
+              px-6 py-2 rounded-md transition
+              ${isHistoryUpdated 
+                ? "bg-blue-600 text-white hover:bg-blue-700" 
+                : "bg-gray-400 text-gray-200 cursor-not-allowed"
+              }
+            `}
+          >
             Submit Medical History
           </button>
+
         </div>
       </div>)}
       </div>

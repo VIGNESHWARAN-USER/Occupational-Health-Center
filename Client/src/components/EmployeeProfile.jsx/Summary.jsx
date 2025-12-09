@@ -13,7 +13,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
 
 const Summary = () => {
-    const {aadhar, date, visit} = useLocation().state || "";
+    const {mrdNo} = useLocation().state || "";
     const [visitData, setVisitData] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ const Summary = () => {
     useEffect(()=>{
         const fetchUserData = async () => {
             try {
-                const response = await axios.get(`http://localhost:8000/visitData/${aadhar}/${date}`);
+                const response = await axios.get(`http://localhost:8000/visitDataWithMrd/${mrdNo}`);
                 console.log(response)
                 console.log(response.data.data)
                 const data = await response.data.data;
@@ -55,7 +55,7 @@ const Summary = () => {
                                   <p className="text-gray-600 font-semibold text-lg animate-pulse">Preparing summary...</p>
                                 </div>
                         ):
-                        ((visit === "Curative") ?(
+                        ((visitData.employee.type_of_visit === "Curative") ?(
                         <>
                             <BasicDetails  data = {visitData.employee}/>
                             <Vitals data = {visitData.vitals}/>
@@ -63,7 +63,7 @@ const Summary = () => {
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
                             
                             <Vaccination data = {visitData.vaccination}/>
-                            <ConsultationDisplay data = {visitData}/>
+                            <ConsultationDisplay data = {visitData.consultation}/>
                         </>
                         ):(
                         <> 
@@ -73,6 +73,7 @@ const Summary = () => {
                             <MedicalHistory data={{ medicalhistory: visitData.msphistory, sex: visitData.employee?.sex }} />
                             
                             <Vaccination data = {visitData.vaccination}/>
+
                             <Fitness data = {visitData.fitnessassessment}/>
                         </>))
                     }
