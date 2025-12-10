@@ -32,19 +32,20 @@ const AmbulanceConsumables = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const medicineOptions = ["Tablet", "Syrup", "Injection","Lotions","Respules","Powder", "Creams", "Drops", "Fluids", "Other"];
+  const medicineOptions = ["Tablet", "Syrup", "Injection","Lotions","Respules","Powder", "Creams", "Drops", "Fluids","Suture & Procedure Items","Dressing Items", "Other"];
 
   const getTodayDate = () => new Date().toISOString().split("T")[0];
 
   const fetchWardConsumables = async () => {
     try {
-      let url = "http://localhost:80000/get_ambulance_consumable/";
+      let url = "http://localhost:8000/get_ambulance_consumable/";
       const params = [];
       if (fromDate) params.push(`from_date=${fromDate}`);
       if (toDate) params.push(`to_date=${toDate}`);
       if (params.length) url += `?${params.join("&")}`;
-
+      console.log("Fetching ambulance consumables from URL:", url);
       const response = await axios.get(url);
+      console.log("Fetched ambulance consumables:", response.data);
       setWardConsumables(response.data.ambulance_consumables || response.data);
       setLoading(false);
     } catch (error) {
@@ -186,41 +187,65 @@ const AmbulanceConsumables = () => {
       setShowDoseSuggestions(false);
     }
   };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setMessage("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("");
+  const isSpecialForm =
+    formData.medicine_form === "Suture & Procedure Items" ||
+    formData.medicine_form === "Dressing Items";
 
-    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.total+quantity || !formData.consumed_date) {
+  // --- Validation ---
+  console.log("Form Data on Submit:", formData.brand_name);
+  if (isSpecialForm) {
+    if (!formData.brand_name || !formData.quantity || !formData.expiry_date || !formData.consumed_date) {
+      setMessage("Item Name, Quantity, Expiry and Consumed Date are required.");
+      return;
+    }
+  } else {
+    if (
+      !formData.medicine_form ||
+      !formData.brand_name ||
+      !formData.chemical_name ||
+      !formData.dose_volume ||
+      !formData.quantity ||
+      !formData.expiry_date ||
+      !formData.consumed_date
+    ) {
       setMessage("All required fields must be filled.");
       return;
     }
+  }
 
-    try {
-      await axios.post("http://localhost:80000/add_ambulance_consumable/", {
-        ...formData,
-        consumed_date: getTodayDate()
-      });
+  try {
+    await axios.post("http://localhost:8000/add_ambulance_consumable/", {
+      ...formData,   // send exactly what user selects
+    });
 
-      setMessage("Ambulance consumable added successfully!");
-      setFormData({
-        medicine_form: "",
-        chemical_name: "",
-        brand_name: "",
-        dose_volume: "",
-        quantity: "",
-        total_quantity: "",
-        expiry_date: "",
-        consumed_date: getTodayDate(),
-      });
-      fetchWardConsumables();
-      setShowForm(false);
-    } catch (err) {
-      console.error("Error adding consumable:", err);
-      const errorMsg = err.response?.data?.detail || "Error adding ambulance consumable.";
-      setMessage(errorMsg);
-    }
-  };
+    setMessage("Ambulance consumable added successfully!");
+
+    setFormData({
+      medicine_form: "",
+      chemical_name: "",
+      brand_name: "",
+      dose_volume: "",
+      quantity: "",
+      expiry_date: "",
+      consumed_date: getTodayDate(),
+    });
+
+    fetchWardConsumables();
+    setShowForm(false);
+  } catch (err) {
+    console.error("Error adding consumable:", err);
+
+    const backendMsg = err.response?.data?.error || "Error adding ambulance consumable.";
+    setMessage(backendMsg);
+  }
+};
+
+
+
 
   const handleShowForm = () => {
     setFormData({
@@ -352,164 +377,219 @@ const AmbulanceConsumables = () => {
                 </p>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
-               {/* Medicine Form Dropdown */}
-               <div>
-                 <label className="block text-gray-700 font-medium mb-1">Medicine Form <span className="text-red-500">*</span></label>
-                 <select
-                    name="medicine_form"
-                    value={formData.medicine_form}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required // Added required attribute
-                 >
-                   <option value="">Select Form</option>
-                   {medicineOptions.map((option) => (
-                     <option key={option} value={option}>{option}</option>
-                   ))}
-                 </select>
-               </div>
 
-               {/* Chemical Name Input with Suggestions */}
-               <div className="relative">
-                 <label className="block text-gray-700 font-medium mb-1">Chemical Name <span className="text-red-500">*</span></label>
-                 <input
-                   type="text"
-                   name="chemical_name"
-                   value={formData.chemical_name}
-                   onChange={handleChange}
-                   className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                   required
-                   autoComplete="off" // Prevent browser autocomplete interfering with suggestions
-                 />
-                 {showChemicalSuggestions && chemicalSuggestions.length > 0 && (
-                   <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 max-h-40 overflow-y-auto rounded-lg shadow-lg">
-                     {chemicalSuggestions.map((suggestion) => (
-                       <li
-                         key={suggestion}
-                         onClick={() => handleChemicalSuggestionClick(suggestion)}
-                         className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                       >
-                         {suggestion}
-                       </li>
-                     ))}
-                   </ul>
-                 )}
-               </div>
-
-               {/* Brand Name Input with Suggestions */}
-               <div className="relative">
-                 <label className="block text-gray-700 font-medium mb-1">Brand Name <span className="text-red-500">*</span></label>
-                 <input
-                   type="text"
-                   name="brand_name"
-                   value={formData.brand_name}
-                   onChange={handleChange}
-                   className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                   required
-                   autoComplete="off"
-                 />
-                 {showSuggestions && suggestions.length > 0 && (
-                   <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 max-h-40 overflow-y-auto rounded-lg shadow-lg">
-                     {suggestions.map((suggestion) => (
-                       <li
-                         key={suggestion}
-                         onClick={() => handleBrandSuggestionClick(suggestion)}
-                         className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                       >
-                         {suggestion}
-                       </li>
-                     ))}
-                   </ul>
-                 )}
-               </div>
-
-              {/* Dose/Volume Input with Suggestions */}
-              <div className="relative">
-                <label className="block text-gray-700 font-medium mb-1">Dose/Volume <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  name="dose_volume"
-                  value={formData.dose_volume}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                  autoComplete="off"
-                />
-                {showDoseSuggestions && doseSuggestions.length > 0 && (
-                  <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 max-h-40 overflow-y-auto rounded-lg shadow-lg">
-                    {doseSuggestions.map((suggestion) => (
-                      <li
-                        key={suggestion}
-                        onClick={() => handleDoseSuggestionClick(suggestion)}
-                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                      >
-                        {suggestion}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              {/* Quantity Input */}
+              {/* Medicine Form */}
               <div>
-                <label className="block text-gray-700 font-medium mb-1">Quantity <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  name="quantity"
-                  value={formData.quantity}
+                <label className="block text-gray-700 font-medium mb-1">
+                  Medicine Form <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="medicine_form"
+                  value={formData.medicine_form}
                   onChange={handleChange}
-                  min="1" // Ensure quantity is positive
-                  className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full border border-gray-300 px-3 py-2 rounded-lg"
                   required
-                />
+                >
+                  <option value="">Select Form</option>
+                  {medicineOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-1">Total Quantity <span className="text-red-500">*</span></label>
-                <input
-                  type="number"
-                  name="total_quantity"
-                  value={formData.total_quantity}
-                  onChange={handleChange}
-                  min="1" // Ensure quantity is positive
-                  className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
+              {/* Determine form type */}
+              {(() => {
+                const isSimpleForm =
+                  formData.medicine_form === "Suture & Procedure Items" ||
+                  formData.medicine_form === "Dressing Items";
 
-              {/* Expiry Date Input */}
-              <div>
-                <label className="block text-gray-700 font-medium mb-1">Expiry Date</label>
-                <input
-                  type="month"
-                  name="expiry_date"
-                  value={formData.expiry_date}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+                if (isSimpleForm) {
+                  return (
+                    <>
+                      {/* Item Name */}
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-1">
+                          Item Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="brand_name"
+                          placeholder="Enter Item Name"
+                          value={formData.brand_name}
+                          onChange={handleChange}
+                          className="w-full border px-3 py-2 rounded-lg"
+                          required
+                        />
+                      </div>
 
-               {/* Consumed Date Input (Read Only) */}
-               <div>
-                 <label className="block text-gray-700 font-medium mb-1">Consumed Date <span className="text-red-500">*</span></label>
-                 <input
-                   type="date"
-                   name="consumed_date"
-                   value={formData.consumed_date}
-                   // onChange={handleChange} // Disable direct changes by user
-                   readOnly // Make field read-only
-                   className="w-full border border-gray-300 px-3 py-2 rounded-lg bg-gray-100 cursor-not-allowed" // Style as read-only
-                   required
-                 />
-               </div>
+                      {/* Quantity */}
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-1">
+                          Quantity <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="quantity"
+                          value={formData.quantity}
+                          onChange={handleChange}
+                          min="1"
+                          className="w-full border px-3 py-2 rounded-lg"
+                          required
+                        />
+                      </div>
 
-              {/* Removed Reason Textarea */}
+                      {/* Expiry Date */}
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-1">
+                          Expiry Date
+                        </label>
+                        <input
+                          type="month"
+                          name="expiry_date"
+                          value={formData.expiry_date}
+                          onChange={handleChange}
+                          className="w-full border px-3 py-2 rounded-lg"
+                        />
+                      </div>
 
+                      {/* Consumed Date */}
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-1">
+                          Consumed Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          name="consumed_date"
+                          value={formData.consumed_date}
+                          readOnly
+                          className="w-full border px-3 py-2 bg-gray-100 rounded-lg"
+                          required
+                        />
+                      </div>
+                    </>
+                  );
+                }
+
+                // 🔵 FULL FORM FOR OTHER MEDICINE TYPES
+                return (
+                  <>
+                    {/* Chemical Name */}
+                    <div className="relative">
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Chemical Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="chemical_name"
+                        value={formData.chemical_name}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded-lg"
+                        required
+                        autoComplete="off"
+                      />
+                      {showChemicalSuggestions && chemicalSuggestions.length > 0 && (
+                        <ul className="absolute w-full bg-white border rounded-lg shadow">
+                          {chemicalSuggestions.map((suggestion) => (
+                            <li
+                              key={suggestion}
+                              onClick={() => handleChemicalSuggestionClick(suggestion)}
+                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                            >
+                              {suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Brand Name */}
+                    <div className="relative">
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Brand Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="brand_name"
+                        value={formData.brand_name}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded-lg"
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    {/* Dose/Volume */}
+                    <div className="relative">
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Dose/Volume <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="dose_volume"
+                        value={formData.dose_volume}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded-lg"
+                        required
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Quantity <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleChange}
+                        min="1"
+                        className="w-full border px-3 py-2 rounded-lg"
+                        required
+                      />
+                    </div>
+
+                   
+
+                    {/* Expiry Date */}
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Expiry Date
+                      </label>
+                      <input
+                        type="month"
+                        name="expiry_date"
+                        value={formData.expiry_date}
+                        onChange={handleChange}
+                        className="w-full border px-3 py-2 rounded-lg"
+                      />
+                    </div>
+
+                    {/* Consumed Date */}
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-1">
+                        Consumed Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="consumed_date"
+                        value={formData.consumed_date}
+                        readOnly
+                        className="w-full border px-3 py-2 bg-gray-100 rounded-lg"
+                        required
+                      />
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow focus:outline-none focus:shadow-outline transition duration-150 ease-in-out"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg"
               >
-                Add Consumable {/* Changed button text */}
+                Add Consumable
               </button>
             </form>
             <button

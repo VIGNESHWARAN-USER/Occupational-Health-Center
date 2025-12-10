@@ -1754,7 +1754,7 @@ class DiscardedMedicine(BaseModel):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     reason = models.TextField()
-    total_quantity=models.PositiveBigIntegerField()
+    #total_quantity=models.PositiveBigIntegerField()
 
 
     def __str__(self):
@@ -1771,7 +1771,7 @@ class WardConsumables(BaseModel):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     consumed_date = models.DateField(auto_now_add=True) # Sets on creation
-    total_quantity=models.PositiveBigIntegerField()
+    # total_quantity=models.PositiveBigIntegerField()
 
     def __str__(self):
         consumed_date_str = self.consumed_date.strftime('%Y-%m-%d') if self.consumed_date else 'N/A'
@@ -1787,7 +1787,7 @@ class AmbulanceConsumables(models.Model):
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     consumed_date = models.DateField(auto_now_add=True)  # Date when medicine was discarded
-    total_quantity=models.PositiveBigIntegerField()
+    # total_quantity=models.PositiveBigIntegerField()
 
     def _str_(self):
         return f"{self.brand_name} ({self.dose_volume}) - {self.discarded_date}"
