@@ -4793,204 +4793,115 @@ def parse_expiry_date(date_str):
         return None
 
 
-
 @csrf_exempt
 def get_prescription_in_data(request):
-    """
-    Fetches unique stock items and their corresponding daily quantities
-    for a given month and year.
-    """
-    # Check model availability again (belt-and-suspenders)
-    if DailyQuantity is None:
-        return JsonResponse({'error': 'Server configuration error: DailyQuantity model not available.'}, status=500)
 
-    if request.method != 'GET':
-        logger.warning(f"get_prescription_in_data rejected non-GET request: {request.method}")
-        return JsonResponse({'error': 'GET method required'}, status=405)
+    if request.method != "GET":
+        return JsonResponse({"error": "GET required"}, status=405)
 
     try:
-        # --- Parameter Validation ---
         today = timezone.now().date()
-        try:
-            year_str = request.GET.get('year', str(today.year))
-            month_str = request.GET.get('month', str(today.month))
-            year = int(year_str)
-            month = int(month_str)
-            if not (1 <= month <= 12): raise ValueError("Month must be between 1 and 12.")
-            if year < 1900 or year > 2100: raise ValueError("Year out of reasonable range.")
-        except (ValueError, TypeError):
-             logger.warning(f"Invalid year/month parameters: year='{request.GET.get('year')}', month='{request.GET.get('month')}'")
-             return JsonResponse({'error': 'Invalid or missing year/month parameter.'}, status=400)
+        year = int(request.GET.get("year", today.year))
+        month = int(request.GET.get("month", today.month))
 
-        logger.info(f"Fetching prescription-in data for {year}-{month:02d}")
+        start_date = date(year, month, 1)
+        days_in_req_month = get_days_in_month(year, month)
+        end_date = date(year, month, days_in_req_month)
 
-        # --- Date Range Calculation ---
-        try:
-            start_date = date(year, month, 1)
-            days_in_req_month = get_days_in_month(year, month)
-            end_date = date(year, month, days_in_req_month)
-            print(start_date, end_date)
-        except ValueError as date_err:
-             logger.error(f"Error calculating date range for {year}-{month}: {date_err}")
-             return JsonResponse({'error': 'Internal error calculating month days.'}, status=500)
-
-        # --- Step 1: Get Unique Stock Identifiers ---
-        unique_items_qs = None
-        required_fields = ['chemical_name', 'brand_name', 'dose_volume'] # Core identifiers
-        stock_fields_to_get = required_fields + ['expiry_date']
+        # STEP 1 — FETCH UNIQUE ITEMS
+        stock_fields = ["chemical_name", "brand_name", "dose_volume", "expiry_date"]
 
         if HAS_STOCK_MODEL and PharmacyStock:
-            logger.debug("Querying PharmacyStock model for unique items.")
-            # *** ADJUST field names to match your PharmacyStock model ***
-            unique_items_qs = PharmacyStock.objects.values(*stock_fields_to_get).distinct().order_by('chemical_name', 'brand_name', 'expiry_date')
-        elif DailyQuantity:
-             logger.warning("Querying DailyQuantity as fallback for unique items.")
-             # This might miss items never entered or only with far future expiry
-             unique_items_qs = DailyQuantity.objects.filter(
-                 # Look for entries in the requested month OR relevant expiry
-                 Q(date__year=year, date__month=month) | Q(expiry_date__gte=start_date) | Q(expiry_date__isnull=True)
-             ).values(*stock_fields_to_get).distinct().order_by('chemical_name', 'brand_name', 'expiry_date')
+            unique_items = PharmacyStock.objects.values(*stock_fields).distinct()
         else:
-             logger.critical("Configuration Error: No model available to determine unique stock items.")
-             return JsonResponse({'error': 'Server configuration error: Cannot determine stock items.'}, status=500)
+            unique_items = DailyQuantity.objects.values(*stock_fields).distinct()
 
-        # Convert to list for efficient iteration & check if empty
-        item_identifiers_list = list(unique_items_qs)
-        if not item_identifiers_list:
-            logger.warning(f"No unique stock items identified for {year}-{month} based on available data.")
-            return JsonResponse([], safe=False) # Return empty list if no items found
+        unique_items = list(unique_items)
 
-        logger.debug(f"Found {len(item_identifiers_list)} unique item identifiers.")
+        # STEP 2 — FETCH DAILY QUANTITIES
+        daily_qs = DailyQuantity.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date
+        ).values(
+            "chemical_name", "brand_name", "dose_volume",
+            "expiry_date", "date", "quantity"
+        )
 
-        # --- Step 2: Fetch Relevant Daily Quantities ---
-        q_objects_filter = Q()
-        valid_identifiers_found_for_q = False
-        for item in item_identifiers_list:
-             # Ensure the item dict has the required keys for filtering
-             if all(k in item for k in required_fields):
-                 q_objects_filter |= Q(
-                     chemical_name=item['chemical_name'],
-                     brand_name=item['brand_name'],
-                     dose_volume=item['dose_volume'],
-                     expiry_date=item.get('expiry_date') # Handles None expiry
-                 )
-                 valid_identifiers_found_for_q = True
-             else:
-                  logger.warning(f"Skipping identifier dict (missing keys) when building Q filter: {item}")
+        # STEP 3 — BUILD LOOKUP MAP
+        daily_map = {}
 
-        daily_data_qs = DailyQuantity.objects.none() # Default to empty queryset
-        if valid_identifiers_found_for_q:
-            # Fetch records matching any valid identifier within the date range
-            daily_data_qs = DailyQuantity.objects.filter(
-                q_objects_filter,
-                date__gte=start_date,
-                date__lte=end_date
-            ).values(
-                'chemical_name', 'brand_name', 'dose_volume', 'expiry_date',
-                'date', 'quantity' # Ensure quantity is selected
-            )
-            logger.debug(f"Found {daily_data_qs.count()} daily quantity records for the month.")
-            print(daily_data_qs)
-        else:
-             logger.warning("No valid identifiers found to build DailyQuantity filter.")
+        for row in daily_qs:
+            if row["date"] is None:
+                continue  # skip entries without date
 
+            chem = row["chemical_name"] or "General Items"
+            brand = row["brand_name"] or "Unknown Brand"
+            dose = row["dose_volume"]
+            if dose is None or dose == "N/A":
+                dose = ""
 
-        # --- Step 3: Organize Daily Data into a Lookup Map ---
-        # Key: tuple(chem, brand, dose, expiry_obj_or_None), Value: {day_num: qty}
-        daily_quantities_map = {}
-        for dq in daily_data_qs:
-            # Validate essential keys before creating map entry
-            
-            if not all(k in dq for k in required_fields + ['date']):
-                logger.warning(f"Skipping daily quantity record (missing keys) for map: {dq}")
-                continue
-            expiry_key = dq.get('expiry_date') # Date object or None from DB
-            key = (dq['chemical_name'], dq['brand_name'], dq['dose_volume'], expiry_key)
-            
-            try:
-                day_num = dq['date'].day
-                quantity_val = dq.get('quantity', 0) # Default to 0 if quantity missing
-                print(day_num, quantity_val)
-            except AttributeError: # Handle if 'date' is somehow not a date object
-                 logger.warning(f"Skipping daily quantity record with invalid date object: {dq}")
-                 continue
+            expiry = row["expiry_date"]
 
-            if key not in daily_quantities_map:
-                daily_quantities_map[key] = {}
-                
-            daily_quantities_map[key][day_num] = quantity_val
-        print(daily_quantities_map)
-            
+            key = (chem, brand, dose, expiry)
 
-        # --- Step 4: Structure Final JSON Response ---
-        structured_data = []
-        processed_chemicals = {} # Helper: chemical_name -> index in structured_data
-        s_no_counter = 1
+            day = row["date"].day
+            qty = row.get("quantity", 0)
 
-        for item in item_identifiers_list:
-            # Validate item before structuring
-            if not all(k in item for k in required_fields):
-                 logger.warning(f"Skipping item during final structuring (missing keys): {item}")
-                 continue
+            if key not in daily_map:
+                daily_map[key] = {}
 
-            chem_name = item['chemical_name']
-            # Find or create the chemical group in the result list
-            if chem_name not in processed_chemicals:
-                 group_index = len(structured_data)
-                 processed_chemicals[chem_name] = group_index
-                 structured_data.append({
-                     "s_no": s_no_counter,
-                     "chemical_name": chem_name,
-                     "brands": []
-                 })
-                 s_no_counter += 1
-            else:
-                 group_index = processed_chemicals[chem_name]
+            daily_map[key][day] = qty
 
-            # Prepare data for the current brand variant
-            brand_name = item['brand_name']
-            dose_volume = item['dose_volume']
-            expiry_date_obj = item.get('expiry_date') # Date object or None
-            # Format date for JSON response (ISO format recommended)
-            expiry_date_str = expiry_date_obj.isoformat() if expiry_date_obj else None
+        # STEP 4 — BUILD FINAL STRUCTURE
+        result = []
+        chem_groups = {}
+        s_no = 1
 
-            # Lookup daily quantities using the map
-            lookup_key = (chem_name, brand_name, dose_volume, expiry_date_obj)
-            print(lookup_key)
-            brand_daily_data_raw = daily_quantities_map.get(lookup_key, {}) # Get {day: qty} or {}
-            
-            # Format the daily quantities object for the frontend
-            daily_quantities_formatted = {}
+        for item in unique_items:
+            chem = item.get("chemical_name") or "General Items"
+            brand = item.get("brand_name") or "Unknown Brand"
+            dose = item.get("dose_volume")
+            if dose is None or dose == "N/A":
+                dose = ""
+            expiry = item.get("expiry_date")
+            expiry_str = expiry.isoformat() if expiry else None
+
+            # CREATE GROUP IF NOT EXISTS
+            if chem not in chem_groups:
+                chem_groups[chem] = len(result)
+                result.append({
+                    "s_no": s_no,
+                    "chemical_name": chem,
+                    "brands": []
+                })
+                s_no += 1
+
+            group_index = chem_groups[chem]
+
+            key = (chem, brand, dose, expiry)
+            daily_raw = daily_map.get(key, {})
+
+            daily_formatted = {}
             monthly_total = 0
-            for i in range(1, days_in_req_month + 1):
-                qty = brand_daily_data_raw.get(i, 0) # Default to 0
-                # Ensure frontend receives number or empty string (consistency)
-                daily_quantities_formatted[f"day_{i}"] = qty if qty != 0 else '' # Send empty string for 0? Or keep 0? FE handles '' or 0. Let's keep 0.
-                # daily_quantities_formatted[f"day_{i}"] = qty # Keep as number (0 or positive)
+
+            for d in range(1, days_in_req_month + 1):
+                qty = daily_raw.get(d, 0)
+                daily_formatted[f"day_{d}"] = qty if qty != 0 else ""
                 monthly_total += qty
 
-            # Append brand details to its chemical group
-            # Ensure target list exists
-            if group_index < len(structured_data) and 'brands' in structured_data[group_index]:
-                structured_data[group_index]['brands'].append({
-                    "brand_name": brand_name,
-                    "dosage": dose_volume, # Match frontend 'dosage' key
-                    "daily_quantities": daily_quantities_formatted,
-                    "monthly_total": monthly_total,
-                    "expiry_date": expiry_date_str, # Send ISO string or null
-                })
-            else:
-                logger.error(f"Logic error: Could not find chemical group at index {group_index} for chemical {chem_name}")
+            result[group_index]["brands"].append({
+                "brand_name": brand,
+                "dosage": dose,
+                "daily_quantities": daily_formatted,
+                "monthly_total": monthly_total,
+                "expiry_date": expiry_str
+            })
 
-        
-        logger.info(f"Successfully structured data for {len(structured_data)} chemicals for {year}-{month:02d}.")
-        return JsonResponse(structured_data, safe=False) # Return the list
+        return JsonResponse(result, safe=False)
 
-    # --- General Exception Handling ---
     except Exception as e:
-        logger.exception(f"Critical error occurred in get_prescription_in_data for {request.GET.get('year')}-{request.GET.get('month')}")
-        return JsonResponse({'error': f'An unexpected server error occurred: {type(e).__name__}'}, status=500)
-
+        logger.exception("Error in get_prescription_in_data")
+        return JsonResponse({"error": str(e)}, status=500)
 
 import json
 # =================================================================
@@ -5365,286 +5276,582 @@ def get_quantity_suggestions(request):
     return JsonResponse({"error": "Invalid request method. Use GET."}, status=405)
 
 
-@csrf_exempt # Should be GET
+@csrf_exempt
 def get_discarded_medicines(request):
     if request.method == 'GET':
         try:
             discarded_qs = DiscardedMedicine.objects.all()
+
+            # ---- Date filters ----
             from_date_str = request.GET.get('from_date')
             to_date_str = request.GET.get('to_date')
+
             from_date = parse_date_internal(from_date_str)
             to_date = parse_date_internal(to_date_str)
-            if from_date: discarded_qs = discarded_qs.filter(entry_date__gte=from_date) # Filter by entry_date
-            if to_date: discarded_qs = discarded_qs.filter(entry_date__lte=to_date)
 
+            if from_date:
+                discarded_qs = discarded_qs.filter(entry_date__gte=from_date)
+
+            if to_date:
+                discarded_qs = discarded_qs.filter(entry_date__lte=to_date)
+
+            # ---- Build response ----
             data = []
             for entry in discarded_qs.order_by('-entry_date'):
-                 total_quantity = get_total_quantity(entry.entry_date, entry.medicine_form, entry.brand_name, entry.chemical_name, entry.dose_volume, entry.expiry_date)
-                 data.append({
-                     "id": entry.id, "medicine_form": entry.medicine_form, "brand_name": entry.brand_name,
-                     "chemical_name": entry.chemical_name, "dose_volume": entry.dose_volume,
-                     "quantity": entry.quantity, # Quantity discarded
-                     "total_quantity": total_quantity, # Original total qty
-                     "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else "",
-                     "reason": entry.reason,
-                     "entry_date": entry.entry_date.strftime("%d-%b-%Y") if entry.entry_date else "", # Date discarded
-                 })
-            return JsonResponse({"discarded_medicines": data}, safe=False)
+
+                data.append({
+                    "id": entry.id,
+                    "medicine_form": entry.medicine_form,
+                    "brand_name": entry.brand_name,
+                    "chemical_name": entry.chemical_name,
+                    "dose_volume": entry.dose_volume,
+                    "quantity": entry.quantity,   # discarded qty
+                    "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else "",
+                    "reason": entry.reason,
+                    "entry_date": entry.entry_date.strftime("%d-%b-%Y") if entry.entry_date else "",
+                })
+
+            return JsonResponse({"discarded_medicines": data})
+
         except Exception as e:
             logger.exception("Error in get_discarded_medicines")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+            return JsonResponse(
+                {"error": "Server error.", "detail": str(e)},
+                status=500
+            )
+
     else:
-         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
-         response['Allow'] = 'GET'
-         return response
+        response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
+        response['Allow'] = 'GET'
+        return response
 
 @csrf_exempt
 def add_discarded_medicine(request):
+    """ Record a discarded medicine and reduce stock accordingly. """
     if request.method == "POST":
+        print("I am leo")
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+            data = json.loads(request.body.decode('utf-8'))
+
+            # 1. Extract Data
             medicine_form = data.get("medicine_form")
             brand_name = data.get("brand_name")
+            quantity_str = data.get("quantity")
+            expiry_date_str = data.get("expiry_date")  # Expect YYYY-MM-DD
+            reason = data.get("reason")
             chemical_name = data.get("chemical_name")
             dose_volume = data.get("dose_volume")
-            expiry_date_str = data.get("expiry_date") # Expect YYYY-MM
-            quantity_str = data.get("quantity")
-            reason = data.get("reason")
 
-            # Validation
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, expiry_date_str, quantity_str, reason]):
-                 return JsonResponse({"error": "Missing required fields for discarding medicine."}, status=400)
+            # 2. Special Category Logic
+            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+
+            if medicine_form in special_categories:
+                chemical_name = None
+                dose_volume = None
+
+                if not all([medicine_form, brand_name, quantity_str, expiry_date_str, reason]):
+                    return JsonResponse({"error": "Item Name, Quantity, Expiry, and Reason are required."}, status=400)
+            else:
+                if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str, reason]):
+                    return JsonResponse({"error": "All fields are required."}, status=400)
+
+            # 3. Parse Numbers and Dates
             try:
-                 quantity_to_discard = int(quantity_str)
-                 if quantity_to_discard <= 0: raise ValueError("Quantity must be positive")
-            except (ValueError, TypeError):
-                  return JsonResponse({"error": "Invalid quantity."}, status=400)
+                quantity_to_discard = int(quantity_str)
+                if quantity_to_discard <= 0:
+                    raise ValueError
+            except:
+                return JsonResponse({"error": "Invalid quantity."}, status=400)
+
             try:
-                  expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
+                expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
             except ValueError:
-                  return JsonResponse({"error": "Invalid expiry date format (YYYY-MM)."}, status=400)
+                return JsonResponse({"error": "Invalid expiry date format."}, status=400)
+
+            entry_date = date.today()
 
             with transaction.atomic():
-                # Find the stock item to deduct from
+                # --- A. Find the EXACT batch to discard from (PharmacyStock) ---
                 stock_item = PharmacyStock.objects.select_for_update().filter(
-                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
-                    dose_volume=dose_volume, expiry_date=expiry_date
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    expiry_date=expiry_date
+                ).filter(
+                    Q(chemical_name=chemical_name) |
+                    Q(chemical_name__isnull=True) |
+                    Q(chemical_name="")
+                ).filter(
+                    Q(dose_volume=dose_volume) |
+                    Q(dose_volume__isnull=True) |
+                    Q(dose_volume="")
                 ).first()
 
-                if not stock_item:
-                    return JsonResponse({"error": "Matching medicine batch not found in active stock."}, status=404)
-                if stock_item.quantity < quantity_to_discard:
-                    return JsonResponse({"error": f"Not enough quantity in stock. Available: {stock_item.quantity}, Requested: {quantity_to_discard}."}, status=400)
+                print("=== INPUT RECEIVED ===")
+                print("medicine_form:", medicine_form)
+                print("brand_name:", brand_name)
+                print("chemical_name:", chemical_name)
+                print("dose_volume:", dose_volume)
+                print("expiry_date:", expiry_date_str)
 
-                # Deduct from stock
+                print("\n=== DATABASE STOCK ITEMS ===")
+                for s in PharmacyStock.objects.filter(
+                    medicine_form=medicine_form,
+                    brand_name=brand_name
+                ):
+                    print({
+                        "chemical_name": s.chemical_name,
+                        "brand_name": s.brand_name,
+                        "dose_volume": s.dose_volume,
+                        "expiry_date": str(s.expiry_date),
+                        "quantity": s.quantity
+                    })
+
+                if not stock_item:
+                    return JsonResponse({"error": "Stock batch not found. Check details and expiry date."}, status=404)
+
+                if stock_item.quantity < quantity_to_discard:
+                    return JsonResponse({"error": f"Insufficient stock. Available: {stock_item.quantity}"}, status=400)
+
+                # Reduce Stock
                 stock_item.quantity -= quantity_to_discard
-                # Decide if total_quantity should also be reduced - typically yes for discard/damage
-                stock_item.total_quantity -= quantity_to_discard
                 stock_item.save()
 
-                # Add to DiscardedMedicine log
+                # --- B. Create Discard Record (Log) ---
                 DiscardedMedicine.objects.create(
-                    entry_date=date.today(), # Log when it was discarded
-                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
-                    dose_volume=dose_volume, quantity=quantity_to_discard,
-                    expiry_date=expiry_date, reason=reason,
-                    # Link back to original stock entry date if needed/possible
-                    # original_entry_date=stock_item.entry_date # Requires adding field to DiscardedMedicine
+                    entry_date=entry_date,
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    chemical_name=chemical_name,
+                    dose_volume=dose_volume,
+                    quantity=quantity_to_discard,
+                    expiry_date=expiry_date,
+                    reason=reason
                 )
 
-            logger.info(f"Discarded {quantity_to_discard} of {brand_name} (Expiry: {expiry_date_str}). Reason: {reason}")
-            return JsonResponse({"message": "Discarded medicine recorded successfully", "success": True})
+                # --- C. Update Daily Quantity (For PrescriptionIn Grid) ---
+                daily_qty, created = DailyQuantity.objects.get_or_create(
+                    date=entry_date,
+                    chemical_name=chemical_name,
+                    brand_name=brand_name,
+                    dose_volume=dose_volume if dose_volume else "N/A",
+                    expiry_date=expiry_date,
+                    defaults={'quantity': 0}
+                )
 
-        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON format."}, status=400)
+                daily_qty.quantity = F('quantity') + quantity_to_discard
+                daily_qty.save()
+
+            return JsonResponse({"message": "Medicine discarded, stock reduced, and daily usage updated successfully."}, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
         except Exception as e:
-            logger.exception("Error adding discarded medicine.")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
-        response = JsonResponse({"error": "Invalid request. Use POST."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+            return JsonResponse({"error": str(e)}, status=500)
 
-@csrf_exempt # Should be GET
+    else:
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+@csrf_exempt
 def get_ward_consumables(request):
     if request.method == 'GET':
         try:
             consumables_qs = WardConsumables.objects.all()
+
+            # ---- Date Filters ----
             from_date_str = request.GET.get("from_date")
             to_date_str = request.GET.get("to_date")
+
             from_date = parse_date_internal(from_date_str)
             to_date = parse_date_internal(to_date_str)
-            if from_date: consumables_qs = consumables_qs.filter(consumed_date__gte=from_date) # Filter by consumed_date
-            if to_date: consumables_qs = consumables_qs.filter(consumed_date__lte=to_date)
 
+            if from_date:
+                consumables_qs = consumables_qs.filter(consumed_date__gte=from_date)
+
+            if to_date:
+                consumables_qs = consumables_qs.filter(consumed_date__lte=to_date)
+
+            # ---- Build Response ----
             data = []
-            for entry in consumables_qs.order_by("-consumed_date", "-entry_date"): # Order by consumed, then entry
-                 total_quantity = get_total_quantity(entry.entry_date, entry.medicine_form, entry.brand_name, entry.chemical_name, entry.dose_volume, entry.expiry_date)
-                 data.append({
-                     "id": entry.id,
-                     # "entry_date": entry.entry_date.strftime("%Y-%m-%d") if entry.entry_date else None, # Original stock entry date
-                     "medicine_form": entry.medicine_form, "brand_name": entry.brand_name,
-                     "chemical_name": entry.chemical_name, "dose_volume": entry.dose_volume,
-                     "quantity": entry.quantity, # Quantity consumed
-                     "total_quantity": total_quantity, # Original total qty
-                     "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else None,
-                     "consumed_date": entry.consumed_date.strftime("%d-%b-%Y") if entry.consumed_date else None, # Date consumed
-                 })
-            return JsonResponse({"ward_consumables": data}, safe=False)
+            for entry in consumables_qs.order_by("-consumed_date", "-entry_date"):
+                total_quantity = get_total_quantity(
+                    entry.entry_date,
+                    entry.medicine_form,
+                    entry.brand_name,
+                    entry.chemical_name,
+                    entry.dose_volume,
+                    entry.expiry_date
+                )
+
+                data.append({
+                    "id": entry.id,
+                    "medicine_form": entry.medicine_form,
+                    "brand_name": entry.brand_name,
+                    "chemical_name": entry.chemical_name,
+                    "dose_volume": entry.dose_volume,
+                    "quantity": entry.quantity,
+
+                    # Original total quantity in stock
+                    "total_quantity": total_quantity,
+
+                    "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else None,
+
+                    # Date consumed
+                    "consumed_date": entry.consumed_date.strftime("%d-%b-%Y") if entry.consumed_date else None,
+                })
+
+            return JsonResponse({"ward_consumables": data})
+
         except Exception as e:
             logger.exception("Error in get_ward_consumables")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
+            return JsonResponse(
+                {"error": "Server error.", "detail": str(e)},
+                status=500
+            )
+
     else:
         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
-        response['Allow'] = 'GET'
+        response["Allow"] = "GET"
         return response
 
 @csrf_exempt
 def add_ward_consumable(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+            data = json.loads(request.body.decode('utf-8'))
+            logger.debug(f"Ward Consumable Data: {data}")
+
+            # -------------------------
+            # 1. Extract Input Fields
+            # -------------------------
             medicine_form = data.get("medicine_form")
             brand_name = data.get("brand_name")
+            quantity_str = data.get("quantity")
+            expiry_date_str = data.get("expiry_date")      # YYYY-MM
+            consumed_date_str = data.get("consumed_date")  # YYYY-MM-DD
+
             chemical_name = data.get("chemical_name")
             dose_volume = data.get("dose_volume")
-            expiry_date_str = data.get("expiry_date") # Expect YYYY-MM
-            consumed_date_str = data.get("consumed_date") # Expect YYYY-MM-DD
-            quantity_str = data.get("quantity")
 
-            # Validation
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, expiry_date_str, consumed_date_str, quantity_str]):
-                 return JsonResponse({"error": "Missing required consumable information."}, status=400)
+            # -------------------------
+            # 2. Special Category Logic
+            # -------------------------
+            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+
+            if medicine_form in special_categories:
+                chemical_name = None
+                dose_volume = None
+
+                if not all([medicine_form, brand_name, quantity_str, expiry_date_str, consumed_date_str]):
+                    return JsonResponse({"error": "Item Name, Quantity, Expiry and Consumed Date are required."},
+                                        status=400)
+            else:
+                if not all([
+                    medicine_form, brand_name, chemical_name, dose_volume,
+                    quantity_str, expiry_date_str, consumed_date_str
+                ]):
+                    return JsonResponse({"error": "All fields including Chemical Name and Dose/Volume are required."},
+                                        status=400)
+
+            # -------------------------
+            # 3. Parse Numbers & Dates
+            # -------------------------
             try:
-                 quantity_to_consume = int(quantity_str)
-                 if quantity_to_consume <= 0: raise ValueError("Quantity must be positive")
-            except (ValueError, TypeError): return JsonResponse({"error": "Invalid quantity."}, status=400)
-            try: expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
-            except ValueError: return JsonResponse({"error": "Invalid expiry date format (YYYY-MM)."}, status=400)
-            consumed_date = parse_date_internal(consumed_date_str)
-            if not consumed_date: return JsonResponse({"error": "Invalid consumed date format (YYYY-MM-DD)."}, status=400)
+                quantity_to_consume = int(quantity_str)
+                if quantity_to_consume <= 0:
+                    raise ValueError
+            except:
+                return JsonResponse({"error": "Invalid quantity."}, status=400)
 
+            try:
+                expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
+            except:
+                return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM."}, status=400)
+
+            try:
+                consumed_date = datetime.strptime(consumed_date_str, "%Y-%m-%d").date()
+            except:
+                return JsonResponse({"error": "Invalid consumed date format. Use YYYY-MM-DD."}, status=400)
+
+            entry_date = date.today()
+
+            # -------------------------
+            # 4. Stock Matching (Flexible Like Discard Logic)
+            # -------------------------
             with transaction.atomic():
+
+                print("\n=== INPUT RECEIVED FOR WARD CONSUMPTION ===")
+                print("medicine_form:", medicine_form)
+                print("brand_name:", brand_name)
+                print("chemical_name:", chemical_name)
+                print("dose_volume:", dose_volume)
+                print("expiry_date:", expiry_date_str)
+
+                print("\n=== DATABASE STOCK ITEMS ===")
+                for s in PharmacyStock.objects.filter(medicine_form=medicine_form, brand_name=brand_name):
+                    print({
+                        "chemical_name": s.chemical_name,
+                        "dose_volume": s.dose_volume,
+                        "brand_name": s.brand_name,
+                        "expiry_date": str(s.expiry_date),
+                        "quantity": s.quantity
+                    })
+
                 stock_item = PharmacyStock.objects.select_for_update().filter(
-                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
-                    dose_volume=dose_volume, expiry_date=expiry_date
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    expiry_date=expiry_date
+                ).filter(
+                    Q(chemical_name=chemical_name) |
+                    Q(chemical_name__isnull=True) |
+                    Q(chemical_name="")
+                ).filter(
+                    Q(dose_volume=dose_volume) |
+                    Q(dose_volume__isnull=True) |
+                    Q(dose_volume="")
                 ).first()
 
-                if not stock_item: return JsonResponse({"error": "Matching medicine batch not found in PharmacyStock."}, status=404)
-                if stock_item.quantity < quantity_to_consume:
-                    return JsonResponse({"error": f"Not enough quantity. Available: {stock_item.quantity}, Requested: {quantity_to_consume}."}, status=400)
+                if not stock_item:
+                    return JsonResponse({"error": "Matching batch not found in Pharmacy Stock."}, status=404)
 
+                if stock_item.quantity < quantity_to_consume:
+                    return JsonResponse({
+                        "error": f"Not enough stock. Available: {stock_item.quantity}"
+                    }, status=400)
+
+                # -------------------------
+                # 5. Reduce Stock
+                # -------------------------
                 stock_item.quantity -= quantity_to_consume
-                # Do NOT reduce total_quantity for consumption, only for discard/damage
                 stock_item.save()
 
+                # -------------------------
+                # 6. Save Ward Consumption
+                # -------------------------
                 WardConsumables.objects.create(
-                    entry_date=stock_item.entry_date, # Link to original entry if needed
-                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
-                    dose_volume=dose_volume, quantity=quantity_to_consume,
-                    expiry_date=expiry_date, consumed_date=consumed_date,
+                    entry_date=entry_date,
+                    medicine_form=medicine_form,
+                    brand_name=brand_name,
+                    chemical_name=chemical_name,
+                    dose_volume=dose_volume,
+                    quantity=quantity_to_consume,
+                    expiry_date=expiry_date,
+                    consumed_date=consumed_date
                 )
 
-            logger.info(f"Consumed {quantity_to_consume} of Ward item {brand_name} (Expiry: {expiry_date_str}) on {consumed_date_str}")
-            return JsonResponse({"message": "Ward consumable added and stock updated successfully", "success": True})
+                # -------------------------
+                # 7. Update Daily Quantity (Same as Discard Logic)
+                # -------------------------
+                daily_qty, created = DailyQuantity.objects.get_or_create(
+                    date=entry_date,
+                    chemical_name=chemical_name,
+                    brand_name=brand_name,
+                    dose_volume=dose_volume if dose_volume else "N/A",
+                    expiry_date=expiry_date,
+                    defaults={'quantity': 0}
+                )
 
-        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON format."}, status=400)
+                daily_qty.quantity = F('quantity') + quantity_to_consume
+                daily_qty.save()
+
+            logger.info(f"Ward consumed: {quantity_to_consume} of {brand_name}")
+
+            return JsonResponse({
+                "message": "Ward consumption added, stock reduced and daily usage updated successfully.",
+                "success": True
+            }, status=201)
+
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON."}, status=400)
+
         except Exception as e:
-            logger.exception("Error adding ward consumable.")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
-        response = JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+            logger.exception("Error in ward consumption.")
+            return JsonResponse({"error": "Server error", "detail": str(e)}, status=500)
 
-@csrf_exempt # Should be GET
+    return JsonResponse({"error": "Invalid request method."}, status=405)
+
+@csrf_exempt
 def get_ambulance_consumables(request):
-     if request.method == 'GET':
+    if request.method == 'GET':
         try:
             consumables_qs = AmbulanceConsumables.objects.all()
+
+            # --- Date filters ---
             from_date_str = request.GET.get("from_date")
             to_date_str = request.GET.get("to_date")
+
             from_date = parse_date_internal(from_date_str)
             to_date = parse_date_internal(to_date_str)
-            if from_date: consumables_qs = consumables_qs.filter(consumed_date__gte=from_date)
-            if to_date: consumables_qs = consumables_qs.filter(consumed_date__lte=to_date)
 
+            if from_date:
+                consumables_qs = consumables_qs.filter(consumed_date__gte=from_date)
+
+            if to_date:
+                consumables_qs = consumables_qs.filter(consumed_date__lte=to_date)
+
+            # --- Build response ---
             data = []
             for entry in consumables_qs.order_by("-consumed_date", "-entry_date"):
-                 total_quantity = get_total_quantity(entry.entry_date, entry.medicine_form, entry.brand_name, entry.chemical_name, entry.dose_volume, entry.expiry_date)
-                 data.append({
-                     "id": entry.id,
-                     "medicine_form": entry.medicine_form, "brand_name": entry.brand_name,
-                     "chemical_name": entry.chemical_name, "dose_volume": entry.dose_volume,
-                     "quantity": entry.quantity, # Quantity consumed
-                     "total_quantity": total_quantity, # Original total qty
-                     "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else None,
-                     "consumed_date": entry.consumed_date.strftime("%d-%b-%Y") if entry.consumed_date else None,
-                 })
-            return JsonResponse({"ambulance_consumables": data}, safe=False)
+                data.append({
+                    "id": entry.id,
+                    "medicine_form": entry.medicine_form,
+                    "brand_name": entry.brand_name,
+                    "chemical_name": entry.chemical_name,
+                    "dose_volume": entry.dose_volume,
+                    "quantity": entry.quantity,   # consumed qty
+                    "expiry_date": entry.expiry_date.strftime("%b-%y") if entry.expiry_date else None,
+                    "consumed_date": entry.consumed_date.strftime("%d-%b-%Y") if entry.consumed_date else None,
+                })
+
+            return JsonResponse({"ambulance_consumables": data})
+
         except Exception as e:
             logger.exception("Error in get_ambulance_consumables")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-     else:
+            return JsonResponse(
+                {"error": "Server error.", "detail": str(e)},
+                status=500
+            )
+
+    else:
         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
         response['Allow'] = 'GET'
         return response
 
 @csrf_exempt
 def add_ambulance_consumable(request):
-    # Logic is identical to add_ward_consumable, just different model
-    if request.method == "POST":
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            medicine_form = data.get("medicine_form")
-            brand_name = data.get("brand_name")
-            chemical_name = data.get("chemical_name")
-            dose_volume = data.get("dose_volume")
-            expiry_date_str = data.get("expiry_date") # YYYY-MM
-            consumed_date_str = data.get("consumed_date") # YYYY-MM-DD
-            quantity_str = data.get("quantity")
+    """ Record consumable used in Ambulance and reduce stock (same logic as discard/ward). """
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
 
-            # Validation
-            if not all([medicine_form, brand_name, chemical_name, dose_volume, expiry_date_str, consumed_date_str, quantity_str]):
-                 return JsonResponse({"error": "Missing required consumable information."}, status=400)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Ambulance Consumable Data: {data}")
+
+        # ----------------------------------------------------
+        # 1. Extract Request Fields
+        # ----------------------------------------------------
+        medicine_form = data.get("medicine_form")
+        brand_name = data.get("brand_name")
+        quantity_str = data.get("quantity")
+        expiry_date_str = data.get("expiry_date")  # Expect YYYY-MM or YYYY-MM-DD
+        consumed_date_str = data.get("consumed_date")
+        chemical_name = data.get("chemical_name")
+        dose_volume = data.get("dose_volume")
+
+        # ----------------------------------------------------
+        # 2. Special Category Logic
+        # ----------------------------------------------------
+        special_categories = ["Suture & Procedure Items", "Dressing Items"]
+
+        if medicine_form in special_categories:
+            # For special categories, ignore chemical_name and dose_volume
+            chemical_name = None
+            dose_volume = None
+
+            # Only medicine_form and brand_name are required
+            if not all([medicine_form, brand_name]):
+                return JsonResponse({"error": "Item Name and Brand Name are required."}, status=400)
+        else:
+            # For regular medicines, all fields are required
+            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str, consumed_date_str]):
+                return JsonResponse({"error": "All fields are required."}, status=400)
+
+        # ----------------------------------------------------
+        # 3. Parse Numbers and Dates
+        # ----------------------------------------------------
+        quantity_to_consume = None
+        if quantity_str:
             try:
-                 quantity_to_consume = int(quantity_str)
-                 if quantity_to_consume <= 0: raise ValueError("Quantity must be positive")
-            except (ValueError, TypeError): return JsonResponse({"error": "Invalid quantity."}, status=400)
-            try: expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
-            except ValueError: return JsonResponse({"error": "Invalid expiry date format (YYYY-MM)."}, status=400)
-            consumed_date = parse_date_internal(consumed_date_str)
-            if not consumed_date: return JsonResponse({"error": "Invalid consumed date format (YYYY-MM-DD)."}, status=400)
+                quantity_to_consume = int(quantity_str)
+                if quantity_to_consume <= 0:
+                    raise ValueError
+            except ValueError:
+                return JsonResponse({"error": "Invalid quantity."}, status=400)
 
-            with transaction.atomic():
-                stock_item = PharmacyStock.objects.select_for_update().filter(
-                    medicine_form=medicine_form, brand_name=brand_name, chemical_name=chemical_name,
-                    dose_volume=dose_volume, expiry_date=expiry_date
-                ).first()
+        expiry_date = None
+        if expiry_date_str:
+            try:
+                # Support YYYY-MM or YYYY-MM-DD
+                if len(expiry_date_str) == 7:
+                    expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
+                else:
+                    expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return JsonResponse({"error": "Invalid expiry date format."}, status=400)
 
-                if not stock_item: return JsonResponse({"error": "Matching medicine batch not found in PharmacyStock."}, status=404)
-                if stock_item.quantity < quantity_to_consume:
-                    return JsonResponse({"error": f"Not enough quantity. Available: {stock_item.quantity}, Requested: {quantity_to_consume}."}, status=400)
+        consumed_date = None
+        if consumed_date_str:
+            try:
+                consumed_date = datetime.strptime(consumed_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                return JsonResponse({"error": "Invalid consumed date format. Use YYYY-MM-DD."}, status=400)
 
-                stock_item.quantity -= quantity_to_consume
-                stock_item.save() # Do not reduce total_quantity
+        entry_date = date.today()
 
-                AmbulanceConsumables.objects.create(
-                    entry_date=stock_item.entry_date, medicine_form=medicine_form, brand_name=brand_name,
-                    chemical_name=chemical_name, dose_volume=dose_volume, quantity=quantity_to_consume,
-                    expiry_date=expiry_date, consumed_date=consumed_date,
+        # ----------------------------------------------------
+        # 4. Database Logic — Flexible Stock Matching
+        # ----------------------------------------------------
+        with transaction.atomic():
+            # --- Find stock item ---
+            stock_filter = PharmacyStock.objects.select_for_update().filter(
+                medicine_form=medicine_form,
+                brand_name=brand_name
+            )
+
+            # For regular medicines, match chemical_name, dose_volume, and expiry
+            if medicine_form not in special_categories:
+                stock_filter = stock_filter.filter(expiry_date=expiry_date).filter(
+                    Q(chemical_name=chemical_name) | Q(chemical_name__isnull=True) | Q(chemical_name="")
+                ).filter(
+                    Q(dose_volume=dose_volume) | Q(dose_volume__isnull=True) | Q(dose_volume="")
                 )
 
-            logger.info(f"Consumed {quantity_to_consume} of Ambulance item {brand_name} (Expiry: {expiry_date_str}) on {consumed_date_str}")
-            return JsonResponse({"message": "Ambulance consumable added and stock updated successfully", "success": True})
+            stock_item = stock_filter.first()
 
-        except json.JSONDecodeError: return JsonResponse({"error": "Invalid JSON format."}, status=400)
-        except Exception as e:
-            logger.exception("Error adding ambulance consumable.")
-            return JsonResponse({"error": "Server error.", "detail": str(e)}, status=500)
-    else:
-        response = JsonResponse({"error": "Invalid request method. Only POST is allowed."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+            if stock_item and quantity_to_consume:
+                if stock_item.quantity < quantity_to_consume:
+                    return JsonResponse({"error": f"Insufficient stock. Available: {stock_item.quantity}"}, status=400)
+                stock_item.quantity -= quantity_to_consume
+                stock_item.save()
+            elif not stock_item and medicine_form not in special_categories:
+                return JsonResponse({"error": "Matching stock batch not found."}, status=404)
+
+            # ----------------------------------------------------
+            # 5. Save Ambulance Record
+            # ----------------------------------------------------
+            AmbulanceConsumables.objects.create(
+                entry_date=entry_date,
+                medicine_form=medicine_form,
+                brand_name=brand_name,
+                chemical_name=chemical_name,
+                dose_volume=dose_volume,
+                quantity=quantity_to_consume,
+                expiry_date=expiry_date,
+                consumed_date=consumed_date
+            )
+
+            # ----------------------------------------------------
+            # 6. Update DailyQuantity (Same as Discard/Ward)
+            # ----------------------------------------------------
+            if quantity_to_consume:
+                daily_qty, created = DailyQuantity.objects.get_or_create(
+                    date=entry_date,
+                    chemical_name=chemical_name,
+                    brand_name=brand_name,
+                    dose_volume=dose_volume if dose_volume else "N/A",
+                    expiry_date=expiry_date,
+                    defaults={'quantity': 0}
+                )
+                daily_qty.quantity = F('quantity') + quantity_to_consume
+                daily_qty.save()
+
+        return JsonResponse({"message": "Ambulance consumable added successfully."}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        logger.exception("Error in add_ambulance_consumable")
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 # --- Calibration ---
 

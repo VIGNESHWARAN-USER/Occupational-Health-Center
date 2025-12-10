@@ -29,20 +29,23 @@ const CurrentStock = () => {
   }, []);
 
   const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTerm(value);
+  const value = e.target.value.toLowerCase();
+  setSearchTerm(value);
 
-    if (value === "") {
-      setFilteredData(stockData);
-    } else {
-      const filtered = stockData.filter(
-        (item) =>
-          item.brand_name.toLowerCase().includes(value) ||
-          item.chemical_name.toLowerCase().includes(value)
-      );
-      setFilteredData(filtered);
-    }
-  };
+  if (value === "") {
+    setFilteredData(stockData);
+  } else {
+    const filtered = stockData.filter((item) => {
+      const brand = (item.brand_name || "").toLowerCase();
+      const chem = (item.chemical_name || "").toLowerCase();
+
+      return brand.includes(value) || chem.includes(value);
+    });
+
+    setFilteredData(filtered);
+  }
+};
+
 
   // Excel Export
   const handleDownloadExcel = () => {

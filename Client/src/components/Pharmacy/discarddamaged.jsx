@@ -40,7 +40,7 @@ const DiscardedMedicines = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const medicineOptions = ["Tablet", "Syrup", "Injection","Lotions","Respules","Powder", "Creams", "Drops", "Fluids", "Other"];
+  const medicineOptions = ["Tablet", "Syrup", "Injection","Lotions","Respules","Powder", "Creams", "Drops", "Fluids","Suture & Procedure Items","Dressing Items", "Other"];
 
   useEffect(() => {
     fetchDiscardedMedicines();
@@ -144,26 +144,50 @@ const DiscardedMedicines = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (Object.values(formData).some((val) => !val)) {
+  e.preventDefault();
+
+  const specialCategories = ["Suture & Procedure Items", "Dressing Items"];
+
+  if (specialCategories.includes(formData.medicine_form)) {
+    // Only check required fields for special categories
+    if (!formData.medicine_form || !formData.brand_name || !formData.quantity || !formData.expiry_date || !formData.reason) {
+      setMessage("Item Name, Quantity, Expiry, and Reason are required.");
+      return;
+    }
+  } else {
+    // Check all fields for regular medicines
+    if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.expiry_date || !formData.reason) {
       setMessage("All fields are required.");
       return;
     }
+  }
 
-    try {
-      await axios.post("http://localhost:8000/add_discarded_medicine/", {
-        ...formData,
-        expiry_date: `${formData.expiry_date}-01`,
-      });
-      setMessage("Discarded medicine added successfully!");
-      setFormData({ medicine_form: "", chemical_name: "", brand_name: "", dose_volume: "", quantity: "", expiry_date: "", reason: "" });
-      fetchDiscardedMedicines();
-      setShowForm(false);
-    } catch (error) {
-      console.error("Error adding discarded medicine:", error);
-      setMessage("Error adding discarded medicine. Please try again.");
-    }
-  };
+  // Clear previous messages
+  setMessage("");
+
+  try {
+    await axios.post("http://localhost:8000/add_discarded_medicine/", {
+      ...formData,
+      expiry_date: `${formData.expiry_date}-01`, // as your backend expects
+    });
+    setMessage("Discarded medicine added successfully!");
+    setFormData({
+      medicine_form: "",
+      chemical_name: "",
+      brand_name: "",
+      dose_volume: "",
+      quantity: "",
+      expiry_date: "",
+      reason: "",
+    });
+    fetchDiscardedMedicines();
+    setShowForm(false);
+  } catch (error) {
+    console.error(error);
+    setMessage("Error adding discarded medicine. Please try again.");
+  }
+};
+
 
   const handleDownloadExcel = () => {
     if (!discardedMedicines || discardedMedicines.length === 0) {
@@ -310,64 +334,181 @@ const DiscardedMedicines = () => {
           <h2 className="text-2xl font-bold mb-4">Discard Medicine</h2>
           {message && <p className="text-red-600">{message}</p>}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block font-medium">Medicine Form</label>
-              <select name="medicine_form" value={formData.medicine_form} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg">
-                <option value="">Select</option>
-                {medicineOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block font-medium">Chemical Name</label>
-              <input type="text" name="chemical_name" value={formData.chemical_name} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-              {showChemicalSuggestions && (
-                <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
-                  {chemicalSuggestions.map((suggestion) => (
-                    <li key={suggestion} onClick={() => handleChemicalSuggestionClick(suggestion)} className="px-3 py-2 cursor-pointer hover:bg-gray-100">{suggestion}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <label className="block font-medium">Brand Name</label>
-              <input type="text" name="brand_name" value={formData.brand_name} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-              {showSuggestions && (
-                <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
-                  {suggestions.map((suggestion) => (
-                    <li key={suggestion} onClick={() => handleBrandSuggestionClick(suggestion)} className="px-3 py-2 cursor-pointer hover:bg-gray-100">{suggestion}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <label className="block font-medium">Dose/Volume</label>
-              <input type="text" name="dose_volume" value={formData.dose_volume} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-              {showDoseSuggestions && (
-                <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
-                  {doseSuggestions.map((suggestion) => (
-                    <li key={suggestion} onClick={() => handleDoseSuggestionClick(suggestion)} className="px-3 py-2 cursor-pointer hover:bg-gray-100">{suggestion}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <label className="block font-medium">Quantity</label>
-              <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-            </div>
-            <div>
-              <label className="block font-medium">Expiry Date</label>
-              <input type="month" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-            </div>
-            <div>
-              <label className="block font-medium">Reason</label>
-              <textarea name="reason" value={formData.reason} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-            </div>
-            <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg">
-              Add Discarded Medicine
-            </button>
-          </form>
+  {/* Medicine Form Selection */}
+  <div>
+    <label className="block font-medium">Medicine Form</label>
+    <select
+      name="medicine_form"
+      value={formData.medicine_form}
+      onChange={handleChange}
+      className="w-full border px-3 py-2 rounded-lg"
+    >
+      <option value="">Select</option>
+      {medicineOptions.map((option) => (
+        <option key={option} value={option}>{option}</option>
+      ))}
+    </select>
+  </div>
+
+  {/* Determine if this is a special category */}
+  {["Suture & Procedure Items", "Dressing Items"].includes(formData.medicine_form) ? (
+    <>
+      {/* Only show Brand/Item Name, Quantity, Expiry, Reason */}
+      <div>
+        <label className="block font-medium">Item Name</label>
+        <input
+          type="text"
+          name="brand_name"
+          value={formData.brand_name}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Quantity</label>
+        <input
+          type="number"
+          name="quantity"
+          value={formData.quantity}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Expiry Date</label>
+        <input
+          type="month"
+          name="expiry_date"
+          value={formData.expiry_date}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+      <div>
+        <label className="block font-medium">Reason</label>
+        <textarea
+          name="reason"
+          value={formData.reason}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+    </>
+  ) : (
+    <>
+      {/* Regular medicine fields */}
+      <div>
+        <label className="block font-medium">Chemical Name</label>
+        <input
+          type="text"
+          name="chemical_name"
+          value={formData.chemical_name}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+        {showChemicalSuggestions && (
+          <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
+            {chemicalSuggestions.map((suggestion) => (
+              <li
+                key={suggestion}
+                onClick={() => handleChemicalSuggestionClick(suggestion)}
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+              >
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <label className="block font-medium">Brand Name</label>
+        <input
+          type="text"
+          name="brand_name"
+          value={formData.brand_name}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+        {showSuggestions && (
+          <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
+            {suggestions.map((suggestion) => (
+              <li
+                key={suggestion}
+                onClick={() => handleBrandSuggestionClick(suggestion)}
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+              >
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <label className="block font-medium">Dose/Volume</label>
+        <input
+          type="text"
+          name="dose_volume"
+          value={formData.dose_volume}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+        {showDoseSuggestions && (
+          <ul className="bg-white border mt-1 max-h-40 overflow-y-auto">
+            {doseSuggestions.map((suggestion) => (
+              <li
+                key={suggestion}
+                onClick={() => handleDoseSuggestionClick(suggestion)}
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100"
+              >
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <label className="block font-medium">Quantity</label>
+        <input
+          type="number"
+          name="quantity"
+          value={formData.quantity}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium">Expiry Date</label>
+        <input
+          type="month"
+          name="expiry_date"
+          value={formData.expiry_date}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+
+      <div>
+        <label className="block font-medium">Reason</label>
+        <textarea
+          name="reason"
+          value={formData.reason}
+          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-lg"
+        />
+      </div>
+    </>
+  )}
+
+  <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg">
+    Add Discarded Medicine
+  </button>
+</form>
+
+
           <button className="mt-4 text-blue-600" onClick={() => setShowForm(false)}>
             Back to List
           </button> </div>
