@@ -142,7 +142,7 @@ const dataMapping = {
     { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false },
     { label: "Enter ID:", name: "employeeId", type: "text", placeholder: "Enter employee ID", disabled: isAutoFilled },
     { label: "Name:", name: "name", type: "text", placeholder: "Enter employee name", disabled: isAutoFilled },
-    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: isAutoFilled },
+    { label: "Name of Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: isAutoFilled },
     { label: "Date of the appointment:", name: "appointmentDate", type: "date", disabled: false },
     { label: "Time:", name: "time", type: "time", disabled: false }
   ];
@@ -160,7 +160,7 @@ const dataMapping = {
   const visitorFields = [
     { label: "Aadhar No:", name: "aadharNo", type: "text", placeholder: "Enter Aadhar No", disabled: false },
     { label: "Name:", name: "name", type: "text", placeholder: "Enter name", disabled: isAutoFilled },
-    { label: "Organization:", name: "organization", type: "text", placeholder: "Enter organization name", disabled: isAutoFilled },
+    { label: "Name of Institute / Organization:", name: "organization", type: "text", placeholder: "Enter name of organization", disabled: isAutoFilled },
     { label: "Appointment Date:", name: "appointmentDate", type: "date" },
     { label: "Time:", name: "time", type: "time" }
   ];

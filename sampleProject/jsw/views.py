@@ -3291,117 +3291,290 @@ def update_status(request):
         response['Allow'] = 'POST, PUT, PATCH' # Indicate allowed methods
         return response
 
+import json
+import logging
+from datetime import datetime, date, timedelta, time
+from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Appointment, employee_details # Ensure you import your models
+
+logger = logging.getLogger(__name__)
+
+DATA_MAPPING = {
+    "Employee": {
+        "Preventive": {
+            "Pre employment": "Medical Examination",
+            "Pre employment (Food Handler)": "Medical Examination",
+            "Pre Placement": "Medical Examination",
+            "Annual / Periodical": "Medical Examination",
+            "Periodical (Food Handler)": "Medical Examination",
+            "Retirement medical examination": "Medical Examination",
+            "Camps (Mandatory)": "Medical Examination",
+            "Camps (Optional)": "Medical Examination",
+            "Special Work Fitness": "Periodic Work Fitness",
+            "Special Work Fitness (Renewal)": "Periodic Work Fitness",
+            "Fitness After Medical Leave": "Fitness After Medical Leave",
+            "Fitness After Personal Long Leave": "Fitness After Personal Long Leave",
+            "Mock Drill": "Mock Drill",
+            "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+            "Preventive - Follow Up Visits": "Follow Up Visits",
+            "Preventive Other": "Other",
+        },
+        "Curative": {
+            "Illness": "Outpatient",
+            "Over Counter Illness": "Outpatient",
+            "Injury": "Outpatient",
+            "Over Counter Injury": "Outpatient",
+            "Curative - Follow Up Visits": "Follow Up Visits",
+            "BP Sugar Chart": "Outpatient",
+            "Injury Outside the Premises": "Outpatient",
+            "Over Counter Injury Outside the Premises": "Outpatient",
+            "Alcohol Abuse": "Alcohol Abuse",
+            "Curative Other": "Other",
+        },
+    },
+    "Contractor": {
+        "Preventive": {
+            "Pre employment": "Medical Examination",
+            "Pre employment (Food Handler)": "Medical Examination",
+            "Pre Placement (Same Contract)": "Medical Examination",
+            "Pre Placement (Contract change)": "Medical Examination",
+            "Annual / Periodical": "Medical Examination",
+            "Periodical (Food Handler)": "Medical Examination",
+            "Camps (Mandatory)": "Medical Examination",
+            "Camps (Optional)": "Medical Examination",
+            "Special Work Fitness": "Periodic Work Fitness",
+            "Special Work Fitness (Renewal)": "Periodic Work Fitness",
+            "Fitness After Medical Leave": "Fitness After Medical Leave",
+            "Fitness After Personal Long Leave": "Fitness After Personal Long Leave",
+            "Mock Drill": "Mock Drill",
+            "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+            "Preventive - Follow Up Visits": "Follow Up Visits",
+            "Preventive Other": "Other",
+        },
+        "Curative": {
+            "Illness": "Outpatient",
+            "Over Counter Illness": "Outpatient",
+            "Injury": "Outpatient",
+            "Over Counter Injury": "Outpatient",
+            "Curative - Follow Up Visits": "Outpatient",
+            "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
+            "Injury Outside the Premises": "Outpatient",
+            "Over Counter Injury Outside the Premises": "Outpatient",
+            "Alcohol Abuse": "Alcohol Abuse",
+            "Curative Other": "Other",
+        },
+    },
+    "Visitor": {
+        "Preventive": {
+            "Fitness": "Fitness",
+            "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+            "Preventive - Follow Up Visits": "Follow Up Visits",
+        },
+        "Curative": {
+            "Illness": "Outpatient",
+            "Over Counter Illness": "Outpatient",
+            "Injury": "Outpatient",
+            "Over Counter Injury": "Outpatient",
+            "Curative - Follow Up Visits": "Outpatient",
+            "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
+            "Injury Outside the Premises": "Outpatient",
+            "Over Counter Injury Outside the Premises": "Outpatient",
+            "Curative Other": "Other",
+        },
+    },
+}
+
+import json
+import logging
+from datetime import datetime, date, timedelta, time
+from django.db import transaction
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Appointment, employee_details # Update with your actual model path
+
+logger = logging.getLogger(__name__)
+
+# --- Helper Functions ---
+def parse_excel_date(value):
+    if not value: return date.today()
+    if isinstance(value, (int, float)):
+        # Excel dates are usually days since Dec 30, 1899
+        return (datetime(1899, 12, 30) + timedelta(days=value)).date()
+    if isinstance(value, str):
+        for fmt in ("%d-%m-%Y", "%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
+            try: return datetime.strptime(value.strip(), fmt).date()
+            except ValueError: continue
+    return date.today()
+
+def parse_excel_time(value):
+    if not value: return datetime.now().time()
+    if isinstance(value, (int, float)):
+        # Convert Excel fraction of day to time
+        total_seconds = int(value * 86400)
+        return (datetime.min + timedelta(seconds=total_seconds)).time()
+    if isinstance(value, str):
+        for fmt in ("%H:%M", "%H:%M:%S", "%I:%M %p"):
+            try: return datetime.strptime(value.strip(), fmt).time()
+            except ValueError: continue
+    return datetime.now().time()
+
+def get_cell(row, index):
+    try:
+        val = row[index]
+        return str(val).strip() if val is not None else ""
+    except IndexError:
+        return ""
+
+def derive_visit_info(role, register):
+    """
+    Returns (visit_type, purpose) based on DATA_MAPPING
+    """
+    if role not in DATA_MAPPING:
+        return "Preventive", "Other" # Default Fallback
+
+    role_data = DATA_MAPPING[role]
+    
+    # Check Preventive Dictionary
+    if register in role_data.get("Preventive", {}):
+        return "Preventive", role_data["Preventive"][register]
+    
+    # Check Curative Dictionary
+    if register in role_data.get("Curative", {}):
+        return "Curative", role_data["Curative"][register]
+
+    # Fallback if register spelling doesn't match exactly
+    return "Preventive", "Other"
+
 @csrf_exempt
 def uploadAppointment(request):
-    """Uploads appointments from a JSON payload containing a list of rows."""
     if request.method != "POST":
-        logger.warning("uploadAppointment failed: Invalid request method. Only POST allowed.")
-        return JsonResponse({"error": "Invalid request method"}, status=405)
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
-        data = json.loads(request.body.decode('utf-8')) # Decode explicitly
+        data = json.loads(request.body.decode('utf-8'))
         appointments_data = data.get("appointments", [])
 
-        if not appointments_data or len(appointments_data) <= 1: # Expect header row
-            logger.warning("uploadAppointment failed: No appointment data or only header row.")
-            return JsonResponse({"error": "No valid appointment data provided (minimum 2 rows expected)."}, status=400)
+        # Expecting at least header + 1 row
+        if not appointments_data or len(appointments_data) < 2:
+            return JsonResponse({"error": "No valid data found in Excel."}, status=400)
 
-        successful_uploads = 0
-        failed_uploads = []
-        processed_count = 0
+        successful = 0
+        failed = []
 
-        # --- Excel date parsing helper ---
-        def parse_excel_date(value):
-            if isinstance(value, (int, float)):
-                try: return (datetime(1899, 12, 30) + timedelta(days=value)).date()
-                except OverflowError: return None
-            if isinstance(value, str):
-                value = value.strip()
-                for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d-%b-%Y", "%d-%m-%Y", "%d/%m/%Y"):
-                    try: return datetime.strptime(value, fmt).date()
-                    except ValueError: continue
-            if isinstance(value, datetime): return value.date()
-            if isinstance(value, date): return value
-            return None
-
-        # Helper to safely get data from row
-        def get_cell(row, index, default=''):
-            try: return str(row[index]).strip() if len(row) > index and row[index] is not None else default
-            except IndexError: return default
-
-        # --- Process rows (skip header) ---
-        header = appointments_data[0] # Assuming header is first row
-        for i, row_data in enumerate(appointments_data[1:], start=1): # Start from second row
-            processed_count += 1
+        # Iterate rows, skipping the header (start=1)
+        for i, row in enumerate(appointments_data[1:], start=1):
             try:
-                # Column mapping (adjust indices based on actual Excel file)
-                role = get_cell(row_data, 1).lower() # Column B -> Role
-                name = get_cell(row_data, 2)        # Column C -> Name
-                emp_no_val = get_cell(row_data, 3)   # Column D -> Emp No
-                organization = get_cell(row_data, 4)# Column E -> Org/Employer
-                aadhar_no_val = get_cell(row_data, 5)# Column F -> Aadhar No *** CHECK INDEX ***
-                contractor_name_val = get_cell(row_data, 6) # Column G -> Contractor
-                purpose_val = get_cell(row_data, 7)      # Column H -> Purpose
-                date_val = parse_excel_date(row_data[8] if len(row_data) > 8 else None) # Column I -> Date
-                time_val = get_cell(row_data, 9)        # Column J -> Time
-                booked_by_val = get_cell(row_data, 10)   # Column K -> Booked By
-                submitted_by_nurse_val = get_cell(row_data, 11) # Column L -> Nurse
-                submitted_dr_val = get_cell(row_data, 12)    # Column M -> Submitting Dr
-                consulted_dr_val = get_cell(row_data, 13) # Column N -> Consulted Dr
-
+                # --- 1. Extract Direct Fields (Order based on your Excel Image) ---
+                # 0: Aadhar, 1: Role, 2: Register, 3: Follow Up Reason, 4: Date, 5: Time
+                # 6: Year, 7: Batch, 8: Hospital, 9: Camp, 10: Booked By
+                
+                aadhar_no = get_cell(row, 0)
+                role = get_cell(row, 1)
+                register = get_cell(row, 2)
+                
                 # Validation
-                if not aadhar_no_val: raise ValueError(f"Row {i+1}: Missing Aadhar Number (Column F)")
-                if not date_val: raise ValueError(f"Row {i+1}: Invalid/Missing Date (Column I)")
-                if role not in ["contractor", "employee", "visitor"]: raise ValueError(f"Row {i+1}: Invalid Role '{role}' (Column B)")
+                if not aadhar_no or len(aadhar_no) != 12:
+                    raise ValueError(f"Invalid Aadhar No: {aadhar_no}")
+                if not role or not register:
+                    raise ValueError("Missing Role or Register")
 
-                employer_val = organization # Employer determined by org/contractor name if needed
+                # Parse Date/Time
+                booked_date = parse_excel_date(row[4] if len(row) > 4 else None)
+                booked_time = parse_excel_time(row[5] if len(row) > 5 else None)
 
-                # Use transaction for atomic appointment number generation and creation
+                # --- 2. Retrieve Employee Details ---
+                worker = employee_details.objects.filter(aadhar=aadhar_no).last()
+                
+                if not worker:
+                    # If visitor, we might accept manual input, but for Employee/Contractor we need DB
+                    if role == "Visitor":
+                        name = "Visitor " + aadhar_no[-4:] # Fallback
+                        emp_id = ""
+                        organization = "Visitor Org"
+                        contractor_name = ""
+                    else:
+                        raise ValueError(f"Worker with Aadhar {aadhar_no} not found in DB")
+                else:
+                    name = worker.name
+                    emp_id = worker.emp_no
+                    organization = worker.organization
+                    contractor_name = worker.contractName if role == "Contractor" else ""
+
+                # --- 3. Retrieve Dynamic Logic Fields ---
+                visit_type, purpose = derive_visit_info(role, register)
+
+                # --- 4. Handle Conditional Fields ---
+                # "Follow Up Reason" column (Index 3) is overloaded based on Register
+                col_dynamic_val = get_cell(row, 3) 
+                
+                bp_sugar_status = ""
+                bp_sugar_reason = ""
+                followup_reason = ""
+                
+                if "BP Sugar Check" in register:
+                    bp_sugar_status = col_dynamic_val # e.g., "Normal People"
+                elif "BP Sugar Chart" in register:
+                    bp_sugar_reason = col_dynamic_val # e.g., "Newly detected"
+                elif "Follow Up" in register:
+                    followup_reason = col_dynamic_val # e.g., "Illness"
+
+                # Other Conditionals (Index 6, 7, 8, 9)
+                year = get_cell(row, 6)
+                batch = get_cell(row, 7)
+                hospital_name = get_cell(row, 8)
+                camp_name = get_cell(row, 9)
+                booked_by = get_cell(row, 10)
+
+                # --- 5. Save to Database ---
                 with transaction.atomic():
-                    appointment_count_today = Appointment.objects.filter(date=date_val).select_for_update().count()
-                    appointment_no_gen = f"{(appointment_count_today + 1):04d}{date_val.strftime('%d%m%Y')}"
+                    # Generate Appt Number
+                    today_count = Appointment.objects.filter(date=booked_date).select_for_update().count()
+                    appt_no = f"{(today_count + 1):04d}{booked_date.strftime('%d%m%Y')}"
 
                     Appointment.objects.create(
-                        appointment_no=appointment_no_gen, booked_date=date.today(), role=role,
-                        emp_no=emp_no_val, aadhar_no=aadhar_no_val, name=name,
-                        organization_name=organization, contractor_name=contractor_name_val,
-                        purpose=purpose_val, date=date_val, time=time_val,
-                        booked_by=booked_by_val or "Bulk Upload",
-                        submitted_by_nurse=submitted_by_nurse_val, submitted_Dr=submitted_dr_val,
-                        consultated_Dr=consulted_dr_val, employer=employer_val,
-                        status = Appointment.StatusChoices.INITIATE
+                        appointment_no=appt_no,
+                        aadhar=aadhar_no,
+                        role=role,
+                        name=name,
+                        emp_no=emp_id,
+                        organization_name=organization,
+                        contractor_name=contractor_name,
+                        
+                        # Logic Fields
+                        visit_type=visit_type,
+                        register=register,
+                        purpose=purpose,
+                        
+                        # Date/Time
+                        date=booked_date,
+                        time=booked_time,
+                        booked_by=booked_by,
+                        
+                        # Conditionals
+                        year=year,
+                        batch=batch,
+                        hospital_name=hospital_name,
+                        camp_name=camp_name,
+                        bp_sugar_status=bp_sugar_status,
+                        bp_sugar_chart_reason=bp_sugar_reason,
+                        followup_reason=followup_reason,
+                        
                     )
-                successful_uploads += 1
+                successful += 1
 
-            except (IndexError, ValueError, ValidationError, TypeError) as e:
-                error_msg = f"Row {i+1}: Error - {str(e)}. Data: {row_data}"
-                logger.error(f"uploadAppointment error: {error_msg}")
-                failed_uploads.append(error_msg)
             except Exception as e:
-                 error_msg = f"Row {i+1}: Unexpected error - {str(e)}. Data: {row_data}"
-                 logger.exception(f"uploadAppointment unexpected error: {error_msg}")
-                 failed_uploads.append(error_msg)
+                failed.append(f"Row {i} (Aadhar: {get_cell(row,0)}): {str(e)}")
+                logger.error(f"Upload Error Row {i}: {e}")
 
-        # Report Results
-        message = f"Processed {processed_count} rows. {successful_uploads} appointments uploaded successfully."
-        status_code = 200
-        response_data = {"message": message, "successful_uploads": successful_uploads}
-        if failed_uploads:
-            response_data["failed_uploads"] = len(failed_uploads)
-            response_data["errors"] = failed_uploads[:10] # Limit error details
-            message += f" {len(failed_uploads)} rows failed."
-            response_data["message"] = message
-            if successful_uploads == 0: status_code = 400 # Indicate failure if nothing worked
-
-        logger.info(f"uploadAppointment result: {message}")
-        return JsonResponse(response_data, status=status_code)
+        return JsonResponse({
+            "message": f"Success: {successful}, Failed: {len(failed)}",
+            "errors": failed
+        }, status=200 if successful > 0 else 400)
 
     except json.JSONDecodeError:
-        logger.error("uploadAppointment failed: Invalid JSON format.", exc_info=True)
-        return JsonResponse({"error": "Invalid JSON format."}, status=400)
-    except Exception as e:
-        logger.exception("uploadAppointment failed: An unexpected error occurred during bulk upload.")
-        return JsonResponse({"error": f"An unexpected error occurred: {str(e)}"}, status=500)
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
 
 
 
