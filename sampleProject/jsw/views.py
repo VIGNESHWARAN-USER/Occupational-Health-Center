@@ -6769,27 +6769,12 @@ from .models import (
 
 # --- Basic Info ---
 BASIC_DETAILS_MAP = {
-    'emp_no': 'Details_Basic detail_EMP NO',
-    'name': 'Details_Basic detail_NAME',
-    'year': 'Details_Basic Details_Year',
-    'batch': 'Details_Basic Details_Batch',
-    'hospitalName': 'Details_Basic Details_Hospital',
-    # ADDED THE DATE KEY HERE. SEE PART 2.
-    'date': 'Details_Basic Details_Date',
-    # Corrected 'Aadhar' to 'Aadhar Number'
-    'aadhar': 'Details_Basic Details_Aadhar Number', 
-}
-# --- Vitals ---
-VITALS_MAP = {
-    'height': 'General Test_Vitals_Height',
-    'weight': 'General Test_Vitals_weight',
-    'bmi': 'General Test_Vitals_BMI',
-    'systolic': 'General Test_Vitals_Systolic BP',
-    'diastolic': 'General Test_Vitals_Diastolic BP',
-    'pulse': 'General Test_Vitals_Pulse Rate',
-    'spO2': 'General Test_Vitals_sp O2',
-    'respiratory_rate': 'General Test_Vitals_Respiratory Rate',
-    'temperature': 'General Test_Vitals_Temperature',
+    # The keys here must match the generated Excel headers exactly
+    'year': 'DETAILS_BASIC DETAILS_Year',
+    'batch': 'DETAILS_BASIC DETAILS_Batch',
+    # Changed from '...Hospital' to '...Hospital Name' based on the image
+    'hospitalName': 'DETAILS_BASIC DETAILS_Hospital Name', 
+    'aadhar': 'DETAILS_BASIC DETAILS_Aadhar Number', 
 }
 
 # --- Test-specific Maps ---
@@ -6901,19 +6886,7 @@ LIPID_PROFILE_MAP = {
     'ldl_chol_hdl_chol_ratio_unit': 'LIPID PROFILE TESTS_LDL.CHOL/HDL.CHOL Ratio_UNIT',
 }
 
-# LIVER_FUNCTION_MAP = {
-#     'bilirubin_total': 'LIVER FUNCTION TEST_Bilirubin -Total_RESULT',
-#     'bilirubin_direct': 'LIVER FUNCTION TEST_Bilirubin -Direct_RESULT',
-#     'bilirubin_indirect': 'LIVER FUNCTION TEST_Bilirubin -indirect_RESULT',
-#     'sgot_ast': 'LIVER FUNCTION TEST_SGOT /AST_RESULT',
-#     'sgpt_alt': 'LIVER FUNCTION TEST_SGPT /ALT_RESULT',
-#     'alkaline_phosphatase': 'LIVER FUNCTION TEST_Alkaline phosphatase_RESULT',
-#     'total_protein': 'LIVER FUNCTION TEST_Total Protein_RESULT',
-#     'albumin_serum': 'LIVER FUNCTION TEST_Albumin (Serum )_RESULT',
-#     'globulin_serum': 'LIVER FUNCTION TEST_Globulin(Serum)_RESULT',
-#     'alb_glob_ratio': 'LIVER FUNCTION TEST_Alb/Glob Ratio_RESULT',
-#     'gamma_glutamyl_transferase': 'LIVER FUNCTION TEST_Gamma Glutamyl transferase_RESULT',
-# }
+
 LIVER_FUNCTION_MAP = {
     'bilirubin_total': 'LIVER FUNCTION TEST_Bilirubin -Total_RESULT',
     'bilirubin_total_unit': 'LIVER FUNCTION TEST_Bilirubin -Total_UNIT',
@@ -6980,19 +6953,7 @@ COAGULATION_MAP = {
     'clotting_time_unit': 'COAGULATION TEST_Clotting Time (CT)_UNIT',
 }
 
-# ENZYMES_CARDIAC_MAP = {
-#     'acid_phosphatase': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_RESULT',
-#     'adenosine_deaminase': 'ENZYMES & CARDIAC Profile_Adenosine Deaminase_RESULT',
-#     'amylase': 'ENZYMES & CARDIAC Profile_Amylase_RESULT',
-#     'lipase': 'ENZYMES & CARDIAC Profile_Lipase_RESULT',
-#     'troponin_t': 'ENZYMES & CARDIAC Profile_Troponin- T_RESULT',
-#     'troponin_i': 'ENZYMES & CARDIAC Profile_Troponin- I_RESULT',
-#     'cpk_total': 'ENZYMES & CARDIAC Profile_CPK - TOTAL_RESULT',
-#     'cpk_mb': 'ENZYMES & CARDIAC Profile_CPK - MB_RESULT',
-#     'ecg': 'ENZYMES & CARDIAC Profile_ECG_RESULT',
-#     'echo': 'ENZYMES & CARDIAC Profile_ECHO_RESULT',
-#     'tmt_normal': 'ENZYMES & CARDIAC Profile_TMT_RESULT',
-# }
+
 ENZYMES_CARDIAC_MAP = {
     'acid_phosphatase': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_RESULT',
     'acid_phosphatase_unit': 'ENZYMES & CARDIAC Profile_Acid Phosphatase_UNIT',
@@ -7364,11 +7325,10 @@ def parse_hierarchical_excel_py(worksheet):
 # ==============================================================================
 # DATA PROCESSING HELPER FUNCTIONS
 # ==============================================================================
-def _populate_data(model,model_map, row_data):
+def _populate_data(model, model_map, row_data):
     """
-    This is the final, universal helper function.
-    It reads your `*_MAP` and intelligently handles both complex tests (with _RESULT)
-    and simple, explicit maps (like for X-Ray, CT, and parts of Haematology).
+    Populates model data without parsing/splitting reference ranges.
+    It stores the raw Reference Range string directly into the database.
     """
     instance_data = {}
     
@@ -7377,61 +7337,56 @@ def _populate_data(model,model_map, row_data):
         if excel_key.endswith('_RESULT'):
             result_excel_key = excel_key
             
-            # 1a. Process the main RESULT field
+            # 1. Process RESULT
             if result_excel_key in row_data and row_data[result_excel_key] is not None:
                 instance_data[model_field] = str(row_data[result_excel_key])
 
-            # 1b. Dynamically find and process UNIT, RANGE, and COMMENTS
+            # 2. Process UNIT
             unit_excel_key = result_excel_key.replace('_RESULT', '_UNIT')
-            range_excel_key = result_excel_key.replace('_RESULT', '_REFERENCE RANGE')
-            comments_excel_key = result_excel_key.replace('_RESULT', '_Comments')
-
-            # Process UNIT
             if unit_excel_key in row_data and row_data[unit_excel_key] is not None:
                 unit_model_field = f"{model_field}_unit"
-                # Check if the model actually has this field before trying to save to it
                 if hasattr(model, unit_model_field):
                     instance_data[unit_model_field] = str(row_data[unit_excel_key])
 
-            # Process COMMENTS
+            # 3. Process COMMENTS
+            comments_excel_key = result_excel_key.replace('_RESULT', '_Comments')
             if comments_excel_key in row_data and row_data[comments_excel_key] is not None:
                 comments_model_field = f"{model_field}_comments"
                 if hasattr(model, comments_model_field):
                     instance_data[comments_model_field] = str(row_data[comments_excel_key])
             
-            # Process and SPLIT REFERENCE RANGE
+            # 4. Process REFERENCE RANGE (Raw Storage - No Parsing)
+            range_excel_key = result_excel_key.replace('_RESULT', '_REFERENCE RANGE')
             if range_excel_key in row_data and row_data[range_excel_key] is not None:
-                range_from_model_field = f"{model_field}_reference_range_from"
-                range_to_model_field = f"{model_field}_reference_range_to"
-                # Check if the model has BOTH range fields
-                if hasattr(model, range_from_model_field) and hasattr(model, range_to_model_field):
-                    range_value = str(row_data[range_excel_key])
-                    try:
-                        # This is the crucial part that splits the range
-                        from_val, to_val = map(str.strip, range_value.split('-'))
-                        instance_data[range_from_model_field] = from_val
-                        instance_data[range_to_model_field] = to_val
-                    except (ValueError, TypeError):
-                        print(f"Warning: Could not parse range '{range_value}' for {model_field}")
+                # We look for a field named like: hemoglobin_reference_range
+                range_model_field = f"{model_field}_reference_range"
+                
+                # Check if the model has this field
+                if hasattr(model, range_model_field):
+                    # Direct copy of the string (e.g., "70 to 110", "Negative")
+                    instance_data[range_model_field] = str(row_data[range_excel_key])
 
-        # --- Case 2: Handle simple/explicit maps (like for X-Ray and Peripheral Smear) ---
+        # --- Case 2: Handle simple/explicit maps ---
         else:
             if excel_key in row_data and row_data[excel_key] is not None:
                 instance_data[model_field] = str(row_data[excel_key])
                 
     return instance_data
+
+    
 def process_model_data(model, model_map, row_data, employee, entry_date):
     """A generic function to process any model."""
-    data = _populate_data(model,model_map, row_data)
+    data = _populate_data(model, model_map, row_data)
     if data:
+        # update_or_create ensures that if we upload the same file twice, 
+        # it updates the existing records for that specific visit (entry_date/mrdNo)
         model.objects.update_or_create(
             emp_no=employee.emp_no,
             aadhar=employee.aadhar,
             entry_date=entry_date,
-            mrdNo = employee.mrdNo,
+            mrdNo=employee.mrdNo, # This is the crucial link you asked for
             defaults=data
         )
-
 # ==============================================================================
 # MAIN UPLOAD VIEW (HANDLES FILE UPLOAD)
 # ==============================================================================
@@ -7461,11 +7416,10 @@ class MedicalDataUploadView(View):
         try:
             workbook = openpyxl.load_workbook(uploaded_file, data_only=True)
             worksheet = workbook.active
-            # Assuming parse_hierarchical_excel_py is defined elsewhere and works correctly
             json_data = parse_hierarchical_excel_py(worksheet)
-
+        
             if not json_data:
-                return JsonResponse({'status': 'error', 'message': 'Excel file is empty or has an unsupported format.'}, status=400)
+                return JsonResponse({'status': 'error', 'message': 'Excel file is empty.'}, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Failed to parse Excel file: {e}'}, status=400)
             
@@ -7476,102 +7430,111 @@ class MedicalDataUploadView(View):
         try:
             with transaction.atomic():
                 for i, row in enumerate(json_data):
-                    s_no_key = 'Details_Basic detail_S.NO' # Assuming this is your S.NO column header after parsing
-                    row_identifier = f"Row (S.No: {row.get(s_no_key, i + 4)})"
+                    # Identifier for error messages
+                    s_no_key = 'DETAILS_BASIC DETAILS_S.NO' # Make sure this matches your parsed header for S.No if it exists
+                    row_identifier = f"Row {i + 4}"
 
-                    # --- Step 1: Read all required details from the current Excel row ---
+                    # --- Step 1: Extract Key Fields ---
                     try:
-                        # Get Aadhar (primary identifier)
-                        aadhar_excel = str(row.get(BASIC_DETAILS_MAP['aadhar'])).strip() if row.get(BASIC_DETAILS_MAP['aadhar']) else None
-                        
-                        # <<< ADDED >>>: Get Year, Batch, and Hospital from the row
-                        year_excel = str(row.get(BASIC_DETAILS_MAP['year'])).strip() if row.get(BASIC_DETAILS_MAP['year']) else None
-                        batch_excel = str(row.get(BASIC_DETAILS_MAP['batch'])).strip() if row.get(BASIC_DETAILS_MAP['batch']) else None
-                        hospital_excel = str(row.get(BASIC_DETAILS_MAP['hospitalName'])).strip() if row.get(BASIC_DETAILS_MAP['hospitalName']) else None
+                        aadhar_val = str(row.get(BASIC_DETAILS_MAP['aadhar'], '')).strip()
+                        year_val = str(row.get(BASIC_DETAILS_MAP['year'], '')).strip()
+                        batch_val = str(row.get(BASIC_DETAILS_MAP['batch'], '')).strip()
+                        hospital_val = str(row.get(BASIC_DETAILS_MAP['hospitalName'], '')).strip()
 
-                        if not aadhar_excel:
-                            errors.append(f"{row_identifier}: Missing required field (Aadhar).")
+                        # Validate that all 4 keys are present
+                        if not all([aadhar_val, year_val, batch_val, hospital_val]):
+                            missing = []
+                            if not aadhar_val: missing.append("Aadhar")
+                            if not year_val: missing.append("Year")
+                            if not batch_val: missing.append("Batch")
+                            if not hospital_val: missing.append("Hospital")
+                            
+                            errors.append(f"{row_identifier}: Missing required fields: {', '.join(missing)}")
                             error_count += 1
                             continue
-                        
+
                     except Exception as e:
-                        errors.append(f"{row_identifier}: Error processing required basic detail fields. Details: {e}.")
+                        errors.append(f"{row_identifier}: Data extraction error: {e}")
                         error_count += 1
                         continue
 
-                    # --- Step 2: Find the LATEST Employee using ONLY Aadhar ---
+                    # --- Step 2: Fetch the specific Employee Record using ALL 4 Keys ---
                     try:
-                        # Find the most recently created employee record with this Aadhar number
+                        # We use .filter().first() or .get() to find the specific visit record
+                        # Note: Field names inside filter() must match your employee_details model exactly
                         employee = employee_details.objects.filter(
-                            aadhar=aadhar_excel
-                        ).order_by('id').last()
+                            aadhar=aadhar_val,
+                            year=year_val,
+                            batch=batch_val,
+                            hospitalName=hospital_val 
+                        ).first()
 
-                        if employee is None:
-                            raise employee_details.DoesNotExist
+                        if not employee:
+                            continue
                         
-                        # <<< MODIFIED >>>: Update the found employee record with row-specific data
-                        # This ensures each employee's record is tagged with the correct batch info
-                        if year_excel:
-                            employee.year = year_excel
-                        if batch_excel:
-                            employee.batch = batch_excel
-                        if hospital_excel:
-                            employee.hospitalName = hospital_excel
+                        # --- Step 3: Get MRD Number and Date ---
+                        # We don't update the employee details here; we just read them.
+                        current_mrd = employee.mrdNo
+                        current_entry_date = employee.entry_date
                         
-                        employee.save() # Persist these changes to the database
-                        
-                    except employee_details.DoesNotExist:
-                        error_msg = (f"{row_identifier}: Employee with Aadhar '{aadhar_excel}' not found in the database.")
-                        errors.append(error_msg)
+                        if not current_mrd:
+                            errors.append(f"{row_identifier}: Employee found but MRD Number is missing in database.")
+                            error_count += 1
+                            continue
+
+                    except Exception as e:
+                        errors.append(f"{row_identifier}: Database query error: {e}")
                         error_count += 1
                         continue
-                    
-                    # --- Step 3: Use the date FROM THE FOUND EMPLOYEE to save medical data ---
-                    entry_date_to_save = employee.entry_date
 
-                    # --- Step 4: Call all processing functions with the retrieved date ---
-                    # This part remains unchanged
-                    process_model_data(vitals, VITALS_MAP, row, employee, entry_date_to_save)
-                    process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, entry_date_to_save)
-                    process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, entry_date_to_save)
-                    process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, entry_date_to_save)
-                    process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, entry_date_to_save)
-                    process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, entry_date_to_save)
-                    process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, entry_date_to_save)
-                    process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, entry_date_to_save)
-                    process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, entry_date_to_save)
-                    process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, entry_date_to_save)
-                    process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, entry_date_to_save)
-                    process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, entry_date_to_save)
-                    process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, entry_date_to_save)
-                    process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, entry_date_to_save)
-                    process_model_data(MensPack, MENS_PACK_MAP, row, employee, entry_date_to_save)
-                    process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, entry_date_to_save)
-                    process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, entry_date_to_save)
-                    process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, entry_date_to_save)
-                    process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, entry_date_to_save)
-                    process_model_data(XRay, XRAY_MAP, row, employee, entry_date_to_save)
-                    process_model_data(USGReport, USG_MAP, row, employee, entry_date_to_save)
-                    process_model_data(CTReport, CT_MAP, row, employee, entry_date_to_save)
-                    process_model_data(MRIReport, MRI_MAP, row, employee, entry_date_to_save)
+                    # --- Step 4: Process Medical Data ---
+                    # The employee object passed here already contains the correct mrdNo and basic info
                     
-                    success_count += 1
+                    try:
+                        process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, current_entry_date)
+                        process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, current_entry_date)
+                        process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, current_entry_date)
+                        process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, current_entry_date)
+                        process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, current_entry_date)
+                        process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, current_entry_date)
+                        process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, current_entry_date)
+                        process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, current_entry_date)
+                        process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, current_entry_date)
+                        process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, current_entry_date)
+                        process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, current_entry_date)
+                        process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, current_entry_date)
+                        process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, current_entry_date)
+                        process_model_data(MensPack, MENS_PACK_MAP, row, employee, current_entry_date)
+                        process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, current_entry_date)
+                        process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, current_entry_date)
+                        process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, current_entry_date)
+                        process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, current_entry_date)
+                        process_model_data(XRay, XRAY_MAP, row, employee, current_entry_date)
+                        process_model_data(USGReport, USG_MAP, row, employee, current_entry_date)
+                        process_model_data(CTReport, CT_MAP, row, employee, current_entry_date)
+                        process_model_data(MRIReport, MRI_MAP, row, employee, current_entry_date)
+                        
+                        success_count += 1
+
+                    except Exception as e:
+                        # Catch model saving errors
+                        errors.append(f"{row_identifier}: Error saving test results: {e}")
+                        error_count += 1
+                        continue
                 
+                # If you want to strictly reject the file if ANY row fails:
                 if error_count > 0:
-                    # If any row failed validation, this will trigger the transaction to roll back
-                    raise Exception(f"Validation failed for {error_count} row(s). Rolling back all changes.")
+                    raise Exception(f"Validation/Processing failed for {error_count} row(s).")
 
         except Exception as e:
-            # This block catches errors, including the rollback exception from above
             return JsonResponse({
                 'status': 'error',
                 'message': str(e),
-                'success_count': 0, # On failure, success count is reset to 0
-                'error_count': error_count or len(json_data),
+                'success_count': 0, 
+                'error_count': error_count,
                 'errors': errors,
             }, status=400)
 
-        # This block is only reached if the entire transaction succeeds without errors
         return JsonResponse({
             'status': 'success',
             'message': f'Successfully processed {success_count} records.',
@@ -7579,6 +7542,7 @@ class MedicalDataUploadView(View):
             'error_count': 0,
             'errors': []
         }, status=201)
+
 
 @csrf_exempt
 def fetchadmindata(request):
