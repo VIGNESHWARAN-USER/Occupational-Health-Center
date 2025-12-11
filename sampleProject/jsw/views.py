@@ -1177,9 +1177,7 @@ def add_basic_details(request):
             'visiting_date_from': parse_date_internal(data.get('visiting_date_from')),
             'visiting_date_to': parse_date_internal(data.get('visiting_date_to')),
             'stay_in_guest_house': data.get('stay_in_guest_house'), 'visiting_purpose': data.get('visiting_purpose'),
-            # Set 'type' based on role
-            'type': data.get('role', 'Employee'), # Default type if role missing
-            # profilepic handled below
+            
         }
 
         # Filter out None values before passing to update_or_create defaults
@@ -1986,6 +1984,7 @@ def fitness_test(request):
                     except json.JSONDecodeError: return []
                 return []
 
+            print(data.get("isDoctorVisited"))
             # ---------------------------------------------------------
             # NURSE LOGIC
             # ---------------------------------------------------------
@@ -1999,9 +1998,11 @@ def fitness_test(request):
                     'submittedNurse': data.get("submittedDoctor"), # Frontend often sends current user as submittedDoctor
                     'bookedDoctor': data.get("bookedDoctor"),
                     
-                    # Status remains default or IN_PROGRESS for nurse (optional, here left as is to not override doctor)
-                    # 'status': model_class.StatusChoices.IN_PROGRESS, 
-
+                    'status': (
+                        model_class.StatusChoices.PENDING if param == "hold" 
+                        else model_class.StatusChoices.INITIATE if data.get('isDoctorVisited') 
+                        else model_class.StatusChoices.IN_PROGRESS
+                    ),
                     # Basic Tests
                     'tremors': data.get("tremors"), 'romberg_test': data.get("romberg_test"),
                     'acrophobia': data.get("acrophobia"), 'trendelenberg_test': data.get("trendelenberg_test"),
@@ -2431,73 +2432,230 @@ def get_notes(request, aadhar):
         return JsonResponse({'error': 'Invalid request method. Use GET.'}, status=405)
 
 
-# Generic form creation handler
+import json
+import logging
+from datetime import date
+from django.http import JsonResponse
+from django.db.models import DateField, IntegerField, BooleanField
+from django.core.exceptions import ValidationError
+
+# Assuming you have these helper functions defined elsewhere in your file as before
+# from .utils import parse_date_internal, parse_form_age 
+
+logger = logging.getLogger(__name__)
+
 def _create_form(request, model_class, form_name, required_fields=None):
     log_prefix = f"create_{form_name.lower().replace(' ', '')}"
-    if request.method == 'POST':
-        aadhar = None
+    
+    if request.method != 'POST':
+        response = JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
+        response['Allow'] = 'POST'
+        return response
+
+    mrdNo = None
+    try:
+        # 1. Decode Data
+        data = json.loads(request.body.decode('utf-8'))
+        logger.debug(f"Received {form_name} Data: {json.dumps(data)[:500]}...")
+
+        # 2. Extract Identifiers
+        mrdNo = data.get('mrdNo')
+        aadhar = data.get('aadhar') # Keep capturing aadhar, but it's secondary now
+        entry_date = date.today()
+
+        # 3. Validate Required Identifier (mrdNo)
+        if not mrdNo:
+            logger.warning(f"{log_prefix} failed: mrdNo is required.")
+            return JsonResponse({'error': 'Medical Record Number (mrdNo) is required'}, status=400)
+
+        # 4. Check for other specific required fields
+        if required_fields:
+            missing = [f for f in required_fields if data.get(f) is None]
+            if missing:
+                return JsonResponse({'error': f"Missing required fields for {form_name}: {', '.join(missing)}"}, status=400)
+
+        # 5. Initialize Form Data
+        # We explicitly set these keys to ensure they are present
+        form_data = {
+            'mrdNo': mrdNo, 
+            'entry_date': entry_date
+        }
+        
+        # Only add aadhar if it exists to avoid overwriting with None if the model has a default or allows blank
+        if aadhar:
+            form_data['aadhar'] = aadhar
+
+        # 6. Dynamic Field Mapping
+        for field in model_class._meta.get_fields():
+            # Skip fields we already handled or auto-generated fields
+            if field.concrete and not field.auto_created and field.name not in ['id', 'mrdNo', 'aadhar', 'entry_date']:
+                
+                payload_key = field.name
+                
+                if payload_key in data:
+                    value = data[payload_key]
+                    
+                    # Handle Data Types
+                    if isinstance(field, DateField):
+                        form_data[field.name] = parse_date_internal(value)
+                    
+                    elif isinstance(field, IntegerField):
+                        form_data[field.name] = parse_form_age(value)
+                    
+                    elif isinstance(field, BooleanField):
+                        if isinstance(value, str):
+                            form_data[field.name] = value.lower() in ['true', '1', 'yes']
+                        else:
+                            form_data[field.name] = bool(value)
+                    
+                    elif value is not None:
+                        form_data[field.name] = value
+
+        # 7. Create and Validate
+        form = model_class(**form_data)
+        form.full_clean() # Triggers Django validation
+        form.save()
+
+        logger.info(f"{form_name} created successfully for MRD {mrdNo}. ID: {form.pk}")
+        return JsonResponse({'message': f'{form_name} created successfully', 'id': form.pk}, status=201)
+
+    except json.JSONDecodeError:
+        logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    
+    except ValidationError as e:
+        logger.error(f"{log_prefix} failed for MRD {mrdNo or 'Unknown'}: Validation Error: {e.message_dict}", exc_info=True)
+        return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
+    
+    except Exception as e:
+        logger.exception(f"{log_prefix} failed for MRD {mrdNo or 'Unknown'}: An unexpected error occurred.")
+        return JsonResponse({'error': "An internal server error occurred.", 'detail': str(e)}, status=500)
+
+
+
+import json
+import logging
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date
+from django.core.exceptions import ValidationError
+
+# Import your models
+from .models import Form17, Form38, Form39, Form40, Form27 
+
+logger = logging.getLogger(__name__)
+
+# --- Helper: Safe Date Parsing ---
+def parse_date_internal(date_str):
+    """
+    Safely parses a date string. Returns None if invalid or empty.
+    """
+    if not date_str:
+        return None
+    try:
+        # Django's parse_date handles YYYY-MM-DD
+        return parse_date(date_str)
+    except Exception:
+        return None
+
+# --- Helper: Safe Age Parsing ---
+def parse_form_age(age_val):
+    """
+    Parses age to integer, returns None if fails.
+    """
+    if not age_val:
+        return None
+    try:
+        return int(age_val)
+    except (ValueError, TypeError):
+        return None
+
+# --- Helper: Robust Request Data Parser ---
+def get_request_data(request):
+    """
+    Retrieves data from request, handling both JSON (application/json)
+    and Form Data (application/x-www-form-urlencoded or multipart/form-data).
+    Prevents RawPostDataException.
+    """
+    if request.content_type == 'application/json':
         try:
-            data = json.loads(request.body.decode('utf-8')) # Decode explicitly
-            logger.debug(f"Received {form_name} Data: {json.dumps(data)[:500]}...")
-
-            aadhar = data.get('aadhar')
-            entry_date = date.today() # Record creation date
-
-            if not aadhar:
-                logger.warning(f"{log_prefix} failed: Aadhar number is required.")
-                return JsonResponse({'error': 'Aadhar number (aadhar) is required'}, status=400)
-
-            # Basic check for required fields if provided
-            if required_fields:
-                 missing = [f for f in required_fields if data.get(f) is None]
-                 if missing:
-                      return JsonResponse({'error': f"Missing required fields for {form_name}: {', '.join(missing)}"}, status=400)
-
-            # Prepare form data based on model fields, handling potential type conversions
-            form_data = {'aadhar': aadhar, 'entry_date': entry_date}
-            for field in model_class._meta.get_fields():
-                 if field.concrete and not field.auto_created and field.name not in ['id', 'aadhar', 'entry_date']:
-                     payload_key = field.name # Assume payload key matches model field name for simplicity here
-                     # Or use a mapping if keys differ significantly
-                     if payload_key in data:
-                         value = data[payload_key]
-                         # Basic type handling
-                         if isinstance(field, DateField):
-                              form_data[field.name] = parse_date_internal(value)
-                         elif isinstance(field, IntegerField):
-                              form_data[field.name] = parse_form_age(value) # Use age parser for integers
-                         elif isinstance(field, BooleanField):
-                              if isinstance(value, str): form_data[field.name] = value.lower() in ['true', '1', 'yes']
-                              else: form_data[field.name] = bool(value)
-                         elif value is not None: # Add other non-None values
-                              form_data[field.name] = value
-                         # Handle potential None values for nullable fields correctly (already done by not adding if None)
-
-            # Create a new form instance
-            form = model_class(**form_data)
-            form.full_clean() # Validate model fields
-            form.save()
-
-            logger.info(f"{form_name} created successfully for aadhar {aadhar}. ID: {form.pk}")
-            return JsonResponse({'message': f'{form_name} created successfully', 'id': form.pk}, status=201)
-
+            return json.loads(request.body.decode('utf-8'))
         except json.JSONDecodeError:
-            logger.error(f"{log_prefix} failed: Invalid JSON data.", exc_info=True)
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e:
-            logger.error(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: Validation Error: {e.message_dict}", exc_info=True)
-            return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e:
-            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: An unexpected error occurred.")
-            return JsonResponse({'error': "An internal server error occurred.", 'detail': str(e)}, status=500)
+            return {}
     else:
-         response = JsonResponse({'error': 'Only POST requests are allowed'}, status=405)
-         response['Allow'] = 'POST'
-         return response
+        # Fallback for standard form posts
+        return request.POST.dict()
 
-# Apply the generic handler
+# --- Generic Form Creator ---
+def _create_form(request, model_class, form_name, specific_date_field='date'):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
+
+    aadhar = None
+    try:
+        # 1. Get Data Safely
+        data = get_request_data(request)
+        aadhar = data.get('aadhar')
+
+        if not aadhar:
+            return JsonResponse({'error': 'Aadhar number is required'}, status=400)
+
+        # 2. Prepare common fields
+        # Start with all incoming data
+        model_data = data.copy()
+        
+        # Enforce specific fields
+        model_data['aadhar'] = aadhar
+        model_data['entry_date'] = date.today() # System date for record creation
+        
+        # 3. Dynamic Field Mapping & Cleaning
+        # Iterate over the model's fields to strictly type cast and filter
+        final_data = {}
+        for field in model_class._meta.get_fields():
+            if field.name in model_data:
+                value = model_data[field.name]
+
+                # Handle Dates
+                if 'Date' in field.get_internal_type() or field.name in ['dob', 'date', 'dateOfBirth', 'employmentDate', 'leavingDate', 'medicalExamDate', 'recertifiedDate', 'eyeExamDate', 'proposedEmploymentDate', 'typhoidVaccinationDate']:
+                    value = parse_date_internal(value)
+                
+                # Handle Integers (like Age)
+                elif field.get_internal_type() == 'IntegerField':
+                    if field.name == 'age':
+                         value = parse_form_age(value)
+                    elif value == '' or value is None:
+                         value = None
+                    else:
+                         try: value = int(value)
+                         except: value = None
+
+                # Remove Empty Strings for nullable fields to avoid DB constraint errors
+                if value == '' or value is None:
+                    if field.null:
+                        value = None
+                    else:
+                        # If field is not nullable but we have empty string, keep it as empty string
+                        value = '' 
+
+                final_data[field.name] = value
+
+        # 4. Create Record
+        form_instance = model_class.objects.create(**final_data)
+        
+        logger.info(f"{form_name} created successfully for aadhar {aadhar}. ID: {form_instance.pk}")
+        return JsonResponse({'message': f'{form_name} created successfully', 'id': form_instance.pk}, status=201)
+
+    except Exception as e:
+        logger.exception(f"Error creating {form_name} for aadhar {aadhar}: {str(e)}")
+        return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
+
+
+# --- API Endpoints ---
+
 @csrf_exempt
 def create_form17(request):
+    # Removed the 'print(json.load(request))' which caused the crash
     return _create_form(request, Form17, "Form 17")
 
 @csrf_exempt
@@ -2514,51 +2672,11 @@ def create_form40(request):
 
 @csrf_exempt
 def create_form27(request):
-    # Form 27 might have slightly different date handling if 'date' refers to form date vs entry date
-    # Keeping its specific logic for now, but could be adapted to _create_form
-    model_class = Form27
-    log_prefix = "create_form27"
-    form_name = "Form 27"
-    if request.method == 'POST':
-        aadhar = None
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            aadhar = data.get('aadhar')
-            entry_date = date.today() # Date the record is created in DB
-            form_date = parse_date_internal(data.get('date')) # The date field *on* the form
-
-            if not aadhar: return JsonResponse({'error': 'Aadhar required'}, status=400)
-
-            form_data = {
-                'aadhar': aadhar, 'entry_date': entry_date,
-                'serialNumber': data.get('serialNumber'),
-                'date': form_date, # Use parsed form date for the 'date' field
-                'department': data.get('department'), 'nameOfWorks': data.get('nameOfWorks'),
-                'sex': data.get('sex'), 'dateOfBirth': parse_date_internal(data.get('dateOfBirth')),
-                'age': parse_form_age(data.get('age')), 'nameOfTheFather': data.get('nameOfTheFather'),
-                'natureOfJobOrOccupation': data.get('natureOfJobOrOccupation'),
-                'signatureOfFMO': data.get('signatureOfFMO'), 'descriptiveMarks': data.get('descriptiveMarks'),
-                'signatureOfCertifyingSurgeon': data.get('signatureOfCertifyingSurgeon'),
-                'emp_no': data.get('emp_no') # Assuming exists
-            }
-            # Filter None values before creating
-            filtered_form_data = {k:v for k,v in form_data.items() if v is not None}
-
-            form = model_class.objects.create(**filtered_form_data)
-            # form.full_clean() # Consider validating before create if needed, create handles basic constraints
-            # form.save() # create already saves
-            logger.info(f"{form_name} created for aadhar {aadhar}. ID: {form.pk}")
-            return JsonResponse({'message': f'{form_name} created successfully', 'id': form.pk}, status=201)
-        except json.JSONDecodeError: return JsonResponse({'error': 'Invalid JSON'}, status=400)
-        except ValidationError as e: return JsonResponse({'error': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e:
-            logger.exception(f"{log_prefix} failed for aadhar {aadhar or 'Unknown'}: {e}")
-            return JsonResponse({'error': "Server error.", 'detail': str(e)}, status=500)
-    else:
-        response = JsonResponse({'error': 'Only POST allowed'}, status=405)
-        response['Allow'] = 'POST'
-        return response
-
+    # Form 27 is handled by the generic creator now too, 
+    # as the generic creator dynamically maps fields based on the model.
+    # If Form27 has a specific date field name (like 'date' instead of 'entry_date'), 
+    # the dictionary mapping inside _create_form handles it.
+    return _create_form(request, Form27, "Form 27")
 
 # --- Appointments ---
 #---  MedicalCertificate ---
@@ -7472,32 +7590,21 @@ def fetchadmindata(request):
 
 
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from datetime import date
-from .models import employee_details, FitnessAssessment, Consultation
-from django.core.serializers.json import DjangoJSONEncoder
-import logging
-
-logger = logging.getLogger(__name__)
-
 @csrf_exempt
 def get_currentfootfalls(request):
     if request.method != "POST":
         return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
 
     try:
-        # --- MODIFIED SECTION: Dynamic Filtering ---
-
-        # 1. Get optional filter parameters from the URL query string
+        # 1. Get optional filter parameters
         from_date_str = request.GET.get('fromDate')
         to_date_str = request.GET.get('toDate')
         purpose_str = request.GET.get('purpose')
 
-        # 2. Start with a base queryset
+        # 2. Start with base queryset
         queryset = employee_details.objects.all()
 
-        # 3. Apply filters conditionally
+        # 3. Apply filters
         if from_date_str:
             queryset = queryset.filter(entry_date__gte=from_date_str)
         
@@ -7507,18 +7614,13 @@ def get_currentfootfalls(request):
         if purpose_str:
             queryset = queryset.filter(register=purpose_str)
             
-        # 4. If no date range is provided, default to today's footfalls.
-        #    This preserves the original behavior when no filters are applied.
+        # 4. Default to today if no date range
         if not from_date_str and not to_date_str:
             today = date.today()
             queryset = queryset.filter(entry_date=today)
         
-        # 5. Execute the final filtered query
-        #    The .order_by() is added to ensure a consistent output order.
+        # 5. Get Footfalls
         footfalls = list(queryset.order_by('-entry_date', '-id').values())
-
-        # --- END MODIFIED SECTION ---
-
 
         if not footfalls:
             return JsonResponse({
@@ -7526,7 +7628,7 @@ def get_currentfootfalls(request):
                 'data': []
             }, status=200)
 
-       
+        # 6. Extract MRDs based on type
         preventive_mrds = [
             f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Preventive' and f['mrdNo']
         ]
@@ -7534,51 +7636,55 @@ def get_currentfootfalls(request):
             f['mrdNo'] for f in footfalls if f['type_of_visit'] == 'Curative' and f['mrdNo']
         ]
 
-        # 7. Fetch all related records in bulk (Efficient)
+        # 7. Fetch related records
         fitness_records = FitnessAssessment.objects.filter(mrdNo__in=preventive_mrds).values()
         consultation_records = Consultation.objects.filter(mrdNo__in=curative_mrds).values()
 
-        # 8. Create maps for quick lookups
+        # 8. Create maps
         fitness_map = {record['mrdNo']: record for record in fitness_records}
         consultation_map = {record['mrdNo']: record for record in consultation_records}
 
-        # 9. Combine the data
+        # 9. Combine data (WITH STRICT FILTERING)
         response_data = []
         for footfall in footfalls:
             mrd_number = footfall.get('mrdNo')
+            visit_type = footfall.get('type_of_visit')
+            
             combined_record = {
                 'details': footfall,
                 'assessment': None,
                 'consultation': None,
             }
 
-            if footfall.get('type_of_visit') == 'Preventive':
-                combined_record['assessment'] = fitness_map.get(mrd_number)
-            elif footfall.get('type_of_visit') == 'Curative':
-                combined_record['consultation'] = consultation_map.get(mrd_number)
+            # --- KEY CHANGE HERE ---
+            # If the related record is NOT found in the map, we skip this footfall completely.
             
-            response_data.append(combined_record)
+            data_found = False
+
+            if visit_type == 'Preventive':
+                assessment_data = fitness_map.get(mrd_number)
+                if assessment_data:
+                    combined_record['assessment'] = assessment_data
+                    data_found = True
+            
+            elif visit_type == 'Curative':
+                consultation_data = consultation_map.get(mrd_number)
+                if consultation_data:
+                    combined_record['consultation'] = consultation_data
+                    data_found = True
+            
+            # Only append if we actually found the linked data
+            if data_found:
+                response_data.append(combined_record)
         
-        # 10. Return the successful response
         return JsonResponse(
             {'data': response_data, 'message': 'Successfully retrieved data'},
-            encoder=DjangoJSONEncoder,
             status=200
         )
 
     except Exception as e:
-        logger.exception("An error occurred in get_currentfootfalls") # More detailed logging
+        logger.exception("An error occurred in get_currentfootfalls")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
-
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.core.serializers.json import DjangoJSONEncoder
-from django.db.models import Q
-from datetime import date
-import logging
-
-logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def get_pendingfootfalls(request):
@@ -7586,12 +7692,10 @@ def get_pendingfootfalls(request):
         return JsonResponse({'error': 'Invalid Method. Only POST is allowed.'}, status=405)
 
     try:
-        # --- Get filters ---
         from_date_str = request.GET.get('fromDate')
         to_date_str = request.GET.get('toDate')
         purpose_str = request.GET.get('purpose')
 
-        # --- Base queryset ---
         queryset = employee_details.objects.all()
 
         if from_date_str:
@@ -7603,12 +7707,11 @@ def get_pendingfootfalls(request):
         if purpose_str:
             queryset = queryset.filter(register=purpose_str)
 
-        # Default to today's data if no date filter
         if not from_date_str and not to_date_str:
             today = date.today()
             queryset = queryset.filter(entry_date=today)
 
-        # --- Fetch ONLY pending MRD numbers ---
+        # 1. Fetch ONLY pending MRDs from the child tables directly
         preventive_mrds = FitnessAssessment.objects.filter(
             status="pending"
         ).values_list('mrdNo', flat=True)
@@ -7617,16 +7720,13 @@ def get_pendingfootfalls(request):
             status="pending"
         ).values_list('mrdNo', flat=True)
 
-        # --- Filter footfalls by only pending MRDs ---
+        # 2. Filter footfalls: This enforces that data MUST exist in child tables to be fetched here
         queryset = queryset.filter(
             Q(type_of_visit='Preventive', mrdNo__in=preventive_mrds) |
             Q(type_of_visit='Curative', mrdNo__in=curative_mrds)
         )
 
-        # --- Fetch footfalls ---
-        footfalls = list(
-            queryset.order_by('-entry_date', '-id').values()
-        )
+        footfalls = list(queryset.order_by('-entry_date', '-id').values())
 
         if not footfalls:
             return JsonResponse({
@@ -7634,7 +7734,7 @@ def get_pendingfootfalls(request):
                 'data': []
             }, status=200)
 
-        # --- Fetch pending related records ---
+        # 3. Fetch full pending records for mapping
         fitness_records = FitnessAssessment.objects.filter(
             mrdNo__in=preventive_mrds,
             status="pending"
@@ -7645,14 +7745,13 @@ def get_pendingfootfalls(request):
             status="pending"
         ).values()
 
-        # --- Map by MRD ---
         fitness_map = {record['mrdNo']: record for record in fitness_records}
         consultation_map = {record['mrdNo']: record for record in consultation_records}
 
-        # --- Build response ---
         response_data = []
         for footfall in footfalls:
             mrd_number = footfall.get('mrdNo')
+            visit_type = footfall.get('type_of_visit')
 
             combined_record = {
                 'details': footfall,
@@ -7660,17 +7759,27 @@ def get_pendingfootfalls(request):
                 'consultation': None
             }
 
-            if footfall.get('type_of_visit') == 'Preventive':
-                combined_record['assessment'] = fitness_map.get(mrd_number)
+            # --- STRICT FILTERING IN LOOP ---
+            data_found = False
 
-            elif footfall.get('type_of_visit') == 'Curative':
-                combined_record['consultation'] = consultation_map.get(mrd_number)
+            if visit_type == 'Preventive':
+                assessment_data = fitness_map.get(mrd_number)
+                if assessment_data:
+                    combined_record['assessment'] = assessment_data
+                    data_found = True
 
-            response_data.append(combined_record)
+            elif visit_type == 'Curative':
+                consultation_data = consultation_map.get(mrd_number)
+                if consultation_data:
+                    combined_record['consultation'] = consultation_data
+                    data_found = True
+
+            # Only append if the child record definitely exists
+            if data_found:
+                response_data.append(combined_record)
 
         return JsonResponse(
             {'data': response_data, 'message': 'Pending records fetched successfully'},
-            encoder=DjangoJSONEncoder,
             status=200
         )
 
@@ -7678,6 +7787,7 @@ def get_pendingfootfalls(request):
         logger.exception("Error in get_pendingfootfalls")
         return JsonResponse({'error': f'An error occurred: {str(e)}'}, status=500)
 
+        
 
 # jsw/views.py
 

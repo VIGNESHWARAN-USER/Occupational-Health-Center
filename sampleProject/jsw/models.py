@@ -1880,6 +1880,7 @@ class Prescription(BaseModel):
 
 # --- Form Models (17, 38, 39, 40, 27) --- *MODIFIED*
 class Form17(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     dept = models.CharField(max_length=255, blank=True, null=True)
@@ -1906,6 +1907,7 @@ class Form17(BaseModel):
         return f"Form 17 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form38(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1925,6 +1927,7 @@ class Form38(BaseModel):
         return f"Form 38 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form39(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1944,6 +1947,7 @@ class Form39(BaseModel):
         return f"Form 39 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form40(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1968,6 +1972,7 @@ class Form40(BaseModel):
         return f"Form 40 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form27(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) 
     serialNumber = models.CharField(max_length=255, blank=True, null=True)

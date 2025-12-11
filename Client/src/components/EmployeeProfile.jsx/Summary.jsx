@@ -74,7 +74,7 @@ const Summary = () => {
                             
                             <Vaccination data = {visitData.vaccination}/>
 
-                            <Fitness data = {visitData.fitnessassessment}/>
+                            <Fitness data = {visitData}/>
                         </>))
                     }
                 </motion.div>
