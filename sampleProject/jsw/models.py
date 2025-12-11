@@ -286,114 +286,121 @@ class eventsandcamps(BaseModel):
         super().save(*args, **kwargs)
 
 
-# --- Haematology Model --- *MODIFIED*
+from django.db import models
+# Assuming BaseModel is defined in your project, otherwise change to models.Model
+# from .models import BaseModel 
+
 class heamatalogy(BaseModel):
     
     checked = models.BooleanField(default=False)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True) 
+
+    # --- Hemoglobin ---
     hemoglobin = models.TextField(max_length=255)
     hemoglobin_unit = models.TextField(max_length=255)
-    hemoglobin_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    hemoglobin_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    hemoglobin_reference_range = models.TextField(max_length=255, null=True, blank=True)
     hemoglobin_comments = models.TextField(max_length=255)
 
+    # --- Total RBC ---
     total_rbc = models.TextField(max_length=255)
     total_rbc_unit = models.TextField(max_length=255)
-    total_rbc_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    total_rbc_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    total_rbc_reference_range = models.TextField(max_length=255, null=True, blank=True)
     total_rbc_comments = models.TextField(max_length=255)
 
+    # --- Total WBC ---
     total_wbc = models.TextField(max_length=255)
     total_wbc_unit = models.TextField(max_length=255)
-    total_wbc_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    total_wbc_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    total_wbc_reference_range = models.TextField(max_length=255, null=True, blank=True)
     total_wbc_comments = models.TextField(max_length=255)
     
+    # --- Haemotocrit ---
     Haemotocrit = models.TextField(max_length=255)
     Haemotocrit_unit = models.TextField(max_length=255)
-    Haemotocrit_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Haemotocrit_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Haemotocrit_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Haemotocrit_comments = models.TextField(max_length=255)
 
+    # --- Neutrophil ---
     neutrophil = models.TextField(max_length=255)
     neutrophil_unit = models.TextField(max_length=255)
-    neutrophil_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    neutrophil_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    neutrophil_reference_range = models.TextField(max_length=255, null=True, blank=True)
     neutrophil_comments = models.TextField(max_length=255)
 
+    # --- Monocyte ---
     monocyte = models.TextField(max_length=255)
     monocyte_unit = models.TextField(max_length=255)
-    monocyte_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    monocyte_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    monocyte_reference_range = models.TextField(max_length=255, null=True, blank=True)
     monocyte_comments = models.TextField(max_length=255)
 
+    # --- PCV ---
     pcv = models.TextField(max_length=255)
     pcv_unit = models.TextField(max_length=255)
-    pcv_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    pcv_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    pcv_reference_range = models.TextField(max_length=255, null=True, blank=True)
     pcv_comments = models.TextField(max_length=255)
 
+    # --- MCV ---
     mcv = models.TextField(max_length=255)
     mcv_unit = models.TextField(max_length=255)
-    mcv_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mcv_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    mcv_reference_range = models.TextField(max_length=255, null=True, blank=True)
     mcv_comments = models.TextField(max_length=255)
 
+    # --- MCH ---
     mch = models.TextField(max_length=255)
     mch_unit = models.TextField(max_length=255)
-    mch_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mch_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    mch_reference_range = models.TextField(max_length=255, null=True, blank=True)
     mch_comments = models.TextField(max_length=255)
 
+    # --- Lymphocyte ---
     lymphocyte = models.TextField(max_length=255)
     lymphocyte_unit = models.TextField(max_length=255)
-    lymphocyte_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    lymphocyte_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    lymphocyte_reference_range = models.TextField(max_length=255, null=True, blank=True)
     lymphocyte_comments = models.TextField(max_length=255)
 
+    # --- ESR ---
     esr = models.TextField(max_length=255)
     esr_unit = models.TextField(max_length=255)
-    esr_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    esr_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    esr_reference_range = models.TextField(max_length=255, null=True, blank=True)
     esr_comments = models.TextField(max_length=255)
 
+    # --- MCHC ---
     mchc = models.TextField(max_length=255)
     mchc_unit = models.TextField(max_length=255)
-    mchc_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mchc_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    mchc_reference_range = models.TextField(max_length=255, null=True, blank=True)
     mchc_comments = models.TextField(max_length=255)
 
+    # --- Platelet Count ---
     platelet_count = models.TextField(max_length=255)
     platelet_count_unit = models.TextField(max_length=255)
-    platelet_count_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    platelet_count_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    platelet_count_reference_range = models.TextField(max_length=255, null=True, blank=True)
     platelet_count_comments = models.TextField(max_length=255)
 
+    # --- RDW ---
     rdw = models.TextField(max_length=255)
     rdw_unit = models.TextField(max_length=255)
-    rdw_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    rdw_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    rdw_reference_range = models.TextField(max_length=255, null=True, blank=True)
     rdw_comments = models.TextField(max_length=255)
 
+    # --- Eosinophil ---
     eosinophil = models.TextField(max_length=255)
     eosinophil_unit = models.TextField(max_length=255)
-    eosinophil_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    eosinophil_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    eosinophil_reference_range = models.TextField(max_length=255, null=True, blank=True)
     eosinophil_comments = models.TextField(max_length=255)
 
+    # --- Basophil ---
     basophil = models.TextField(max_length=255)
     basophil_unit = models.TextField(max_length=255)
-    basophil_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    basophil_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    basophil_reference_range = models.TextField(max_length=255, null=True, blank=True)
     basophil_comments = models.TextField(max_length=255)
 
+    # --- Smear / Morphology (No ranges usually, just comments) ---
     peripheral_blood_smear_rbc_morphology = models.TextField(max_length=255)
     peripheral_blood_smear_rbc_morphology_comments = models.TextField(max_length=255)
+    
     peripheral_blood_smear_parasites = models.TextField(max_length=255)
     peripheral_blood_smear_parasites_comments = models.TextField(max_length=255)
+    
     peripheral_blood_smear_others = models.TextField(max_length=255)
     peripheral_blood_smear_others_comments = models.TextField(max_length=255)
 
@@ -405,254 +412,255 @@ class RoutineSugarTests(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     mrdNo = models.TextField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
 
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    # --- Glucose (F) ---
     glucose_f = models.TextField(max_length=255)
     glucose_f_unit = models.TextField(max_length=255)
-    glucose_f_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    glucose_f_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    glucose_f_reference_range = models.TextField(max_length=255, null=True, blank=True)
     glucose_f_comments = models.TextField(max_length=255)
 
+    # --- Glucose (PP) ---
     glucose_pp = models.TextField(max_length=255)
     glucose_pp_unit = models.TextField(max_length=255)
-    glucose_pp_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    glucose_pp_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    glucose_pp_reference_range = models.TextField(max_length=255, null=True, blank=True)
     glucose_pp_comments = models.TextField(max_length=255)
 
+    # --- Random Blood Sugar ---
     random_blood_sugar = models.TextField(max_length=255)
     random_blood_sugar_unit = models.TextField(max_length=255)
-    random_blood_sugar_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    random_blood_sugar_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    random_blood_sugar_reference_range = models.TextField(max_length=255, null=True, blank=True)
     random_blood_sugar_comments = models.TextField(max_length=255)
 
+    # --- Estimated Average Glucose ---
     estimated_average_glucose = models.TextField(max_length=255)
     estimated_average_glucose_unit = models.TextField(max_length=255)
-    estimated_average_glucose_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    estimated_average_glucose_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    estimated_average_glucose_reference_range = models.TextField(max_length=255, null=True, blank=True)
     estimated_average_glucose_comments = models.TextField(max_length=255)
 
+    # --- HbA1c ---
     hba1c = models.TextField(max_length=255)
     hba1c_unit = models.TextField(max_length=255)
-    hba1c_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    hba1c_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    hba1c_reference_range = models.TextField(max_length=255, null=True, blank=True)
     hba1c_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Routine Sugar Test Report {self.id} for Emp {self.emp_no}"
 
 # --- Renal Function Test Model --- *MODIFIED*
+# --- Renal Function Test Model ---
 class RenalFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
     mrdNo = models.TextField(max_length=255, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
 
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    # --- Urea ---
     urea = models.TextField(max_length=255)
     urea_unit = models.TextField(max_length=255)
-    urea_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    urea_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    urea_reference_range = models.TextField(max_length=255, null=True, blank=True)
     urea_comments = models.TextField(max_length=255)
 
+    # --- BUN ---
     bun = models.TextField(max_length=255)
     bun_unit = models.TextField(max_length=255)
-    bun_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bun_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bun_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bun_comments = models.TextField(max_length=255)
 
+    # --- Calcium ---
     calcium = models.TextField(max_length=255)
     calcium_unit = models.TextField(max_length=255)
-    calcium_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    calcium_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    calcium_reference_range = models.TextField(max_length=255, null=True, blank=True)
     calcium_comments = models.TextField(max_length=255)
 
+    # --- Sodium ---
     sodium = models.TextField(max_length=255)
     sodium_unit = models.TextField(max_length=255)
-    sodium_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    sodium_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    sodium_reference_range = models.TextField(max_length=255, null=True, blank=True)
     sodium_comments = models.TextField(max_length=255)
 
+    # --- Potassium ---
     potassium = models.TextField(max_length=255)
     potassium_unit = models.TextField(max_length=255)
-    potassium_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    potassium_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    potassium_reference_range = models.TextField(max_length=255, null=True, blank=True)
     potassium_comments = models.TextField(max_length=255)
 
+    # --- Phosphorus ---
     phosphorus = models.TextField(max_length=255)
     phosphorus_unit = models.TextField(max_length=255)
-    phosphorus_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    phosphorus_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    phosphorus_reference_range = models.TextField(max_length=255, null=True, blank=True)
     phosphorus_comments = models.TextField(max_length=255)
 
+    # --- Serum Creatinine ---
     serum_creatinine = models.TextField(max_length=255)
     serum_creatinine_unit = models.TextField(max_length=255)
-    serum_creatinine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    serum_creatinine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    serum_creatinine_reference_range = models.TextField(max_length=255, null=True, blank=True)
     serum_creatinine_comments = models.TextField(max_length=255)
 
+    # --- Uric Acid ---
     uric_acid = models.TextField(max_length=255)
     uric_acid_unit = models.TextField(max_length=255)
-    uric_acid_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    uric_acid_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    uric_acid_reference_range = models.TextField(max_length=255, null=True, blank=True)
     uric_acid_comments = models.TextField(max_length=255)
 
+    # --- Chloride ---
     chloride = models.TextField(max_length=255)
     chloride_unit = models.TextField(max_length=255)
-    chloride_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    chloride_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    chloride_reference_range = models.TextField(max_length=255, null=True, blank=True)
     chloride_comments = models.TextField(max_length=255)
     
+    # --- Bicarbonate ---
     bicarbonate = models.TextField(max_length=255)
     bicarbonate_unit = models.TextField(max_length=255)
-    bicarbonate_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bicarbonate_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bicarbonate_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bicarbonate_comments = models.TextField(max_length=255)
     
+    # --- eGFR ---
     eGFR = models.TextField(max_length=255)
     eGFR_unit = models.TextField(max_length=255)
-    eGFR_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    eGFR_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    eGFR_reference_range = models.TextField(max_length=255, null=True, blank=True)
     eGFR_comments = models.TextField(max_length=255)
     
-
     def __str__(self):
         return f"Renal Function Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Lipid Profile Model --- *MODIFIED*
+
+# --- Lipid Profile Model ---
 class LipidProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
     
-    Total_Cholesterol= models.TextField(max_length=255) # Note: Total Cholesterol
+    # --- Total Cholesterol ---
+    Total_Cholesterol= models.TextField(max_length=255)
     Total_Cholesterol_unit = models.TextField(max_length=255)
-    Total_Cholesterol_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Total_Cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Total_Cholesterol_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Total_Cholesterol_comments = models.TextField(max_length=255)
 
+    # --- Triglycerides ---
     triglycerides = models.TextField(max_length=255)
     triglycerides_unit = models.TextField(max_length=255)
-    triglycerides_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    triglycerides_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    triglycerides_reference_range = models.TextField(max_length=255, null=True, blank=True)
     triglycerides_comments = models.TextField(max_length=255)
 
+    # --- HDL Cholesterol ---
     hdl_cholesterol = models.TextField(max_length=255)
     hdl_cholesterol_unit = models.TextField(max_length=255)
-    hdl_cholesterol_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    hdl_cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    hdl_cholesterol_reference_range = models.TextField(max_length=255, null=True, blank=True)
     hdl_cholesterol_comments = models.TextField(max_length=255)
 
+    # --- LDL Cholesterol ---
     ldl_cholesterol = models.TextField(max_length=255)
     ldl_cholesterol_unit = models.TextField(max_length=255)
-    ldl_cholesterol_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ldl_cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ldl_cholesterol_reference_range = models.TextField(max_length=255, null=True, blank=True)
     ldl_cholesterol_comments = models.TextField(max_length=255)
 
+    # --- CHOL/HDL Ratio ---
     chol_hdl_ratio = models.TextField(max_length=255)
     chol_hdl_ratio_unit = models.TextField(max_length=255)
-    chol_hdl_ratio_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    chol_hdl_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    chol_hdl_ratio_reference_range = models.TextField(max_length=255, null=True, blank=True)
     chol_hdl_ratio_comments = models.TextField(max_length=255)
 
+    # --- VLDL Cholesterol ---
     vldl_cholesterol = models.TextField(max_length=255)
     vldl_cholesterol_unit = models.TextField(max_length=255)
-    vldl_cholesterol_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    vldl_cholesterol_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    vldl_cholesterol_reference_range = models.TextField(max_length=255, null=True, blank=True)
     vldl_cholesterol_comments = models.TextField(max_length=255)
 
+    # --- LDL/HDL Ratio ---
     ldl_chol_hdl_chol_ratio = models.TextField(max_length=255)
     ldl_chol_hdl_chol_ratio_unit = models.TextField(max_length=255)
-    ldl_chol_hdl_chol_ratio_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ldl_chol_hdl_chol_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ldl_chol_hdl_chol_ratio_reference_range = models.TextField(max_length=255, null=True, blank=True)
     ldl_chol_hdl_chol_ratio_comments = models.TextField(max_length=255)
 
-    def _str_(self):
+    def __str__(self):
         return f"Lipid Profile Report {self.id} for Emp {self.emp_no}"
 
-# --- Liver Function Test Model --- *MODIFIED*
+
+# --- Liver Function Test Model ---
 class LiverFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
-
+    # --- Bilirubin Total ---
     bilirubin_total = models.TextField(max_length=255)
     bilirubin_total_unit = models.TextField(max_length=255)
-    bilirubin_total_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bilirubin_total_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bilirubin_total_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bilirubin_total_comments = models.TextField(max_length=255)
 
+    # --- Bilirubin Direct ---
     bilirubin_direct = models.TextField(max_length=255)
     bilirubin_direct_unit = models.TextField(max_length=255)
-    bilirubin_direct_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bilirubin_direct_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bilirubin_direct_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bilirubin_direct_comments = models.TextField(max_length=255)
 
+    # --- Bilirubin Indirect ---
     bilirubin_indirect = models.TextField(max_length=255)
     bilirubin_indirect_unit = models.TextField(max_length=255)
-    bilirubin_indirect_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bilirubin_indirect_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bilirubin_indirect_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bilirubin_indirect_comments = models.TextField(max_length=255)
 
+    # --- SGOT / AST ---
     sgot_ast = models.TextField(max_length=255)
     sgot_ast_unit = models.TextField(max_length=255)
-    sgot_ast_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    sgot_ast_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    sgot_ast_reference_range = models.TextField(max_length=255, null=True, blank=True)
     sgot_ast_comments = models.TextField(max_length=255)
 
+    # --- SGPT / ALT ---
     sgpt_alt = models.TextField(max_length=255)
     sgpt_alt_unit = models.TextField(max_length=255)
-    sgpt_alt_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    sgpt_alt_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    sgpt_alt_reference_range = models.TextField(max_length=255, null=True, blank=True)
     sgpt_alt_comments = models.TextField(max_length=255)
 
+    # --- Alkaline Phosphatase ---
     alkaline_phosphatase = models.TextField(max_length=255)
     alkaline_phosphatase_unit = models.TextField(max_length=255)
-    alkaline_phosphatase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    alkaline_phosphatase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    alkaline_phosphatase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     alkaline_phosphatase_comments = models.TextField(max_length=255)
 
+    # --- Total Protein ---
     total_protein = models.TextField(max_length=255)
     total_protein_unit = models.TextField(max_length=255)
-    total_protein_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    total_protein_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    total_protein_reference_range = models.TextField(max_length=255, null=True, blank=True)
     total_protein_comments = models.TextField(max_length=255)
 
+    # --- Albumin Serum ---
     albumin_serum = models.TextField(max_length=255)
     albumin_serum_unit = models.TextField(max_length=255)
-    albumin_serum_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    albumin_serum_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    albumin_serum_reference_range = models.TextField(max_length=255, null=True, blank=True)
     albumin_serum_comments = models.TextField(max_length=255)
 
+    # --- Globulin Serum ---
     globulin_serum = models.TextField(max_length=255)
     globulin_serum_unit = models.TextField(max_length=255)
-    globulin_serum_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    globulin_serum_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    globulin_serum_reference_range = models.TextField(max_length=255, null=True, blank=True)
     globulin_serum_comments = models.TextField(max_length=255)
 
+    # --- Alb/Glob Ratio ---
     alb_glob_ratio = models.TextField(max_length=255)
     alb_glob_ratio_unit = models.TextField(max_length=255)
-    alb_glob_ratio_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    alb_glob_ratio_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    alb_glob_ratio_reference_range = models.TextField(max_length=255, null=True, blank=True)
     alb_glob_ratio_comments = models.TextField(max_length=255)
 
+    # --- GGT ---
     gamma_glutamyl_transferase = models.TextField(max_length=255)
     gamma_glutamyl_transferase_unit = models.TextField(max_length=255)
-    gamma_glutamyl_transferase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    gamma_glutamyl_transferase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    gamma_glutamyl_transferase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     gamma_glutamyl_transferase_comments = models.TextField(max_length=255)
     
+    # --- C-Reactive Protein ---
     C_reactive_protien = models.TextField(max_length=255)
     C_reactive_protien_unit = models.TextField(max_length=255)
-    C_reactive_protien_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    C_reactive_protien_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    C_reactive_protien_reference_range = models.TextField(max_length=255, null=True, blank=True)
     C_reactive_protien_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Liver Function Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Thyroid Function Test Model --- *MODIFIED*
+# --- Thyroid Function Test Model ---
 class ThyroidFunctionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
@@ -662,463 +670,464 @@ class ThyroidFunctionTest(BaseModel):
     # --- T3 Fields ---
     t3_triiodothyronine = models.TextField(max_length=255)
     t3_triiodothyronine_unit = models.TextField(max_length=255)
-    t3_triiodothyronine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    t3_triiodothyronine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    t3_triiodothyronine_reference_range = models.TextField(max_length=255, null=True, blank=True)
     t3_triiodothyronine_comments = models.TextField(max_length=255)
 
     # --- T4 Fields ---
     t4_thyroxine = models.TextField(max_length=255)
     t4_thyroxine_unit = models.TextField(max_length=255)
-    t4_thyroxine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    t4_thyroxine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    t4_thyroxine_reference_range = models.TextField(max_length=255, null=True, blank=True)
     t4_thyroxine_comments = models.TextField(max_length=255)
 
     # --- TSH Fields ---
     tsh_thyroid_stimulating_hormone = models.TextField(max_length=255)
     tsh_thyroid_stimulating_hormone_unit = models.TextField(max_length=255)
-    tsh_thyroid_stimulating_hormone_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    tsh_thyroid_stimulating_hormone_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    tsh_thyroid_stimulating_hormone_reference_range = models.TextField(max_length=255, null=True, blank=True)
     tsh_thyroid_stimulating_hormone_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Thyroid Function Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Autoimmune test Model --- *MODIFIED*
- 
+
+# --- Autoimmune test Model ---
 class AutoimmuneTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- ANA ---
     ANA = models.TextField(max_length=255)
     ANA_unit = models.TextField(max_length=255)
-    ANA_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ANA_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ANA_reference_range = models.TextField(max_length=255, null=True, blank=True)
     ANA_comments = models.TextField(max_length=255)
     
+    # --- Anti ds DNA ---
     Anti_ds_dna = models.TextField(max_length=255)
     Anti_ds_dna_unit = models.TextField(max_length=255)
-    Anti_ds_dna_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Anti_ds_dna_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Anti_ds_dna_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Anti_ds_dna_comments = models.TextField(max_length=255)
     
-    Anticardiolipin_Antibodies= models.TextField(max_length=255)
+    # --- Anticardiolipin Antibodies ---
+    Anticardiolipin_Antibodies = models.TextField(max_length=255)
     Anticardiolipin_Antibodies_unit = models.TextField(max_length=255)
-    Anticardiolipin_Antibodies_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Anticardiolipin_Antibodies_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Anticardiolipin_Antibodies_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Anticardiolipin_Antibodies_comments = models.TextField(max_length=255)
     
-        
-    Rheumatoid_factor= models.TextField(max_length=255)
+    # --- Rheumatoid Factor ---
+    Rheumatoid_factor = models.TextField(max_length=255)
     Rheumatoid_factor_unit = models.TextField(max_length=255)
-    Rheumatoid_factor_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Rheumatoid_factor_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Rheumatoid_factor_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Rheumatoid_factor_comments = models.TextField(max_length=255)
     
     def __str__(self):
         return f"Autoimmune Test {self.id} for Emp {self.emp_no}"
-    
-    
 
-# --- Coagulation Test Model --- *MODIFIED*
+
+# --- Coagulation Test Model ---
 class CoagulationTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Prothrombin Time ---
     prothrombin_time = models.TextField(max_length=255)
     prothrombin_time_unit = models.TextField(max_length=255)
-    prothrombin_time_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    prothrombin_time_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    prothrombin_time_reference_range = models.TextField(max_length=255, null=True, blank=True)
     prothrombin_time_comments = models.TextField(max_length=255)
 
+    # --- PT INR ---
     pt_inr = models.TextField(max_length=255)
     pt_inr_unit = models.TextField(max_length=255)
-    pt_inr_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    pt_inr_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    pt_inr_reference_range = models.TextField(max_length=255, null=True, blank=True)
     pt_inr_comments = models.TextField(max_length=255)
 
+    # --- Clotting Time ---
     clotting_time = models.TextField(max_length=255)
     clotting_time_unit = models.TextField(max_length=255)
-    clotting_time_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    clotting_time_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    clotting_time_reference_range = models.TextField(max_length=255, null=True, blank=True)
     clotting_time_comments = models.TextField(max_length=255)
 
+    # --- Bleeding Time ---
     bleeding_time = models.TextField(max_length=255)
     bleeding_time_unit = models.TextField(max_length=255)
-    bleeding_time_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bleeding_time_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bleeding_time_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bleeding_time_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Coagulation Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Enzymes Cardiac Profile Model --- *MODIFIED*
+
+# --- Enzymes Cardiac Profile Model ---
 class EnzymesCardiacProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Acid Phosphatase ---
     acid_phosphatase = models.TextField(max_length=255)
     acid_phosphatase_unit = models.TextField(max_length=255)
-    acid_phosphatase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    acid_phosphatase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    acid_phosphatase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     acid_phosphatase_comments = models.TextField(max_length=255)
 
+    # --- Adenosine Deaminase ---
     adenosine_deaminase = models.TextField(max_length=255)
     adenosine_deaminase_unit = models.TextField(max_length=255)
-    adenosine_deaminase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    adenosine_deaminase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    adenosine_deaminase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     adenosine_deaminase_comments = models.TextField(max_length=255)
 
+    # --- Amylase ---
     amylase = models.TextField(max_length=255)
     amylase_unit = models.TextField(max_length=255)
-    amylase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    amylase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    amylase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     amylase_comments = models.TextField(max_length=255)
 
+    # --- ECG ---
     ecg = models.TextField(max_length=255)
     ecg_comments = models.TextField(max_length=255)
 
+    # --- Troponin T ---
     troponin_t = models.TextField(max_length=255)
     troponin_t_unit = models.TextField(max_length=255)
-    troponin_t_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    troponin_t_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    troponin_t_reference_range = models.TextField(max_length=255, null=True, blank=True)
     troponin_t_comments = models.TextField(max_length=255)
     
-    #troponin I
+    # --- Troponin I ---
     troponin_i = models.TextField(max_length=255)
     troponin_i_unit = models.TextField(max_length=255)
-    troponin_i_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    troponin_i_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    troponin_i_reference_range = models.TextField(max_length=255, null=True, blank=True)
     troponin_i_comments = models.TextField(max_length=255)
 
+    # --- CPK Total ---
     cpk_total = models.TextField(max_length=255)
     cpk_total_unit = models.TextField(max_length=255)
-    cpk_total_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    cpk_total_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    cpk_total_reference_range = models.TextField(max_length=255, null=True, blank=True)
     cpk_total_comments = models.TextField(max_length=255)
 
+    # --- ECHO ---
     echo = models.TextField(max_length=255)
     echo_comments = models.TextField(max_length=255)
 
+    # --- Lipase ---
     lipase = models.TextField(max_length=255)
     lipase_unit = models.TextField(max_length=255)
-    lipase_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    lipase_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    lipase_reference_range = models.TextField(max_length=255, null=True, blank=True)
     lipase_comments = models.TextField(max_length=255)
 
+    # --- CPK MB ---
     cpk_mb = models.TextField(max_length=255)
     cpk_mb_unit = models.TextField(max_length=255)
-    cpk_mb_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    cpk_mb_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    cpk_mb_reference_range = models.TextField(max_length=255, null=True, blank=True)
     cpk_mb_comments = models.TextField(max_length=255)
 
+    # --- TMT ---
     tmt_normal = models.TextField(max_length=255)
     tmt_normal_comments = models.TextField(max_length=255)
     
+    # --- Angiogram ---
     angiogram = models.TextField(max_length=255)
     angiogram_comments = models.TextField(max_length=255)
 
     def _str_(self):
         return f"Enzymes & Cardiac Profile Report {self.id} for Emp {self.emp_no}"
 
-# --- Urine Routine Test Model --- *MODIFIED*
+
+# --- Urine Routine Test Model ---
 class UrineRoutineTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Colour ---
     colour = models.TextField(max_length=255)
     colour_unit = models.TextField(max_length=255)
-    colour_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    colour_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    colour_reference_range = models.TextField(max_length=255, null=True, blank=True)
     colour_comments = models.TextField(max_length=255)
 
+    # --- Appearance ---
     appearance = models.TextField(max_length=255)
     appearance_unit = models.TextField(max_length=255)
-    appearance_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    appearance_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    appearance_reference_range = models.TextField(max_length=255, null=True, blank=True)
     appearance_comments = models.TextField(max_length=255)
 
+    # --- Reaction pH ---
     reaction_ph = models.TextField(max_length=255)
     reaction_ph_unit = models.TextField(max_length=255)
-    reaction_ph_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    reaction_ph_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    reaction_ph_reference_range = models.TextField(max_length=255, null=True, blank=True)
     reaction_ph_comments = models.TextField(max_length=255)
 
+    # --- Specific Gravity ---
     specific_gravity = models.TextField(max_length=255)
     specific_gravity_unit = models.TextField(max_length=255)
-    specific_gravity_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    specific_gravity_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    specific_gravity_reference_range = models.TextField(max_length=255, null=True, blank=True)
     specific_gravity_comments = models.TextField(max_length=255)
 
+    # --- Crystals ---
     crystals = models.TextField(max_length=255)
     crystals_unit = models.TextField(max_length=255)
-    crystals_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    crystals_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    crystals_reference_range = models.TextField(max_length=255, null=True, blank=True)
     crystals_comments = models.TextField(max_length=255)
 
+    # --- Bacteria ---
     bacteria = models.TextField(max_length=255)
     bacteria_unit = models.TextField(max_length=255)
-    bacteria_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bacteria_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bacteria_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bacteria_comments = models.TextField(max_length=255)
 
+    # --- Protein/Albumin ---
     protein_albumin = models.TextField(max_length=255)
     protein_albumin_unit = models.TextField(max_length=255)
-    protein_albumin_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    protein_albumin_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    protein_albumin_reference_range = models.TextField(max_length=255, null=True, blank=True)
     protein_albumin_comments = models.TextField(max_length=255)
 
+    # --- Glucose Urine ---
     glucose_urine = models.TextField(max_length=255)
     glucose_urine_unit = models.TextField(max_length=255)
-    glucose_urine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    glucose_urine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    glucose_urine_reference_range = models.TextField(max_length=255, null=True, blank=True)
     glucose_urine_comments = models.TextField(max_length=255)
 
+    # --- Ketone Bodies ---
     ketone_bodies = models.TextField(max_length=255)
     ketone_bodies_unit = models.TextField(max_length=255)
-    ketone_bodies_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ketone_bodies_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ketone_bodies_reference_range = models.TextField(max_length=255, null=True, blank=True)
     ketone_bodies_comments = models.TextField(max_length=255)
 
+    # --- Urobilinogen ---
     urobilinogen = models.TextField(max_length=255)
     urobilinogen_unit = models.TextField(max_length=255)
-    urobilinogen_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    urobilinogen_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    urobilinogen_reference_range = models.TextField(max_length=255, null=True, blank=True)
     urobilinogen_comments = models.TextField(max_length=255)
 
+    # --- Casts ---
     casts = models.TextField(max_length=255)
     casts_unit = models.TextField(max_length=255)
-    casts_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    casts_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    casts_reference_range = models.TextField(max_length=255, null=True, blank=True)
     casts_comments = models.TextField(max_length=255)
 
+    # --- Bile Salts ---
     bile_salts = models.TextField(max_length=255)
     bile_salts_unit = models.TextField(max_length=255)
-    bile_salts_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bile_salts_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bile_salts_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bile_salts_comments = models.TextField(max_length=255)
 
+    # --- Bile Pigments ---
     bile_pigments = models.TextField(max_length=255)
     bile_pigments_unit = models.TextField(max_length=255)
-    bile_pigments_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    bile_pigments_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    bile_pigments_reference_range = models.TextField(max_length=255, null=True, blank=True)
     bile_pigments_comments = models.TextField(max_length=255)
 
+    # --- WBC / Pus Cells ---
     wbc_pus_cells = models.TextField(max_length=255)
     wbc_pus_cells_unit = models.TextField(max_length=255)
-    wbc_pus_cells_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    wbc_pus_cells_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    wbc_pus_cells_reference_range = models.TextField(max_length=255, null=True, blank=True)
     wbc_pus_cells_comments = models.TextField(max_length=255)
 
+    # --- Red Blood Cells ---
     red_blood_cells = models.TextField(max_length=255)
     red_blood_cells_unit = models.TextField(max_length=255)
-    red_blood_cells_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    red_blood_cells_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    red_blood_cells_reference_range = models.TextField(max_length=255, null=True, blank=True)
     red_blood_cells_comments = models.TextField(max_length=255)
 
+    # --- Epithelial Cells ---
     epithelial_cells = models.TextField(max_length=255)
     epithelial_cells_unit = models.TextField(max_length=255)
-    epithelial_cells_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    epithelial_cells_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    epithelial_cells_reference_range = models.TextField(max_length=255, null=True, blank=True)
     epithelial_cells_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Urine Routine Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Serology Test Model --- *MODIFIED*
+# --- Serology Test Model ---
 class SerologyTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Screening HIV 1 ---
     screening_hiv = models.TextField(max_length=255)
     screening_hiv_unit = models.TextField(max_length=255)
-    screening_hiv_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    screening_hiv_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    screening_hiv_reference_range = models.TextField(max_length=255, null=True, blank=True)
     screening_hiv_comments = models.TextField(max_length=255)
     
+    # --- Screening HIV 2 ---
     screening_hiv2 = models.TextField(max_length=255)
     screening_hiv2_unit = models.TextField(max_length=255)
-    screening_hiv2_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    screening_hiv2_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    screening_hiv2_reference_range = models.TextField(max_length=255, null=True, blank=True)
     screening_hiv2_comments = models.TextField(max_length=255)
     
+    # --- HBsAg ---
     HBsAG = models.TextField(max_length=255)
     HBsAG_unit = models.TextField(max_length=255)
-    HBsAG_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    HBsAG_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    HBsAG_reference_range = models.TextField(max_length=255, null=True, blank=True)
     HBsAG_comments = models.TextField(max_length=255)
     
+    # --- HCV ---
     HCV = models.TextField(max_length=255)
     HCV_unit = models.TextField(max_length=255)
-    HCV_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    HCV_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    HCV_reference_range = models.TextField(max_length=255, null=True, blank=True)
     HCV_comments = models.TextField(max_length=255)
     
+    # --- WIDAL ---
     WIDAL = models.TextField(max_length=255)
     WIDAL_unit = models.TextField(max_length=255)
-    WIDAL_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    WIDAL_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    WIDAL_reference_range = models.TextField(max_length=255, null=True, blank=True)
     WIDAL_comments = models.TextField(max_length=255)
     
+    # --- VDRL ---
     VDRL = models.TextField(max_length=255)
     VDRL_unit = models.TextField(max_length=255)
-    VDRL_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    VDRL_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    VDRL_reference_range = models.TextField(max_length=255, null=True, blank=True)
     VDRL_comments = models.TextField(max_length=255)
     
+    # --- Dengue NS1Ag ---
     Dengue_NS1Ag = models.TextField(max_length=255)
     Dengue_NS1Ag_unit = models.TextField(max_length=255)
-    Dengue_NS1Ag_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Dengue_NS1Ag_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Dengue_NS1Ag_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Dengue_NS1Ag_comments = models.TextField(max_length=255)
 
+    # --- Dengue IgG ---
     Dengue_IgG = models.TextField(max_length=255)
     Dengue_IgG_unit = models.TextField(max_length=255)
-    Dengue_IgG_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Dengue_IgG_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Dengue_IgG_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Dengue_IgG_comments = models.TextField(max_length=255)
     
+    # --- Dengue IgM ---
     Dengue_IgM = models.TextField(max_length=255)
     Dengue_IgM_unit = models.TextField(max_length=255)
-    Dengue_IgM_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Dengue_IgM_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Dengue_IgM_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Dengue_IgM_comments = models.TextField(max_length=255)
-    
 
     def __str__(self):
         return f"Serology Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Motion Test Model --- *MODIFIED*
+
+# --- Motion Test Model ---
 class MotionTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Colour ---
     colour_motion = models.TextField(max_length=255)
     colour_motion_unit = models.TextField(max_length=255)
-    colour_motion_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    colour_motion_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    colour_motion_reference_range = models.TextField(max_length=255, null=True, blank=True)
     colour_motion_comments = models.TextField(max_length=255)
 
+    # --- Appearance ---
     appearance_motion = models.TextField(max_length=255)
     appearance_motion_unit = models.TextField(max_length=255)
-    appearance_motion_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    appearance_motion_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    appearance_motion_reference_range = models.TextField(max_length=255, null=True, blank=True)
     appearance_motion_comments = models.TextField(max_length=255)
 
+    # --- Occult Blood ---
     occult_blood = models.TextField(max_length=255)
     occult_blood_unit = models.TextField(max_length=255)
-    occult_blood_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    occult_blood_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    occult_blood_reference_range = models.TextField(max_length=255, null=True, blank=True)
     occult_blood_comments = models.TextField(max_length=255)
 
+    # --- Cyst ---
     cyst = models.TextField(max_length=255)
     cyst_unit = models.TextField(max_length=255)
-    cyst_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    cyst_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    cyst_reference_range = models.TextField(max_length=255, null=True, blank=True)
     cyst_comments = models.TextField(max_length=255)
 
+    # --- Mucus ---
     mucus = models.TextField(max_length=255)
     mucus_unit = models.TextField(max_length=255)
-    mucus_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    mucus_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    mucus_reference_range = models.TextField(max_length=255, null=True, blank=True)
     mucus_comments = models.TextField(max_length=255)
 
+    # --- Pus Cells ---
     pus_cells = models.TextField(max_length=255)
     pus_cells_unit = models.TextField(max_length=255)
-    pus_cells_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    pus_cells_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    pus_cells_reference_range = models.TextField(max_length=255, null=True, blank=True)
     pus_cells_comments = models.TextField(max_length=255)
 
+    # --- Ova ---
     ova = models.TextField(max_length=255)
     ova_unit = models.TextField(max_length=255)
-    ova_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    ova_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    ova_reference_range = models.TextField(max_length=255, null=True, blank=True)
     ova_comments = models.TextField(max_length=255)
 
+    # --- RBCs ---
     rbcs = models.TextField(max_length=255)
     rbcs_unit = models.TextField(max_length=255)
-    rbcs_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    rbcs_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    rbcs_reference_range = models.TextField(max_length=255, null=True, blank=True)
     rbcs_comments = models.TextField(max_length=255)
 
+    # --- Others ---
     others = models.TextField(max_length=255)
     others_unit = models.TextField(max_length=255)
-    others_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    others_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    others_reference_range = models.TextField(max_length=255, null=True, blank=True)
     others_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Motion Test Report {self.id} for Emp {self.emp_no}"
-    
-   
 
 
-# --- Culture Sensitivity Test Model --- *MODIFIED*
+# --- Culture Sensitivity Test Model ---
 class CultureSensitivityTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Urine ---
     urine = models.TextField(max_length=255)
     urine_unit = models.TextField(max_length=255)
-    urine_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    urine_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    urine_reference_range = models.TextField(max_length=255, null=True, blank=True)
     urine_comments = models.TextField(max_length=255)
 
+    # --- Motion ---
     motion = models.TextField(max_length=255)
     motion_unit = models.TextField(max_length=255)
-    motion_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    motion_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    motion_reference_range = models.TextField(max_length=255, null=True, blank=True)
     motion_comments = models.TextField(max_length=255)
 
+    # --- Sputum ---
     sputum = models.TextField(max_length=255)
     sputum_unit = models.TextField(max_length=255)
-    sputum_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    sputum_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    sputum_reference_range = models.TextField(max_length=255, null=True, blank=True)
     sputum_comments = models.TextField(max_length=255)
 
+    # --- Blood ---
     blood = models.TextField(max_length=255)
     blood_unit = models.TextField(max_length=255)
-    blood_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    blood_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    blood_reference_range = models.TextField(max_length=255, null=True, blank=True)
     blood_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Culture & Sensitivity Test Report {self.id} for Emp {self.emp_no}"
 
-# --- Mens Pack Model --- *MODIFIED*
+
+# --- Mens Pack Model ---
 class MensPack(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- PSA ---
     psa = models.TextField(max_length=255)
     psa_unit = models.TextField(max_length=255)
-    psa_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    psa_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    psa_reference_range = models.TextField(max_length=255, null=True, blank=True)
     psa_comments = models.TextField(max_length=255)
 
     def __str__(self):
         return f"Men's Pack Test Report {self.id} for Emp {self.emp_no}"
- 
- # --- Womens Pack Model --- *MODIFIED*
+
+
+# --- Womens Pack Model ---
+# No reference ranges in original code, usually just results/comments
 class WomensPack(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar 
+    aadhar = models.CharField(max_length=225, blank=True, null=True) 
     mrdNo = models.TextField(max_length=255, blank=True)
 
     Mammogaram  = models.TextField(max_length=255)
@@ -1130,11 +1139,13 @@ class WomensPack(BaseModel):
     def __str__(self):
         return f"Women's Pack {self.id} for Emp {self.emp_no}"
     
- # --- OccupationalProfile Model --- *MODIFIED*    
+
+# --- OccupationalProfile Model ---
+# No reference ranges in original code, usually just results/comments
 class OccupationalProfile(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar    
+    aadhar = models.CharField(max_length=225, blank=True, null=True)   
     mrdNo = models.TextField(max_length=255, blank=True)
 
     Audiometry  = models.TextField(max_length=255)
@@ -1146,37 +1157,39 @@ class OccupationalProfile(BaseModel):
     def __str__(self):
         return f"Occupational Profile {self.id} for Emp {self.emp_no}"
    
- # --- Others Test Model --- *MODIFIED*      
+
+# --- Others Test Model ---      
 class OthersTest(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar   
+    aadhar = models.CharField(max_length=225, blank=True, null=True)   
     mrdNo = models.TextField(max_length=255, blank=True)
 
+    # --- Bone Densitometry ---
     Bone_Densitometry = models.TextField(max_length=255)
     Bone_Densitometry_unit = models.TextField(max_length=255)
-    Bone_Densitometry_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Bone_Densitometry_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Bone_Densitometry_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Bone_Densitometry_comments = models.TextField(max_length=255)
     
+    # --- Vit D ---
     Vit_D = models.TextField(max_length=255)
     Vit_D_unit = models.TextField(max_length=255)
-    Vit_D_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Vit_D_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Vit_D_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Vit_D_comments = models.TextField(max_length=255)
     
+    # --- Vit B12 ---
     Vit_B12 = models.TextField(max_length=255)
     Vit_B12_unit = models.TextField(max_length=255)
-    Vit_B12_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Vit_B12_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Vit_B12_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Vit_B12_comments = models.TextField(max_length=255)
     
+    # --- Serum Ferritin ---
     Serum_Ferritin = models.TextField(max_length=255)
     Serum_Ferritin_unit = models.TextField(max_length=255)
-    Serum_Ferritin_reference_range_from = models.TextField(max_length=50, null=True, blank=True)
-    Serum_Ferritin_reference_range_to = models.TextField(max_length=50, null=True, blank=True)
+    Serum_Ferritin_reference_range = models.TextField(max_length=255, null=True, blank=True)
     Serum_Ferritin_comments = models.TextField(max_length=255)
     
+    # --- Simple Tests (No ranges) ---
     Dental = models.TextField(max_length=255)
     Dental_comments = models.TextField(max_length=255)
     
@@ -1208,11 +1221,11 @@ class OthersTest(BaseModel):
         return f"Others Test {self.id} for Emp {self.emp_no}"
     
 
-# --- Ophthalmic Report Model --- *MODIFIED*
+# --- Ophthalmic Report Model ---
 class OphthalmicReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     vision = models.TextField(max_length=255)
@@ -1227,10 +1240,12 @@ class OphthalmicReport(BaseModel):
     def __str__(self):
         return f"Ophthalmic Report {self.id} for Emp {self.emp_no}"
 
+
+# --- XRay Model ---
 class XRay(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     Chest = models.TextField(max_length=255)
@@ -1248,10 +1263,8 @@ class XRay(BaseModel):
     Pelvis = models.TextField(max_length=255)
     Pelvis_comments = models.TextField(max_length=255)   
     
-    
     Skull = models.TextField(max_length=255)
     Skull_comments = models.TextField(max_length=255)   
-    
     
     Upper_limb = models.TextField(max_length=255)
     Upper_limb_comments = models.TextField(max_length=255)   
@@ -1261,12 +1274,13 @@ class XRay(BaseModel):
     
     def __str__(self):
         return f"X-Ray {self.id} for Emp {self.emp_no}"
-    
-# --- USG Report Model --- *MODIFIED*
+
+
+# --- USG Report Model ---
 class USGReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     usg_abdomen = models.TextField(max_length=255)
@@ -1283,28 +1297,28 @@ class USGReport(BaseModel):
 
     def __str__(self):
         return f"USG Report {self.id} for Emp {self.emp_no}"
-    
+
+
 # --- CT Report Model --- *MODIFIED*
 
+# --- CT Report Model ---
 class CTReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     CT_brain = models.TextField(max_length=255)
     CT_brain_comments = models.TextField(max_length=255)
     
-    CT_Head= models.TextField(max_length=255)
+    CT_Head = models.TextField(max_length=255)
     CT_Head_comments = models.TextField(max_length=255)
 
-    CT_Neck= models.TextField(max_length=255)
+    CT_Neck = models.TextField(max_length=255)
     CT_Neck_comments = models.TextField(max_length=255)
 
-
-    CT_Chest= models.TextField(max_length=255)
+    CT_Chest = models.TextField(max_length=255)
     CT_Chest_comments = models.TextField(max_length=255)
-
 
     CT_lungs = models.TextField(max_length=255)
     CT_lungs_comments = models.TextField(max_length=255)
@@ -1327,20 +1341,21 @@ class CTReport(BaseModel):
     def __str__(self):
         return f"CT {self.id} for Emp {self.emp_no}"
     
-# --- MRI Report Model --- *MODIFIED*
+
+# --- MRI Report Model ---
 class MRIReport(BaseModel):
     checked = models.BooleanField(default=False)
     emp_no = models.TextField(max_length=200)
-    aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
     mrdNo = models.TextField(max_length=255, blank=True)
 
     mri_brain = models.TextField(max_length=255)
     mri_brain_comments = models.TextField(max_length=255)
 
-    mri_Head= models.TextField(max_length=255)
+    mri_Head = models.TextField(max_length=255)
     mri_Head_comments = models.TextField(max_length=255)
 
-    mri_Neck= models.TextField(max_length=255)
+    mri_Neck = models.TextField(max_length=255)
     mri_Neck_comments = models.TextField(max_length=255)
   
     mri_lungs = models.TextField(max_length=255)
@@ -1355,7 +1370,7 @@ class MRIReport(BaseModel):
     mri_pelvis = models.TextField(max_length=255)
     mri_pelvis_comments = models.TextField(max_length=255)
 
-    mri_Chest= models.TextField(max_length=255)
+    mri_Chest = models.TextField(max_length=255)
     mri_Chest_comments = models.TextField(max_length=255)
 
     mri_Upper_limb = models.TextField(max_length=255)
@@ -1364,7 +1379,6 @@ class MRIReport(BaseModel):
     mri_Lower_limb = models.TextField(max_length=255)
     mri_Lower_limb_comments = models.TextField(max_length=255)   
  
-
     def __str__(self):
         return f"MRI Report {self.id} for Emp {self.emp_no}"
 
@@ -1880,6 +1894,7 @@ class Prescription(BaseModel):
 
 # --- Form Models (17, 38, 39, 40, 27) --- *MODIFIED*
 class Form17(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     dept = models.CharField(max_length=255, blank=True, null=True)
@@ -1906,6 +1921,7 @@ class Form17(BaseModel):
         return f"Form 17 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form38(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1925,6 +1941,7 @@ class Form38(BaseModel):
         return f"Form 38 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form39(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1944,6 +1961,7 @@ class Form39(BaseModel):
         return f"Form 39 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form40(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) # Added Aadhar
     serialNumber = models.CharField(max_length=255, blank=True, null=True)
@@ -1968,6 +1986,7 @@ class Form40(BaseModel):
         return f"Form 40 - {self.workerName or 'N/A'} (Emp: {self.emp_no or 'N/A'})"
 
 class Form27(BaseModel):
+    mrdNo = models.CharField(max_length=255, blank=True, null=True)
     emp_no = models.CharField(max_length=255, blank=True, null=True)
     aadhar = models.CharField(max_length=225, blank=True, null=True) 
     serialNumber = models.CharField(max_length=255, blank=True, null=True)

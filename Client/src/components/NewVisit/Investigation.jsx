@@ -1,6 +1,5 @@
 import axios from "axios";
 import React, { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom"; // useNavigate is not used in the current version
 
 // --- Helper: Icon for expand/collapse ---
 const ChevronDownIcon = () => (
@@ -16,10 +15,9 @@ const ChevronUpIcon = () => (
 );
 
 
-// CHANGED: Accept mrdNo as a prop
 function InvestigationForm({ data, mrdNo }) {
   console.log("Received data prop:", data);
-  console.log("Received mrdNo prop:", mrdNo); // Log the new prop
+  console.log("Received mrdNo prop:", mrdNo);
 
   const [formData, setFormData] = useState({});
   const [processedData, setProcessedData] = useState(null);
@@ -27,7 +25,6 @@ function InvestigationForm({ data, mrdNo }) {
   const [activeCategoryForForm, setActiveCategoryForForm] = useState("");
 
   const accessLevel = localStorage.getItem('accessLevel');
-  console.log("Access Level:", accessLevel);
 
   const getNestedData = (obj, path) => {
     if (!obj) return null;
@@ -37,7 +34,7 @@ function InvestigationForm({ data, mrdNo }) {
   const categoryMap = {
     "HAEMATALOGY": "heamatalogy",
     "ROUTINE SUGAR TESTS": "routinesugartests",
-    "RENAL FUNCTION TEST & ELECTROLYTES": "renalfunctiontests_and_electrolytes",
+    "RENAL FUNCTION TEST & ELECTROLYTES": "renalfunctiontests_and_electrolytes", 
     "LIPID PROFILE": "lipidprofile",
     "LIVER FUNCTION TEST": "liverfunctiontest",
     "THYROID FUNCTION TEST": "thyroidfunctiontest",
@@ -65,12 +62,10 @@ function InvestigationForm({ data, mrdNo }) {
     if (data && data.length > 0 && data[0]) {
       const initialData = data[0];
       setProcessedData(initialData);
-      console.log("Processed Initial Data:", initialData);
       setExpandedCategories({});
       setActiveCategoryForForm("");
       setFormData({});
     } else {
-      console.log("Data prop is empty or invalid, resetting all states.");
       setProcessedData(null);
       setExpandedCategories({});
       setActiveCategoryForForm("");
@@ -78,7 +73,6 @@ function InvestigationForm({ data, mrdNo }) {
     }
   }, [data]);
   
-  // CHANGED: This effect will update the form's MRD number if it's generated after a form is already open.
   useEffect(() => {
     if (mrdNo && activeCategoryForForm) {
       setFormData(prevData => ({ ...prevData, mrdNo: mrdNo }));
@@ -100,15 +94,12 @@ function InvestigationForm({ data, mrdNo }) {
       if (processedData) {
         const categoryKey = categoryMap[categoryName];
         const categoryData = categoryKey ? getNestedData(processedData, categoryKey) : null;
-        console.log(`Populating form for ${categoryName} (key: ${categoryKey}):`, categoryData);
+        
         if (categoryData && typeof categoryData === 'object') {
-          // CHANGED: We explicitly ignore the old mrdNo from fetched data
+          // Exclude internal fields and set form data
           const { id, latest_id, aadhar, checked, entry_date, emp_no, mrdNo: oldMrdNo, ...initialFields } = categoryData;
-          // CHANGED: We set the form data using fields from the database BUT inject the NEW mrdNo from props
           setFormData({ ...initialFields, mrdNo: mrdNo || "" });
         } else {
-          console.log(`No data or invalid structure for ${categoryName}, resetting form.`);
-          // CHANGED: Even for a new form, we set the new mrdNo
           setFormData({ mrdNo: mrdNo || "" });
         }
       }
@@ -126,48 +117,11 @@ function InvestigationForm({ data, mrdNo }) {
 
 
   const handleChange = (e) => {
-    // ... (This function remains unchanged)
     const { id, value } = e.target;
-    const baseName = id.split('_reference_range_')[0]
-                      .replace('_unit', '')
-                      .replace('_comments', '');
-
-    const valueKey = baseName;
-    const rangeFromKey = `${baseName}_reference_range_from`;
-    const rangeToKey = `${baseName}_reference_range_to`;
-    const commentKey = `${baseName}_comments`;
-
-    const newState = { ...formData, [id]: value };
-
-    if (id === valueKey) {
-        const currentValueStr = value;
-        const fromRangeStr = newState[rangeFromKey];
-        const toRangeStr = newState[rangeToKey];
-        let calculatedComment = formData[commentKey] || "";
-
-        const hasRangeFrom = fromRangeStr !== null && fromRangeStr !== undefined && String(fromRangeStr).trim() !== '';
-        const hasRangeTo = toRangeStr !== null && toRangeStr !== undefined && String(toRangeStr).trim() !== '';
-
-        if (hasRangeFrom && hasRangeTo) {
-            const currentValue = parseFloat(currentValueStr);
-            const fromRange = parseFloat(fromRangeStr);
-            const toRange = parseFloat(toRangeStr);
-
-            if (!isNaN(currentValue) && !isNaN(fromRange) && !isNaN(toRange)) {
-                calculatedComment = (currentValue < fromRange || currentValue > toRange) ? "Abnormal" : "Normal";
-            } else if (currentValueStr.trim() === '') {
-                calculatedComment = "";
-            } else {
-                 calculatedComment = "";
-            }
-        } else if (currentValueStr.trim() === '') {
-             calculatedComment = "";
-        } else {
-             calculatedComment = "";
-        }
-        newState[commentKey] = calculatedComment;
-    }
-    setFormData(newState);
+    // Simply update state. 
+    // We removed the automatic Normal/Abnormal calculation because
+    // reference ranges are now raw strings (e.g., "70-110") and hard to parse mathematically.
+    setFormData(prev => ({ ...prev, [id]: value }));
   };
 
   const handleClear = (e, category) => {
@@ -175,23 +129,16 @@ function InvestigationForm({ data, mrdNo }) {
     const categoryKey = categoryMap[category];
     if (!processedData || !categoryKey) return;
   
-    // Deep clone the state to avoid mutating React state directly
     const updatedData = { ...processedData };
     const categoryData = { ...updatedData[categoryKey] };
   
-    // Clear all fields in this category
     for (const key in categoryData) {
       categoryData[key] = null;
     }
   
-    // Put the cleared data back
     updatedData[categoryKey] = categoryData;
-  
-    // Update both processedData and formData
     setProcessedData(updatedData);
-    setFormData({ mrdNo: mrdNo || "" }); // Reset visible form fields
-  
-    console.log("Cleared data for", category, updatedData[categoryKey]);
+    setFormData({ mrdNo: mrdNo || "" });
   };
   
 
@@ -204,7 +151,6 @@ function InvestigationForm({ data, mrdNo }) {
       return;
     }
     
-    // CHANGED: Add a check for the mrdNo from props
     if (!mrdNo) {
       alert("MRD Number for this visit is missing. Please click 'Add Entry' first.");
       return;
@@ -215,6 +161,7 @@ function InvestigationForm({ data, mrdNo }) {
         return;
     }
 
+    // Endpoint map matches your URL structure
     const endpointMap = {
         "HAEMATALOGY": "addInvestigation",
         "ROUTINE SUGAR TESTS": "addRoutineSugarTest",
@@ -248,7 +195,6 @@ function InvestigationForm({ data, mrdNo }) {
     const url = `http://localhost:8000/${endpoint}`;
 
     try {
-      // CHANGED: The payload now correctly uses formData which includes the new mrdNo.
       const { emp_no, ...formDataToSend } = formData;
       const finalPayload = { 
         ...formDataToSend, 
@@ -276,46 +222,41 @@ function InvestigationForm({ data, mrdNo }) {
   };
 
   const getDoctorOptions = () => {
-    // ... (This function remains unchanged)
     if (!processedData) return [];
     return allInvFormOptions.filter(option => {
         const categoryKey = categoryMap[option];
         if (!categoryKey) return false;
         const categoryData = getNestedData(processedData, categoryKey);
+        // Display if checked is true
         return categoryData && categoryData.checked === true;
     });
   };
 
   const renderFields = (category) => {
-    // ... (This function remains unchanged)
     if (!processedData || !category) return null;
 
     const categoryKey = categoryMap[category];
     const categoryData = categoryKey ? getNestedData(processedData, categoryKey) : null;
 
     if (!categoryData || typeof categoryData !== 'object') {
-        console.log(`No data structure found for category: ${category}`);
         return <p className="text-gray-500 italic p-4">No data available or structure defined for {category}.</p>;
     }
 
-    const { id, latest_id, aadhar,checked,entry_date, emp_no, ...filteredCategoryData } = categoryData;
+    const { id, latest_id, aadhar, checked, entry_date, emp_no, ...filteredCategoryData } = categoryData;
     const allKeys = Object.keys(filteredCategoryData);
 
+    // Filter to get the "Base" keys (e.g., 'hemoglobin' instead of 'hemoglobin_unit')
     const baseKeys = allKeys.filter(key =>
         !key.endsWith('_unit') &&
-        !key.endsWith('_reference_range_from') &&
-        !key.endsWith('_reference_range_to') &&
+        !key.endsWith('_reference_range') && // Changed: Now looking for the single range key
         !key.endsWith('_comments') &&
         key !== 'emp_no' && 
-        key !== 'mrdNo' // Also ignore mrdNo for rendering
+        key !== 'mrdNo'
     );
 
+    // Fallback if specific structure isn't found (e.g. simple lists)
     if (baseKeys.length === 0 && allKeys.length > 0) {
-        console.warn("Could not automatically determine base keys for", category, ". Displaying all relevant keys.");
-        const relevantKeys = allKeys.filter(key => key !== 'emp_no');
-        if (relevantKeys.length === 0) {
-             return <p className="text-gray-500 italic p-4">No displayable fields found for {category} after filtering.</p>;
-        }
+        const relevantKeys = allKeys.filter(key => key !== 'emp_no' && key !== 'mrdNo');
         return (
             <div className="p-4 border-t grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {relevantKeys.map((key) => (
@@ -335,24 +276,26 @@ function InvestigationForm({ data, mrdNo }) {
         );
     }
 
+    // Main Rendering for Complex Structures
     return (
       <div className="space-y-4 p-4 border-t">
         {baseKeys.map((baseKey) => {
           const valueKey = baseKey;
           const unitKey = `${baseKey}_unit`;
-          const rangeFromKey = `${baseKey}_reference_range_from`;
-          const rangeToKey = `${baseKey}_reference_range_to`;
+          // CHANGED: Single reference range key
+          const rangeKey = `${baseKey}_reference_range`; 
           const commentKey = `${baseKey}_comments`;
 
           const hasUnit = allKeys.includes(unitKey);
-          const hasRangeFrom = allKeys.includes(rangeFromKey);
-          const hasRangeTo = allKeys.includes(rangeToKey);
+          const hasRange = allKeys.includes(rangeKey);
           const hasComment = allKeys.includes(commentKey);
 
           const label = baseKey.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
           return (
             <div key={baseKey} className="grid grid-cols-1 md:grid-cols-5 gap-x-3 gap-y-2 p-3 border rounded bg-gray-50 items-end">
+              
+              {/* Value Field */}
               <div className="md:col-span-1">
                 <label htmlFor={valueKey} className="block text-xs font-medium text-gray-600 mb-1">
                   {label}
@@ -362,51 +305,48 @@ function InvestigationForm({ data, mrdNo }) {
                   className="py-2 px-3 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   value={formData[valueKey] !== undefined ? formData[valueKey] : ""}
                   onChange={handleChange}
-                  placeholder="Normal / Abnormal (Result)"
+                  placeholder="Result"
                 />
               </div>
-              {hasUnit && (
+
+              {/* Unit Field */}
+              {hasUnit ? (
                 <div className="md:col-span-1">
                   <label htmlFor={unitKey} className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
                   <input type="text" id={unitKey} name={unitKey}
                     className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                     value={formData[unitKey] !== undefined ? formData[unitKey] : ""}
-                    onChange={handleChange}  tabIndex={-1} />
+                    onChange={handleChange} tabIndex={-1} />
                 </div>
+              ) : (
+                <div className="md:col-span-1"></div>
               )}
-              {(hasRangeFrom || hasRangeTo) && (
-                <div className="md:col-span-1 flex items-center space-x-1">
-                    {hasRangeFrom && (
-                        <div className="flex-1">
-                            <label htmlFor={rangeFromKey} className="block text-xs font-medium text-gray-600 mb-1">Range From</label>
-                            <input type="text" id={rangeFromKey} name={rangeFromKey}
-                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
-                                value={formData[rangeFromKey] !== undefined ? formData[rangeFromKey] : ""}
-                                onChange={handleChange}  tabIndex={-1} />
-                        </div>
-                    )}
-                    {hasRangeTo && (
-                        <div className="flex-1">
-                            <label htmlFor={rangeToKey} className="block text-xs font-medium text-gray-600 mb-1">Range To</label>
-                            <input type="text" id={rangeToKey} name={rangeToKey}
-                                className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
-                                value={formData[rangeToKey] !== undefined ? formData[rangeToKey] : ""}
-                                onChange={handleChange}  tabIndex={-1} />
-                        </div>
-                    )}
+
+              {/* Reference Range Field (Single Field) */}
+              {hasRange ? (
+                 <div className="md:col-span-1">
+                    <label htmlFor={rangeKey} className="block text-xs font-medium text-gray-600 mb-1">Ref. Range</label>
+                    <input type="text" id={rangeKey} name={rangeKey}
+                        className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
+                        value={formData[rangeKey] !== undefined ? formData[rangeKey] : ""}
+                        onChange={handleChange} tabIndex={-1} />
                 </div>
+              ) : (
+                <div className="md:col-span-1"></div>
               )}
-              {!(hasRangeFrom || hasRangeTo) && <div className="md:col-span-1"></div>}
-              {hasComment && (
+
+              {/* Comments Field */}
+              {hasComment ? (
                 <div className="md:col-span-2">
                   <label htmlFor={commentKey} className="block text-xs font-medium text-gray-600 mb-1">Comments</label>
                   <textarea id={commentKey} name={commentKey} rows="1"
                     className="py-2 px-3 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm "
                     value={formData[commentKey] !== undefined ? formData[commentKey] : ""}
-                    onChange={handleChange}  tabIndex={-1} />
+                    onChange={handleChange} tabIndex={-1} />
                 </div>
+              ) : (
+                <div className="md:col-span-2"></div>
               )}
-               {!hasComment && <div className="md:col-span-2"></div>}
             </div>
           );
         })}

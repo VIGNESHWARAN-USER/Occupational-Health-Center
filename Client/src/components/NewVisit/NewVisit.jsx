@@ -364,7 +364,7 @@ const NewVisit = () => {
     appointmentId: appointment ? appointment.id : null,
     formDataDashboard: {
       typeofVisit: visit,
-      category: type,
+      type: type,
       register: register,
       purpose: purpose,
     },
@@ -613,7 +613,7 @@ const NewVisit = () => {
         // but typically we can just use what's there or leave it broad.
         const targetPurpose = appointment.purpose || ""; 
 
-        const targetType = appointment.role || ""; // Employee, Visitor...
+        const targetType = appointment.type || ""; // Employee, Visitor...
         
         // Backend sends 'visit_type', JSON reference had 'type_of_visit'. Checking both.
         const targetVisit = appointment.visit_type || appointment.type_of_visit || ""; 
@@ -627,7 +627,7 @@ const NewVisit = () => {
         // Sync Dashboard Data (for dropdown rendering)
         setFormDataDashboard({
             typeofVisit: targetVisit,
-            category: targetType,
+            type: targetType,
             register: targetRegister,
             purpose: targetPurpose
         });
