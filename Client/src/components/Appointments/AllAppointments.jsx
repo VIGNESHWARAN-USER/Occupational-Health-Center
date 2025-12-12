@@ -28,7 +28,7 @@ const AllAppointments = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const response = await axios.post("http://localhost:8000/userData");
+                const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
                 setEmployees(response.data.data || []);
             } catch (error) {
                 console.error("Error fetching employee data:", error);
@@ -45,7 +45,7 @@ const AllAppointments = () => {
     const fetchAppointments = async () => {
         setLoading(true);
         try {
-            let url = "http://localhost:8000/appointments/";
+            let url = "https://occupational-health-center-1.onrender.com/appointments/";
             const params = new URLSearchParams();
 
             if (fromDate) {

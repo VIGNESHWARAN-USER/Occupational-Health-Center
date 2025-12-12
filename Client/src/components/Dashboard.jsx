@@ -163,8 +163,8 @@ const App = () => {
         try {
             // Fetch both endpoints concurrently
             const [fitnessResp, visitResp] = await Promise.all([
-                axios.post("http://localhost:8000/fitnessData/"),
-                axios.post("http://localhost:8000/visitData/")
+                axios.post("https://occupational-health-center-1.onrender.com/fitnessData/"),
+                axios.post("https://occupational-health-center-1.onrender.com/visitData/")
             ]);
 
             const rawFitness = fitnessResp.data.data || [];

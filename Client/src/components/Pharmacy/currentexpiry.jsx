@@ -10,7 +10,7 @@ const CurrentExpiry = () => {
   // Fetch expiry stock
   const fetchExpiryStock = () => {
     axios
-      .post("http://localhost:8000/current_expiry/")
+      .post("https://occupational-health-center-1.onrender.com/current_expiry/")
       .then((response) => {
         setExpiryStock(response.data.expiry_stock);
         setLoading(false);
@@ -28,7 +28,7 @@ const CurrentExpiry = () => {
   // Remove expired medicine
   const handleRemove = async (id) => {
     try {
-      const response = await axios.post("http://localhost:8000/remove_expiry/", { id });
+      const response = await axios.post("https://occupational-health-center-1.onrender.com/remove_expiry/", { id });
 
       if (response.data.success) {
         alert("Medicine removed successfully!");

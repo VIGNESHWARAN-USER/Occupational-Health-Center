@@ -7,12 +7,12 @@ import PersonalLeaveCertificateForm from "./PersonalLeaveCertificateForm";
 import axios from "axios";
 
 // URLs
-const FITNESS_ASSESSMENT_URL = "http://localhost:8000/fitness-tests/";
-const FORM17_URL = "http://localhost:8000/form17/";
-const FORM38_URL = "http://localhost:8000/form38/";
-const FORM39_URL = "http://localhost:8000/form39/";
-const FORM40_URL = "http://localhost:8000/form40/";
-const FORM27_URL = "http://localhost:8000/form27/";
+const FITNESS_ASSESSMENT_URL = "https://occupational-health-center-1.onrender.com/fitness-tests/";
+const FORM17_URL = "https://occupational-health-center-1.onrender.com/form17/";
+const FORM38_URL = "https://occupational-health-center-1.onrender.com/form38/";
+const FORM39_URL = "https://occupational-health-center-1.onrender.com/form39/";
+const FORM40_URL = "https://occupational-health-center-1.onrender.com/form40/";
+const FORM27_URL = "https://occupational-health-center-1.onrender.com/form27/";
 
 // --- Design Constants (Updated per request) ---
 const labelDesign = "block text-sm font-medium text-gray-700 mb-1";
@@ -70,7 +70,7 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const response = await axios.post("http://localhost:8000/adminData");
+                const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
                 const fetchedEmployees = response.data.data;
                 const doctorNames = fetchedEmployees
                     .filter(emp => emp.role === "doctor")
