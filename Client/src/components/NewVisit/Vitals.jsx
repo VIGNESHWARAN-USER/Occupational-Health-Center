@@ -171,7 +171,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
     const handleDelete = async (key, mrdNo) => {
         e.preventDefault();
-        const response = await axios.post("http://localhost:8000/deleteUploadedFile", {mrdNo, key});
+        const response = await axios.post("https://occupational-health-center-1.onrender.com/deleteUploadedFile", {mrdNo, key});
         console.log(response);
     }
 
@@ -233,7 +233,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
             console.log(pair[0] + ': ' + (pair[1] instanceof File ? `File(${pair[1].name}, size: ${pair[1].size}, type: ${pair[1].type})` : pair[1]));
         }
 
-        const apiUrl = "http://localhost:8000/addvitals";
+        const apiUrl = "https://occupational-health-center-1.onrender.com/addvitals";
 
         try {
             const resp = await axios.post(apiUrl, submissionData);
@@ -452,7 +452,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                 {formData[config.key] ? (
                   <div className="flex items-center">
                     <a
-                      href={`http://localhost:8000/media/${formData[config.key]}`}
+                      href={`https://occupational-health-center-1.onrender.com/media/${formData[config.key]}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 underline"

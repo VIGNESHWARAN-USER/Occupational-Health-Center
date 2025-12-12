@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { FaDownload, FaEraser } from "react-icons/fa";
 
 // Define API endpoints centrally
-const API_BASE_URL = "http://localhost:8000"; // Or your actual base URL
+const API_BASE_URL = "https://occupational-health-center-1.onrender.com"; // Or your actual base URL
 const CURRENT_STOCK_URL = `${API_BASE_URL}/current_stock/`;
 const STOCK_HISTORY_URL = `${API_BASE_URL}/stock_history/`;
 

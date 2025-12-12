@@ -33,10 +33,10 @@ const CurrentFootfalls = () => {
     try {
       let url
       if(accessLevel === "nurse" ){
-        url = "http://localhost:8000/pendingfootfalls/";
+        url = "https://occupational-health-center-1.onrender.com/pendingfootfalls/";
       }
       else{
-      url = "http://localhost:8000/currentfootfalls/";
+      url = "https://occupational-health-center-1.onrender.com/currentfootfalls/";
       }
       
       const params = new URLSearchParams();
@@ -128,7 +128,7 @@ const CurrentFootfalls = () => {
     
 
     try {
-      await axios.post('http://localhost:8000/update-status/', {
+      await axios.post('https://occupational-health-center-1.onrender.com/update-status/', {
         id: mrdNo,
         status: 'inprogress',
         field: fieldType,
