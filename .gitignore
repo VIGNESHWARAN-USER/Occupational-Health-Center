@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # === Node / React ===
 node_modules/
 dist/
@@ -41,8 +40,6 @@ dist/
 build/
 .eggs/
 *.egg-info/
-=======
 __pycache__/
 *.pyc
 *.pyo
->>>>>>> 8c22e40 (Design and Integrity check in pharmacy)
