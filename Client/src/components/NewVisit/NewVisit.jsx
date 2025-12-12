@@ -155,7 +155,7 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Curative - Follow Up Visits": "Follow Up Visits",
-        "BP Sugar Chart (Abormal Value)": "Outpatient",
+        "BP Sugar Chart (Abormal Value) (Abormal Value)": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
@@ -334,7 +334,7 @@ const NewVisit = () => {
     }
   }
 
-  if (register.startsWith("BP Sugar Chart")) {
+  if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
     if (!bpSugarChartReason) {
       alert("Please select Reason");
       setLoading1(false);
@@ -344,7 +344,7 @@ const NewVisit = () => {
 
   if (register.startsWith("Curative - Follow Up Visits")) {
     if (!followupConsultationReason) {
-      alert("Please select a Followup Reason");
+      alert("Please select a Follow up Reason");
       setLoading1(false);
       return;
     }
@@ -418,7 +418,7 @@ const NewVisit = () => {
     };
   }
 
-  if (register.startsWith("BP Sugar Chart")) {
+  if (register.startsWith("BP Sugar Chart (Abormal Value)")) {
     submissionData.extraData = {
       reason: bpSugarChartReason,
     };
@@ -1471,15 +1471,20 @@ const NewVisit = () => {
               </div>
             </div>
 
+            
+
             <button
-  onClick={handleSubmit}
-  disabled={!isUpdated}
-  className={`mt-8 px-6 py-3 rounded-lg transition duration-300
-    ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
-  `}
->
-  Add Basic Details
-</button>
+              onClick={handleSubmit}
+              disabled={!isUpdated}
+              className={`mt-8 px-6 py-3 rounded-lg transition duration-300
+                ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
+              `}
+            >
+              Add Basic Details
+            </button>
+            <p className="text-sm text-gray-600 ">
+              * Press only if changes in the above details
+            </p>
 
             </div>)}
           </div>

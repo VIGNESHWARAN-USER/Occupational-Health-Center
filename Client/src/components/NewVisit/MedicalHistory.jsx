@@ -916,6 +916,9 @@
           </button>
 
         </div>
+        <p className="text-sm text-gray-600 ">
+              * Press only if changes in the above details
+            </p>
       </div>)}
       </div>
     );

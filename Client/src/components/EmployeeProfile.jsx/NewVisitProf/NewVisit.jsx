@@ -21,7 +21,7 @@ const NewVisit = ({data}) => {
   return (
     <div className="h-screen w-full flex ">
       
-      <div className="w-full mt-4 overflow-auto"> {/* Adjusted width from w-4/5 to w-11/12 */}
+      <div className="w-full mt-4 overflow-auto"> 
         
         <div className="bg-white rounded-lg w-full p-6 shadow-lg">
           <hr className="h-4 text-blue-100" />

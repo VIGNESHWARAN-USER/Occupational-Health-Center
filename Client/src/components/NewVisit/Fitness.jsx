@@ -43,8 +43,8 @@ const allFitnessTestsConfig = [
 ];
 
 const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
-    // console.log("FitnessPage props:", { reference, appointment });
-    const [showAllTests, setShowAllTests] = useState(false);
+    console.log("FitnessPage props:", { reference, appointment });
+    const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
     const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue", "Lone Work", "Fisher Man", "Snake Catch", "Pest Control", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
     const eyeExamFitStatusOptions = ['Fit', 'Fit when newly prescribed glass', 'Fit with existing glass', 'Fit with an advice to change existing glass with newly prescribed glass', 'Unfit'];
