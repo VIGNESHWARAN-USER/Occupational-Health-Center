@@ -1471,15 +1471,20 @@ const NewVisit = () => {
               </div>
             </div>
 
+            
+
             <button
-  onClick={handleSubmit}
-  disabled={!isUpdated}
-  className={`mt-8 px-6 py-3 rounded-lg transition duration-300
-    ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
-  `}
->
-  Add Basic Details
-</button>
+              onClick={handleSubmit}
+              disabled={!isUpdated}
+              className={`mt-8 px-6 py-3 rounded-lg transition duration-300
+                ${isUpdated ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-gray-400 text-gray-200 cursor-not-allowed"}
+              `}
+            >
+              Add Basic Details
+            </button>
+            <p className="text-sm text-gray-600 ">
+              * Press only if changes in the above details
+            </p>
 
             </div>)}
           </div>
