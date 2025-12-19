@@ -1,160 +1,215 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import Sidebar from "../Sidebar"; 
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import Sidebar from "../Sidebar";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+    FiTrash2, FiSearch, FiUser, FiMail, 
+    FiShield, FiFilter, FiRefreshCw, FiAlertCircle, 
+    FiPhone,
+    FiCheckCircle
+} from "react-icons/fi";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
+    const [members, setMembers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusMsg, setStatusMsg] = useState({ type: null, message: null });
 
-  useEffect(() => {
-    const accessLevel = localStorage.getItem('accessLevel');
-    const checkAuth = () => {
-      if (!accessLevel)
-        navigate("../");
-    }
+    // --- Fetch Members ---
+    const fetchMembers = useCallback(async () => {
+        setLoading(true);
+        try {
+            const response = await axios.get("http://localhost:8000/members/list/");
+            setMembers(response.data);
+        } catch (error) {
+            setStatusMsg({ type: "error", message: "Failed to load members." });
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-    checkAuth();
-  }, [navigate]);
+    useEffect(() => {
+        fetchMembers();
+    }, [fetchMembers]);
 
-  const accessLevel = localStorage.getItem('accessLevel');
+    // --- Delete Member ---
+    const handleDelete = async (id, name) => {
+        if (!window.confirm(`Are you sure you want to delete ${name}?`)) return;
 
-  const renderDashboardContent = () => {
-    let heading = "";
-    let backgroundColor = "bg-gradient-to-r from-blue-50 to-blue-100"; 
+        try {
+            const response = await axios.post(`http://localhost:8000/members/delete/${id}/`);
+            if (response.data.success) {
+                // Remove from local state
+                setMembers(prev => prev.filter(m => m.id !== id));
+                setStatusMsg({ type: "success", message: `${name} deleted successfully.` });
+            }
+        } catch (error) {
+            setStatusMsg({ type: "error", message: "Error deleting member." });
+        }
+        // Clear message after 3 seconds
+        setTimeout(() => setStatusMsg({ type: null, message: null }), 3000);
+    };
 
-    switch (accessLevel) {
-      case "nurse":
-        heading = "Nurse Dashboard";
-        backgroundColor = "bg-gradient-to-r from-teal-50 to-teal-100"; 
-        break;
-      case "doctor":
-        heading = "Doctor Dashboard";
-        backgroundColor = "bg-gradient-to-r from-indigo-50 to-indigo-100"; 
-        break;
-      case "admin":
-        heading = "Admin Dashboard";
-        backgroundColor = "bg-gradient-to-r from-purple-50 to-purple-100"; 
-        break;
-      default:
-        return null; 
-    }
+    // --- Filter Logic ---
+    const filteredMembers = members.filter(m => 
+        m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        m.aadhar.includes(searchTerm) ||
+        (m.emp_no && m.emp_no.includes(searchTerm))
+    );
+
+    // Helper for role badges
+    const getRoleStyle = (role) => {
+        const roles = {
+            admin: "bg-purple-100 text-purple-700 border-purple-200",
+            doctor: "bg-red-100 text-red-700 border-red-200",
+            nurse: "bg-blue-100 text-blue-700 border-blue-200",
+            pharmacy: "bg-green-100 text-green-700 border-green-200",
+            registration: "bg-amber-100 text-amber-700 border-amber-200"
+        };
+        return roles[role.toLowerCase()] || "bg-gray-100 text-gray-700 border-gray-200";
+    };
 
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
-        <><Sidebar /><div className="flex-1 p-6 overflow-auto">
+        <div className="flex h-screen bg-slate-50">
+            <Sidebar />
+            
+            <div className="flex-1 flex flex-col p-4 md:p-10 overflow-hidden">
+                <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Admin Dashboard</h1>
+                        <p className="text-slate-500 font-medium">Manage existing OHC and External staff records.</p>
+                    </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-800">{heading}</h2>
-            <motion.div
-              className="bg-white p-4 rounded-xl shadow-lg"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center space-x-4">
-                <div className="flex flex-col">
-                  <label htmlFor="fromDate" className="text-gray-700 text-sm font-bold mb-1">
-                    From:
-                  </label>
-                  <input
-                    type="date"
-                    id="fromDate"
-                    className="px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-40" />
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={fetchMembers}
+                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+                            title="Refresh Data"
+                        >
+                            <FiRefreshCw className={loading ? "animate-spin" : ""} />
+                        </button>
+                    </div>
+                </header>
+
+                {/* --- Stats & Search --- */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div className="md:col-span-3 relative">
+                        <FiSearch className="absolute left-4 top-3.5 text-slate-400" size={20} />
+                        <input 
+                            type="text"
+                            placeholder="Search by Name, Aadhar, or Employee Number..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                        />
+                    </div>
+                    <div className="bg-blue-600 rounded-xl p-4 text-white shadow-lg shadow-blue-200 flex flex-col justify-center">
+                        <span className="text-xs font-bold uppercase tracking-wider opacity-80">Total Members</span>
+                        <span className="text-2xl font-black">{filteredMembers.length}</span>
+                    </div>
                 </div>
-                <div className="flex flex-col">
-                  <label htmlFor="toDate" className="text-gray-700 text-sm font-bold mb-1">
-                    To:
-                  </label>
-                  <input
-                    type="date"
-                    id="toDate"
-                    className="px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-40" />
+
+                {/* --- Status Message --- */}
+                <AnimatePresence>
+                    {statusMsg.message && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            className={`mb-6 p-4 rounded-xl flex items-center gap-3 border font-bold text-sm ${
+                                statusMsg.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                        >
+                            {statusMsg.type === 'success' ? <FiCheckCircle /> : <FiAlertCircle />}
+                            {statusMsg.message}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* --- Members Table --- */}
+                <div className="flex-1 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Member Info</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Professional</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Type</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Role</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest">Contact</th>
+                                    <th className="px-6 py-4 text-xs font-black text-slate-500 uppercase tracking-widest text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-20 text-center text-slate-400 font-bold">
+                                            <FiRefreshCw className="animate-spin inline mr-2" /> Loading records...
+                                        </td>
+                                    </tr>
+                                ) : filteredMembers.length > 0 ? (
+                                    filteredMembers.map((member) => (
+                                        <tr key={member.id} className="hover:bg-slate-50 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold shadow-inner">
+                                                        {member.name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-black text-slate-800">{member.name}</div>
+                                                        <div className="text-xs text-slate-500 font-mono">{member.aadhar}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="text-sm font-bold text-slate-700">{member.designation}</div>
+                                                <div className="text-xs text-slate-400 font-medium">ID: {member.emp_no || 'N/A'}</div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
+                                                    member.type === 'ohc' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-orange-50 text-orange-600 border-orange-100'
+                                                }`}>
+                                                    {member.type}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getRoleStyle(member.role)}`}>
+                                                    {member.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                                                        <FiMail className="text-blue-500" /> {member.mail_id_Office}
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                                                        <FiPhone className="text-blue-500" /> {member.phone_Office}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button 
+                                                    onClick={() => handleDelete(member.id, member.name)}
+                                                    className="p-2.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center mx-auto"
+                                                    title="Delete Member"
+                                                >
+                                                    <FiTrash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-20 text-center text-slate-400 font-bold">
+                                            No members found matching your search.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <button className="px-6 py-2 bg-blue-500 text-white rounded-lg shadow-md hover:bg-blue-600 transition">
-                  Apply
-                </button>
-              </div>
-            </motion.div>
-          </div>
-
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
-            <div className="flex flex-wrap gap-3">
-              {["Preventive", "Curative", "Total Footfalls", "Employee", "Contractor", "Visitor"].map(
-                (tab, index) => (
-                  <button
-                    key={index}
-                    className={`px-5 py-2.5 rounded-lg shadow-md transition text-sm font-semibold ${index === 0
-                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : "bg-white text-gray-700 hover:bg-gray-100"}`}
-                  >
-                    {tab}
-                  </button>
-                )
-              )}
             </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-8"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { label: "Total Footfalls", value: 0 },
-                { label: "Healthy Entry", value: 10 },
-                { label: "Unhealthy Entry", value: 10 },
-                { label: "Appointments", value: 0 },
-              ].map((stat, index) => (
-                <div
-                  key={index}
-                  className="p-6 bg-white rounded-xl shadow-md text-center hover:shadow-lg transition"
-                >
-                  <p className="text-sm text-gray-500 mb-2">{stat.label}</p>
-                  <p className="text-4xl font-bold text-gray-800">{stat.value}</p>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="p-6 bg-white rounded-xl shadow-md">
-              <h3 className="text-xl font-semibold mb-4 text-gray-800">Healthy Entry</h3>
-              <div className="h-72 flex items-center justify-center text-gray-400 bg-gray-50 border-2 border-dashed rounded-xl">
-
-                Chart goes here
-              </div>
-            </div>
-          </motion.div>
-        </div></>
-      </div>
+        </div>
     );
-  };
-
-  return accessLevel==="admin" ? renderDashboardContent() : (
-    <section class="bg-white h-full flex items-center dark:bg-gray-900">
-    <div class="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-        <div class="mx-auto max-w-screen-sm text-center">
-            <h1 class="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-primary-600 dark:text-primary-500">404</h1>
-            <p class="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Something's missing.</p>
-            <p class="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, we can't find that page. You'll find lots to explore on the home page. </p>
-            <button onClick={()=>navigate(-1)} class="inline-flex text-white bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-primary-900 my-4">Back</button>
-        </div>   
-    </div>
-</section>
-  );
 };
 
 export default AdminDashboard;

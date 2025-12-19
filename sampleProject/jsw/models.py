@@ -1585,17 +1585,19 @@ class Review(BaseModel):
 # --- Member Model ---
 # Has employee_number, not emp_no, but also has aadhar. Keeping as is.
 class Member(BaseModel):
-    name = models.CharField(max_length=255)
-    designation = models.CharField(max_length=255)
-    email = models.EmailField()
-    role = models.CharField(max_length=255, blank=True)
-    job_nature = models.CharField(max_length=255, blank=True)
-    date_exited = models.DateField(null=True, blank=True)
+    aadhar = models.CharField(max_length=225, blank=True, null=True)
+    name = models.CharField(max_length=225)
+    emp_no = models.CharField(max_length=200,blank=True)
+    designation = models.CharField(max_length=225, blank=True)
+    mail_id_Office = models.EmailField(max_length=225, blank=True)
+    mail_id_Personal = models.EmailField(max_length=225, blank=True)
+    phone_Personal = models.CharField(max_length=225, blank=True)
+    phone_Office = models.CharField(max_length=225, blank=True)
+    job_nature = models.CharField(max_length=225, blank=True)
     doj = models.DateField(null=True, blank=True)
-    employee_number = models.CharField(max_length=50, unique=True, null=True, blank=True) # Different from emp_no
+    role = models.CharField(max_length=255, blank=True)
+    date_exited = models.DateField(null=True, blank=True)
     hospital_name = models.CharField(max_length=255, null=True, blank=True)
-    aadhar = models.CharField(max_length=20, blank=True, null=True) # Already present, different length
-    phone_number = models.CharField(max_length=20, null=True, blank=True)
     password = models.CharField(max_length=255, db_column='password', null=True, blank=True)
 
     

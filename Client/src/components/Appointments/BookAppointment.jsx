@@ -221,7 +221,7 @@ const dataMapping = {
       const activeFields = getCurrentFields();
       for (let field of activeFields) {
         const value = formData[field.name];
-        if (!value || value.trim() === "") {
+        if ((!value || value.trim() === "") && !isAutoFilled) {
           setIsFormValid(false);
           return;
         }
