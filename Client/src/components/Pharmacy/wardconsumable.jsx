@@ -50,7 +50,7 @@ const WardConsumables = () => {
 
   const fetchWardConsumables = async () => {
     try {
-      let url = "https://occupational-health-center-1.onrender.com/get_ward_consumable/";
+      let url = "http://localhost:8000/get_ward_consumable/";
       const params = [];
       if (fromDate) params.push(`from_date=${fromDate}`);
       if (toDate) params.push(`to_date=${toDate}`);
@@ -129,7 +129,7 @@ const WardConsumables = () => {
     if (!chemicalName || chemicalName.length < 3 || !medicineForm) return;
     try {
       const res = await axios.get(
-        `https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`
+        `http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`
       );
       setSuggestions(res.data.suggestions || []);
       setShowSuggestions(true);
@@ -142,7 +142,7 @@ const WardConsumables = () => {
     if (!brandName || brandName.length < 3 || !medicineForm) return;
     try {
       const res = await axios.get(
-        `https://occupational-health-center-1.onrender.com/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`
+        `http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`
       );
       setChemicalSuggestions(res.data.suggestions || []);
       setShowChemicalSuggestions(true);
@@ -155,7 +155,7 @@ const WardConsumables = () => {
     if (!brandName || !chemicalName || !medicineForm) return;
     try {
       const res = await axios.get(
-        `https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`
+        `http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`
       );
       setDoseSuggestions(res.data.suggestions || []);
       setShowDoseSuggestions((res.data.suggestions || []).length > 1);
@@ -305,7 +305,7 @@ const WardConsumables = () => {
         dose_volume: isSpecialForm() ? null : formData.dose_volume,
       };
 
-      await axios.post("https://occupational-health-center-1.onrender.com/add_ward_consumable/", payload);
+      await axios.post("http://localhost:8000/add_ward_consumable/", payload);
 
       setMessage("Ward consumable added successfully!");
       setFormData({

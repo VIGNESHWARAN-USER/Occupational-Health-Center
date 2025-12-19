@@ -49,7 +49,7 @@ const AlcoholAbuseForm = ({ initialData, patientEmpNo, isDoctor, mrdNo, aadhar }
     };
     
     try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/add_alcohol_form_data/", payload);
+        const response = await axios.post("http://localhost:8000/add_alcohol_form_data/", payload);
         if (response.status === 200 || response.status === 201) {
             alert(response.data.message || "Alcohol Abuse details submitted successfully!");
         } else {
@@ -216,7 +216,7 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
     if (emp_no && register === "Alcohol Abuse") {
         const fetchAlcoholData = async () => {
             try {
-                const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_alcohol_form_data/?aadhar=${emp_no}`);
+                const response = await axios.get(`http://localhost:8000/get_alcohol_form_data/?aadhar=${emp_no}`);
                 setInitialAlcoholData(response.data && Object.keys(response.data).length > 0 ? response.data : null);
             } catch (error) {
                 console.error("Could not fetch alcohol form data:", error);
@@ -232,7 +232,7 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
   useEffect(() => {
       const fetchDetails = async () => {
           try {
-              const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+              const response = await axios.post("http://localhost:8000/adminData");
               const fetchedEmployees = response.data.data;
   
               const doctorNames = fetchedEmployees
@@ -309,7 +309,7 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
     };
     
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/consultations/add/", consultationPayload);
+      const response = await axios.post("http://localhost:8000/consultations/add/", consultationPayload);
       if (response.status === 200 || response.status === 201) {
         alert("Consultation data submitted successfully!");
         if (followUpDate) {
@@ -321,7 +321,7 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
                  consultedDoctor: "", employer: patientData?.employer || '',
              };
              try {
-                 await axios.post("https://occupational-health-center-1.onrender.com/bookAppointment/", appointmentPayload);
+                 await axios.post("http://localhost:8000/bookAppointment/", appointmentPayload);
                  alert(`Follow-up appointment booked successfully!`);
              } catch (apptError) {
                  console.error('Error booking follow-up appointment:', apptError);

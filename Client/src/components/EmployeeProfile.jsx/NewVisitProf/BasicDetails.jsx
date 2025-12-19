@@ -112,7 +112,7 @@ const BasicDetails = ({ data }) => {
         try {
             
             console.log("HII")
-            const respose = await axios.post("https://occupational-health-center-1.onrender.com/updateEmployeeData",{
+            const respose = await axios.post("http://localhost:8000/updateEmployeeData",{
                 emp_no: data.emp_no,
                 field: fieldKey,
                 value: newValue,

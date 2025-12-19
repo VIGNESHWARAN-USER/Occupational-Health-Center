@@ -149,7 +149,7 @@ const FormRadioGroup = ({ label, name, value, onChange, options, required = fals
 
 
 // --- Main FormFields Component ---
-const FormFields = ({ formType, initialData = null, logoSrc = null, apiUrlBase = "https://occupational-health-center-1.onrender.com" }) => {
+const FormFields = ({ formType, initialData = null, logoSrc = null, apiUrlBase = "http://localhost:8000" }) => {
     const [formData, setFormData] = useState({});
 
     useEffect(() => {
