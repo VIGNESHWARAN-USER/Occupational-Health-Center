@@ -53,7 +53,7 @@ const DiscardedMedicines = () => {
       if (fromDate) params.from_date = fromDate;
       if (toDate) params.to_date = toDate;
 
-      const response = await axios.get("https://occupational-health-center-1.onrender.com/discarded_medicines/", { params });
+      const response = await axios.get("http://localhost:8000/discarded_medicines/", { params });
       setDiscardedMedicines(response.data.discarded_medicines);
       setLoading(false);
     } catch (error) {
@@ -71,7 +71,7 @@ const DiscardedMedicines = () => {
   const fetchBrandSuggestions = debounce(async (chemicalName, medicineForm) => {
     if (chemicalName.length < 3 || !medicineForm) return;
     try {
-      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setSuggestions(res.data.suggestions);
       setShowSuggestions(true);
     } catch (error) {
@@ -82,7 +82,7 @@ const DiscardedMedicines = () => {
   const fetchChemicalSuggestions = debounce(async (brandName, medicineForm) => {
     if (brandName.length < 3 || !medicineForm) return;
     try {
-      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
       setChemicalSuggestions(res.data.suggestions);
       setShowChemicalSuggestions(true);
     } catch (error) {
@@ -93,7 +93,7 @@ const DiscardedMedicines = () => {
   const fetchDoseSuggestions = debounce(async (brandName, chemicalName, medicineForm) => {
     if (!brandName || !chemicalName || !medicineForm) return;
     try {
-      const res = await axios.get(`https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const res = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setDoseSuggestions(res.data.suggestions);
       setShowDoseSuggestions(res.data.suggestions.length > 1);
       if (!doseManuallyEntered && res.data.suggestions.length === 1) {
@@ -166,7 +166,7 @@ const DiscardedMedicines = () => {
   setMessage("");
 
   try {
-    await axios.post("https://occupational-health-center-1.onrender.com/add_discarded_medicine/", {
+    await axios.post("http://localhost:8000/add_discarded_medicine/", {
       ...formData,
       expiry_date: `${formData.expiry_date}-01`, // as your backend expects
     });

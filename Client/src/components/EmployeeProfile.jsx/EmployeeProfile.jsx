@@ -224,7 +224,7 @@ const EmployeeProfile = () => {
         setError(null);
         try {
             // Ensure endpoint matches your backend urls.py
-            const response = await axios.get(`https://occupational-health-center-1.onrender.com/get_notes/${idValue}`);
+            const response = await axios.get(`http://localhost:8000/get_notes/${idValue}`);
             
             console.log("Fetched Data:", response.data);
 
@@ -272,7 +272,7 @@ const EmployeeProfile = () => {
         };
 
         try {
-            const response = await fetch("https://occupational-health-center-1.onrender.com/update_employee_status/", {
+            const response = await fetch("http://localhost:8000/update_employee_status/", {
                 method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
             });
             const result = await response.json();

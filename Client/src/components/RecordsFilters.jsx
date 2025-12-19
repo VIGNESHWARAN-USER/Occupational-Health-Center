@@ -74,7 +74,7 @@ const RecordsFilters = () => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const response = await axios.post("https://occupational-health-center-1.onrender.com/userData");
+                const response = await axios.post("http://localhost:8000/userData");
                 const data = response.data?.data;
 
                 if (Array.isArray(data)) {
@@ -85,7 +85,7 @@ const RecordsFilters = () => {
                     setFilteredEmployees([]);
                 }
 
-                const summaryResponse = await axios.get("https://occupational-health-center-1.onrender.com/get_notes/");
+                const summaryResponse = await axios.get("http://localhost:8000/get_notes/");
                 const consultationData = summaryResponse?.data?.consultation; 
 
                 if (Array.isArray(consultationData)) {

@@ -20,7 +20,7 @@ const Vaccination = ({ data }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`https://occupational-health-center-1.onrender.com/getvaccinations/${aadhar}`);
+        const response = await axios.get(`http://localhost:8000/getvaccinations/${aadhar}`);
         const visitRecords = response.data?.vaccinations; // This is an array of visits
 
         if (Array.isArray(visitRecords) && visitRecords.length > 0) {

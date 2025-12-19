@@ -59,7 +59,7 @@ const MockDrills = () => {
 
    const handleViewMockDrills = async () => {
     try {
-        const url = 'https://occupational-health-center-1.onrender.com/get-mockdrills/';
+        const url = 'http://localhost:8000/get-mockdrills/';
 
         const bodyData = {
             from_date: fromDate || "",
@@ -109,7 +109,7 @@ const MockDrills = () => {
 
         // Fetch the latest mock drill data to autofill the form
         try {
-            // const response = await fetch("https://occupational-health-center-1.onrender.com/get-one-mockdrills");
+            // const response = await fetch("http://localhost:8000/get-one-mockdrills");
             if (response.ok) {
                 const latestData = await response.json();
                 console.log("Latest mock drill data fetched for autofill:", latestData);
@@ -181,7 +181,7 @@ const MockDrills = () => {
             return;
         }
 
-        const response = await fetch("https://occupational-health-center-1.onrender.com/save-mockdrills/", {
+        const response = await fetch("http://localhost:8000/save-mockdrills/", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

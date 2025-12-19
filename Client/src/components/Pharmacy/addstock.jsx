@@ -39,8 +39,8 @@ const AddStock = () => {
     const fetchData = async () => {
       try {
         // These get requests are fine, assuming endpoints exist
-        await axios.get("https://occupational-health-center-1.onrender.com/archive_stock/");
-        await axios.get("https://occupational-health-center-1.onrender.com/current_expiry/");
+        await axios.get("http://localhost:8000/archive_stock/");
+        await axios.get("http://localhost:8000/current_expiry/");
       } catch (error) {
         console.error("Error fetching initial data", error);
       }
@@ -56,7 +56,7 @@ const AddStock = () => {
       return;
     }
     try {
-      const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const response = await axios.get(`http://localhost:8000/get-brand-names/?chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setBrandSuggestions(response.data.suggestions);
       setShowBrandSuggestions(true);
     } catch (error) { console.error(error); }
@@ -69,7 +69,7 @@ const AddStock = () => {
       return;
     }
     try {
-      const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
+      const response = await axios.get(`http://localhost:8000/get-chemical-name-by-brand/?brand_name=${brandName}&medicine_form=${medicineForm}`);
       setChemicalSuggestions(response.data.suggestions);
       setShowChemicalSuggestions(true);
     } catch (error) { console.error(error); }
@@ -78,7 +78,7 @@ const AddStock = () => {
   const fetchDoseSuggestions = debounce(async (brandName, chemicalName, medicineForm) => {
     if (!brandName || !chemicalName || !medicineForm) return;
     try {
-      const response = await axios.get(`https://occupational-health-center-1.onrender.com/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
+      const response = await axios.get(`http://localhost:8000/get-dose-volume/?brand_name=${brandName}&chemical_name=${chemicalName}&medicine_form=${medicineForm}`);
       setDoseSuggestions(response.data.suggestions);
       setShowDoseSuggestions(response.data.suggestions.length > 1);
       if (!doseManuallyEntered && response.data.suggestions.length === 1) {
@@ -155,7 +155,7 @@ const AddStock = () => {
     };
 
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/add-stock/", submissionData);
+      const response = await axios.post("http://localhost:8000/add-stock/", submissionData);
       setMessage(response.data.message);
 
       setFormData({

@@ -140,7 +140,7 @@ const InstrumentCalibration = () => {
 
   const fetchPendingCalibrations = async () => {
     try {
-      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibrations/");
+      const response = await axios.get("http://localhost:8000/get_calibrations/");
       setPendingCalibrations((response.data.pending_calibrations || []).sort((a, b) => a.id - b.id));
     } catch (error) { console.error("Error fetching pending calibrations:", error); alert("Error: Could not fetch pending calibrations."); }
   };
@@ -149,14 +149,14 @@ const InstrumentCalibration = () => {
       const params = {};
       if (fromDate) params.from = fromDate;
       if (toDate) params.to = toDate;
-      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_calibration_history/", { params });
+      const response = await axios.get("http://localhost:8000/get_calibration_history/", { params });
       setCalibrationHistory((response.data.calibration_history || []).sort((a, b) => a.id - b.id));
       setViewMode('history');
     } catch (error) { console.error("Error fetching calibration history:", error); alert("Error: Could not fetch calibration history."); }
   };
   const fetchUniqueInstruments = async () => {
     try {
-      const response = await axios.get("https://occupational-health-center-1.onrender.com/get_unique_instruments/");
+      const response = await axios.get("http://localhost:8000/get_unique_instruments/");
       setUniqueInstruments(response.data.unique_instruments || []);
       setViewMode('list');
     } catch (error) { console.error("Error fetching unique instruments:", error); alert("Error: Could not fetch unique instruments list."); }
@@ -181,8 +181,8 @@ const InstrumentCalibration = () => {
     if (payload.calibration_status === "Completed") payload.next_due_date = calculateNextDueDate(payload.calibration_date, payload.freq);
     setIsSubmitting(true);
     try {
-      if (payload.id) { await axios.post("https://occupational-health-center-1.onrender.com/EditInstrument", payload); alert("Instrument updated successfully!"); }
-      else { await axios.post("https://occupational-health-center-1.onrender.com/add_instrument/", payload); alert("Instrument added successfully!"); }
+      if (payload.id) { await axios.post("http://localhost:8000/EditInstrument", payload); alert("Instrument updated successfully!"); }
+      else { await axios.post("http://localhost:8000/add_instrument/", payload); alert("Instrument added successfully!"); }
       handleCloseAddModal();
       await fetchPendingCalibrations();
     } catch (error) {
@@ -195,7 +195,7 @@ const InstrumentCalibration = () => {
     if (!calibrationForm.freq || !calibrationForm.done_by) { alert("Please select a frequency and enter who performed the calibration."); return; }
     setIsSubmitting(true);
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/complete_calibration/", calibrationForm);
+      const response = await axios.post("http://localhost:8000/complete_calibration/", calibrationForm);
       alert(response.data.message);
       setShowCompleteModal(false);
       setCalibrationForm(null);
@@ -213,7 +213,7 @@ const InstrumentCalibration = () => {
   const handleDelete = async (instrumentToDelete) => {
     if (!window.confirm(`Are you sure you want to delete "${instrumentToDelete.instrument_name}"? This will remove all its history.`)) return;
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/deleteInstrument", { instrument_number: instrumentToDelete.instrument_number });
+      const response = await axios.post("http://localhost:8000/deleteInstrument", { instrument_number: instrumentToDelete.instrument_number });
       alert(response.data.message || "Instrument deleted successfully!");
       await fetchPendingCalibrations();
       if (viewMode === 'history') fetchCalibrationHistory();

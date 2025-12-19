@@ -247,7 +247,7 @@ const dataMapping = {
   const handleAadharLookup = async (aadhar) => {
     if (aadhar.length !== 12) return;
     try {
-      const response = await axios.post("https://occupational-health-center-1.onrender.com/get_worker_by_aadhar/", { aadhar: aadhar });
+      const response = await axios.post("http://localhost:8000/get_worker_by_aadhar/", { aadhar: aadhar });
       if (response.data.success) {
         const worker = response.data.data;
         setFormData(prev => ({
@@ -335,7 +335,7 @@ const dataMapping = {
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const response = await axios.post("https://occupational-health-center-1.onrender.com/adminData");
+        const response = await axios.post("http://localhost:8000/adminData");
         const fetchedEmployees = response.data.data;
         setEmployees(fetchedEmployees);
 
@@ -360,7 +360,7 @@ const dataMapping = {
     if (formData.bookedBy === "") formData.bookedBy = localStorage.getItem("userData") || "";
 
     try {
-      const response = await fetch("https://occupational-health-center-1.onrender.com/bookAppointment/", {
+      const response = await fetch("http://localhost:8000/bookAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
