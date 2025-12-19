@@ -65,28 +65,11 @@ const DataUpload = () => {
                 
                 // Get the name of the first sheet
                 const firstSheetName = workbook.SheetNames[0];
-
-                // Normalize strings for comparison (remove extra spaces and make lowercase)
-                const normalizedSheetName = firstSheetName ? firstSheetName.trim().toLowerCase() : "";
-                const normalizedSelectedType = hrDataType.trim().toLowerCase();
-
-                // CHECK: If sheet name does not match the selected dropdown value
-                if (normalizedSheetName !== normalizedSelectedType) {
-                    // 1. Show Alert
-                    alert(`Please check  Excel sheet name ("${firstSheetName}") does not match the selected HR Data Type ("${hrDataType}").`);
-                    
-                    // 2. Clear the invalid file
-                    setSelectedFile(null);
-                    if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                    }
-                    setError(`Sheet name mismatch. Expected: "${hrDataType}", Found: "${firstSheetName}"`);
-                } else {
                     // Validation passed
                     setSelectedFile(file);
                     setError(null);
                     setSuccessMessage(null);
-                }
+                
             };
             
             reader.onerror = () => {

@@ -113,7 +113,7 @@ const Sidebar = ({ redCount }) => {
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
       ],
     admin: [
-      
+      { name: "Admin Dashboard", to: "../admindashboard", icon: <FaUsers /> },
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
     ],
     pharmacist: [

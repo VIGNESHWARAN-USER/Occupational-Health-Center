@@ -194,14 +194,14 @@ def login(request):
             if not username or not password: return JsonResponse({"message": "Username and password required."}, status=400)
             # Use Django's authenticate or custom logic
             try:
-                member = Member.objects.get(employee_number=username)
+                member = Member.objects.get(emp_no=username)
                 
                 if bcrypt.checkpw(password.encode('utf-8'), member.password.encode('utf-8')):
                      # Login successful
                     return JsonResponse({
                         "username": member.name,
                         "accessLevel": member.role, # Consider splitting roles if needed: member.role.split(',')
-                        "empNo": member.employee_number,
+                        "empNo": member.emp_no,
                         "message": "Login successful!"
                     }, status=200)
                 else:
@@ -214,6 +214,15 @@ def login(request):
         except Exception as e: logger.exception("Login failed."); return JsonResponse({"message": "Unexpected error occurred."}, status=500)
     return JsonResponse({"message": "Invalid request method. Use POST."}, status=405)
 
+import bcrypt
+from datetime import date
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date as django_parse_date
+import logging
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def create_default_members(request):
     if request.method != 'POST':
@@ -225,110 +234,107 @@ def create_default_members(request):
         return None
 
     try:
+        # Data updated to match the logic of your new Model
         default_members = [
             {
-                "email": "2k22cse162@kiot.ac.in",
+                "mail_id_Office": "2k22cse162@kiot.ac.in",
                 "role": "nurse",
-                "employee_number": "900001",
+                "emp_no": "900001",
                 "aadhar": "123456789001",
-                "memberType": "ohc",
-                "phone_number": "9000000001",
+                "phone_Office": "9000000001",
                 "name": "VICKY",
                 "designation": "nurse",
-                "date_exited": None,
                 "doj": "2025-11-28",
                 "job_nature": "nurse",
-                "password": "nurse"
+                "password": "nurse",
+                "date_exited": None,
             },
             {
-                "email": "2k22cse163@kiot.ac.in",
+                "mail_id_Office": "2k22cse163@kiot.ac.in",
                 "role": "doctor",
-                "employee_number": "900002",
+                "emp_no": "900002",
                 "aadhar": "123456789003",
-                "memberType": "ohc",
-                "phone_number": "9000000002",
+                "phone_Office": "9000000002",
                 "name": "VIGNESHWARAN",
                 "designation": "doctor",
-                "date_exited": None,
                 "doj": "2025-11-28",
                 "job_nature": "doctor",
-                "password": "doctor"
+                "password": "doctor",
+                "date_exited": None,
             },
             {
-                "email": "2k22cse124@kiot.ac.in",
+                "mail_id_Office": "2k22cse124@kiot.ac.in",
                 "role": "admin",
-                "employee_number": "900003",
+                "emp_no": "900003",
                 "aadhar": "123456789002",
-                "memberType": "ohc",
-                "phone_number": "9600207797",
+                "phone_Office": "9600207797",
                 "name": "RAMESH",
                 "designation": "admin",
-                "date_exited": "2025-11-28",
                 "doj": "2025-11-28",
                 "job_nature": "admin",
-                "password": "admin"
+                "password": "admin",
+                "date_exited": "2025-11-28",
             },
             {
-                "email": "2k22cse114@kiot.ac.in",
-                "role": "pharma",
-                "employee_number": "900004",
+                "mail_id_Office": "2k22cse114@kiot.ac.in",
+                "role": "pharmacy",
+                "emp_no": "900004",
                 "aadhar": "123456789004",
-                "memberType": "ohc",
-                "phone_number": "9000000004",
+                "phone_Office": "9000000004",
                 "name": "PRAMOTH",
                 "designation": "pharma",
-                "date_exited": None,
                 "doj": "2025-11-28",
                 "job_nature": "pharmacy",
-                "password": "pharma"
+                "password": "pharma",
+                "date_exited": None,
             },
             {
-                "email": "2k22cse117@kiot.ac.in",
+                "mail_id_Office": "2k22cse117@kiot.ac.in",
                 "role": "doctor",
-                "employee_number": "900005",
+                "emp_no": "900005",
                 "aadhar": "123456789004",
-                "memberType": "ohc",
-                "phone_number": "9000000005",
+                "phone_Office": "9000000005",
                 "name": "PRAVEEN",
                 "designation": "pharma",
-                "date_exited": None,
                 "doj": "2025-11-28",
                 "job_nature": "doctor",
-                "password": "doctor"
+                "password": "doctor",
+                "date_exited": None,
             }
         ]
 
         created, skipped = 0, 0
 
         for m in default_members:
-
-            # Skip if already exists
-            if Member.objects.filter(email__iexact=m["email"]).exists():
+            # Check existence using the new field: mail_id_Office
+            if Member.objects.filter(mail_id_Office__iexact=m["mail_id_Office"]).exists():
                 skipped += 1
                 continue
 
             hashed_pw = bcrypt.hashpw(m["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
+            # Aligned with your new Member model fields
             Member.objects.create(
-                name=m["name"],
-                designation=m["designation"],
-                email=m["email"],
-                role=m["role"],
-                phone_number=m["phone_number"],
-                job_nature=m["job_nature"],
                 aadhar=m["aadhar"],
-                employee_number=m["employee_number"],
+                name=m["name"],
+                emp_no=m["emp_no"],
+                designation=m["designation"],
+                mail_id_Office=m["mail_id_Office"],
+                mail_id_Personal="", # Optional: can be left blank
+                phone_Office=m["phone_Office"],
+                phone_Personal="", # Optional: can be left blank
+                job_nature=m["job_nature"],
                 doj=safe_date(m["doj"]),
+                role=m["role"],
                 date_exited=safe_date(m["date_exited"]),
-                entry_date=date.today(),
-                password=hashed_pw,
-                type=m["memberType"]
+                hospital_name=None, # These are OHC staff
+                password=hashed_pw
             )
 
             created += 1
 
         return JsonResponse({
-            "message": "Default members processed",
+            "message": "Default members processed successfully",
             "created": created,
             "skipped_already_exists": skipped
         }, status=201 if created > 0 else 200)
@@ -338,87 +344,103 @@ def create_default_members(request):
         return JsonResponse({"error": "Internal error", "detail": str(e)}, status=500)
 
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import Member, employee_details # Ensure correct imports
 
 @csrf_exempt
 def find_member_by_aadhar(request):
-    if request.method == 'GET':
-        aadhar_param = request.GET.get('aadhar')
-        if not aadhar_param:
-            return JsonResponse({'error': True, 'message': 'Aadhar number is required'}, status=400)
+    if request.method != 'GET':
+        return JsonResponse({'error': True, 'message': 'Only GET method is allowed'}, status=405)
 
-        try:
-            
-            try:
-                employee_record = employee_details.objects.filter(aadhar=aadhar_param).first()
-                if employee_record:
-                    roles_list = [r.strip().lower() for r in employee_record.role.split(',')] if employee_record.role else []
-                    member_data = {
-                        'id': employee_record.id, # <<<<<<<<<<<<---- ADD THIS LINE (or ensure it's .pk)
-                        'name': employee_record.name,
-                        'designation': employee_record.designation,
-                        'email': employee_record.mail_id_Office or employee_record.mail_id_Personal,
-                        'phone_number': employee_record.phone_Office or employee_record.phone_Personal,
-                        'role': roles_list,
-                        'job_nature': employee_record.job_nature,
-                        'doj': employee_record.doj.strftime('%Y-%m-%d') if employee_record.doj else None,
-                        'employee_number': employee_record.emp_no,
-                        'aadhar': employee_record.aadhar,
-                        'memberTypeDetermined': 'ohc',
-                        'date_exited': None,
-                        'hospital_name': None,
-                    }
-                    return JsonResponse({
-                        'found': True,
-                        'member': member_data,
-                        'message': 'OHC Staff member found.'
-                    })
-            except employee_details.DoesNotExist: # This won't be hit if using filter().first()
-                pass
-            except Exception as e_emp:
-                print(f"Error querying employee_details for Aadhar {aadhar_param}: {str(e_emp)}")
-                # Potentially return an error or log more carefully
+    aadhar_param = request.GET.get('aadhar')
+    if not aadhar_param:
+        return JsonResponse({'error': True, 'message': 'Aadhar number is required'}, status=400)
 
-            # Check General Member table
-            try:
-                member_instance = Member.objects.filter(aadhar=aadhar_param).first() # Use your actual model name
-                if member_instance:
-                    roles_list = [r.strip().lower() for r in member_instance.role.split(',')] if member_instance.role else []
-                    member_data = {
-                        'id': member_instance.id, # <<<<<<<<<<<<---- ADD THIS LINE (or ensure it's .pk)
-                        'name': member_instance.name,
-                        'designation': member_instance.designation,
-                        'email': member_instance.email,
-                        'phone_number': member_instance.phone_number,
-                        'role': roles_list,
-                        'job_nature': member_instance.job_nature,
-                        'doj': member_instance.doj.strftime('%Y-%m-%d') if member_instance.doj else None,
-                        'date_exited': member_instance.date_exited.strftime('%Y-%m-%d') if member_instance.date_exited else None,
-                        'employee_number': member_instance.employee_number,
-                        'hospital_name': member_instance.hospital_name,
-                        'aadhar': member_instance.aadhar,
-                        'memberTypeDetermined': member_instance.type
-                    }
-                    return JsonResponse({
-                        'found': True,
-                        'member': member_data,
-                        'message': 'Member found.'
-                    })
-            except Member.DoesNotExist: # This won't be hit if using filter().first()
-                pass
-            except Exception as e_mem:
-                 print(f"Error querying Member for Aadhar {aadhar_param}: {str(e_mem)}")
-                 # Potentially return an error here
+    try:
+        # STEP 1: Search in Member Table (Existing Registered Users)
+        member_instance = Member.objects.filter(aadhar=aadhar_param).first()
+        if member_instance:
+            member_data = {
+                'id': member_instance.id, 
+                'name': member_instance.name,
+                'emp_no': member_instance.emp_no,
+                'designation': member_instance.designation,
+                'mail_id_Office': member_instance.mail_id_Office,
+                'mail_id_Personal': member_instance.mail_id_Personal,
+                'phone_Office': member_instance.phone_Office,
+                'phone_Personal': member_instance.phone_Personal,
+                'job_nature': member_instance.job_nature,
+                'doj': member_instance.doj.strftime('%Y-%m-%d') if member_instance.doj else None,
+                'date_exited': member_instance.date_exited.strftime('%Y-%m-%d') if member_instance.date_exited else None,
+                'role': member_instance.role,
+                'hospital_name': member_instance.hospital_name,
+                'aadhar': member_instance.aadhar,
+                # Note: Ensure your Member model actually has a 'type' field or logic
+                'memberTypeDetermined': getattr(member_instance, 'type', 'ohc') 
+            }
+            return JsonResponse({
+                'found': True,
+                'mode': 'update',
+                'member': member_data,
+                'message': 'User found and ready to update.'
+            })
+
+        # STEP 2: Search in employee_details (HR Records - Pre-fill for registration)
+        employee_record = employee_details.objects.filter(aadhar=aadhar_param).first()
+        if employee_record:
+            member_data = {
+                'id': None, # Indicates NEW registration
+                'name': employee_record.name,
+                'emp_no': employee_record.emp_no,
+                'designation': employee_record.designation,
+                'mail_id_Office': employee_record.mail_id_Office,
+                'mail_id_Personal': employee_record.mail_id_Personal,
+                'phone_Office': employee_record.phone_Office,
+                'phone_Personal': employee_record.phone_Personal,
+                'role': employee_record.role,
+                'job_nature': employee_record.job_nature,
+                'doj': employee_record.doj.strftime('%Y-%m-%d') if employee_record.doj else None,
+                'aadhar': employee_record.aadhar,
+                'memberTypeDetermined': 'ohc' if employee_record.type == "Employee" else 'external',
+                'date_exited': None,
+                'hospital_name': None,
+            }
+            return JsonResponse({
+                'found': True,
+                'mode': 'create',
+                'member': member_data,
+                'message': 'User not found in members. Pre-filled from HR records. Create new user.'
+            })
+
+        # STEP 3: If not found in either table
+        return JsonResponse({
+            'found': False, 
+            'error': True, 
+            'message': 'Aadhar not found in Member or HR records. Please check the number.'
+        }, status=404)
+
+    except Exception as e:
+        return JsonResponse({'error': True, 'message': f'Internal Server Error: {str(e)}'}, status=500)
 
 
-            # If no record found in either table after checks
-            return JsonResponse({'found': False, 'message': 'Member not found in any records.'}, status=200)
 
-        except Exception as e:
-            print(f"Outer error finding member by Aadhar {aadhar_param}: {str(e)}")
-            return JsonResponse({'error': True, 'message': 'An internal server error occurred.'}, status=500)
+import json
+import bcrypt
+import logging
+from datetime import date
+from django.http import JsonResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.dateparse import parse_date as django_parse_date
+from django.core.exceptions import ValidationError
+from .models import Member # Ensure correct import path
 
-    return JsonResponse({'error': True, 'message': 'Only GET method is allowed'}, status=405)
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def add_member(request):
     if request.method != 'POST':
@@ -426,139 +448,180 @@ def add_member(request):
 
     try:
         data = json.loads(request.body)
-        member_type = data.get('memberType')
-        print("member_type", member_type)
-
-        # Validate memberType
+        member_type = data.get('memberTypeDetermined') # 'ohc' or 'external'
+        print("Received data for new member:", data)
+        # 1. Validation Logic
         if member_type not in ['ohc', 'external']:
             return JsonResponse({'message': 'Invalid memberType'}, status=400)
 
-        # Required fields
-        required = ['name', 'designation', 'email', 'role', 'phone_number', 'aadhar']
+        # Fields aligned with your new model
+        required = ['name', 'designation',  'role','aadhar']
         if member_type == 'ohc':
-            required += ['employee_number', 'doj']
+            required += ['emp_no', 'doj']
         elif member_type == 'external':
             required += ['hospital_name']
 
-        # Check missing fields
         missing = [f for f in required if not data.get(f)]
         if missing:
+            print("Missing fields:", missing)
             return JsonResponse({'message': f"Missing fields: {', '.join(missing)}"}, status=400)
 
-        # Uniqueness checks
-        if Member.objects.filter(email__iexact=data['email']).exists():
-            return JsonResponse({'message': 'Email already exists.'}, status=409)
-        if member_type == 'ohc' and Member.objects.filter(employee_number=data['employee_number']).exists():
-            return JsonResponse({'message': 'Employee number already exists.'}, status=409)
+        # 2. Uniqueness checks (Using new field names)
+        if Member.objects.filter(mail_id_Office__iexact=data['mail_id_Office']).exists():
+            return JsonResponse({'message': 'Office Email already exists.'}, status=409)
+        
         if Member.objects.filter(aadhar=data['aadhar']).exists():
-            return JsonResponse({'message': 'Aadhar number already exists.'}, status=409)
+            return JsonResponse({'message': 'Aadhar number already registered.'}, status=409)
 
-        # Handle password
-        raw_pw = data.get('password', f"{data['role'][0]}123" if data.get('role') else "DefaultPass123!")
+        if member_type == 'ohc' and Member.objects.filter(emp_no=data['emp_no']).exists():
+            return JsonResponse({'message': 'Employee number already exists.'}, status=409)
+
+        # 3. Password Hashing
+        # If no password provided, default to "role123"
+        raw_pw = data.get('password') or f"{data['role']}123"
         hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # Build member data
+        # 4. Build Record
         member_data = {
-            'name': data['name'],
-            'designation': data['designation'],
-            'email': data['email'],
-            'role': ','.join(data.get('role', [])),
-            'phone_number': data['phone_number'],
-            'job_nature': data.get('job_nature'),
-            'date_exited': django_parse_date(data.get('date_exited')),
-            'password': hashed_pw,
-            'entry_date': date.today(),
             'aadhar': data['aadhar'],
-            'type': member_type  
+            'name': data['name'],
+            'emp_no': data.get('emp_no', ''),
+            'designation': data['designation'],
+            'mail_id_Office': data['mail_id_Office'],
+            'mail_id_Personal': data.get('mail_id_Personal', ''),
+            'phone_Office': data['phone_Office'],
+            'phone_Personal': data.get('phone_Personal', ''),
+            'job_nature': data.get('job_nature', ''),
+            'doj': django_parse_date(data.get('doj')) if data.get('doj') else None,
+            'role': data['role'], # Single value string
+            'date_exited': django_parse_date(data.get('date_exited')) if data.get('date_exited') else None,
+            'hospital_name': data.get('hospital_name') if member_type == 'external' else None,
+            'password': hashed_pw,
+            'type': member_type # Assuming your model has this field to distinguish OHC/External
         }
-        
-        
 
-        # Add type-specific fields
-        if member_type == 'ohc':
-            member_data.update({
-                'employee_number': data['employee_number'],
-                'doj': django_parse_date(data.get('doj'))   
-            })
-        elif member_type == 'external':
-            member_data.update({
-                'hospital_name': data['hospital_name']
-            })
-
-        # Create member
         member = Member.objects.create(**member_data)
-        logger.info(f"Member added ID: {member.id}, Type: {member_type}")
         return JsonResponse({'message': 'Member added successfully', 'memberId': member.id}, status=201)
 
-    except json.JSONDecodeError:
-        return JsonResponse({'message': 'Invalid JSON'}, status=400)
-    except ValidationError as e:
-        return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
     except Exception as e:
         logger.exception("add_member failed.")
-        return JsonResponse({'message': 'Internal error.'}, status=500)
+        return JsonResponse({'message': f'Internal error: {str(e)}'}, status=500)
 
 @csrf_exempt
 def update_member(request, member_id):
-    if request.method == 'PUT':
-        try:
-            member = get_object_or_404(Member, pk=member_id)
-            data = json.loads(request.body)
-            member_type = data.get('memberType')
+    if request.method != 'POST':
+        return JsonResponse({'message': 'Use PUT method'}, status=405)
 
-            # Validate member type consistency
-            is_ohc = bool(member.employee_number)
-            if not member_type or (member_type == 'ohc' and not is_ohc) or (member_type == 'external' and is_ohc):
-                 # Allow specifying type if it matches, otherwise error on mismatch/change attempt
-                return JsonResponse({'message': 'Member type mismatch or change not allowed.'}, status=400)
+    try:
+        member = get_object_or_404(Member, pk=member_id)
+        data = json.loads(request.body)
 
-            # Basic required fields for update (email is usually not updated, roles might be)
-            required = ['name', 'designation', 'role', 'phone_number']
-            if member_type == 'external' and not data.get('aadhar'):
-                 # Aadhar becomes required for external if not already set (unlikely scenario)
-                 if not member.aadhar: required.append('aadhar')
+        # Update Personal & Professional Info
+        member.name = data.get('name', member.name)
+        member.designation = data.get('designation', member.designation)
+        member.role = data.get('role', member.role) # Single value update
+        member.job_nature = data.get('job_nature', member.job_nature)
+        member.hospital_name = data.get('hospital_name', member.hospital_name)
+        member.aadhar = data.get('aadhar', member.aadhar)
 
-            missing = [f for f in required if data.get(f) is None or data.get(f) == ''] # Check for missing or empty
-            if missing: return JsonResponse({'message': f"Missing required fields for update: {', '.join(missing)}"}, status=400)
+        # Update Contact Info
+        member.mail_id_Office = data.get('mail_id_Office', member.mail_id_Office)
+        member.mail_id_Personal = data.get('mail_id_Personal', member.mail_id_Personal)
+        member.phone_Office = data.get('phone_Office', member.phone_Office)
+        member.phone_Personal = data.get('phone_Personal', member.phone_Personal)
 
-            # Update fields from payload, using existing value as default if key not present
-            member.name = data.get('name', member.name)
-            member.designation = data.get('designation', member.designation)
-            member.role = ','.join(data.get('role', [])) if data.get('role') is not None else member.role
-            member.phone_number = data.get('phone_number', member.phone_number)
-            member.job_nature = data.get('job_nature', member.job_nature) # Optional update
-            member.date_exited = parse_date_internal(data.get('date_exited')) if data.get('date_exited') is not None else member.date_exited # Allow clearing
+        # Update Dates
+        if data.get('doj'):
+            member.doj = django_parse_date(data.get('doj'))
+        if 'date_exited' in data: # Allow setting to None/Null
+            member.date_exited = django_parse_date(data.get('date_exited')) if data.get('date_exited') else None
 
-            if member_type == 'ohc':
-                # employee_number is usually immutable, DOJ might be updatable
-                member.doj = parse_date_internal(data.get('doj')) if data.get('doj') else member.doj
-            elif member_type == 'external':
-                member.hospital_name = data.get('hospital_name', member.hospital_name)
-                member.aadhar = data.get('aadhar', member.aadhar) # Allow updating Aadhar if needed
+        # Handle Password Update (Only if provided)
+        if data.get('password') and data['password'].strip() != "":
+            member.password = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-            member.full_clean() # Validate before saving
-            member.save()
-            logger.info(f"Member updated ID: {member_id}, Name: {member.name}")
-            return JsonResponse({'message': 'Member updated successfully'}, status=200)
-        except Http404: return JsonResponse({'message': 'Member not found'}, status=404)
-        except json.JSONDecodeError: return JsonResponse({'message': 'Invalid JSON format'}, status=400)
-        except ValidationError as e: return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
-        except Exception as e: logger.exception(f"update_member failed ID: {member_id}."); return JsonResponse({'message': 'An internal server error occurred.'}, status=500)
-    return JsonResponse({'message': 'Invalid request method. Use PUT.'}, status=405)
+        member.full_clean()
+        member.save()
+        
+        return JsonResponse({'message': 'Member updated successfully'}, status=200)
 
+    except ValidationError as e:
+        return JsonResponse({'message': 'Validation Error', 'details': e.message_dict}, status=400)
+    except Exception as e:
+        logger.exception(f"update_member failed ID: {member_id}")
+        return JsonResponse({'message': 'Internal server error'}, status=500)
+
+import logging
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from .models import Member # Ensure correct import
+
+logger = logging.getLogger(__name__)
+
+# --- API: List All Members ---
+def list_members(request):
+    """
+    Returns a list of all members ordered by newest first.
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Only GET allowed'}, status=405)
+
+    try:
+        # Fetch all members
+        members = Member.objects.all().order_by('-id')
+        
+        data = []
+        for m in members:
+            data.append({
+                'id': m.id,
+                'name': m.name,
+                'emp_no': m.emp_no,
+                'designation': m.designation,
+                'mail_id_Office': m.mail_id_Office,
+                'phone_Office': m.phone_Office,
+                'role': m.role,
+                'aadhar': m.aadhar,
+                'type': getattr(m, 'type', 'ohc'), # Falls back to 'ohc' if field missing
+                'hospital_name': m.hospital_name,
+                'doj': m.doj.strftime('%Y-%m-%d') if m.doj else None,
+                'job_nature': m.job_nature,
+            })
+            
+        return JsonResponse(data, safe=False)
+
+    except Exception as e:
+        logger.error(f"Error listing members: {str(e)}")
+        return JsonResponse({'error': 'Internal Server Error'}, status=500)
+
+
+# --- API: Delete Member ---
 @csrf_exempt
 def delete_member(request, member_id):
-    # Should ideally use DELETE method, but POST is common
-    if request.method == 'POST':
-        try:
-            member = get_object_or_404(Member, pk=member_id)
-            member_name = member.name # Get name for logging before delete
-            member.delete()
-            logger.info(f"Member deleted ID: {member_id}, Name: {member_name}")
-            return JsonResponse({'success': True, 'message': 'Member deleted successfully.'})
-        except Http404: return JsonResponse({'success': False, 'message': 'Member not found.'}, status=404)
-        except Exception as e: logger.exception(f"delete_member failed ID: {member_id}."); return JsonResponse({'success': False, 'message': 'An error occurred during deletion.'}, status=500)
-    return JsonResponse({'error': 'Invalid request method. Use POST.'}, status=405) # Changed error message
+    """
+    Deletes a member record by ID.
+    Implemented as POST for compatibility with your previous code pattern.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Method not allowed. Use POST.'}, status=405)
+
+    try:
+        member = get_object_or_404(Member, id=member_id)
+        member_name = member.name # Store for logging
+        member.delete()
+        
+        logger.info(f"Member Deleted: {member_name} (ID: {member_id})")
+        return JsonResponse({
+            'success': True, 
+            'message': f'Member {member_name} has been deleted successfully.'
+        })
+
+    except Exception as e:
+        logger.error(f"Error deleting member {member_id}: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'message': 'Failed to delete member due to a server error.'
+        }, status=500)
 
 
 @csrf_exempt
@@ -6453,7 +6516,7 @@ logger = logging.getLogger(__name__)
 def map_excel_headers_to_model_fields(excel_data_type):
     # Base mappings common to all types
     mapping = {
-        'BASIC DETAILS_Aadhar / Doc No.-Foreigner': 'aadhar', # Added a trailing underscore to match the flattened header format
+        'BASIC DETAILS_Aadhar / Doc No.-Foreigner': 'aadhar', 
         'BASIC DETAILS_NAME': 'name',
         'BASIC DETAILS_Aadhar / Doc No.-Foreigner_Name of Father / Mother / Guardian': 'guardian',
         'BASIC DETAILS_Name of Father / Mother / Guardian': 'guardian',
@@ -6487,7 +6550,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
         'Contact Details_Residential Country': 'residential_country',
     })
 
-    if excel_data_type == 'employee' or excel_data_type == 'contractor':
+    if excel_data_type == 'employee':
         # Mappings specific to Employee and Associate
         mapping.update({
             'Employment Details_Contractor Status': 'contractor_status',
@@ -6504,7 +6567,25 @@ def map_excel_headers_to_model_fields(excel_data_type):
             'Employment Details_Previous Employer': 'previousemployer',
             'Employment Details_Previous Location': 'previouslocation',
             'Employment Details_Employee Number': 'emp_no',
-            'Employment Details_Status': 'status',
+            'Employment Details_Status': 'employee_status',
+        })
+
+    elif excel_data_type == 'contractor':
+        # Mappings specific to Employee and Associate
+        mapping.update({
+            'Employment Details_Current Employer': 'employer',
+            'Employment Details_Current Designation_Location': 'location', # Combined header
+            'Employment Details_Designation': 'designation',
+            'Employment Details_Department': 'department',
+            'Employment Details_Division' : 'division',
+            'Employment Details_Work Area' : 'workarea',
+            'Employment Details_Nature of Job': 'job_nature',
+            'Employment Details_Date of Joining': 'doj',
+            'Employment Details_Mode of Joining': 'moj',
+            'Employment Details_Previous Employer': 'previousemployer',
+            'Employment Details_Previous Location': 'previouslocation',
+            'Employment Details_Employee Number': 'emp_no',
+            'Employment Details_Status': 'contractor_status',
         })
     elif excel_data_type == 'visitor':
         # Mappings specific to Visitor
@@ -6522,79 +6603,167 @@ def map_excel_headers_to_model_fields(excel_data_type):
 
     return mapping
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from datetime import datetime
+import pandas as pd
+from io import BytesIO
+import logging
+
+from .models import employee_details
+
+logger = logging.getLogger(__name__)
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+from datetime import datetime
+import pandas as pd
+from io import BytesIO
+import logging
+
+from .models import employee_details
+
+def parse_date(value):
+    if pd.isna(value):
+        return None
+
+    if isinstance(value, pd.Timestamp):
+        return value.date()
+
+    if isinstance(value, str):
+        for fmt in ("%d-%m-%Y", "%d/%m/%Y", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(value.split(" ")[0], fmt).date()
+            except ValueError:
+                pass
+
+    return None
+
+def clean_id(value):
+    if pd.isna(value):
+        return ""
+    if isinstance(value, float):
+        return str(int(value))  # removes .0 safely
+    return str(value).strip()
+
+
+
+logger = logging.getLogger(__name__)
+
+
 @csrf_exempt
 def hrupload(request, data_type):
-    if request.method == 'POST':
-        try:
-            data_type = data_type.lower()
-            if data_type not in ['employee', 'contractor', 'visitor']:
-                return JsonResponse({"error": "Invalid data type specified."}, status=400)
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-            if 'file' not in request.FILES:
-                return JsonResponse({"error": "No file was uploaded."}, status=400)
+    try:
+        data_type = data_type.lower()
+        if data_type not in ["employee", "contractor", "visitor"]:
+            return JsonResponse({"error": "Invalid data type"}, status=400)
 
-            uploaded_file = request.FILES['file']
-            file_bytes = uploaded_file.read()
+        if "file" not in request.FILES:
+            return JsonResponse({"error": "File missing"}, status=400)
 
-            excel_data = pd.read_excel(BytesIO(file_bytes), header=[0, 1], sheet_name=0)
-            
-            # The Fix: Use .map(str) to convert all parts of the multi-index header to strings
-            excel_data.columns = ['_'.join(map(str, col)).strip() for col in excel_data.columns.values]
-            
-            field_mapping = map_excel_headers_to_model_fields(data_type)
-            print(excel_data)
-            records_to_create = []
-            
-            for index, row in excel_data.iterrows():
-                record_data = {}
-                for excel_header, model_field in field_mapping.items():
-                    if excel_header in row:
-                        print(excel_header)
-                        value = row[excel_header]
-                        
-                        if 'date' in model_field or 'dob' in model_field or 'doj' in model_field: 
-                            try:
-                                if pd.notna(value):
-                                    if isinstance(value, pd.Timestamp):
-                                        record_data[model_field] = value.date()
-                                    elif isinstance(value, (int, float)):
-                                        # Handle Excel date numbers
-                                        record_data[model_field] = datetime.fromtimestamp(value, tz=None).date()
-                                    elif isinstance(value, str):
-                                        # Use a more flexible date parser
-                                        try:
-                                            record_data[model_field] = datetime.strptime(value.split(' ')[0], '%d-%m-%Y').date()
-                                        except ValueError:
-                                            try:
-                                                record_data[model_field] = datetime.strptime(value.split(' ')[0], '%d/%m/%Y').date()
-                                            except ValueError:
-                                                record_data[model_field] = None
-                                    else:
-                                        record_data[model_field] = None
-                            except Exception as e:
-                                logger.warning(f"Could not parse date for field {model_field} with value: {value}, Error: {e}")
-                                record_data[model_field] = None
-                        else:
-                            record_data[model_field] = str(value) if pd.notna(value) else ''
-                
-                record_data['type'] = data_type.capitalize()
-                record_data['mrdNo'] = '0'
-                
-                records_to_create.append(employee_details(**record_data))
-                
-            with transaction.atomic():
-                employee_details.objects.bulk_create(records_to_create)
+        df = pd.read_excel(
+            BytesIO(request.FILES["file"].read()),
+            header=[0, 1]
+        )
 
-            return JsonResponse({"message": f"{len(records_to_create)} {data_type.capitalize()} records uploaded successfully."}, status=200)
+        # Flatten headers
+        df.columns = [
+            "_".join(map(str, col)).strip()
+            for col in df.columns.values
+        ]
 
-        except Exception as e:
-            logger.exception("Error processing HR upload")
-            return JsonResponse({"error": "An error occurred during file processing.", "detail": str(e)}, status=500)
-    
-    else:
-        response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+        field_mapping = map_excel_headers_to_model_fields(data_type)
+
+        to_create = []
+        to_update = []
+        i = 0
+        for _, row in df.iterrows():
+            record = {}
+
+            for excel_col, model_field in field_mapping.items():
+                print(excel_col, model_field, row.get(excel_col))
+                if excel_col not in row:
+                    continue
+
+                value = row[excel_col]
+
+                if model_field in ("dob", "doj"):
+                    record[model_field] = parse_date(value)
+
+                elif model_field in ("aadhar", "mrdNo"):
+                    record[model_field] = clean_id(value)
+
+                else:
+                    record[model_field] = str(value).strip() if pd.notna(value) else ""
+
+
+            aadhar = record.get("aadhar")
+            if not aadhar:
+                continue  
+            i+=1
+            print(i, aadhar)
+            # Fetch latest record for this aadhar
+            latest = (
+                employee_details.objects
+                .filter(aadhar=aadhar)
+                .order_by("-id")   # OR -created_at
+                .first()
+            )
+
+            if latest:
+                # UPDATE latest record
+                for field, value in record.items():
+                    if field == "mrdNo":
+                        continue  # explicitly protect mrdNo
+                    setattr(latest, field, value)
+
+                # ensure type can be updated
+                latest.type = data_type.capitalize()
+
+                to_update.append(latest)
+
+            else:
+                # CREATE new record
+                record["type"] = data_type.capitalize()
+                record["mrdNo"] = "0"
+                to_create.append(employee_details(**record))
+
+        with transaction.atomic():
+            if to_create:
+                employee_details.objects.bulk_create(
+                    to_create,
+                    batch_size=1000
+                )
+
+            if to_update:
+                employee_details.objects.bulk_update(
+                    to_update,
+                    fields=[
+                        f.name for f in employee_details._meta.fields
+                        if f.name not in ("id", "mrdNo")
+                    ],
+                    batch_size=1000
+                )
+
+        return JsonResponse({
+            "created": len(to_create),
+            "updated": len(to_update),
+            "message": f"{len(to_create)} HR data added and {len(to_update)} updated successfully"
+        }, status=200)
+
+    except Exception as e:
+        logger.exception("HR Upload Failed")
+        return JsonResponse({
+            "error": "Upload failed",
+            "detail": str(e)
+        }, status=500)
+
 
 
 # @csrf_exempt

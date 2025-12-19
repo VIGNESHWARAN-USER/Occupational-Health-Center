@@ -1,601 +1,273 @@
-import React, { useState, useCallback } from "react"; // Removed useEffect as it wasn't strictly needed here
+import React, { useState, useCallback } from "react";
 import Select from 'react-select';
-import Sidebar from "../Sidebar"; // Assuming correct path
-import { motion } from "framer-motion";
+import Sidebar from "../Sidebar";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from 'axios';
+import { 
+    FiSearch, FiUserPlus, FiAlertCircle, FiCheckCircle, 
+    FiRefreshCw, FiUser, FiHome, FiMail, FiPhone, 
+    FiCalendar, FiBriefcase, FiShield, FiLock 
+} from "react-icons/fi";
 
-// --- Initial Form States ---
-const initialOHCState = {
-    employee_number: "", name: "", designation: "", email: "", role: [],
-    doj: "", date_exited: "", job_nature: "", phone_number: ""
-};
-const initialExternalState = {
-    name: "", designation: "", email: "", role: [], hospital_name: "",
-    aadhar: "", phone_number: "", // do_access: "", // Uncomment if needed
-    date_exited: "", job_nature: ""
+// --- Initial Form States (Aligned with New Member Model) ---
+const initialFormState = {
+    name: "", 
+    emp_no: "", 
+    designation: "", 
+    mail_id_Office: "", 
+    mail_id_Personal: "",
+    phone_Office: "",
+    phone_Personal: "",
+    job_nature: "",
+    doj: "",
+    role: null, 
+    date_exited: "",
+    hospital_name: "",
+    password: ""
 };
 
-// --- Role Options ---
 const roleOptions = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'registration', label: 'Registration' },
     { value: 'nurse', label: 'Nurse' },
     { value: 'doctor', label: 'Doctor' },
     { value: 'pharmacy', label: 'Pharmacy' },
+    { value: 'camp_nurse', label: 'Camp Nurse' },
+    { value: 'camp_doctor', label: 'Camp Doctor' },
 ];
 
-// --- Helper: Convert role values to select options ---
-const mapRolesToOptions = (roleValues = []) => {
-    if (!Array.isArray(roleValues)) return [];
-    return roleValues
-        .map(value => roleOptions.find(option => option.value === value))
-        .filter(Boolean); // Filter out undefined/null if a role value doesn't match
+const customSelectStyles = {
+    control: (base, state) => ({
+        ...base,
+        backgroundColor: '#dbeafe', // bg-blue-100
+        borderColor: '#d1d5db',
+        borderRadius: '0.5rem',
+        padding: '3px',
+        boxShadow: state.isFocused ? '0 0 0 2px #3b82f6' : 'none',
+        '&:hover': { borderColor: '#9ca3af' }
+    })
 };
 
-// --- Helper: Format date for input type="date" ---
-const formatDateForInput = (dateString) => {
-    if (!dateString) return "";
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return ""; // Invalid date
-        // Ensure timezone issues don't shift the date back
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    } catch (error) {
-        console.error("Error formatting date:", dateString, error);
-        return "";
-    }
-};
+// --- Reusable Components ---
+const SectionHeader = ({ title, icon: Icon }) => (
+    <div className="col-span-full border-b border-blue-100 pb-2 mt-4 flex items-center gap-2 text-blue-800 font-bold uppercase text-xs tracking-widest">
+        <Icon size={16} /> {title}
+    </div>
+);
 
+const CustomInput = ({ label, name, value, onChange, type = "text", placeholder, required = false, readOnly = false, icon: Icon }) => (
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-bold text-gray-600 ml-1">{label} {required && "*"}</label>
+        <div className="relative">
+            {Icon && <Icon className="absolute left-3 top-3 text-blue-500" size={16} />}
+            <input
+                name={name}
+                value={value || ''}
+                onChange={onChange}
+                type={type}
+                placeholder={placeholder}
+                required={required}
+                readOnly={readOnly}
+                className={`pl-10 pr-4 py-2.5 w-full border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${
+                    readOnly ? 'bg-gray-200 cursor-not-allowed text-gray-500' : 'bg-blue-100 hover:bg-blue-200 focus:bg-white'
+                }`}
+            />
+        </div>
+    </div>
+);
 
 function AddMember() {
     const accessLevel = localStorage.getItem('accessLevel');
     const navigate = useNavigate();
 
-    // --- Component State ---
     const [searchAadhar, setSearchAadhar] = useState('');
     const [isSearching, setIsSearching] = useState(false);
-    const [searchStatus, setSearchStatus] = useState({ type: null, message: null }); // type: 'success', 'error', 'info' | message: string
+    const [searchStatus, setSearchStatus] = useState({ type: null, message: null });
     const [showForm, setShowForm] = useState(false);
-    const [memberId, setMemberId] = useState(null); // ID of member being updated
+    const [memberId, setMemberId] = useState(null);
     const [memberType, setMemberType] = useState(''); // 'ohc' or 'external'
-    const [ohcFormData, setOHCFormData] = useState(initialOHCState);
-    const [externalFormData, setExternalFormData] = useState(initialExternalState);
+    const [formData, setFormData] = useState(initialFormState);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [submitStatus, setSubmitStatus] = useState({ type: null, message: null }); // type: 'success', 'error' | message: string
+    const [submitStatus, setSubmitStatus] = useState({ type: null, message: null });
 
-    // --- Reset Handler ---
-    const handleResetToSearch = useCallback(() => {
+    const handleReset = useCallback(() => {
         setSearchAadhar('');
         setSearchStatus({ type: null, message: null });
         setSubmitStatus({ type: null, message: null });
         setShowForm(false);
         setMemberId(null);
         setMemberType('');
-        setOHCFormData(initialOHCState);
-        setExternalFormData(initialExternalState);
-        setIsSubmitting(false);
-        setIsSearching(false);
-    }, []); // Empty dependency array as it only uses setters
+        setFormData(initialFormState);
+    }, []);
 
-    // --- Email Search Handler ---
-    const handleSearch = useCallback(async () => {
-        if (!searchAadhar.trim() || !/^\d{12}$/.test(searchAadhar)) {
-            setSearchStatus({ type: 'error', message: "Please enter a valid 12-digit Aadhar number." });
+    const handleSearch = async () => {
+        if (searchAadhar.length !== 12) {
+            setSearchStatus({ type: 'error', message: "Enter a valid 12-digit Aadhar." });
             return;
         }
         setIsSearching(true);
         setSearchStatus({ type: null, message: null });
-        setSubmitStatus({ type: null, message: null });
-        setShowForm(false);
-        setMemberId(null);
-        setMemberType('');
-        setOHCFormData(initialOHCState);
-        setExternalFormData(initialExternalState);
 
         try {
-            const searchUrl = `http://localhost:8000/find_member_by_aadhar/?aadhar=${encodeURIComponent(searchAadhar)}`;
-            const response = await axios.get(searchUrl);
-            const data = response.data;
+            const res = await axios.get(`http://localhost:8000/find_member_by_aadhar/?aadhar=${searchAadhar}`);
+            const { member, mode, message } = res.data;
 
-            if (data.error) {
-                setSearchStatus({ type: 'error', message: data.message || 'An error occurred during search.' });
-                return;
-            }
+            setMemberId(member.id);
+            setMemberType(member.memberTypeDetermined || 'ohc');
+            
+            // Map backend single role string back to select option
+            const currentRole = roleOptions.find(opt => opt.value === member.role) || null;
 
-            if (data.found && data.member) {
-                const memberData = data.member;
-                const determinedType = memberData.memberTypeDetermined;
-                console
-                setMemberId(memberData.id);
-                setMemberType(determinedType);
-
-                const commonData = {
-                    name: memberData.name || "",
-                    designation: memberData.designation || "",
-                    email: memberData.email || "",
-                    role: mapRolesToOptions(memberData.role),
-                    date_exited: formatDateForInput(memberData.date_exited),
-                    job_nature: memberData.job_nature || "",
-                    phone_number: memberData.phone_number || ""
-                };
-
-                if (determinedType === 'ohc') {
-                    setOHCFormData({
-                        ...commonData,
-                        employee_number: memberData.employee_number || "",
-                        doj: formatDateForInput(memberData.doj),
-                    });
-                } else if (determinedType === 'external') {
-                    setExternalFormData({
-                        ...commonData,
-                        hospital_name: memberData.hospital_name || "",
-                        aadhar: memberData.aadhar || searchAadhar,
-                    });
-                }
-                setShowForm(true);
-                setSearchStatus({
-                    type: 'success',
-                    message: `Member found (ID: ${memberData.id}). Details pre-filled for update`
-                });
-            } else {
-                setMemberId(null);
-                setShowForm(true);
-                setSearchStatus({ 
-                    type: 'info', 
-                    message: `Member not found. Select type below to add a new member.` 
-                });
-                setOHCFormData({ ...initialOHCState });
-                setExternalFormData({ ...initialExternalState, aadhar: searchAadhar });
-            }
-        } catch (error) {
-            console.error("Error searching member:", error);
-            const errorMessage = error.response?.data?.message || 
-                               "Failed to search for member. Please check your network connection and try again.";
-            setSearchStatus({ 
-                type: 'error', 
-                message: errorMessage
+            setFormData({
+                ...member,
+                role: currentRole,
+                doj: member.doj || "",
+                date_exited: member.date_exited || "",
             });
-            setMemberId(null);
+
+            setShowForm(true);
+            setSearchStatus({ type: mode === 'update' ? 'success' : 'info', message });
+        } catch (err) {
+            setSearchStatus({ type: 'error', message: err.response?.data?.message || "Not found." });
             setShowForm(false);
         } finally {
             setIsSearching(false);
         }
-    }, [searchAadhar]);
+    };
 
-    // --- Form Input Handlers ---
-    const handleChange = useCallback((e) => {
-        const { name, value } = e.target;
-        const setter = memberType === 'ohc' ? setOHCFormData : setExternalFormData;
-        setter(prev => ({ ...prev, [name]: value }));
-    }, [memberType]); // Dependency: memberType determines which state to update
+    const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const handleRoleChange = (selected) => setFormData(prev => ({ ...prev, role: selected }));
 
-    const handleSelectChange = useCallback((selectedOptions, actionMeta) => {
-        const { name } = actionMeta; // Get field name from react-select action
-        const setter = memberType === 'ohc' ? setOHCFormData : setExternalFormData;
-        // Ensure selectedOptions is always an array (for isMulti) or null/object (for single)
-        setter(prev => ({ ...prev, [name]: selectedOptions || [] }));
-    }, [memberType]); // Dependency: memberType
-
-    // --- Form Submit Handler (Add or Update) ---
-    const handleSubmit = useCallback(async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!memberType) {
-            setSubmitStatus({ type: 'error', message: "Cannot submit: Member type not determined." });
-            return;
-        }
-
         setIsSubmitting(true);
-        setSubmitStatus({ type: null, message: null }); // Clear previous submit status
-
-        let dataToSend = {};
-        let rolesForApi = [];
-        let url = "";
-        let method = "";
-
-        // Prepare data based on member type
-        if (memberType === 'ohc') {
-            rolesForApi = ohcFormData.role ? ohcFormData.role.map(option => option.value) : [];
-            dataToSend = { 
-                ...ohcFormData, 
-                role: rolesForApi, 
-                memberType: 'ohc',
-                aadhar: searchAadhar // Ensure Aadhar is included
-            };
-        } else if (memberType === 'external') {
-            rolesForApi = externalFormData.role ? externalFormData.role.map(option => option.value) : [];
-            dataToSend = { 
-                ...externalFormData, 
-                role: rolesForApi, 
-                memberType: 'external',
-                aadhar: searchAadhar // Ensure Aadhar is included
-            };
-        }
-
-        // Determine API endpoint and method
-        if (memberId) {
-            // UPDATE mode
-            url = `http://localhost:8000/members/update/${memberId}/`;
-            method = 'put';
-        } else {
-            // ADD mode
-            url = "http://localhost:8000/members/add/";
-            method = 'post';
-        }
+        
+        const payload = {
+            ...formData,
+            aadhar: searchAadhar,
+            role: formData.role?.value || "", 
+            type: memberType
+        };
 
         try {
-            const response = await axios({ method, url, data: dataToSend });
-            const successMessage = memberId 
-                ? "Member details updated successfully!" 
-                : "New member added successfully!";
-            setSubmitStatus({ type: 'success', message: successMessage });
+            const url = memberId ? `http://localhost:8000/members/update/${memberId}/` : "http://localhost:8000/members/add/";
+            await axios({ method: 'post', url, data: payload });
             
-            // If it was an update, refresh the form with new data
-            if (memberId) {
-                handleSearch(); // Re-fetch the updated data
-            } else {
-                // For new members, reset the form after a delay
-                setTimeout(handleResetToSearch, 2000);
-            }
-        } catch (error) {
-            console.error(`Error ${memberId ? 'updating' : 'adding'} member:`, error);
-            const errorMsg = error.response?.data?.message ||
-                `Failed to ${memberId ? 'update' : 'add'} member. Please try again.`;
-            setSubmitStatus({ type: 'error', message: errorMsg });
+            setSubmitStatus({ type: 'success', message: memberId ? "Record Updated!" : "Member Registered!" });
+            if (!memberId) setTimeout(handleReset, 2000);
+        } catch (err) {
+            setSubmitStatus({ type: 'error', message: "Save failed. Check required fields." });
         } finally {
             setIsSubmitting(false);
         }
-    }, [memberType, memberId, ohcFormData, externalFormData, searchAadhar, handleResetToSearch, handleSearch]);
+    };
 
-    // --- Enhanced Form Field Rendering ---
-    const renderOHCStaffFields = () => (
-        <>
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                <h3 className="text-lg font-semibold text-blue-800 mb-2">OHC Staff Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Employee Number *</label>
-                        <input
-                            type="text"
-                            name="employee_number"
-                            value={ohcFormData.employee_number}
-                            onChange={handleChange}
-                            required
-                            readOnly={!!memberId}
-                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                                memberId ? 'bg-gray-100' : ''
-                            }`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Name *</label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={ohcFormData.name}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Designation *</label>
-                        <input
-                            type="text"
-                            name="designation"
-                            value={ohcFormData.designation}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email *</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={ohcFormData.email}
-                            onChange={handleChange}
-                            required
-                            readOnly={!!memberId}
-                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                                memberId ? 'bg-gray-100' : ''
-                            }`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Date of Joining *</label>
-                        <input
-                            type="date"
-                            name="doj"
-                            value={ohcFormData.doj}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
-                        <input
-                            type="tel"
-                            name="phone_number"
-                            value={ohcFormData.phone_number}
-                            onChange={handleChange}
-                            required
-                            pattern="[0-9]{10}"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Job Nature</label>
-                        <input
-                            type="text"
-                            name="job_nature"
-                            value={ohcFormData.job_nature}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Role (Access) *</label>
-                        <Select
-                            name="role"
-                            isMulti
-                            options={roleOptions}
-                            value={ohcFormData.role}
-                            onChange={handleSelectChange}
-                            required
-                            className="mt-1"
-                        />
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-
-    const renderExternalHospitalFields = () => (
-        <>
-            <div className="mb-4 p-4 bg-green-50 rounded-lg">
-                <h3 className="text-lg font-semibold text-green-800 mb-2">External Hospital Staff Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Name *</label>
-                        <input
-                            type="text"
-                            name="name"
-                            value={externalFormData.name}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Hospital Name *</label>
-                        <input
-                            type="text"
-                            name="hospital_name"
-                            value={externalFormData.hospital_name}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Designation *</label>
-                        <input
-                            type="text"
-                            name="designation"
-                            value={externalFormData.designation}
-                            onChange={handleChange}
-                            required
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Email *</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={externalFormData.email}
-                            onChange={handleChange}
-                            required
-                            readOnly={!!memberId}
-                            className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm ${
-                                memberId ? 'bg-gray-100' : ''
-                            }`}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Phone Number *</label>
-                        <input
-                            type="tel"
-                            name="phone_number"
-                            value={externalFormData.phone_number}
-                            onChange={handleChange}
-                            required
-                            pattern="[0-9]{10}"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Job Nature</label>
-                        <input
-                            type="text"
-                            name="job_nature"
-                            value={externalFormData.job_nature}
-                            onChange={handleChange}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700">Role (Access) *</label>
-                        <Select
-                            name="role"
-                            isMulti
-                            options={roleOptions}
-                            value={externalFormData.role}
-                            onChange={handleSelectChange}
-                            required
-                            className="mt-1"
-                        />
-                    </div>
-                </div>
-            </div>
-        </>
-    );
-
-    // --- Main Render ---
-    if (accessLevel !== "admin") {
-        return (
-            <section className="bg-white h-full flex items-center dark:bg-gray-900">
-                <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">
-                    <div className="mx-auto max-w-screen-sm text-center">
-                        <h1 className="mb-4 text-7xl tracking-tight font-extrabold lg:text-9xl text-primary-600 dark:text-primary-500">403</h1>
-                        <p className="mb-4 text-3xl tracking-tight font-bold text-gray-900 md:text-4xl dark:text-white">Access Denied</p>
-                        <p className="mb-4 text-lg font-light text-gray-500 dark:text-gray-400">Sorry, you do not have permission to access this page.</p>
-                        <button onClick={() => navigate(-1)} className="inline-flex text-white bg-blue-600 hover:cursor-pointer hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:focus:ring-blue-900 my-4">Go Back</button>
-                    </div>
-                </div>
-            </section>
-        );
-    }
-
-    // Determine status colors dynamically
-    const searchStatusColor = searchStatus.type === 'success' ? 'text-green-600' : searchStatus.type === 'error' ? 'text-red-600' : 'text-blue-600';
-    const submitStatusColor = submitStatus.type === 'success' ? 'text-green-600' : 'text-red-600';
+    if (accessLevel !== "admin") return <div className="p-20 text-center font-bold text-red-600">Admin Access Required</div>;
 
     return (
-        <div className="flex h-screen bg-gray-100"> {/* Changed background */}
+        <div className="flex h-screen bg-slate-100">
             <Sidebar />
-            <div className="flex-1 flex flex-col p-4 md:p-6 lg:p-8 overflow-hidden"> {/* Adjusted padding */}
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 flex-shrink-0 border-b pb-2">
-                    {memberId ? 'Update Member Information' : 'Add New Member'} {/* Dynamic Title */}
-                </h1>
-
-                {/* Search Section */}
-                <motion.div
-                    className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6 flex-shrink-0"
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <div className="flex flex-wrap items-end gap-4"> {/* Use gap for spacing */}
-                        <div className="flex-grow min-w-[250px]"> {/* Ensure input doesn't get too small */}
-                            <label htmlFor="searchAadhar" className="block text-gray-700 mb-1 text-sm font-medium">
-                                Enter Member Aadhar Number to Search or Add
-                            </label>
-                            <input
-                                id="searchAadhar"
-                                type="text"
-                                value={searchAadhar}
-                                onChange={(e) => setSearchAadhar(e.target.value)}
-                                placeholder="e.g., 123456789012"
-                                pattern="\d{12}"
-                                maxLength={12}
-                                className="w-full p-2 border border-gray-300 rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                disabled={isSearching}
-                            />
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleSearch}
-                            disabled={isSearching || !searchAadhar}
-                            className={`bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition-colors duration-200 ${isSearching || !searchAadhar ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            {isSearching ? ( /* Spinner SVG */ <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ) : null}
-                            {isSearching ? 'Searching...' : 'Search / Find'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleResetToSearch}
-                            className="bg-gray-500 text-white px-5 py-2 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1 transition-colors duration-200"
-                            title="Clear Search and Form"
-                        >
-                            Reset
-                        </button>
+            <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden">
+                <div className="mb-6 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
+                            <FiUserPlus className="text-blue-600" /> {memberId ? 'Update Profile' : 'New Registration'}
+                        </h1>
+                        <p className="text-slate-500 text-sm font-medium">Verify via Aadhar to begin.</p>
                     </div>
-                    {searchStatus.message && (
-                        <p className={`mt-2 text-sm font-medium ${searchStatusColor}`}>
-                           {searchStatus.message}
-                        </p>
-                    )}
-                </motion.div>
+                </div>
 
-                 {/* Form Section - Conditionally Rendered */}
-                {showForm && (
-                    <motion.div
-                        className="bg-white p-4 md:p-6 rounded-lg shadow-md overflow-y-auto flex-grow" // Allows scrolling within the form area
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                {/* --- Search Bar --- */}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6 flex items-end gap-4">
+                    <div className="w-80">
+                        <CustomInput 
+                            label="Verification Aadhar" 
+                            name="searchAadhar" 
+                            value={searchAadhar} 
+                            placeholder="12 Digit Number"
+                            maxLength={12}
+                            icon={FiShield}
+                            onChange={(e) => setSearchAadhar(e.target.value.replace(/\D/g, ""))}
+                        />
+                    </div>
+                    <button 
+                        onClick={handleSearch} 
+                        disabled={isSearching || searchAadhar.length !== 12}
+                        className="bg-blue-600 text-white px-8 py-2.5 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
                     >
-                        <form className="space-y-5" onSubmit={handleSubmit} noValidate> {/* Add noValidate to rely on custom/backend validation */}
-                            {/* Member Type Selection (Only if adding new and not found) */}
-                            {!memberId && searchStatus.type !== 'success' && (
+                        {isSearching ? <FiRefreshCw className="animate-spin" /> : <FiSearch />} Search
+                    </button>
+                    <button onClick={handleReset} className="text-slate-400 hover:text-slate-600 font-bold px-4 py-2.5 transition-all">Reset</button>
+                    
+                    {searchStatus.message && (
+                        <div className={`ml-4 mb-2 text-sm font-bold flex items-center gap-2 ${searchStatus.type === 'error' ? 'text-red-500' : 'text-green-600'}`}>
+                            {searchStatus.type === 'error' ? <FiAlertCircle /> : <FiCheckCircle />} {searchStatus.message}
+                        </div>
+                    )}
+                </div>
+
+                {/* --- Form Section --- */}
+                <AnimatePresence>
+                    {showForm && (
+                        <motion.form 
+                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                            onSubmit={handleSubmit}
+                            className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col"
+                        >
+                            <div className="p-8 overflow-y-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+                                
+                               
+
+                                {/* --- Personal & Professional --- */}
+                                <SectionHeader title="Professional Identity" icon={FiBriefcase} />
+                                <CustomInput label="Full Name" name="name" value={formData.name} onChange={handleChange} icon={FiUser} required />
+                                <CustomInput label="Employee No (Login ID)" name="emp_no" value={formData.emp_no} onChange={handleChange} icon={FiShield} required />
+                                <CustomInput label="Designation" name="designation" value={formData.designation} onChange={handleChange} icon={FiBriefcase} required />
+                                
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-bold text-gray-600 ml-1">Access Role *</label>
+                                    <Select 
+                                        options={roleOptions} 
+                                        styles={customSelectStyles} 
+                                        value={formData.role} 
+                                        onChange={handleRoleChange} 
+                                        placeholder="Choose Role..."
+                                    />
+                                </div>
+                                <CustomInput label="Date of Joining" name="doj" type="date" value={formData.doj} onChange={handleChange} icon={FiCalendar} />
+                                {memberType === 'external' && <CustomInput label="Hospital Name" name="hospital_name" value={formData.hospital_name} onChange={handleChange} icon={FiHome} required />}
+
+                                {/* --- Contact Details --- */}
+                                <SectionHeader title="Contact Information" icon={FiPhone} />
+                                <CustomInput label="Office Email" name="mail_id_Office" type="email" value={formData.mail_id_Office} onChange={handleChange} icon={FiMail} />
+                                <CustomInput label="Personal Email" name="mail_id_Personal" type="email" value={formData.mail_id_Personal} onChange={handleChange} icon={FiMail} required/>
+                                <CustomInput label="Office Phone" name="phone_Office" type="tel" value={formData.phone_Office} onChange={handleChange} icon={FiPhone} />
+                                <CustomInput label="Personal Phone" name="phone_Personal" type="tel" value={formData.phone_Personal} onChange={handleChange} icon={FiPhone} />
+                                <CustomInput label="Nature of Job" name="job_nature" value={formData.job_nature} onChange={handleChange} icon={FiUser} />
+
+                                
+                            </div>
+
+                            {/* --- Footer Action --- */}
+                            <div className="bg-slate-50 p-6 border-t flex items-center justify-between">
                                 <div>
-                                    <label htmlFor="memberTypeSelect" className="block text-gray-700 mb-1 text-sm font-medium">Select Member Type *</label>
-                                    <select
-                                        id="memberTypeSelect"
-                                        value={memberType}
-                                        onChange={(e) => setMemberType(e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded-md bg-gray-50 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                        required
-                                    >
-                                        <option value="" disabled>-- Select Type --</option>
-                                        <option value="ohc">OHC Staff</option>
-                                        <option value="external">External Hospital</option>
-                                    </select>
-                                    {!memberType && <p className="text-xs text-red-500 mt-1">Please select a member type.</p>}
+                                    {submitStatus.message && (
+                                        <div className={`font-black text-sm uppercase flex items-center gap-2 ${submitStatus.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>
+                                            {submitStatus.type === 'success' ? <FiCheckCircle /> : <FiAlertCircle />} {submitStatus.message}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-
-                             {/* Show Member Type Info if updating */}
-                             {memberId && (
-                                 <div className="p-3 bg-blue-50 rounded border border-blue-200 text-sm">
-                                     <p className="font-medium text-gray-800">
-                                         Updating Member Type: <span className="font-semibold">{memberType === 'ohc' ? 'OHC Staff' : 'External Hospital'}</span>
-                                     </p>
-                                     <p className="text-xs text-gray-600">Email is read-only.</p>
-                                 </div>
-                             )}
-
-                            {/* Render form fields based on memberType */}
-                            {memberType === 'ohc' && renderOHCStaffFields()}
-                            {memberType === 'external' && renderExternalHospitalFields()}
-
-                            {/* Submit/Status Area (Only show if a type is selected/determined) */}
-                            {memberType && (
-                                <div className="flex flex-col sm:flex-row justify-between items-center pt-5 border-t border-gray-200 mt-4 gap-4">
-                                    {/* Submit Status Message */}
-                                    <div className="flex-grow text-center sm:text-left">
-                                        {submitStatus.message && (
-                                            <p className={`text-sm font-medium ${submitStatusColor}`}>
-                                                {submitStatus.message}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className={`bg-green-600 text-white px-6 py-2 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-1 transition-all duration-200 w-full sm:w-auto ${isSubmitting ? 'opacity-60 cursor-not-allowed' : ''}`}
-                                    >
-                                        {isSubmitting ? (
-                                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                        ) : null}
-                                        {isSubmitting ? 'Processing...' : (memberId ? 'Update Information' : 'Add New Member')}
-                                    </button>
-                                </div>
-                            )}
-                        </form>
-                    </motion.div>
-                )}
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !memberType}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-12 py-3 rounded-xl font-black shadow-lg shadow-green-200 transition-all flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isSubmitting ? <FiRefreshCw className="animate-spin" /> : <FiCheckCircle />}
+                                    {memberId ? 'UPDATE PROFILE' : 'ADD PROFILE'}
+                                </button>
+                            </div>
+                        </motion.form>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );

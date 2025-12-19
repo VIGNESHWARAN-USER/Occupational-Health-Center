@@ -14,6 +14,7 @@ urlpatterns = [
     path('reset_password/', views.reset_password, name='reset_password'),
     path('find_member_by_aadhar/', views.find_member_by_aadhar, name='find_member_by_aadhar'),
     path('members/add/', views.add_member, name='member-add'),
+    path('members/list/', views.list_members, name='member-list'),
     path('members/update/<int:member_id>/', views.update_member, name='update_member'),
     path('members/delete/<int:member_id>/', views.delete_member, name='delete_member'),
     path('addUsers/', views.create_default_members, name='addusers'),
@@ -163,3 +164,6 @@ urlpatterns = [
 # Add static files serving during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+
