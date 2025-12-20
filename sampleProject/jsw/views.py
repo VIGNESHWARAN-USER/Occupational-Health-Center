@@ -2236,6 +2236,8 @@ def add_consultation(request):
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo') # Primary lookup key
             accessLevel = data.get('accessLevel') 
+            param = data.get('param')  # e.g., "hold"   
+            print(param, data.get('isDoctorVisited'))
             entry_date = date.today()
 
             if not aadhar:
@@ -2309,7 +2311,11 @@ def add_consultation(request):
                     'aadhar': aadhar,
                     'entry_date': entry_date,
                     'emp_no': data.get('emp_no'),
-                    'status': Consultation.StatusChoices.PENDING if data.get('param') == "hold" else Consultation.StatusChoices.IN_PROGRESS,
+                    'status': (
+                        Consultation.StatusChoices.PENDING if param == "hold" 
+                        else Consultation.StatusChoices.INITIATE if data.get('isDoctorVisited') 
+                        else Consultation.StatusChoices.IN_PROGRESS
+                    ),
                     # Personnel
                     'submittedNurse': data.get("submittedDoctor"), # Assuming nurse uses same field name in frontend
                     'bookedDoctor': data.get("bookedDoctor"),
@@ -3784,6 +3790,7 @@ def add_prescription(request):
         entry_date = timezone.now().date()  # Get current date
 
         print("MRD No : ", mrd_no)
+        print("emp_no : ", emp_no)
 
         # --- Basic Validation ---
         if not mrd_no:
@@ -4641,6 +4648,7 @@ def get_brand_names(request):
     if request.method == 'GET':
         try:
             chemical_name = request.GET.get("chemical_name", "").strip()
+            print("Hi : ",chemical_name)
             medicine_form = request.GET.get("medicine_form", "").strip()
             query = request.GET.get("query", "").strip()
             suggestions = set()
