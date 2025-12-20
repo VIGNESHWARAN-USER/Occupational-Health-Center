@@ -122,7 +122,7 @@ const Sidebar = ({ redCount }) => {
       { name: "Admin Dashboard", to: "../admindashboard", icon: <FaUsers /> },
       { name: "Add Members", to: "../addmember", icon: <FaUsers /> },
     ],
-    pharmacist: [
+    pharma: [
       { name: "View / Issue Prescription", to: "../viewprescription", icon: <FaPills /> },
       { name: "Add Stock", to: "../addstock", icon: <MdInventory /> },
       { name: "Current Stock", to: "../currentstock", icon: <MdDashboard /> },
