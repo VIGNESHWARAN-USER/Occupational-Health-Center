@@ -33,7 +33,7 @@ const AddStock = () => {
   ];
 
   // Helper to check if the selected form is one of the special categories
-  const isSpecialCategory = ["Suture & Procedure Items", "Dressing Items"].includes(formData.medicine_form);
+  // const isSpecialCategory = ["Suture & Procedure Items", "Dressing Items"].includes(formData.medicine_form);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -110,7 +110,7 @@ const AddStock = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (isSpecialCategory) return;
+    // if (isSpecialCategory) return;
 
     if (name === "chemical_name") fetchBrandSuggestions(value, formData.medicine_form);
     if (name === "brand_name") {
@@ -134,24 +134,24 @@ const AddStock = () => {
     setMessage("");
 
     // --- Validation Logic ---
-    if (isSpecialCategory) {
-      if (!formData.medicine_form || !formData.brand_name || !formData.quantity || !formData.expiry_date) {
-        setMessage("Item Name, Quantity, and Expiry Date are required.");
-        return;
-      }
-    } else {
+    // if (isSpecialCategory) {
+    //   if (!formData.medicine_form || !formData.brand_name || !formData.quantity || !formData.expiry_date) {
+    //     setMessage("Item Name, Quantity, and Expiry Date are required.");
+    //     return;
+    //   }
+    // } else {
       if (!formData.medicine_form || !formData.brand_name || !formData.chemical_name || !formData.dose_volume || !formData.quantity || !formData.expiry_date) {
         setMessage("All fields are required.");
         return;
       }
-    }
+    // }
 
     // --- Prepare Payload ---
     // ✅ CHANGED: Send null instead of "N/A"
     const submissionData = {
       ...formData,
-      chemical_name: isSpecialCategory ? null : formData.chemical_name,
-      dose_volume: isSpecialCategory ? null : formData.dose_volume,
+      // chemical_name:  formData.chemical_name,
+      // dose_volume: isSpecialCategory ? null : formData.dose_volume,
     };
 
     try {
@@ -204,7 +204,7 @@ const AddStock = () => {
             </div>
 
             {/* CONDITIONAL RENDERING */}
-            {isSpecialCategory ? (
+            {/* {isSpecialCategory ? (
               <div className="relative">
                 <label className="block font-medium">Item Name</label>
                 <input
@@ -218,7 +218,7 @@ const AddStock = () => {
                 />
               </div>
             ) : (
-              <>
+              <> */}
                 <div className="relative">
                   <label className="block font-medium">Chemical Name</label>
                   <input
@@ -283,8 +283,8 @@ const AddStock = () => {
                     </ul>
                   )}
                 </div>
-              </>
-            )}
+              {/* </> */}
+            {/* )} */}
 
             <div>
               <label className="block font-medium">Quantity</label>

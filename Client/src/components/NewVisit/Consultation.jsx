@@ -273,6 +273,8 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
 
     const newMrds = previousVisits.map(visit => visit.mrd.trim()).filter(Boolean);
     const currentSessionHistory = [...new Set([...newMrds, mrdNo])];
+    const isDoctorVisited = data[0]?.consultation?.submittedDoctor === "" || data[0]?.consultation?.submittedDoctor === null;
+    
 
     setIsSubmitting(true);
     const consultationPayload = {
@@ -305,7 +307,8 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
       ambulance_details: shiftingRequired === 'yes' ? ambulanceDetails : '',
       reference: reference || false,
       follow_up_mrd_history: currentSessionHistory,
-      param,
+      param: param,
+      isDoctorVisited: isDoctorVisited,
     };
     
     try {
