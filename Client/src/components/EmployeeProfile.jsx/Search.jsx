@@ -12,7 +12,7 @@ const Search = () => {
   const navigate = useNavigate();
 
   // Check access level early
-  if (accessLevel !== "nurse" && accessLevel !== "doctor") {
+  if (accessLevel !== "nurse" && accessLevel !== "doctor" && accessLevel !== "hr") {
     return (
       <section className="bg-white h-full flex items-center dark:bg-gray-900">
         <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16 lg:px-6">

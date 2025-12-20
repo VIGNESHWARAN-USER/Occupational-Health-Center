@@ -11,7 +11,7 @@ import CurrentFootfalls from "./CuurentFootfalls";
 const AppointmentPage = () => {
   const [formVal, setformVal] = useState("");
   const navigate = useNavigate();  const accessLevel = localStorage.getItem('accessLevel');
-  if(accessLevel === "nurse")
+  if(accessLevel === "nurse" || accessLevel === "camp_nurse")
   {
     return (
       <div className="h-screen flex bg-[#8fcadd]">
@@ -21,7 +21,7 @@ const AppointmentPage = () => {
           <div className="flex justify-between mb-8 items-center">
             <h2 className="text-4xl font-bold text-gray-800">Appointments</h2>
             <div>
-              {["Appointments", "Pending Footfalls","Book Appointment", "Upload"].map(
+              {(accessLevel === "nurse" && ["Appointments", "Pending Footfalls","Book Appointment", "Upload"].map(
                 (btnText, index) => (
                   <button
                     key={index}
@@ -33,7 +33,20 @@ const AppointmentPage = () => {
                     {btnText}
                   </button>
                 )
-              )}
+              )) ||
+              (accessLevel === "camp_nurse" && ["Appointments", "Pending Footfalls"].map(
+                (btnText, index) => (
+                  <button
+                    key={index}
+                    className="px-4 py-2 rounded-lg bg-blue-500 me-4 text-white"
+                    onClick={() => {
+                      setformVal(btnText);
+                    }}
+                  >
+                    {btnText}
+                  </button>
+                )
+              ))}
             </div>
           </div>
   

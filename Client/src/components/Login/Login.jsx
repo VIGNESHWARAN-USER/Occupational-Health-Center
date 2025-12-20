@@ -63,7 +63,9 @@ const Login = () => {
               ? "../viewprescription"
               : response.data.accessLevel === "doctor"
               ? "../appointments"
-              : "../dashboard"
+              : response.data.accessLevel === "nurse" || response.data.accessLevel === "hr" || response.data.accessLevel === "camp_nurse"
+              ? "../dashboard"
+              : "../"
           );
         }
       } catch (error) {

@@ -467,7 +467,7 @@ def add_member(request):
             return JsonResponse({'message': f"Missing fields: {', '.join(missing)}"}, status=400)
 
         # 2. Uniqueness checks (Using new field names)
-        if Member.objects.filter(mail_id_Office__iexact=data['mail_id_Office']).exists():
+        if Member.objects.filter(mail_id_Office__iexact=data['mail_id_Office']).exists() and data['mail_id_Office'].strip() != "":
             return JsonResponse({'message': 'Office Email already exists.'}, status=409)
         
         if Member.objects.filter(aadhar=data['aadhar']).exists():
@@ -478,7 +478,8 @@ def add_member(request):
 
         # 3. Password Hashing
         # If no password provided, default to "role123"
-        raw_pw = data.get('password') or f"{data['role']}123"
+        raw_pw = f"{data['role'].split('_')[0]}123"
+        print("Raw password for hashing:", raw_pw)
         hashed_pw = bcrypt.hashpw(raw_pw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # 4. Build Record
@@ -2232,7 +2233,7 @@ def add_consultation(request):
         try:
             data = json.loads(request.body.decode('utf-8'))
             logger.debug(f"Received data for consultation: {json.dumps(data)[:500]}...")
-            
+            param = data.get('param')
             aadhar = data.get('aadhar')
             mrd_no = data.get('mrdNo') # Primary lookup key
             accessLevel = data.get('accessLevel') 
@@ -2309,7 +2310,11 @@ def add_consultation(request):
                     'aadhar': aadhar,
                     'entry_date': entry_date,
                     'emp_no': data.get('emp_no'),
-                    'status': Consultation.StatusChoices.PENDING if data.get('param') == "hold" else Consultation.StatusChoices.IN_PROGRESS,
+                    'status': (
+                        Consultation.StatusChoices.PENDING if param == "hold" 
+                        else Consultation.StatusChoices.INITIATE if data.get('isDoctorVisited') 
+                        else Consultation.StatusChoices.IN_PROGRESS
+                    ),
                     # Personnel
                     'submittedNurse': data.get("submittedDoctor"), # Assuming nurse uses same field name in frontend
                     'bookedDoctor': data.get("bookedDoctor"),
