@@ -62,7 +62,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     lotions: "Lotions",
     fluids: "Fluids",
     powder: "Powder",
-    sutureProcedureItems: "Suture Procedure Items",
+    sutureProcedureItems: "Suture & Procedure Items",
     dressingItems: "Dressing Items",
     others: "Other",
   };
@@ -79,8 +79,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   const accessLevel = localStorage.getItem("accessLevel");
   const isDoctor = accessLevel === "doctor";
   const isNurse = accessLevel === "nurse";
-  const isPharmacy = accessLevel === "pharma";
-  const isNurseWithOverride =
+  const isPharmacy = accessLevel === "pharmacy";
+  const isNurseWithOverride = "nurse"
     isNurse &&
     register &&
     typeof register === "string" &&
@@ -197,11 +197,11 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         initialData.sutureProcedureItems =
           existingPrescription.suture_procedure?.length > 0
             ? existingPrescription.suture_procedure.map(createItem)
-            : [getDefaultRow("sutureProcedureItems")];
+            : [getDefaultRow()];
         initialData.dressingItems =
           existingPrescription.dressing?.length > 0
             ? existingPrescription.dressing.map(createItem)
-            : [getDefaultRow("dressingItems")];
+            : [getDefaultRow()];
         initialData.others =
           existingPrescription.others?.length > 0
             ? existingPrescription.others.map(createItem)
@@ -262,14 +262,14 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   // NEW: Fetch suggestions for Chemical Name
   const fetchChemicalSuggestions = useCallback(
     debounce(async (partialName, medicineForm, type, index) => {
-      if (["sutureProcedureItems", "dressingItems"].includes(type)) {
-        setShowChemicalSuggestions((prev) => ({
-          ...prev,
-          [type]: { ...prev[type], [index]: false },
-        }));
-        return;
-      }
-      if (partialName?.length < 2 || !medicineForm) {
+      // if (["sutureProcedureItems", "dressingItems"].includes(type)) {
+      //   setShowChemicalSuggestions((prev) => ({
+      //     ...prev,
+      //     [type]: { ...prev[type], [index]: false },
+      //   }));
+      //   return;
+      // }
+      if (partialName?.length < 3 || !medicineForm) {
         setShowChemicalSuggestions((prev) => ({
           ...prev,
           [type]: { ...prev[type], [index]: false },
@@ -278,7 +278,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       }
       try {
         const response = await axios.get(
-          `http://localhost:8000/get-chemical-names/?name=${encodeURIComponent(
+          `http://localhost:8000/get-chemical-names/?chemical_Name=${encodeURIComponent(
             partialName
           )}&medicine_form=${encodeURIComponent(medicineForm)}`
         );
@@ -303,7 +303,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
 
   const fetchBrandSuggestions = useCallback(
     debounce(async (chemicalName, medicineForm, type, index) => {
-      if (chemicalName?.length < 3 || !medicineForm) {
+      if (chemicalName?.length < 3
+         || !medicineForm) {
         setShowBrandSuggestions((prev) => ({
           ...prev,
           [type]: { ...prev[type], [index]: false },
@@ -347,6 +348,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         "others",
         "injections",
         "respules",
+        "sutureProcedureItems",
+        "dressingItems",
         "fluids",
       ].includes(type);
       if (!requiresDoseFetch || !brandName || !chemicalName || !medicineForm) {
@@ -490,6 +493,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   };
 
   const handleInputChange = (e, type, index, field) => {
+    console.log(e.target.value,type);
     
     if (type === "nurseNotes") {
       setNurseNotes(e?.target?.value ?? "");
@@ -613,12 +617,12 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
               [type]: { ...prev[type], [index]: false },
             }));
           } else if (field === "brandName") {
-            if(type == "sutureProcedureItems"){fetchBrandSuggestions(
-              None,
-              medicineFormValue,
-              type,
-              index
-            );}
+            // if(type == "sutureProcedureItems"){fetchBrandSuggestions(
+            //   None,
+            //   medicineFormValue,
+            //   type,
+            //   index
+            // );}
             fetchBrandSuggestions(
               chemicalName,
               medicineFormValue,
@@ -746,6 +750,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         "others",
         "injections",
         "respules",
+        "sutureProcedureItems",
+        "dressingItems",
         "fluids",
       ];
 
@@ -881,6 +887,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       "others",
       "injections",
       "respules",
+      "sutureProcedureItems",
+      "dressingItems",
       "fluids",
     ].includes(type);
     if (!hasBrandSuggestions) return null;
@@ -920,6 +928,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       "others",
       "injections",
       "respules",
+      "sutureProcedureItems",
+      "dressingItems",
       "fluids",
     ].includes(type);
     if (!requiresDose) return null;
@@ -2472,7 +2482,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
             onChange={(e) => handleInputChange(e, "nurseNotes")}
             className="px-3 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-vertical min-h-[80px]"
             // UPDATED: allow nurse and pharmacy
-            disabled={!(accessLevel === "pharma" || accessLevel === "nurse")}
+            disabled={!(accessLevel === "pharmacy" || accessLevel === "nurse")}
           />
         </div>
       </section>

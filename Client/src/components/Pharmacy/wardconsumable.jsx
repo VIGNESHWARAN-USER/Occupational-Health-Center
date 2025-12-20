@@ -477,58 +477,7 @@ const WardConsumables = () => {
                 </select>
               </div>
 
-              {/* Conditional fields */}
-              {isSpecialForm() ? (
-                <>
-                  {/* Item Name (brand_name) */}
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-1">
-                      Item Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="brand_name"
-                      value={formData.brand_name}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 px-3 py-2 rounded-lg"
-                      required
-                      autoComplete="off"
-                    />
-                  </div>
-
-                  {/* Quantity */}
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-1">
-                      Quantity <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="quantity"
-                      value={formData.quantity}
-                      onChange={handleChange}
-                      min="1"
-                      className="w-full border border-gray-300 px-3 py-2 rounded-lg"
-                      required
-                    />
-                  </div>
-
-                  {/* Expiry Date */}
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-1">
-                      Expiry Date <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="month"
-                      name="expiry_date"
-                      value={formData.expiry_date}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 px-3 py-2 rounded-lg"
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
+              
                   {/* Chemical Name Input with Suggestions */}
                   <div className="relative">
                     <label className="block text-gray-700 font-medium mb-1">
@@ -643,8 +592,7 @@ const WardConsumables = () => {
                       className="w-full border border-gray-300 px-3 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
-                </>
-              )}
+               
 
               {/* Consumed Date Input (Read Only) */}
               <div>
