@@ -33,6 +33,7 @@ const roleOptions = [
     { value: 'pharmacy', label: 'Pharmacy' },
     { value: 'camp_nurse', label: 'Camp Nurse' },
     { value: 'camp_doctor', label: 'Camp Doctor' },
+    { value: 'hr', label: 'HR' },
 ];
 
 const customSelectStyles = {

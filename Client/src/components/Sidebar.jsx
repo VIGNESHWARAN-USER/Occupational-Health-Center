@@ -105,6 +105,12 @@ const Sidebar = ({ redCount }) => {
       { name: "Data Upload", to: "../dataupload", icon: <FaUpload /> },
       { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' },
     ],
+    camp_nurse: [
+      { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
+      { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
+      { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+    ],
     doctor: [
       { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
       { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
@@ -127,6 +133,10 @@ const Sidebar = ({ redCount }) => {
       { name: "Ward Consumable", to: "../wardconsumable", icon: <MdInventory /> },
       { name: "Ambulance Consumable", to: "../ambulanceconsumable", icon: <FaAmbulance /> },
     ],
+    hr: [
+      { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
+      { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> }
+      ],
   };
 
   const currentMenu = menus[accessLevel] || [];

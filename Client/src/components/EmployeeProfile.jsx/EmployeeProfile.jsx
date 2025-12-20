@@ -327,7 +327,7 @@ const EmployeeProfile = () => {
     // --- Loading / Access Checks ---
     if (isLoadingEmployee) return <div className="p-10">Loading...</div>;
     if (error && !employeeData) return <div className="p-10 text-red-600">{error}</div>;
-    if (!["nurse", "doctor"].includes(accessLevel)) return <div className="p-10 text-red-600">Access Denied</div>;
+    if (!["nurse", "doctor", "hr"].includes(accessLevel)) return <div className="p-10 text-red-600">Access Denied</div>;
 
     const cardDetails = [
         { id: 'health', label: 'Health Summary', Component: HealthSummaryContent },
