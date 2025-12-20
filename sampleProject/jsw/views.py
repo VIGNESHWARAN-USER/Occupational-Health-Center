@@ -4547,28 +4547,28 @@ def add_stock(request):
             dose_volume_input = data.get("dose_volume")
 
             # 2. Define Special Categories
-            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+            # special_categories = ["Suture & Procedure Items", "Dressing Items"]
 
             # 3. Conditional Logic
-            if medicine_form in special_categories:
-                # ✅ CASE 1: Sutures / Dressings
-                # Force Chemical and Dose to None (Database NULL)
-                chemical_name = None
-                dose_volume = None
+            # if medicine_form in special_categories:
+            #     # ✅ CASE 1: Sutures / Dressings
+            #     # Force Chemical and Dose to None (Database NULL)
+            #     chemical_name = None
+            #     dose_volume = None
 
-                # Validate only: Form, Item Name, Qty, Expiry
-                if not all([medicine_form, brand_name, quantity_str, expiry_date_str]):
-                    return JsonResponse({"error": "Item Name, Quantity, and Expiry Date are required."}, status=400)
+            #     # Validate only: Form, Item Name, Qty, Expiry
+            #     if not all([medicine_form, brand_name, quantity_str, expiry_date_str]):
+            #         return JsonResponse({"error": "Item Name, Quantity, and Expiry Date are required."}, status=400)
             
-            else:
-                # ✅ CASE 2: Standard Medicines (Tablets, Syrups, etc.)
-                # Use the inputs provided
-                chemical_name = chemical_name_input
-                dose_volume = dose_volume_input
+            # else:
+            #     # ✅ CASE 2: Standard Medicines (Tablets, Syrups, etc.)
+            #     # Use the inputs provided
+            chemical_name = chemical_name_input
+            dose_volume = dose_volume_input
 
-                # Validate ALL fields
-                if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str]):
-                    return JsonResponse({"error": "All fields (Form, Brand, Chemical, Dose, Qty, Expiry) are required"}, status=400)
+            # Validate ALL fields
+            if not all([medicine_form, brand_name, chemical_name, dose_volume, quantity_str, expiry_date_str]):
+                return JsonResponse({"error": "All fields (Form, Brand, Chemical, Dose, Qty, Expiry) are required"}, status=400)
 
             # 4. Parse Quantity and Date
             try:
@@ -6868,8 +6868,9 @@ def get_chemical_name_suggestions(request):
     """
     try:
         # 1. Get the query parameters from the frontend request
-        name_query = request.GET.get('name', '').strip()
+        name_query = request.GET.get('chemical_Name', '').strip()
         form_query = request.GET.get('medicine_form', '').strip() # e.g., 'Tablet', 'Syrup'
+        print(name_query, form_query)  # Debugging line to check received queries
 
         # If the user hasn't typed anything, return an empty list
         if not name_query:
@@ -6885,6 +6886,8 @@ def get_chemical_name_suggestions(request):
             # specified type (e.g., only 'Tablet' or only 'Syrup').
             # '__iexact' is a case-insensitive exact match.
             queryset = queryset.filter(medicine_form__iexact=form_query)
+
+        print("Filtered Queryset:", queryset)  # Debugging line to see the actual SQL query
         
         # 4. Get the final, clean list of suggestions
         suggestions = list(

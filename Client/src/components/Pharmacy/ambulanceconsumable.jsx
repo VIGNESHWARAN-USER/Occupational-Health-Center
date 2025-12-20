@@ -399,77 +399,9 @@ const handleSubmit = async (e) => {
 
               {/* Determine form type */}
               {(() => {
-                const isSimpleForm =
-                  formData.medicine_form === "Suture & Procedure Items" ||
-                  formData.medicine_form === "Dressing Items";
+                
 
-                if (isSimpleForm) {
-                  return (
-                    <>
-                      {/* Item Name */}
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-1">
-                          Item Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="brand_name"
-                          placeholder="Enter Item Name"
-                          value={formData.brand_name}
-                          onChange={handleChange}
-                          className="w-full border px-3 py-2 rounded-lg"
-                          required
-                        />
-                      </div>
-
-                      {/* Quantity */}
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-1">
-                          Quantity <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="quantity"
-                          value={formData.quantity}
-                          onChange={handleChange}
-                          min="1"
-                          className="w-full border px-3 py-2 rounded-lg"
-                          required
-                        />
-                      </div>
-
-                      {/* Expiry Date */}
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-1">
-                          Expiry Date
-                        </label>
-                        <input
-                          type="month"
-                          name="expiry_date"
-                          value={formData.expiry_date}
-                          onChange={handleChange}
-                          className="w-full border px-3 py-2 rounded-lg"
-                        />
-                      </div>
-
-                      {/* Consumed Date */}
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-1">
-                          Consumed Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          name="consumed_date"
-                          value={formData.consumed_date}
-                          readOnly
-                          className="w-full border px-3 py-2 bg-gray-100 rounded-lg"
-                          required
-                        />
-                      </div>
-                    </>
-                  );
-                }
-
+  
                 // 🔵 FULL FORM FOR OTHER MEDICINE TYPES
                 return (
                   <>

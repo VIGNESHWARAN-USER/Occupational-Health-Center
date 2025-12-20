@@ -350,52 +350,7 @@ const DiscardedMedicines = () => {
     </select>
   </div>
 
-  {/* Determine if this is a special category */}
-  {["Suture & Procedure Items", "Dressing Items"].includes(formData.medicine_form) ? (
-    <>
-      {/* Only show Brand/Item Name, Quantity, Expiry, Reason */}
-      <div>
-        <label className="block font-medium">Item Name</label>
-        <input
-          type="text"
-          name="brand_name"
-          value={formData.brand_name}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Quantity</label>
-        <input
-          type="number"
-          name="quantity"
-          value={formData.quantity}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Expiry Date</label>
-        <input
-          type="month"
-          name="expiry_date"
-          value={formData.expiry_date}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
-      </div>
-      <div>
-        <label className="block font-medium">Reason</label>
-        <textarea
-          name="reason"
-          value={formData.reason}
-          onChange={handleChange}
-          className="w-full border px-3 py-2 rounded-lg"
-        />
-      </div>
-    </>
-  ) : (
-    <>
+  
       {/* Regular medicine fields */}
       <div>
         <label className="block font-medium">Chemical Name</label>
@@ -500,8 +455,7 @@ const DiscardedMedicines = () => {
           className="w-full border px-3 py-2 rounded-lg"
         />
       </div>
-    </>
-  )}
+    
 
   <button type="submit" className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg">
     Add Discarded Medicine
