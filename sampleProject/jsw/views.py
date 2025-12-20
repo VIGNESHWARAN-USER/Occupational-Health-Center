@@ -7641,7 +7641,7 @@ class MedicalDataUploadView(View):
                             year=year_val,
                             batch=batch_val,
                             hospitalName=hospital_val 
-                        ).first()
+                        ).last()
 
                         if not employee:
                             continue
@@ -7655,6 +7655,14 @@ class MedicalDataUploadView(View):
                             errors.append(f"{row_identifier}: Employee found but MRD Number is missing in database.")
                             error_count += 1
                             continue
+                        assessment_data = FitnessAssessment.objects.filter(
+                            mrdNo = current_mrd)
+                        if not assessment_data.exists():
+                            errors.append(f"{row_identifier}: No FitnessAssessment record found for MRD Number {current_mrd}.")
+                            error_count += 1
+                            continue
+                        assessment_data.status = FitnessAssessment.StatusChoices.COMPLETED
+                        assessment_data.save()
 
                     except Exception as e:
                         errors.append(f"{row_identifier}: Database query error: {e}")
