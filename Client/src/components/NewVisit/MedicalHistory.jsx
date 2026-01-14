@@ -544,14 +544,14 @@
             <select id="diet-select" style={{ ...selectStyle, width: "auto", minWidth: "150px" }} name="diet"
               onChange={handlePersonalHistoryChange} value={personalHistory?.diet || ""} disabled={!isEditMode}>
               <option value="">Select Diet</option>
-              <option value="mixed">Mixed</option>
-              <option value="veg">Pure Veg</option>
-              <option value="egg">Eggetarian</option>
+              <option value="mixed diet">Mixed</option>
+              <option value="pure veg">Pure Veg</option>
+              <option value="eggetarian">Eggetarian</option>
             </select>
           </div>
         </div>
 
-        // {/* --- PATIENT'S MEDICAL HISTORY TABLE (INTEGRATED) --- */}
+         {/* --- PATIENT'S MEDICAL HISTORY TABLE (INTEGRATED) --- */}
         <div style={cardStyle}>
           <div style={headerStyle} onClick={toggleFormVisibility}>
             <h2 style={titleStyle}>Medical History</h2>

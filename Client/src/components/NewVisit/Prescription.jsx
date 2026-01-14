@@ -6,15 +6,13 @@ import { debounce } from "lodash";
 import jsPDF from "jspdf";
 
 const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }) => {
-  console.log("Condition prop:", condition);
-  console.log("Register prop:", register);
-  console.log("MRD No prop:", mrdNo);
-  console.log("Data prop:", data);
-
+  
+  
+  console.log(data)
   let aadhar = data?.[0]?.aadhar || "";
   const emp_no = data?.[0]?.emp_no;
-  const existingPrescription = data?.[0]; // Assuming 'data' prop might contain an existing prescription
-
+  const existingPrescription = data?.[0]?.prescription || data?.[0];  // Assuming 'data' prop might contain an existing prescription
+  console.log(existingPrescription, condition)
   // State for different medicine types
   const [tablets, setTablets] = useState([]);
   const [injections, setInjections] = useState([]);
@@ -50,7 +48,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   const [doseManuallyEntered, setDoseManuallyEntered] = useState({});
   const [qtyManuallyEntered, setQtyManuallyEntered] = useState({});
   const [expandedSections, setExpandedSections] = useState([]);
-
+  
   // Mappings and constants
   const medicineForms = {
     tablets: "Tablet",
@@ -62,8 +60,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     lotions: "Lotions",
     fluids: "Fluids",
     powder: "Powder",
-    sutureProcedureItems: "Suture & Procedure Items",
-    dressingItems: "Dressing Items",
+    sutureProcedureItems: "SutureAndProcedureItems",
+    dressingItems: "DressingItems",
     others: "Other",
   };
 
@@ -79,13 +77,12 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   const accessLevel = localStorage.getItem("accessLevel");
   const isDoctor = accessLevel === "doctor";
   const isNurse = accessLevel === "nurse";
-  const isPharmacy = accessLevel === "pharmacy";
+  const isPharmacy = accessLevel === "pharmacist";
   const isNurseWithOverride = "nurse"
     isNurse &&
     register &&
     typeof register === "string" &&
     register.toUpperCase().startsWith("OVER");
-  console.log("Is Nurse with Override:", isNurseWithOverride);
 
   // Default row structure
   const getDefaultRow = useCallback(
@@ -102,6 +99,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       issuedOut: "",
       prescriptionOut: "",
       expiryDate: "",
+      indicator: ""
     }),
     []
   );
@@ -126,7 +124,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         consulted_doctor: "",
       };
 
-      if (condition && existingPrescription) {
+      if (existingPrescription) {
         const mapTiming = (timing) => {
           if (!timing) return [];
           if (Array.isArray(timing))
@@ -156,6 +154,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
           issuedIn: item.issuedIn || "",
           issuedOut: item.issuedOut || "",
           prescriptionOut: item.prescriptionOut || "",
+          indicator: '*'
         });
 
         initialData.tablets =
@@ -232,7 +231,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
 
   // Function to add a new row
   const addRow = (type) => {
-    if (!isDoctor && !isNurseWithOverride) return;
+    if (!isDoctor && !isNurseWithOverride || isPharmacy) return;
     const newRow = getDefaultRow(type);
     const setState = (setter) => setter((prev) => [...prev, newRow]);
     const typeMap = {
@@ -493,7 +492,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   };
 
   const handleInputChange = (e, type, index, field) => {
-    console.log(e.target.value,type);
+    
     
     if (type === "nurseNotes") {
       setNurseNotes(e?.target?.value ?? "");
@@ -676,7 +675,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   };
 
   const removeRow = (type, index) => {
-    if (!isDoctor && !isNurseWithOverride) return;
+    if (!isDoctor && !isNurseWithOverride ) return;
     const setState = (setter) =>
       setter((prev) =>
         prev.length <= 1
@@ -804,6 +803,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
   };
 
   const handleDoseSuggestionClick = (suggestion, type, index) => {
+   
     if (!isDoctor && !isNurseWithOverride) return;
     setDoseManuallyEntered((prev) => ({
       ...prev,
@@ -1036,8 +1036,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     ].includes(type);
 
     const isFieldDisabledForCurrentUser = isSutureDressingOthers
-      ? !(isNurse || isDoctor)
-      : !isDoctor && !isNurseWithOverride;
+      ? !(isNurse || isDoctor  )
+      : !isDoctor && isNurse || isPharmacy;
 
     const isPharmacyFieldDisabledForCurrentUser = !isPharmacy;
     const fieldDisabledClass = isFieldDisabledForCurrentUser
@@ -1609,7 +1609,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
 
   const handleSubmit = async (mrdNo) => {
     try {
-      console.log("mrd", mrdNo);
+      
       if (mrdNo === "") {
         alert("Please submit the entries first to get MRD Number");
         return;
@@ -1648,7 +1648,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         issued_by: localStorage.getItem("username") || "Unknown",
         issued_status: condition ? 1 : 0,
       };
-      console.log(prescriptionData);
+      
       const formatTimingForSubmit = (timingArray) =>
         Array.isArray(timingArray)
           ? timingArray.map((t) => t.value)
@@ -1722,8 +1722,8 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
       Lotions: lotions,
       Fluids: fluids,
       Powders: powder,
-      "Suture & Procedure Items": sutureProcedureItems,
-      "Dressing Items": dressingItems,
+      "SutureAndProcedureItems": sutureProcedureItems,
+      "DressingItems": dressingItems,
       Others: others,
     };
     const filteredSections = {};
@@ -2048,8 +2048,11 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
     title,
     color,
     children,
-    addItemButtonText
+    addItemButtonText,
+    indicator
+    
   ) => {
+    
     const isExpanded = isSectionExpanded(type);
     const headerColor = color || "gray";
     const buttonColor = "blue";
@@ -2240,7 +2243,9 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
           aria-expanded={isExpanded}
           aria-controls={`section-content-${type}`}
         >
-          {title}
+          
+          {title} {indicator}
+          
           <span
             className={`text-sm text-gray-500 transition-transform duration-200 transform ${
               isExpanded ? "rotate-180" : "rotate-0"
@@ -2316,7 +2321,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         )}
       </h1>
 
-      {isNurseWithOverride && (
+      {/* {isNurseWithOverride && (
         <section className="border border-gray-200 rounded-lg shadow-sm mb-6 overflow-hidden bg-white">
           <h2 className="text-lg font-semibold p-3 bg-yellow-50 border-b border-gray-200 text-yellow-700">
             Consultation Details
@@ -2338,7 +2343,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
                 onChange={(e) => handleInputChange(e, "consultedDoctor")}
                 className="px-3 py-1.5 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 text-sm bg-white focus:ring-blue-500"
                 autoComplete="off"
-                disabled={!isNurseWithOverride}
+                disabled={(accessLevel === "pharmacist" )}
               />
               {showDoctorSuggestions && doctorSuggestions.length > 0 && (
                 <div className="absolute z-30 bg-white border border-gray-300 rounded-md shadow-lg mt-1 w-full max-h-48 overflow-y-auto">
@@ -2359,7 +2364,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
       {sectionOrder.map((type) => {
         const stateMap = {
@@ -2377,7 +2382,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
           others,
         };
         const items = stateMap[type] || [];
-        console.log("Rendering section:", data);
         let title, color, addItemButtonText;
         switch (type) {
           case "tablets":
@@ -2426,12 +2430,12 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
             addItemButtonText = "Add Powder";
             break;
           case "sutureProcedureItems":
-            title = "Suture & Procedure Items";
+            title = "SutureAndProcedureItems";
             color = "gray";
             addItemButtonText = "Add Suture/Procedure Item";
             break;
           case "dressingItems":
-            title = "Dressing Items";
+            title = "DressingItems";
             color = "gray";
             addItemButtonText = "Add Dressing Item";
             break;
@@ -2448,7 +2452,9 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
             key={`${type}-${index}`}
             className="grid gap-x-4 mb-3 items-start px-1"
             style={{ gridTemplateColumns: gridTemplateColumns[type] }}
+            
           >
+            
             {renderInputFields(type, items, index)}
             <div className="flex justify-center items-center h-full pt-1">
               {isDoctor || isNurseWithOverride ? (
@@ -2456,7 +2462,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
                   onClick={removeRow}
                   type={type}
                   index={index}
-                  disabled={!isDoctor && !isNurseWithOverride}
+                  disabled={!isDoctor && !isNurseWithOverride || isPharmacy}
                 />
               ) : (
                 <div className="w-8 h-8"></div>
@@ -2466,7 +2472,7 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
         ));
         return (
           <React.Fragment key={type}>
-            {renderSection(type, title, color, children, addItemButtonText)}
+            {renderSection(type, title, color, children, addItemButtonText, items?.[0]?.indicator)}
           </React.Fragment>
         );
       })}
@@ -2481,8 +2487,6 @@ const Prescription = ({ data, onPrescriptionUpdate, condition, register, mrdNo }
             value={nurseNotes}
             onChange={(e) => handleInputChange(e, "nurseNotes")}
             className="px-3 py-2 w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 resize-vertical min-h-[80px]"
-            // UPDATED: allow nurse and pharmacy
-            disabled={!(accessLevel === "pharmacy" || accessLevel === "nurse")}
           />
         </div>
       </section>

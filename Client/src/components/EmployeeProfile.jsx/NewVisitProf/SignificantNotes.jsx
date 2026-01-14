@@ -85,7 +85,7 @@ const SignificantNotesDetails = ({ data }) => {
         { label: "Incident Type", key: "incident_type" },
         { label: "Incident", key: "incident" },
         { label: "Illness Type", key: "illness_type" },
-        { label: "Entry Date", key: "entry_date" }, // Add date for context
+        { label: "Entry Date", key: "entry_date" }, 
     ];
 
     return (

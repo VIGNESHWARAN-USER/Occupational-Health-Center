@@ -5,52 +5,44 @@ Django settings for sampleProject project.
 import os
 from pathlib import Path
 
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Correctly configure MEDIA_ROOT and MEDIA_URL
+# MEDIA settings
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
-# Static files (CSS, JavaScript, Images)
+# STATIC settings
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Add this line
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# SECURITY
 SECRET_KEY = 'django-insecure-2an=+9=g@e!k!x@al6ve@@g@fuxv&vgv%evj%6jv^l6421xojc'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
 ALLOWED_HOSTS = [
     '*',
     'occupational-health-center-1.onrender.com',
     'localhost',
-    '127.0.0.1'
+    '10.15.4.22',
+    '127.0.0.1',
     'ohc.jsw.in'
 ]
 
-# CORS settings - allow all origins for development
-# Be SURE to restrict this in a production environment
+
+# CORS
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-]
+CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.office365.com'
 EMAIL_PORT = 587
+EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = 'jsw.salem@jsw.in'          # Your Gmail
-EMAIL_HOST_PASSWORD = 'pgtrkschxwqmfgtd'        # App Password, not your actual Gmail password
+EMAIL_HOST_USER = 'jsw.salem@jsw.in'
+EMAIL_HOST_PASSWORD = 'pgtrkschxwqmfgtd'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
 # Application definition
 INSTALLED_APPS = [
     'corsheaders',
@@ -59,15 +51,15 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',  # Required for serving static files
+    'django.contrib.staticfiles',
     'jsw',
     'sslserver',
     'django_extensions'
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Place as high as possible
-    'django.middleware.common.CommonMiddleware', # required for static files serving
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -78,6 +70,7 @@ MIDDLEWARE = [
     'jsw.middleware.SimpleMiddleware',
 ]
 
+# CHANGED FROM OHC.urls
 ROOT_URLCONF = 'sampleProject.urls'
 
 TEMPLATES = [
@@ -96,14 +89,9 @@ TEMPLATES = [
     },
 ]
 
+# CHANGED FROM OHC.wsgi.application
 WSGI_APPLICATION = 'sampleProject.wsgi.application'
 
-
-
-
-import pyodbc
-
-print(pyodbc.drivers())
 
 DATABASES = {
     'default': {
@@ -117,29 +105,12 @@ DATABASES = {
     }
 }
 
-
-
-
-
-
-
-
-
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # Internationalization

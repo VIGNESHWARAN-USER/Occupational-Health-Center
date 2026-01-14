@@ -63,14 +63,14 @@ const AdminDashboard = () => {
             admin: "bg-purple-100 text-purple-700 border-purple-200",
             doctor: "bg-red-100 text-red-700 border-red-200",
             nurse: "bg-blue-100 text-blue-700 border-blue-200",
-            pharmacy: "bg-green-100 text-green-700 border-green-200",
+            pharmacist: "bg-green-100 text-green-700 border-green-200",
             registration: "bg-amber-100 text-amber-700 border-amber-200"
         };
         return roles[role.toLowerCase()] || "bg-gray-100 text-gray-700 border-gray-200";
     };
 
     return (
-        <div className="flex h-screen bg-slate-50">
+        <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
             
             <div className="flex-1 flex flex-col p-4 md:p-10 overflow-hidden">
@@ -103,8 +103,8 @@ const AdminDashboard = () => {
                             className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
                         />
                     </div>
-                    <div className="bg-blue-600 rounded-xl p-4 text-white shadow-lg shadow-blue-200 flex flex-col justify-center">
-                        <span className="text-xs font-bold uppercase tracking-wider opacity-80">Total Members</span>
+                    <div className="bg-blue-600 rounded-xl p-4 text-white shadow-lg shadow-blue-200 flex items-center justify-evenly">
+                        <span className="text-m font-bold uppercase tracking-wider opacity-80">Total Members</span>
                         <span className="text-2xl font-black">{filteredMembers.length}</span>
                     </div>
                 </div>

@@ -253,7 +253,7 @@ const MockDrills = () => {
 
     if (accessLevel === "nurse" || accessLevel === "doctor") {
         return (
-            <div className="h-screen flex bg-[#8fcadd]">
+            <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
                 <Sidebar />
                 <div className="w-4/5 h-screen overflow-auto p-8">
 

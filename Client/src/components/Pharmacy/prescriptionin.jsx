@@ -381,7 +381,7 @@ const PrescriptionIn = () => {
 
   // --- Render Logic ---
   return (
-    <div className="h-screen flex">
+    <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <main className="flex-1 overflow-x-hidden overflow-y-auto  p-4 md:p-6">

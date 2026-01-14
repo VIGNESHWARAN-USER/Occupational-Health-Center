@@ -14,7 +14,7 @@ const AppointmentPage = () => {
   if(accessLevel === "nurse" || accessLevel === "camp_nurse")
   {
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
+      <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
         <Sidebar />
   
         <div className="w-4/5 p-8 overflow-y-auto">
@@ -78,7 +78,7 @@ const AppointmentPage = () => {
   else if(accessLevel === "doctor")
   {
     return (
-      <div className="flex h-screen bg-[#8fcadd] overflow-auto">
+      <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
         <Sidebar />
   
         <div className="w-4/5 p-6 h-screen overflow-auto">

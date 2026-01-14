@@ -151,7 +151,7 @@ const Search = () => {
                 ) : (
                   <FaUserCircle className="w-24 h-24 text-gray-300 bg-white rounded-full" />
                 )}
-                {emp.consultation?.special_cases === "Yes" && (<span className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white bg-blue-500 `}></span>)}
+                {(emp.consultation?.special_cases === "Yes" || emp.fitnessassessment?.special_cases === "Yes") && (<span className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white bg-red-500 `}></span>)}
               </div>
               <h3 className="mt-3 text-lg font-bold text-gray-800 text-center">{emp.name || 'Unknown'}</h3>
               <span className="text-xs font-semibold px-3 py-1 bg-blue-100 text-blue-700 rounded-full mt-1 uppercase tracking-wide">

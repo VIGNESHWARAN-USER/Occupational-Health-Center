@@ -126,11 +126,12 @@ function Viewprescription() {
                         brandName: item.brandName,
                         action: 'decrease' // Specify that we want to decrease the stock
                     });
-
+                    
+                    console.log("THis is ",response.data.success)
                     if (!response.data.success) {
                         throw new Error(response.data.message || 'Failed to update stock');
                     }
-
+                  
                     console.log(`Successfully updated stock for ${item.chemicalName}`);
                     return response.data;
                 } catch (error) {
@@ -282,7 +283,7 @@ function Viewprescription() {
     };
 
     return (
-        <div className="flex h-screen">
+        <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
             <div className="flex-1 p-4 overflow-y-auto">
                 <h1 className="text-2xl font-semibold mb-4 text-center">View Prescriptions</h1>

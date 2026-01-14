@@ -43,7 +43,8 @@ const allFitnessTestsConfig = [
 ];
 
 const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
-    console.log("FitnessPage props:", { reference, appointment });
+    console.log(data?.[0]?.fitnessassessment?.mrdNo, mrdNo);
+    console.log(data)
     const [showAllTests, setShowAllTests] = useState(false); // For toggling fitness tests visibility
     const allOptions = ["Height", "Gas Line", "Confined Space", "SCBA Rescue", "Fire Rescue", "Lone Work", "Fisher Man", "Snake Catch", "Pest Control", "Others"];
     const statutoryOptions = ["Select Form", "Form 17", "Form 38", "Form 39", "Form 40", "Form 27"];
@@ -393,7 +394,8 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
         const url = FITNESS_ASSESSMENT_URL;
         const employer = data?.[0]?.type || '';
         const submittedDoctor = localStorage.getItem("userData") || '';
-        const isDoctorVisited = data[0]?.fitnessassessment?.submittedDoctor === "" || data[0]?.fitnessassessment?.submittedDoctor === null;
+        const isDoctorVisited = existingAssessment?.submittedDoctor === "" || existingAssessment?.submittedDoctor === null || existingAssessment?.submittedDoctor === undefined || existingAssessment.medNo !== mrdNo;
+        console.log(isDoctorVisited)
         const payload = {
             ...fitnessFormData,
             mrdNo: mrdNo,
@@ -956,8 +958,16 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
             )}
             {data &&(data.length > 0) && (
             <div className="bg-gray-50 min-h-screen p-4 md:p-6 relative">
-                <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-gray-800 border-b pb-2">Fitness Assessment</h1>
-
+                
+                <div className="mb-6 flex justify-between">
+                    <h1 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-gray-800 border-b">Fitness Assessment</h1>
+                    <button
+                        onClick={toggleTests}
+                        className="bg-blue-500 text-white px-4 py-2 mb-6 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 text-sm"
+                    >
+                        {showAllTests ? 'Hide All Tests' : 'Show All Tests'}
+                    </button>
+                </div>
                 { register === "Fitness After Medical Leave" && (
                     <MedicalCertificateForm 
                         mrdNo={mrdNo} 
@@ -1019,14 +1029,7 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
                     </div>
                 )}
 
-                <div className="mb-6">
-                    <button
-                        onClick={toggleTests}
-                        className="bg-blue-500 mt-10 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 text-sm"
-                    >
-                        {showAllTests ? 'Hide All Tests' : 'Show All Tests'}
-                    </button>
-                </div>
+                
 
                 {showAllTests && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
@@ -1053,12 +1056,12 @@ const FitnessPage = ({ data, mrdNo, register, reference, appointment }) => {
                 )}
 
                 {/* Eye Examination Section */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 md:gap-6 mb-6 md:mb-8">
                     <div className="bg-white p-4 rounded-lg shadow border border-gray-200">
                         <label htmlFor="eyeExamFitStatus" className="block text-base md:text-lg font-semibold mb-3 text-gray-700">Eye Exam Fitness Status by OPHTHALMOLOGIST</label>
                         <select id="eyeExamFitStatus" name="eyeExamFitStatus" value={eyeExamFitStatus} onChange={handleEyeExamFitStatusChange}
                             disabled={!data?.[0]?.aadhar || isSubmitting}
-                            className={selectClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            className={selectClass + ` ${!data?.[0]?.aadhar || isSubmitting ? 'bg-gray-100 cursor-not-allowed' : 'px-4 py-2 w-full bg-blue-100 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500'}`}
                             title={!data?.[0]?.emp_no ? "Select an employee first" : ""}>
                             <option value="">-- Select Status --</option>
                             {eyeExamFitStatusOptions.map(option => (<option key={option} value={option}>{option}</option>))}

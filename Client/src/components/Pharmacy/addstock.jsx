@@ -29,11 +29,11 @@ const AddStock = () => {
   const medicineOptions = [
     "Tablet", "Syrup", "Injection", "Lotions", "Respules", 
     "Powder", "Creams", "Drops", "Fluids", "Other", 
-    "Suture & Procedure Items", "Dressing Items"
+    "SutureAndProcedureItems", "DressingItems"
   ];
 
   // Helper to check if the selected form is one of the special categories
-  // const isSpecialCategory = ["Suture & Procedure Items", "Dressing Items"].includes(formData.medicine_form);
+  // const isSpecialCategory = ["SutureAndProcedureItems", "DressingItems"].includes(formData.medicine_form);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -174,7 +174,7 @@ const AddStock = () => {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
       <div className="flex-1 p-6 overflow-auto">
         <div className="flex justify-end">

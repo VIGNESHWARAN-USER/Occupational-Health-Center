@@ -1722,7 +1722,7 @@ class PharmacyStock(BaseModel):
         LOTIONS = "Lotions", "Lotions"
         POWDER = "Powder", "Powder"
         RESPULES = "Respules", "Respules"
-        SUTURE_PROCEDURE = "Suture & Procedure Items", "Suture & Procedure Items"
+        SUTURE_PROCEDURE = "SutureAndProcedureItems", "SutureAndProcedureItems"
         DRESSING_ITEMS = "Dressing Items", "Dressing Items"
 
     medicine_form = models.CharField(max_length=50, choices=MedicineFormChoices.choices)
@@ -1823,7 +1823,7 @@ class PharmacyMedicine(BaseModel):
         ("Fluids", "Fluids"), 
         ("Other", "Other"),
         # ✅ Added new categories to match PharmacyStock
-        ("Suture & Procedure Items", "Suture & Procedure Items"),
+        ("SutureAndProcedureItems", "SutureAndProcedureItems"),
         ("Dressing Items", "Dressing Items"),
     ]
     medicine_form = models.CharField(max_length=50, choices=MEDICINE_FORMS)
@@ -2199,7 +2199,7 @@ class SignificantNotes(BaseModel):
 class PharmacyStockHistory(models.Model):
     entry_date = models.DateField(default=timezone.now)
     
-    # ✅ Changed: Increased max_length from 20 to 50 (Crucial for "Suture & Procedure Items")
+    # ✅ Changed: Increased max_length from 20 to 50 (Crucial for "SutureAndProcedureItems")
     medicine_form = models.CharField(max_length=50) 
     
     brand_name = models.CharField(max_length=255)

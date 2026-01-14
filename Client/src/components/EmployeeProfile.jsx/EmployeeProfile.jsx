@@ -323,12 +323,12 @@ const EmployeeProfile = () => {
         if (val !== "Transferred") setTransferredToDetail("");
         if (val !== "Other") setOtherReasonDetail("");
     };
-
+    
     // --- Loading / Access Checks ---
     if (isLoadingEmployee) return <div className="p-10">Loading...</div>;
     if (error && !employeeData) return <div className="p-10 text-red-600">{error}</div>;
     if (!["nurse", "doctor", "hr"].includes(accessLevel)) return <div className="p-10 text-red-600">Access Denied</div>;
-
+    
     const cardDetails = [
         { id: 'health', label: 'Health Summary', Component: HealthSummaryContent },
         { id: 'remarks', label: 'Remarks/Defaults', Component: RemarksDefaultsContent },
@@ -352,7 +352,8 @@ const EmployeeProfile = () => {
         else if(lower === 'terminated') statusBgColor = 'bg-red-600';
         else if(lower === 'transferred') statusBgColor = 'bg-blue-500';
     }
-
+    
+    
     return (
         <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
@@ -362,10 +363,13 @@ const EmployeeProfile = () => {
                      <div className="flex flex-col items-center text-center md:w-1/5 space-y-2 mb-4 md:mb-0">
                          {employeeData.profilepic_url ? (
                              <img src={employeeData.profilepic_url} alt="Profile" className="w-32 h-32 rounded-full object-cover border-2 border-blue-200" />
-                         ) : <FaUserCircle className="text-blue-600 text-7xl w-32 h-32" />}
+                         ) : <FaUserCircle className="text-blue-600 text-7xl w-32 h-32" />
+                         
+                         }
+                         {(employeeData.consultation?.special_cases === "Yes" || employeeData.fitnessassessment?.special_cases === "Yes") && (<span className={`relative bottom-8 left-10 w-5 h-5 rounded-full border-2 border-white bg-red-500 `}></span>)}
                          <span className={`px-3 py-1 rounded text-xs font-bold text-white ${statusBgColor}`}>{statusText}</span>
                          <h2 className="text-xl font-bold text-blue-800">{employeeData.name}</h2>
-                         <p className="text-sm text-gray-500">{employeeData.emp_no || employeeData.aadhar}</p>
+                         <p className="text-sm text-gray-500">{employeeData.emp_no || employeeData.aadhar}</p>  
                      </div>
 
                     {/* Details */}
@@ -377,7 +381,7 @@ const EmployeeProfile = () => {
                             <p className="p-2 bg-gray-50 rounded border-l-4 border-blue-500"><b>Employer:</b> {employeeData.employer}</p>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm w-full mt-6">
-                            {cardDetails.map((card) => (
+                            {accessLevel !== "hr" && cardDetails.map((card) => (
                                 <button key={card.id} onClick={() => handleButtonClick(card.id)} className="py-2 px-4 rounded bg-blue-500 text-white hover:bg-blue-600 font-bold">
                                     {card.label}
                                 </button>

@@ -5,7 +5,6 @@ import fs from 'fs';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: 'localhost',
     port: 5173,
   },
   build: {

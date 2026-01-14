@@ -30,7 +30,7 @@ const initialFormState = {
 const roleOptions = [
     { value: 'nurse', label: 'Nurse' },
     { value: 'doctor', label: 'Doctor' },
-    { value: 'pharmacy', label: 'Pharmacy' },
+    { value: 'pharmacist', label: 'Pharmacist' },
     { value: 'camp_nurse', label: 'Camp Nurse' },
     { value: 'camp_doctor', label: 'Camp Doctor' },
     { value: 'hr', label: 'HR' },
@@ -165,7 +165,7 @@ function AddMember() {
     if (accessLevel !== "admin") return <div className="p-20 text-center font-bold text-red-600">Admin Access Required</div>;
 
     return (
-        <div className="flex h-screen bg-slate-100">
+        <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
             <div className="flex-1 flex flex-col p-4 md:p-8 overflow-hidden">
                 <div className="mb-6 flex justify-between items-center">

@@ -739,7 +739,7 @@ const NewVisit = () => {
 
   if (accessLevel === "nurse") {
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
+      <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
         <Sidebar />
         <div className="w-4/5 p-8 overflow-y-auto">
           <h2 className="text-4xl font-bold mb-8 text-gray-800">New Visit</h2>
@@ -950,7 +950,7 @@ const NewVisit = () => {
     ].filter(Boolean);
 
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
+      <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
         <Sidebar />
         <div className="w-4/5 p-8 overflow-y-auto">
           <h2 className="text-4xl font-bold mb-8 text-gray-800">New Visit</h2>

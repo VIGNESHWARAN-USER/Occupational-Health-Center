@@ -273,7 +273,7 @@ const Consultation = ({ data, type, mrdNo, register, reference, appointment }) =
 
     const newMrds = previousVisits.map(visit => visit.mrd.trim()).filter(Boolean);
     const currentSessionHistory = [...new Set([...newMrds, mrdNo])];
-    const isDoctorVisited = data[0]?.consultation?.submittedDoctor === "" || data[0]?.consultation?.submittedDoctor === null;
+    const isDoctorVisited = data[0]?.consultation?.submittedDoctor === "" || data[0]?.consultation?.submittedDoctor === null || data[0]?.consultation?.submittedDoctor === undefined || data[0]?.consultation?.mrdNo !== mrdNo;
     
 
     setIsSubmitting(true);

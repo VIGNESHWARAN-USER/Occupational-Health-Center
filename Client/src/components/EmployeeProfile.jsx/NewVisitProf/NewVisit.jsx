@@ -8,8 +8,16 @@ import MedicalHistory from "./MedicalHistory";
 import VIsitHistory from "../VIsitHistory";
 
 const NewVisit = ({data}) => {
+  const accessLevel = localStorage.getItem("accessLevel")
+  console.log(accessLevel)
   const [activeTab, setActiveTab] = useState("DocBasicDetails");
-  const tabs = [
+  let tabs = [];
+  if(accessLevel === "hr")
+  {
+    
+  }
+  else{
+  tabs = [
     { id: "DocBasicDetails", label: "Basic Details" },
     { id: "DocVitals", label: "Vitals" },
     { id: "DocMedicalHistory", label: "Medical/Surgical/Personal History" },
@@ -17,6 +25,7 @@ const NewVisit = ({data}) => {
     { id: "DocInvestigations", label: "Investigations" },
     { id: "Visithistory", label: "Visit History" },
   ];
+}
 
   return (
     <div className="h-screen w-full flex ">

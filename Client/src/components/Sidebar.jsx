@@ -59,7 +59,7 @@ const Sidebar = ({ redCount }) => {
     }
     
     // Fetch expiry count separately, as this logic is independent.
-    if (accessLevel === 'pharmacist') {
+    if (accessLevel === 'pharmacy') {
        fetchExpiryCount();
     }
   // This effect will re-run if the user navigates, the role changes, or the redCount prop updates.
@@ -78,7 +78,7 @@ const Sidebar = ({ redCount }) => {
   };
 
   const fetchExpiryCount = async () => {
-     if (accessLevel === 'pharmacist') {
+     if (accessLevel === 'pharmacy') {
         try {
             const response = await axios.get(
                 "http://localhost:8000/get_current_expiry_count/"
@@ -112,11 +112,14 @@ const Sidebar = ({ redCount }) => {
       { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
     ],
     doctor: [
-      { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
-      { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+     { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
       { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> },
-      
+      { name: "New Visit", to: "../newvisit", icon: <FaUserMd /> },
+      { name: "Events & Camps", to: "../eventsandcamps", icon: <MdEvent /> },
       { name: "Records & Filters", to: "../recordsfilters", icon: <MdFilterList /> },
+      { name: "Mock Drills", to: "../mockdrills", icon: <MdLibraryAdd /> },
+      { name: "Appointments & Reviews", to: "../appointments", icon: <FaRegCalendarAlt /> },
+      { name: "Instrument Calibration", to: "../instrumentcalibration", icon: <FaRegCalendarAlt />, badgeName: 'pending' },
       ],
     admin: [
       { name: "Admin Dashboard", to: "../admindashboard", icon: <FaUsers /> },
@@ -134,7 +137,6 @@ const Sidebar = ({ redCount }) => {
       { name: "Ambulance Consumable", to: "../ambulanceconsumable", icon: <FaAmbulance /> },
     ],
     hr: [
-      { name: "Dashboard", to: "../dashboard", icon: <MdDashboard /> },
       { name: "Worker Profile", to: "../searchemployee", icon: <FaUsers /> }
       ],
   };

@@ -69,52 +69,9 @@ const RecordsFilters = () => {
     const [includeContact, setIncludeContact] = useState(false);
     const [hospitalOptions, setHospitalOptions] = useState([]);
 
-    // --- Fetch Initial Employee Data and Filter Options ---
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const response = await axios.post("http://localhost:8000/userData");
-                const data = response.data?.data;
+    
 
-                if (Array.isArray(data)) {
-                    setEmployees(data);
-                    setFilteredEmployees(data);
-                } else {
-                    setEmployees([]);
-                    setFilteredEmployees([]);
-                }
-
-                const summaryResponse = await axios.get("http://localhost:8000/get_notes/");
-                const consultationData = summaryResponse?.data?.consultation; 
-
-                if (Array.isArray(consultationData)) {
-                    const uniqueSpecialities = new Set();
-                    const uniqueDoctors = new Set();
-                    const uniqueHospitals = new Set();
-                    consultationData.forEach(element => {
-                        if (element?.speciality) uniqueSpecialities.add(element.speciality.trim());
-                        if (element?.doctor_name) uniqueDoctors.add(element.doctor_name.trim());
-                        if (element?.hospital_name) uniqueHospitals.add(element.hospital_name.trim());
-                    });
-                    
-                    setSpecialityOptions(Array.from(uniqueSpecialities).filter(item => item !== ''));
-                    setDoctorOptions(Array.from(uniqueDoctors).filter(item => item !== ''));
-                    setHospitalOptions(Array.from(uniqueHospitals).filter(item => item !== ''));
-                } 
-
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                setEmployees([]);
-                setFilteredEmployees([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, []); 
-
-    // --- Filter Selection Handlers ---
+   
     const handleRoleChange = (e) => setSelectedRole(e.target.value);
     const handleFilterClick = (sectionId) => setSelectedSection(sectionId);
 
@@ -133,8 +90,8 @@ const RecordsFilters = () => {
 
                 let filterKey = key;
                 let filterObject = { [key]: value };
+                console.log(filterKey, filterObject)
                 
-                // Logic to create unique keys (unchanged)
                 if (key === "param" && typeof value === 'object' && value.param) {
                     filterKey = `param_${value.param}`; filterObject = { [filterKey]: value };
                 } else if (key === "investigation" && typeof value === 'object' && value.form && value.param) {
@@ -153,6 +110,8 @@ const RecordsFilters = () => {
                     filterKey = `statutory_${value.formType}_${value.from}_${value.to}`; filterObject = { [filterKey]: value };
                 } else if (key.startsWith('personal_')) { 
                     filterKey = key; filterObject = { [filterKey]: value };
+                } else if (key.startsWith("shiftingAmbulance")) {
+                    filterKey = key; filterObject = { [filterKey]: value};
                 }
 
                 const existingIndex = updatedFilters.findIndex( f => Object.keys(f)[0] === filterKey );
@@ -161,10 +120,8 @@ const RecordsFilters = () => {
             });
             return updatedFilters;
         });
-        // Optional: Close section after adding
-        // setSelectedSection(null); 
     };
-    console.log(employees)
+    
     const [dateRange, setDateRange] = useState({ fromDate: "", toDate: "" });
     const { fromDate, toDate } = dateRange;
 
@@ -173,28 +130,27 @@ const RecordsFilters = () => {
         setDateRange(prev => ({ ...prev, [name]: value }));
     };
 
-    // --- Core Filtering Logic (Unchanged) ---
-    const applyFiltersToData = () => {
+    
+    const applyFiltersToData = async () => {
         let results = [...employees];
 
-        // 1. Filter by Role
-        if (selectedRole) {
-            results = results.filter(emp => emp.type && emp.type.toLowerCase() === selectedRole.toLowerCase());
-        }
-
-        // 2. Filter by selected criteria
+        
+        
+        
         const filtersMap = selectedFilters.reduce((acc, filter) => {
             const key = Object.keys(filter)[0];
             acc[key] = Object.values(filter)[0];
             return acc;
         }, {});
-
+        filtersMap.role = selectedRole
+        console.log(filtersMap)
+        const response = await axios.post("http://localhost:8000/get_filtered_data", filtersMap);
         results = results.filter(employee => {
             for (const key in filtersMap) {
                 const value = filtersMap[key];
                 console.log("Filtering Key:", key, "Value:", value, "Employee ID:", employee.id, employee.nationality);
                 
-                // ---   Simple Key Matches ---
+                
                 if (key === 'sex') { if (!employee.sex || employee.sex?.toLowerCase() !== value.toLowerCase()) return false; }
                 else if (key === 'bloodgrp') { if (employee.bloodgrp !== value) return false; }
                 else if (key === 'marital_status') { if (!employee.marital_status || employee.marital_status?.toLowerCase() !== value.toLowerCase()) return false; }
@@ -244,7 +200,7 @@ const RecordsFilters = () => {
                          } catch(e) { return false; }
                      }
                  }
-                // --- Vitals ---
+                
                 else if (key.startsWith('param_')) {
                     const filterData = value; const vitalParam = filterData.param;
                     if (!employee.vitals || employee.vitals[vitalParam] === undefined || employee.vitals[vitalParam] === null || employee.vitals[vitalParam] === '') return false;
@@ -258,7 +214,7 @@ const RecordsFilters = () => {
                         if (isNaN(vitalValue) || isNaN(fromValue) || isNaN(toValue) || vitalValue < fromValue || vitalValue > toValue) return false;
                     }
                 }
-                // --- Investigations ---
+                
                 else if (key.startsWith('investigation_')) {
                     const filterData = value;
                     const investigationCategory = employee[filterData.form];
@@ -278,7 +234,7 @@ const RecordsFilters = () => {
                         if (!statusMatch) return false;
                     }
                 }
-                // --- Fitness ---
+                
                 else if (key.startsWith('fitness_')) { 
                     const filterData = value; if (!employee.fitnessassessment) return false;
                     const fitnessMatch = Object.entries(filterData).every(([fitnessKey, fitnessValue]) => employee.fitnessassessment[fitnessKey]?.toLowerCase() === fitnessValue?.toLowerCase());
@@ -397,7 +353,7 @@ const RecordsFilters = () => {
             } 
             return true;
         });
-        setFilteredEmployees(results);
+        setFilteredEmployees(response.data.data);
     };
 
     useEffect(() => {
@@ -438,7 +394,7 @@ const RecordsFilters = () => {
             return `Sig. Notes: ${entries.join(', ')}`;
         }
          else if (key.startsWith('statutory_')) { const { formType, from, to } = value; let d = `Statutory: ${formType}`; if(from || to) d += ` [${from || '..'} - ${to || '..'}]`; return d; }
-         else if (key === 'shiftingAmbulance') { return `Shifting Ambulance: ${value}`; }
+         else if (key === 'shiftingAmbulance') { return `Shifting in Ambulance : ${value.val}, From Date: ${value.from}, To Date: ${value.to}`; }
          else if (key === 'consultationReview') { return `Consultation Review: ${value}`; }
          else {
               const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -470,7 +426,7 @@ const RecordsFilters = () => {
 
     // --- JSX Render ---
     return (
-        <div className="h-screen bg-slate-100 flex overflow-hidden">
+        <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
             
             <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
@@ -521,7 +477,7 @@ const RecordsFilters = () => {
                         <div className="flex flex-col xl:flex-row items-start xl:items-end gap-5">
                             
                             {/* Role Select */}
-                            <div className="w-full xl:w-1/4">
+                            <div className="w-full xl:w-1/2">
                                 <label className={uiStyles.label}>User Role</label>
                                 <div className="relative">
                                     <select 
@@ -534,26 +490,14 @@ const RecordsFilters = () => {
                                         <option value="Contractor">Contractor</option> 
                                         <option value="Visitor">Visitor</option>
                                     </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                                         <User size={16}/>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Date Range */}
-                            <div className="w-full xl:w-2/5 flex gap-3">
-                                <div className="flex-1">
-                                    <label className={uiStyles.label}>From Date</label>
-                                    <input type="date" name="fromDate" value={fromDate} onChange={handleChange} className={uiStyles.input}/>
-                                </div>
-                                <div className="flex-1">
-                                    <label className={uiStyles.label}>To Date</label>
-                                    <input type="date" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className={uiStyles.input}/>
-                                </div>
-                            </div>
-
                             {/* Add Specific Filter Dropdown */}
-                            <div className="w-full xl:w-1/3">
+                            <div className="w-full xl:w-1/2">
                                 <label className={uiStyles.label}>Add Criteria</label>
                                 <div className="relative">
                                     <select 
@@ -576,7 +520,7 @@ const RecordsFilters = () => {
                                             ))
                                         }
                                     </select>
-                                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-blue-500">
                                         <PlusCircle size={16}/>
                                     </div>
                                 </div>
@@ -663,7 +607,7 @@ const RecordsFilters = () => {
                             <table className="min-w-full divide-y divide-gray-200">
                                 <thead className="bg-gray-50 sticky top-0 z-10">
                                     <tr>
-                                        {["Aadhar", "MRD", "Emp ID", "Name", "Age", "Gender", "Role", "Status", "Actions"].map((head) => (
+                                        {["Aadhar", "Emp ID", "Name", "Age", "Role", "Status", "Actions"].map((head) => (
                                             <th key={head} className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                                                 {head}
                                             </th>
@@ -682,16 +626,11 @@ const RecordsFilters = () => {
                                         filteredEmployees.map((employee) => (
                                             <tr key={employee.id || employee.emp_no} className="hover:bg-blue-50/50 transition-colors duration-150 group">
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{employee.aadhar || '-'}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{employee.mrdNo || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{employee.emp_no || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-                                                        {employee.name ? employee.name.charAt(0).toUpperCase() : 'U'}
-                                                    </div>
                                                     {employee.name || '-'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{calculateAge(employee.dob)}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{employee.sex || '-'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${employee.type === 'Employee' ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}`}>
                                                         {employee.type || '-'}
@@ -850,9 +789,9 @@ const PersonalDetails = ({ addFilter }) => {
 
 const EmploymentDetails = ({ addFilter, selectedRole }) => {
     const [formData, setFormData] = useState({ designation: "", department: "", moj: "", division: "", workarea: "", employer: "", job_nature: "", previousEmployer: "", previousLocation: "", dojFrom: "", dojTo: "", });
-    const employerOptions = { "JSW Steel": "JSW Steel", "JSW Cement": "JSW Cement", "JSW Foundation": "JSW Foundation" };
+    const employerOptions = { "JSW Steel Limited": "JSW Steel Limited", "JSW Cement": "JSW Cement", "JSW Foundation": "JSW Foundation" };
     const mojOptions = { "New Joinee": "New Joinee", "Transfer": "Transfer" };
-    const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant", "Painter": "Painter", "Driver": "Driver" };
+    const jobNatureOptions = { "Contract": "Contract", "Permanent": "Permanent", "Consultant": "Consultant", "Painter": "Painter", "Driver": "Driver", "Manager":"Manager" };
     const jobStatusOptions = { "JBC": "JBC", "SSC": "SSC", "JBN":"JBN", "TBC":"TBC", "GGBS":"GGBS", "JBI":"JBI", "JBA":"JBA", "Support Staff": "Support Staff", "MBC":"MBC", "Propreitor":"Propreitor", "CSR Foundation": "CSR Foundation", "Transporter":"Transporter", "JSW Society":"JSW Society", "Shut Down":"Shut Down", "ITI Apprentice":"ITI Apprentice", "Supplier":"Supplier"}
     const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = () => {
@@ -894,7 +833,7 @@ const EmploymentDetails = ({ addFilter, selectedRole }) => {
 const Vitals = ({ addFilter }) => {
     const [formData, setFormData] = useState({ param: "systolic", bmiCategory: "", from: "", to: "", });
     const vitalParams = [ { value: "systolic", label: "Systolic BP", type: "range" }, { value: "diastolic", label: "Diastolic BP", type: "range" }, { value: "pulse", label: "Pulse Rate", type: "range" }, { value: "respiratory_rate", label: "Resp Rate", type: "range" }, { value: "temperature", label: "Temp", type: "range" }, { value: "spo2", label: "SpO2", type: "range" }, { value: "height", label: "Height", type: "range" }, { value: "weight", label: "Weight", type: "range" }, { value: "bmi", label: "BMI", type: "category" }, ];
-    const bmiOptions = { "Under weight": "Under weight", "Normal": "Normal", "Over weight": "Over weight", "Obese": "Obese", "Extremely Obese": "Extremely Obese" };
+    const bmiOptions = { "Under weight": "Under weight", "Normal weight": "Normal weight", "Over weight": "Over weight", "Obesity": "Obesity", "Extremely Obesity": "Extremely Obesity" };
     const selectedParamConfig = vitalParams.find(p => p.value === formData.param);
     const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => { const ns = { ...prev, [name]: value }; if (name === 'param') { ns.bmiCategory = ""; ns.from = ""; ns.to = ""; } return ns; }); };
     const handleSubmit = () => { const { param, bmiCategory, from, to } = formData; const config = vitalParams.find(p => p.value === param); if (!config) return; let fp = {}; if (config.type === "category" && param === "bmi" && bmiCategory) { fp = { param: param, value: bmiCategory }; } else if (config.type === "range" && from !== "" && to !== "") { if (parseFloat(from) > parseFloat(to)) { alert("'From' > 'To'."); return; } fp = { param: param, from: from, to: to }; } else { alert("Provide valid inputs."); return; } addFilter({ param: fp }); setFormData({ param: "systolic", bmiCategory: "", from: "", to: "" }); };
@@ -939,7 +878,7 @@ const Investigations = ({ addFilter }) => {
 const Fitness = ({ addFilter }) => {
     const initialFormData = { tremors: "", romberg_test: "", acrophobia: "", trendelenberg_test: "", CO_dizziness: "", MusculoSkeletal_Movements: "", Claustrophobia: "", Tandem: "", Nystagmus_Test: "", Dysdiadochokinesia: "", Finger_nose_test: "", Psychological_PMK: "", Psychological_zollingar: "", eye_exam_fit_status: "", job_nature: "", overall_fitness: "", };
     const [formData, setFormData] = useState(initialFormData);
-    const NormalorAbnormal = { "": "Any", Normal: "Normal", Abnormal: "Abnormal" }; const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" }; const Positiveoptions = { "": "Any", Positive: "Positive", Negative: "Negative" }; const jobNatureOptions = { "": "Any", Height: "Height", Gas_Line : "Gas Line", Confined_Space : "Confined Space", SCBA_Rescuer : "SCBA Resucer", Fire_Rescuer : "Fire Rescuer", Lone_Worker : "Lone Worker", Fisher_Man: "Fisher Man", Snake_Cather: "Snake Catcher", Others:"Others" }; const fitnessStatusOptions = { "": "Any", Fit: "Fit", "Conditionally Fit": "Conditionally Fit", Unfit: "Unfit" }; const eyeExamFitStatusOptions = { "": "Any", Fit: "Fit", Fit_when_newly_prescribed_glass: "Fit when newly prescribed glass", Fit_with_existing_glass: "Fit with existing glass" ,Fit_with_an_advice_to_change_existing_glass_with_newly_prescribed_glass : "Fit with an advice to change existing glass with newly prescribed glass", Unfit: "Unfit" };
+    const NormalorAbnormal = { "": "Any", Normal: "Normal", Abnormal: "Abnormal" }; const yesNoOptions = { "": "Any", Yes: "Yes", No: "No" }; const Positiveoptions = { "": "Any", Positive: "Positive", Negative: "Negative" }; const jobNatureOptions = { "": "Any", "Height": "Height", "Gas Line" : "Gas Line", "Confined Space" : "Confined Space", "SCBA Rescue" : "SCBA Rescue", "Fire Rescue" : "Fire Rescue", "Lone Work": "Lone Work", "Fisher Man" : "Fisher Man", "Snake Catch": "Snake Catch", "Pest Control":"Pest Control","Others":"Others" }; const fitnessStatusOptions = { "": "Any", Fit: "Fit", "Conditionally Fit": "Conditionally Fit", Unfit: "Unfit" }; const eyeExamFitStatusOptions = { "": "Any", Fit: "Fit", Fit_when_newly_prescribed_glass: "Fit when newly prescribed glass", Fit_with_existing_glass: "Fit With Existing Glass" ,Fit_with_an_advice_to_change_existing_glass_with_newly_prescribed_glass : "Fit with an advice to change existing glass with newly prescribed glass", Unfit: "Unfit" };
     const handleChange = (e) => { setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = () => { const activeFilters = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "")); if (Object.keys(activeFilters).length > 0) { addFilter({ fitness: activeFilters }); } else { alert("Please select at least one filter criterion."); } setFormData(initialFormData); };
 
@@ -1000,21 +939,24 @@ const SpecialCasesFilter = ({ addFilter }) => {
 };
 
 const ShiftingAmbulanceFilter = ({ addFilter }) => {
-    const [selectedValue, setSelectedValue] = useState("");
-    const handleChange = (e) => setSelectedValue(e.target.value);
-    const handleSubmit = () => { if (!selectedValue) { alert("Select option."); return; } addFilter({ shiftingAmbulance: selectedValue }); setSelectedValue(""); };
+    const [formData, setFormData] = useState({ val: "", from: "", to: "" });
+    const handleChange = (e) => { console.log(e.target.name, e.target.value); setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value })); };
+    const handleSubmit = () => { if (!formData.val) { alert("Select option."); return; } addFilter({ shiftingAmbulance: formData }); setFormData({ val: "", from: "", to: "" }); };
     return (
         <div className="space-y-4">
-            <p className="text-gray-700 font-medium">Was an ambulance shift required during the consultation?</p>
-            <div className="flex gap-4">
-                {["Yes", "No"].map(val => (
+            <div className="mb-4">
+                <div className="flex gap-4 mb-4">
+                    {["Yes", "No"].map(val => (
                     <label key={val} className="flex items-center space-x-2 cursor-pointer bg-gray-50 px-5 py-2 rounded-lg border border-gray-200 hover:bg-white hover:border-blue-400 hover:shadow-sm transition-all">
-                        <input type="radio" name="ambulanceShiftOption" value={val} checked={selectedValue === val} onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500"/>
+                        <input type="radio" name="val" value={val} checked={formData.val === val} onChange={handleChange} className="w-4 h-4 text-blue-600 focus:ring-blue-500"/>
                         <span className="text-sm font-medium">{val}</span>
                     </label>
                 ))}
+                </div>
+                <div className="grid grid-cols-2 gap-5"> <div> <label className={uiStyles.label}>From Date</label> <input type="date" name="from" value={formData.from} onChange={handleChange} className={uiStyles.input}/> </div> <div> <label className={uiStyles.label}>To Date</label> <input type="date" name="to" value={formData.to} onChange={handleChange} className={uiStyles.input}/> </div> </div>
             </div>
-            <button onClick={handleSubmit} className={uiStyles.buttonPrimary} disabled={!selectedValue}>Apply Filter</button>
+            
+            <button onClick={handleSubmit} className={uiStyles.buttonPrimary} disabled={!formData.val}>Apply Filter</button>
         </div>
     );
 };
@@ -1060,7 +1002,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
     const [fc, setFc] = useState({ condition: "", status: "", relation: "", });
     const [al, setAl] = useState({ drugAllergy: "", foodAllergy: "", otherAllergies: "", });
     const [sh, setSh] = useState({ status: "", });
-    const hOpts={"":"Any",Yes:"Yes",No:"No",Cessased:"Cessased"}; const yOpts={"":"Any",Yes:"Yes",No:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Vertigo", "Hyper thyroid","Hypo thyroid","Asthma","Mental Illness", "CVS","CNS","RS","ENT", "GIT","KUB","Musculo Skeletal (Fractures, etc.)","Skin", "Oral/Dental", "Cancer","Defective Colour Vision","OTHERS","Obstetric","Gynaec"];
+    const hOpts={"":"Any",yes:"Yes",no:"No",cessased:"Cessased"}; const yOpts={"":"Any",yes:"Yes",no:"No"}; const dOpts={"":"Any","Pure Veg":"Pure Veg","Mixed Diet":"Mixed Diet",Eggetarian:"Eggetarian"}; const cParams=["","HTN","DM","Epileptic","Vertigo", "Hyper thyroid","Hypo thyroid","Asthma","Mental Illness", "CVS","CNS","RS","ENT", "GIT","KUB","Musculo Skeletal (Fractures, etc.)","Skin", "Oral/Dental", "Cancer","Defective Colour Vision","OTHERS","Obstetric","Gynaec"];
     const hhc=(e)=>{setPh(p=>({...p,[e.target.name]:e.target.value}))}; const hpc=(e)=>{setPc(p=>({...p,[e.target.name]:e.target.value}))}; const hfc=(e)=>{setFc(p=>({...p,[e.target.name]:e.target.value}))}; const hal=(e)=>{setAl(p=>({...p,[e.target.name]:e.target.value}))}; const hsh=(e)=>{setSh(p=>({...p,[e.target.name]:e.target.value}))};
     const handleSubmit = () => {
         let cf={}; Object.entries(ph).forEach(([k,v])=>{if(v)cf[k]=v}); Object.entries(al).forEach(([k,v])=>{if(v)cf[k]=v}); if(sh.status){cf.surgicalHistory=sh.status} if(pc.condition&&pc.status){cf[`personal_${pc.condition}`]=pc.status} const { condition, status, relation } = fc; if (condition || status || relation) { const familyFilter = {}; if (condition) familyFilter.condition = condition; if (status) familyFilter.status = status; if (relation) familyFilter.relation = relation; cf.familyCondition = familyFilter; }
@@ -1079,7 +1021,7 @@ const MedicalHistoryForm = ({ addFilter }) => {
 const VaccinationForm = ({ addFilter }) => {
   const [formData, setFormData] = useState({ disease: "", vaccine: "", vaccine_status: "", });
   const dOpts = [ "", "Covid-19", "Hepatitis B", "Influenza", "Tetanus", "MMR", "Rabies", "Chickenpox", "HPV", "Pneumococcal" ];
-  const pOpts = [ "", "Pre-Prophylaxis", "Post-Prophylaxis" ]; const sOpts = { "": "Any", Completed: "Completed", Partial: "Partial" };
+  const pOpts = [ "", "Pre exposure prophylaxis", "Post exposure prophylaxis" ]; const sOpts = { "": "Any", Completed: "Completed", Partial: "Partial" };
   const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
   const handleSubmit = () => { const filtered = Object.fromEntries(Object.entries(formData).filter(([_, v]) => v !== "")); if (Object.keys(filtered).length === 0) { return alert("Select at least one criterion."); } addFilter(filtered); setFormData({ disease: "", vaccine: "", vaccine_status: "" }); };
   return (
@@ -1102,14 +1044,14 @@ const PurposeFilter = ({ addFilter }) => {
     const specificOpts = Array.isArray(rawSpecific) ? rawSpecific : (rawSpecific ? [rawSpecific] : []);
     const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => { const ns = { ...prev, [name]: value }; if (name === 'type_of_visit') { ns.register = ""; ns.specificCategory = ""; } else if (name === 'register') { ns.specificCategory = ""; } return ns; }); };
     const handleSubmit = () => { const pf = {}; if (fromDate) pf.fromDate = fromDate; if (toDate) pf.toDate = toDate; if (type_of_visit) pf.type_of_visit = type_of_visit; if (register) pf.register = register; if (specificCategory) pf.specificCategory = specificCategory; if (fromDate && toDate && new Date(fromDate) > new Date(toDate)) { alert("'From' > 'To'."); return; } if (Object.keys(pf).length > 0) { addFilter({ purpose: pf }); } else { alert("Select criterion or date range."); } setFormData({ fromDate: "", toDate: "", type_of_visit: "", register: "", specificCategory: "" }); };
-    return (<div className="space-y-6"> <div className="p-4 rounded-xl bg-gray-50 border border-gray-200"><h5 className="font-bold text-gray-700 mb-3">Visit Dates</h5><div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label className={uiStyles.label}>From</label><input type="date" name="fromDate" value={fromDate} onChange={handleChange} className={uiStyles.input}/></div> <div><label className={uiStyles.label}>To</label><input type="date" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className={uiStyles.input}/></div> </div></div> <div className="p-4 rounded-xl bg-gray-50 border border-gray-200"><h5 className="font-bold text-gray-700 mb-3">Visit Type</h5><div className="grid grid-cols-1 md:grid-cols-3 gap-4"> <div><label className={uiStyles.label}>Type</label><select name="type_of_visit" value={type_of_visit} onChange={handleChange} className={uiStyles.select}><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label className={uiStyles.label}>Register</label><select name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className={`${uiStyles.select} disabled:bg-gray-200`}><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label className={uiStyles.label}>Specific Reason</label><select name="specificCategory" value={specificCategory} onChange={handleChange} disabled={!register||specificOpts.length===0} className={`${uiStyles.select} disabled:bg-gray-200`}><option value="">--Select--</option>{specificOpts.map((c, i)=>(<option key={`${c}-${i}`} value={c}>{c}</option>))}</select></div> </div></div> <button onClick={handleSubmit} className={uiStyles.buttonPrimary}>Add Purpose Filter</button> </div>);
+    return (<div className="space-y-6"> <div className="p-4 rounded-xl bg-gray-50 border border-gray-200"><h5 className="font-bold text-gray-700 mb-3">Visit Dates</h5><div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label className={uiStyles.label}>From</label><input type="date" name="fromDate" value={fromDate} onChange={handleChange} className={uiStyles.input}/></div> <div><label className={uiStyles.label}>To</label><input type="date" name="toDate" value={toDate} onChange={handleChange} min={fromDate || undefined} className={uiStyles.input}/></div> </div></div> <div className="p-4 rounded-xl bg-gray-50 border border-gray-200"><h5 className="font-bold text-gray-700 mb-3">Visit Type</h5><div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div><label className={uiStyles.label}>Type</label><select name="type_of_visit" value={type_of_visit} onChange={handleChange} className={uiStyles.select}><option value="">--Select--</option>{Object.keys(PurposeData).map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div> <div><label className={uiStyles.label}>Register</label><select name="register" value={register} onChange={handleChange} disabled={!type_of_visit} className={`${uiStyles.select} disabled:bg-gray-200`}><option value="">--Select--</option>{subcategories.map((k)=>(<option key={k} value={k}>{k}</option>))}</select></div></div></div> <button onClick={handleSubmit} className={uiStyles.buttonPrimary}>Add Purpose Filter</button> </div>);
 }
 
 const Referrals = ({ addFilter, specialityOptions = [], hospitalOptions = [], doctorOptions = [] }) => {
     const [formData, setFormData] = useState({ referred: "", speciality: "", hospitalName: "", doctorName: "" });
     const handleChange = (e) => { setFormData(prev => ({ ...prev, [e.target.name]: e.target.value })); };
     const handleSubmit = (e) => { e.preventDefault(); const fd=Object.fromEntries(Object.entries(formData).filter(([_,v])=>v!==""&&v!==null)); if(Object.keys(fd).length>0){addFilter({referrals:fd})}else{alert("Select criterion.")} setFormData({referred:"",speciality:"",hospitalName:"",doctorName:""}); }; 
-    return (<form onSubmit={handleSubmit} className="space-y-5"> <div> <label className={uiStyles.label}>Referral Made?</label> <select name="referred" value={formData.referred} onChange={handleChange} className={uiStyles.select}><option value="">Any</option><option value="Yes">Yes</option><option value="No">No</option></select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-5"> <div> <label className={uiStyles.label}>Speciality</label> <select name="speciality" value={formData.speciality} onChange={handleChange} className={uiStyles.select}><option value="">--Select--</option>{specialityOptions.map(o=><option key={o} value={o}>{o}</option>)}</select></div> <div> <label className={uiStyles.label}>Hospital</label> <select name="hospitalName" value={formData.hospitalName} onChange={handleChange} className={uiStyles.select}><option value="">--Select--</option>{hospitalOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> </div> <div> <label className={uiStyles.label}>Doctor</label> <select name="doctorName" value={formData.doctorName} onChange={handleChange} className={uiStyles.select}><option value="">--Select--</option>{doctorOptions.map(o=><option key={o} value={o}>{o}</option>)}</select> </div> <button type="submit" className={uiStyles.buttonPrimary}>Add Referral Filter</button> </form>);
+    return (<form onSubmit={handleSubmit} className="space-y-5"> <div> <label className={uiStyles.label}>Referral Made?</label> <select name="referred" value={formData.referred} onChange={handleChange} className={uiStyles.select}><option value="">Any</option><option value="Yes">Yes</option><option value="No">No</option></select> </div> <div className="grid grid-cols-1 md:grid-cols-2 gap-5"> <div> <label className={uiStyles.label}>Speciality</label> <input name="speciality" value={formData.speciality} onChange={handleChange} className={uiStyles.select}></input></div> <div> <label className={uiStyles.label}>Hospital</label> <input name="hospitalName" value={formData.hospitalName} onChange={handleChange} className={uiStyles.select}></input> </div> </div> <div> <label className={uiStyles.label}>Doctor</label> <input name="doctorName" value={formData.doctorName} onChange={handleChange} className={uiStyles.select}></input> </div> <button type="submit" className={uiStyles.buttonPrimary}>Add Referral Filter</button> </form>);
 };
 
 const StatutoryForms = ({ addFilter }) => {

@@ -48,9 +48,6 @@ const BpStandardsModal = ({ isOpen, onClose }) => {
 const VitalsForm = ({ data, type, mrdNo }) => {
     const [isUpdated, setIsUpdated] = useState(false);
     const initialData = data?.[0] || {};
-    console.log(initialData)
-    console.log("VitalsForm mrdNo prop:", mrdNo);
-    console.log("VitalsForm type prop:", type);
 
     const [formData, setFormData] = useState({
         systolic: '', diastolic: '', bp_status: '',
@@ -72,8 +69,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
         manual: null,
     });
 
-    console.log("Current formData state:", formData);
-    console.log("Current selectedFiles state:", selectedFiles);
+    
 
     const [isBpModalOpen, setIsBpModalOpen] = useState(false);
     const [isPulseModalOpen, setIsPulseModalOpen] = useState(false);
@@ -92,7 +88,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
 
      useEffect(() => {
         const initialVitals = initialData?.vitals;
-        console.log(initialVitals)
+        
         const defaultState = {
             systolic: '', diastolic: '', bp_status: '', pulse: '', pulse_status: '', pulse_comment: '', respiratory_rate: '', respiratory_rate_status: '', respiratory_rate_comment: '', temperature: '', temperature_status: '', temperature_comment: '', spO2: '', spO2_status: '', spO2_comment: '', weight: '', height: '', bmi: '', bmi_status: '', bmi_comment: '',
             aadhar: initialData.aadhar || '', application_form: null, self_declared: null, consent: null, fc: null, report: null, manual: null
@@ -100,7 +96,6 @@ const VitalsForm = ({ data, type, mrdNo }) => {
         setSelectedFiles({ application_form: null, self_declared: null, consent: null, fc: null, report: null, manual: null });
 
         if (initialVitals && typeof initialVitals === 'object') {
-            console.log("Loading vitals from props:", initialVitals);
             const loadedData = { ...defaultState };
             for (const key in defaultState) {
                 if (key === 'aadhar') continue; // Aadhar is handled separately
@@ -169,15 +164,28 @@ const VitalsForm = ({ data, type, mrdNo }) => {
         }
     };
 
-    const handleDelete = async (key, mrdNo) => {
-        e.preventDefault();
-        const response = await axios.post("http://localhost:8000/deleteUploadedFile", {mrdNo, key});
-        console.log(response);
+    const handleDelete = async (e, key, mrdNo) => {
+    e.preventDefault();
+    try {
+        const response = await axios.post(
+            "http://localhost:8000/deleteUploadedFile",
+            { mrdNo, key }
+        );
+        alert(response.data.message)
+        if(response.data.success)
+        {
+            selectedFiles[key] = "";
+        }
+    } catch (error) {
+        alert(error.message);
     }
+};
+
 
     const handleFileChange = (event, fileKey) => {
         const file = event.target.files[0];
         setSelectedFiles((prevFiles) => ({ ...prevFiles, [fileKey]: file || null }));
+        setIsUpdated(true)
         event.target.value = null; // Allows re-selecting the same file
     };
 
@@ -464,7 +472,7 @@ const VitalsForm = ({ data, type, mrdNo }) => {
                     {canDeleteFile && (
                       <button
                         className="ms-24 text-xl text-red-700"
-                        onClick={() => handleDelete(formData[config.key], mrdNo)}
+                        onClick={(e) => handleDelete(e, config.key, mrdNo)}
                         title="Delete File"
                       >
                         <MdDelete />

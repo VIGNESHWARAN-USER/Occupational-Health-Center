@@ -98,7 +98,7 @@ ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png',
 
 def send_otp_via_email(email, otp):
     subject = "🔐 Password Reset OTP - JSW Health Portal"
-    from_email = settings.DEFAULT_FROM_EMAIL # Use settings directly
+    from_email = settings.EMAIL_HOST_USER
     recipient_list = [email]
     context = {"otp": otp, "email": email}
     try:
@@ -119,14 +119,15 @@ def forgot_password(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body)
-            username = data.get("username") # Expects employee_number
+            username = data.get("username")
             if not username: return JsonResponse({"message": "Username (Employee Number) is required"}, status=400)
-            member = Member.objects.get(employee_number=username)
-            if not member.email: return JsonResponse({"message": "No email address found for this user."}, status=400)
+            member = Member.objects.get(emp_no=username)
+            mail_id = member.mail_id_Personal
+            if not mail_id: return JsonResponse({"message": "No email address found for this user."}, status=400)
             otp = random.randint(100000, 999999)
             cache_key = f"otp_{username}"
             cache.set(cache_key, otp, timeout=300) # 5 minutes timeout
-            if send_otp_via_email(member.email, otp):
+            if send_otp_via_email(mail_id, otp):
                 return JsonResponse({"message": "OTP sent successfully to your registered email."}, status=200)
             else:
                 cache.delete(cache_key) # Clean up cache if email failed
@@ -169,7 +170,7 @@ def reset_password(request):
             verified_key = f"otp_verified_{username}"
             if not cache.get(verified_key): return JsonResponse({"message": "OTP not verified or verification expired."}, status=403)
 
-            member = Member.objects.get(employee_number=username)
+            member = Member.objects.get(emp_no=username)
             # Hash the new password
             hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             member.password = hashed_pw
@@ -200,7 +201,7 @@ def login(request):
                      # Login successful
                     return JsonResponse({
                         "username": member.name,
-                        "accessLevel": member.role, # Consider splitting roles if needed: member.role.split(',')
+                        "accessLevel": member.role, 
                         "empNo": member.emp_no,
                         "message": "Login successful!"
                     }, status=200)
@@ -763,150 +764,163 @@ def fetchdatawithID(request):
     logger.warning("fetchdatawithID failed: Invalid request method.")
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Max, CharField, BooleanField
+from django.db.models.fields.json import JSONField
+from datetime import datetime, date
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @csrf_exempt
 def fetchdata(request):
-    """Fetches latest employee_details and related data based on AADHAR."""
-    # This view seems complex but correctly uses aadhar as the key after fetching latest IDs.
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        # ---------- STEP 1: FETCH LATEST EMPLOYEES ----------
+        latest_employees = (
+            employee_details.objects
+            .values("aadhar")
+            .annotate(latest_id=Max("id"))
+        )
+
+        latest_employee_ids = [emp["latest_id"] for emp in latest_employees if emp.get("latest_id")]
+
+        employees = list(
+            employee_details.objects
+            .filter(id__in=latest_employee_ids)
+            .values()
+        )
+
+        if not employees:
+            return JsonResponse({"data": []}, status=200)
+
+        # ---------- STEP 2: MEDIA URL ----------
         try:
-            # Fetch Latest Employee Records based on Aadhar and Max ID
-            latest_employees = (
-                employee_details.objects
-                .values("aadhar")
-                .annotate(latest_id=Max("id"))
-            )
-            latest_employee_ids = [emp["latest_id"] for emp in latest_employees]
-            # Get the full employee details for the latest IDs
-            employees = list(employee_details.objects.filter(id__in=latest_employee_ids).values())
-           
-            media_url_prefix = get_media_url_prefix(request) # Use helper function
-
-            # Add profile picture URL
-            for emp in employees:
-                if emp.get("profilepic"):
-                    emp["profilepic_url"] = f"{media_url_prefix}{emp['profilepic']}"
-                else:
-                    emp["profilepic_url"] = None
-
-            def get_latest_records(model, key_field='aadhar'): # Allow specifying key field if not aadhar
-                """ Helper to get latest records for a list of employees/aadhars """
-                employee_keys = [emp[key_field] for emp in employees if emp.get(key_field)]
-                if not employee_keys:
-                     return {}, {} # No keys to query
-
-                # Identify the date field (usually 'entry_date' or 'date')
-                date_field = 'entry_date' if hasattr(model, 'entry_date') else 'date' if hasattr(model, 'date') else None
-                if not date_field:
-                     logger.warning(f"Model {model.__name__} has no recognized date field for ordering.")
-                     # Fallback: just filter by aadhar without date ordering (might not be latest)
-                     records = list(model.objects.filter(aadhar__in=employee_keys).values())
-
-                else:
-                     # Get the latest ID for each aadhar based on the date field and ID
-                     latest_ids_subquery = model.objects.filter(aadhar__in=employee_keys)\
-                         .values('aadhar')\
-                         .annotate(latest_id=Max('id')) # Assuming higher ID is later if dates are same
-
-                     latest_ids = [item['latest_id'] for item in latest_ids_subquery]
-                     records = list(model.objects.filter(id__in=latest_ids).values())
-
-
-                # Create a default structure based on model fields
-                default_structure = {}
-                if model and hasattr(model, '_meta'):
-                     try:
-                         for field in model._meta.get_fields():
-                            if field.concrete and not field.is_relation and not field.primary_key:
-                                default_val = None # Default
-                                if isinstance(field, (CharField,)): default_val = ""
-                                elif isinstance(field, BooleanField): default_val = False
-                                elif isinstance(field, JSONField):
-                                    # Basic defaults for common JSON structures
-                                    if field.name in ["normal_doses", "booster_doses"]: default_val = {"dates": [], "dose_names": []}
-                                    elif field.name == "surgical_history": default_val = {"comments":"", "children": []}
-                                    elif field.name == "vaccination": default_val = {"vaccination": []}
-                                    elif field.name in ["job_nature", "conditional_fit_feilds"]: default_val = []
-                                    else: default_val = {}
-                                default_structure[field.name] = default_val
-                     except Exception as e:
-                          logger.error(f"Error creating default structure for {model.__name__}: {e}")
-
-
-                # Return dictionary keyed by aadhar and the default structure
-                return {record["aadhar"]: record for record in records if "aadhar" in record}, default_structure
-
-
-            # Fetch data for all related models
-            models_to_fetch = [
-                 Dashboard, vitals, MedicalHistory, heamatalogy, RoutineSugarTests,
-                 RenalFunctionTest, LipidProfile, LiverFunctionTest, ThyroidFunctionTest,
-                 AutoimmuneTest, CoagulationTest, EnzymesCardiacProfile, UrineRoutineTest,
-                 SerologyTest, MotionTest, CultureSensitivityTest, MensPack, WomensPack,
-                 OccupationalProfile, OthersTest, OphthalmicReport, XRay, USGReport,
-                 CTReport, MRIReport, FitnessAssessment, VaccinationRecord, Consultation,
-                 Prescription, SignificantNotes, Form17, Form38, Form39, Form40, Form27
-            ]
-
-            fetched_data = {}
-            default_structures = {}
-            for model_cls in models_to_fetch:
-                 model_name_lower = model_cls.__name__.lower()
-                 
-                 if model_cls == RenalFunctionTest: 
-                     key_name = "renalfunctiontests_and_electrolytes"
-                 elif model_cls == XRay:
-                     key_name = "xray"
-                 elif model_cls == MotionTest:
-                     key_name = "motiontest"
-                 elif model_cls == CultureSensitivityTest:
-                     key_name = "culturesensitivitytest"
-                 # --- START: ADD/COMPLETE THESE CONDITIONS ---
-                 elif model_cls == USGReport:
-                     key_name = "usgreport" # Corrected from "usg" to match frontend
-                 elif model_cls == CTReport:
-                     key_name = "ctreport" # Corrected from "ct" to match frontend
-                 elif model_cls == MRIReport:
-                     key_name = "mrireport" # Corrected from "mri" to match frontend
-                 # --- END: ADD/COMPLETE THESE CONDITIONS ---
-                 
-                 else: 
-                     key_name = model_name_lower
-
-                 fetched_data[key_name], default_structures[key_name] = get_latest_records(model_cls)
-
-
-            if not employees:
-                logger.info("No employee records found.")
-                return JsonResponse({"data": []}, status=200)
-
-            # Merge data
-            merged_data = []
-            for emp in employees:
-                emp_aadhar = emp.get("aadhar")
-                if not emp_aadhar: continue # Skip if employee record missing aadhar
-
-                merged_emp = emp.copy() # Start with employee details
-
-                # Add data from related models
-                for key_name in fetched_data:
-                    # Use get with fallback to the default structure for that model type
-                    merged_emp[key_name] = fetched_data[key_name].get(emp_aadhar, default_structures.get(key_name, {}))
-                    # Ensure dates within fetched data are serialized
-                    if isinstance(merged_emp[key_name], dict):
-                        for sub_key, sub_value in merged_emp[key_name].items():
-                            if isinstance(sub_value, (datetime, date)):
-                                merged_emp[key_name][sub_key] = sub_value.isoformat()
-
-                merged_data.append(merged_emp)
-
-            return JsonResponse({"data": merged_data}, status=200)
-
+            media_url_prefix = get_media_url_prefix(request)
         except Exception as e:
-            logger.exception("Error in fetchdata view: An unexpected error occurred.")
-            return JsonResponse({"error": "An internal server error occurred.", "detail": str(e)}, status=500)
+            media_url_prefix = ""
+            logger.error(f"Media URL error: {e}")
 
-    logger.warning("fetchdata failed: Invalid request method. Only POST allowed.")
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+        for emp in employees:
+            emp["profilepic_url"] = (
+                f"{media_url_prefix}{emp['profilepic']}"
+                if emp.get("profilepic")
+                else None
+            )
+
+        # ---------- STEP 3: HELPER ----------
+        def get_latest_records(model):
+            debug = {
+                "model": model.__name__,
+                "stage": "start"
+            }
+
+            try:
+                model_fields = [f.name for f in model._meta.fields]
+
+                if "aadhar" not in model_fields:
+                    return {}, {}
+
+                employee_keys = [emp["aadhar"] for emp in employees if emp.get("aadhar")]
+                if not employee_keys:
+                    return {}, {}
+
+                pk_name = model._meta.pk.name
+
+                latest_ids = (
+                    model.objects
+                    .filter(aadhar__in=employee_keys)
+                    .values("aadhar")
+                    .annotate(latest_id=Max(pk_name))
+                )
+
+                ids = [row["latest_id"] for row in latest_ids if row.get("latest_id")]
+                records = list(model.objects.filter(**{f"{pk_name}__in": ids}).values())
+
+                # ---------- DEFAULT STRUCTURE ----------
+                default_structure = {}
+                for field in model._meta.fields:
+                    if field.primary_key or field.is_relation:
+                        continue
+
+                    if isinstance(field, CharField):
+                        default_structure[field.name] = ""
+                    elif isinstance(field, BooleanField):
+                        default_structure[field.name] = False
+                    elif isinstance(field, JSONField):
+                        default_structure[field.name] = {}
+                    else:
+                        default_structure[field.name] = None
+
+                return (
+                    {rec["aadhar"]: rec for rec in records if "aadhar" in rec},
+                    default_structure
+                )
+
+            except Exception as e:
+                return (
+                    {},
+                    {
+                        "__error__": True,
+                        "model": model.__name__,
+                        "exception": type(e).__name__,
+                        "message": str(e),
+                        "debug_stage": debug["stage"]
+                    }
+                )
+
+        # ---------- STEP 4: MODELS ----------
+        models_to_fetch = [
+            Dashboard, vitals, MedicalHistory, heamatalogy, RoutineSugarTests,
+            RenalFunctionTest, LipidProfile, LiverFunctionTest, ThyroidFunctionTest,
+            AutoimmuneTest, CoagulationTest, EnzymesCardiacProfile, UrineRoutineTest,
+            SerologyTest, MotionTest, CultureSensitivityTest, MensPack, WomensPack,
+            OccupationalProfile, OthersTest, OphthalmicReport, XRay, USGReport,
+            CTReport, MRIReport, FitnessAssessment, VaccinationRecord, Consultation,
+            Prescription, SignificantNotes, Form17, Form38, Form39, Form40, Form27
+        ]
+
+        fetched_data = {}
+        default_structures = {}
+
+        for model_cls in models_to_fetch:
+            key = model_cls.__name__.lower()
+            fetched_data[key], default_structures[key] = get_latest_records(model_cls)
+
+        # ---------- STEP 5: MERGE ----------
+        merged_data = []
+
+        for emp in employees:
+            merged = emp.copy()
+            aadhar = emp.get("aadhar")
+
+            for key in fetched_data:
+                value = fetched_data[key].get(aadhar, default_structures.get(key, {}))
+
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        if isinstance(v, (datetime, date)):
+                            value[k] = v.isoformat()
+
+                merged[key] = value
+
+            merged_data.append(merged)
+
+        return JsonResponse({"data": merged_data}, status=200)
+
+    except Exception as e:
+        # ---------- FINAL FAIL-SAFE ----------
+        return JsonResponse({
+            "error": "Internal Server Error",
+            "exception": type(e).__name__,
+            "message": str(e),
+            "hint": "Share this response with backend team"
+        }, status=500)
+
 
 
 
@@ -1078,7 +1092,7 @@ def addEntries(request):
             'visiting_date_to': parse_date_internal(employee_data.get('visiting_date_to')),
             'stay_in_guest_house': employee_data.get('stay_in_guest_house', ''),
             'visiting_purpose': employee_data.get('visiting_purpose', ''),
-            'type': dashboard_data.get('category', 'Employee'),
+            'type': employee_data.get('type', ''),
             'type_of_visit': dashboard_data.get('typeofVisit', ''),
             'register': dashboard_data.get('register', ''),
             'purpose': dashboard_data.get('purpose', ''),
@@ -1176,11 +1190,12 @@ def addEntries(request):
             appointment_data = Appointment.objects.filter(id=data.get('appointmentId')).first()
             if appointment_data:
                 appointment_data.mrdNo = employee_entry.mrdNo
+                appointment_data.submitted_by_nurse = data.get('submitted_by_nurse')
                 appointment_data.status = Appointment.StatusChoices.IN_PROGRESS
                 appointment_data.save()
 
         message = f"Entry added successfully. MRD: {employee_entry.mrdNo}"
-        return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": aadhar}, status=200)
+        return JsonResponse({"message": message, "mrdNo": employee_entry.mrdNo, "aadhar": employee_data}, status=200)
 
     except json.JSONDecodeError:
         logger.error("addEntries failed: Invalid JSON data.")
@@ -4547,7 +4562,7 @@ def add_stock(request):
             dose_volume_input = data.get("dose_volume")
 
             # 2. Define Special Categories
-            # special_categories = ["Suture & Procedure Items", "Dressing Items"]
+            # special_categories = ["SutureAndProcedureItems", "Dressing Items"]
 
             # 3. Conditional Logic
             # if medicine_form in special_categories:
@@ -4725,6 +4740,31 @@ def get_chemical_name_by_brand(request):
          response['Allow'] = 'GET'
          return response
 
+
+@csrf_exempt # Should be GET
+def get_chemical_name_by_chemical(request):
+    if request.method == 'GET':
+        try:
+            chemical_name = request.GET.get("chemical_name", "").strip()
+            medicine_form = request.GET.get("medicine_form", "").strip()
+
+            if not chemical_name or not medicine_form:
+                return JsonResponse({"suggestions": []})
+
+            suggestions = list(
+                PharmacyMedicine.objects.filter(chemical_name__istartswith=chemical_name, medicine_form__iexact=medicine_form)
+                .values_list("chemical_name", flat=True).distinct()
+            )
+            return JsonResponse({"suggestions": suggestions, "data": medicine_form})
+        except Exception as e:
+            logger.exception("Error in get_chemical_name_by_brand")
+            return JsonResponse({"error": str(e)}, status=500)
+    else:
+         response = JsonResponse({"error": "Invalid method. Use GET."}, status=405)
+         response['Allow'] = 'GET'
+         return response
+
+
 @csrf_exempt # Should be GET
 def get_chemical_name(request):
      # Simpler version - assumes brand name is enough? Might return multiple if ambiguous.
@@ -4868,88 +4908,75 @@ except ImportError:
     HAS_STOCK_MODEL = False
     logging.warning("Optional PharmacyStock model not found or failed to import. Fetching logic will rely solely on DailyQuantity, which might be incomplete for identifying all possible stock items.")
 
-
-#update_pharmacy_stock
 @csrf_exempt
 def update_pharmacy_stock(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            
-            chemical_name = data.get("chemicalName")
-            brand_name = data.get("brandName")
-            expiry_date = data.get("expiryDate")
-            dose_volume = data.get("doseVolume")
-            quantity = data.get("quantity")
-            action = data.get("action")
+    if request.method != 'POST':
+        return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
 
-            # --- Validation ---
-            if not all([chemical_name, brand_name, expiry_date, dose_volume, action]):
-                return JsonResponse({"error": "Missing required fields (chemicalName, brandName, expiryDate, doseVolume, action)."}, status=400)
+    try:
+        data = json.loads(request.body.decode('utf-8'))
 
-            if not isinstance(quantity, (int, float)) or quantity <= 0:
-                 return JsonResponse({"error": "Quantity must be a positive number."}, status=400)
+        chemical_name = data.get("chemicalName")
+        brand_name = data.get("brandName")
+        expiry_date = data.get("expiryDate")
+        dose_volume = data.get("doseVolume")
+        quantity = data.get("quantity")
+        action = data.get("action")
 
-            if action not in ['increase', 'decrease']:
-                return JsonResponse({"error": "Invalid action. Must be 'increase' or 'decrease'."}, status=400)
-            
-            with transaction.atomic():
-                # Lock the pharmacy stock record to prevent race conditions
-                try:
-                    medicine = PharmacyStock.objects.select_for_update().get(
-                        chemical_name=chemical_name, 
-                        brand_name=brand_name, 
-                        dose_volume=dose_volume, 
-                        expiry_date=expiry_date
-                    )
-                except PharmacyStock.DoesNotExist:
-                    return JsonResponse({"error": "Medicine stock not found."}, status=404)
-                
-                # Update the main PharmacyStock quantity
-                if action == 'increase':
-                    medicine.quantity = F('quantity') + quantity
-                else: # 'decrease'
-                    if medicine.quantity < quantity:
-                        return JsonResponse({
-                            "error": "Insufficient stock.", 
-                            "current_stock": medicine.quantity
-                        }, status=400)
-                    medicine.quantity = F('quantity') - quantity
-                
-                medicine.save(update_fields=['quantity'])
+        if not all([chemical_name, brand_name, expiry_date, dose_volume, action]):
+            return JsonResponse({"error": "Missing required fields."}, status=400)
 
-                # --- CORRECTED LOGIC FOR DailyQuantity ---
-                # Only update the daily usage/dispensed count when stock is decreased.
-                if action == 'decrease':
-                    # Find or create a record for this specific medicine batch for today.
-                    # This tracks the total amount dispensed today.
-                    daily_record, created = DailyQuantity.objects.get_or_create(
-                        chemical_name=chemical_name,
-                        brand_name=brand_name,
-                        dose_volume=dose_volume,
-                        expiry_date=expiry_date,
-                        date=timezone.now().date(),
-                        # 'defaults' is used only when creating a new record for the day.
-                        defaults={'quantity': 0} 
-                    )
-                    
-                    # Atomically ADD the dispensed quantity to today's total.
-                    # This will never result in a negative number.
-                    daily_record.quantity = F('quantity') + quantity
-                    daily_record.save(update_fields=['quantity'])
-                
-                return JsonResponse({"message": "Stock updated successfully", "success": True})
-                    
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON format."}, status=400)
-        except Exception as e:
-            logger.exception("Error updating pharmacy stock")
-            return JsonResponse({"error": "An unexpected server error occurred.", "detail": str(e)}, status=500)
-    else:
-        # The request method is not POST
-        response = JsonResponse({"error": "Invalid method. Use POST."}, status=405)
-        response['Allow'] = 'POST'
-        return response
+        if not isinstance(quantity, (int, float)) or quantity <= 0:
+            return JsonResponse({"error": "Quantity must be a positive number."}, status=400)
+
+        if action not in ['increase', 'decrease']:
+            return JsonResponse({"error": "Invalid action."}, status=400)
+
+        from datetime import datetime
+        expiry_date = datetime.strptime(expiry_date, "%Y-%m-%d").date()
+
+        with transaction.atomic():
+            medicine = PharmacyStock.objects.select_for_update().get(
+                chemical_name=chemical_name,
+                brand_name=brand_name,
+                dose_volume=dose_volume,
+                expiry_date=expiry_date
+            )
+
+            current_quantity = medicine.quantity
+
+            if action == 'decrease':
+                if current_quantity < quantity:
+                    return JsonResponse({
+                        "error": "Insufficient stock",
+                        "current_stock": current_quantity
+                    }, status=400)
+                medicine.quantity = F('quantity') - quantity
+            else:
+                medicine.quantity = F('quantity') + quantity
+
+            medicine.save(update_fields=['quantity'])
+
+            if action == 'decrease':
+                daily_record, _ = DailyQuantity.objects.get_or_create(
+                    chemical_name=chemical_name,
+                    brand_name=brand_name,
+                    dose_volume=dose_volume,
+                    expiry_date=expiry_date,
+                    date=timezone.now().date(),
+                    defaults={'quantity': 0}
+                )
+                daily_record.quantity = F('quantity') + quantity
+                daily_record.save(update_fields=['quantity'])
+
+        return JsonResponse({"success": True, "message": "Stock updated successfully"})
+
+    except PharmacyStock.DoesNotExist:
+        return JsonResponse({"error": "Medicine stock not found."}, status=404)
+    except Exception as e:
+        logger.exception("Error updating pharmacy stock")
+        return JsonResponse({"error": str(e)}, status=500)
+
 
 
 def get_days_in_month(year, month):
@@ -5126,7 +5153,27 @@ def get_investigation_details(request, aadhar):
             model_map = {
                 'heamatalogy': heamatalogy,
                 'routinesugartests': RoutineSugarTests,
-                # ... other models
+                'lipidprofile': LipidProfile,
+                'liverfunctiontest': LiverFunctionTest,
+                'thyroidfunctiontest': ThyroidFunctionTest,
+                'renalfunctiontests_and_electrolytes': RenalFunctionTest,
+                'urineroutinetest': UrineRoutineTest,
+                'autoimmunetest': AutoimmuneTest,
+                'coagulationtest': CoagulationTest,
+                'enzymescardiacprofile': EnzymesCardiacProfile,
+                'urineroutinetest': UrineRoutineTest,
+                'serologytest': SerologyTest,
+                'motiontest': MotionTest,
+                'culturesensitivitytest': CultureSensitivityTest,
+                'menspack' : MensPack,
+                'womenspack' : WomensPack,
+                'occupationalprofile': OccupationalProfile,
+                'otherstest': OthersTest,
+                'opthalmicreport': OphthalmicReport,
+                'xray': XRay,
+                'usgreport' : USGReport,
+                'ctreport' : CTReport,
+                'mrireport' : MRIReport,
             }
 
             response_data = {}
@@ -5136,10 +5183,7 @@ def get_investigation_details(request, aadhar):
                     query = model.objects.filter(aadhar=aadhar)
 
                     if from_date_str and to_date_str:
-                        # =================================================================
-                        # === FIX 2: CALL DATETIME METHODS CORRECTLY                  ===
-                        # =================================================================
-                        # Use datetime.strptime directly, not datetime.datetime.strptime
+                        
                         to_date_obj = datetime.strptime(to_date_str, '%Y-%m-%d').date()
                         
                         # Use datetime.combine and time.max directly
@@ -5406,7 +5450,7 @@ def get_expiry_dates(request):
             logger.debug(f"get_expiry_dates: chemical_name='{chemical_name}', brand_name='{brand_name}', dose_volume='{dose_volume}'")
 
             if not chemical_name or not brand_name or not dose_volume:
-                return JsonResponse({"suggestions": []})
+                return JsonResponse({"suggestions": ["Hii"]})
 
             # Important: Filter by exact values
             expiry_dates = (
@@ -5420,7 +5464,7 @@ def get_expiry_dates(request):
                 .order_by("expiry_date")
             )
 
-            formatted_expiry_dates = [date.strftime('%Y-%m-%d') for date in expiry_dates if date] #Handle if expiry_date is null/None
+            formatted_expiry_dates = [date.strftime('%Y-%m-%d') for date in expiry_dates if date] 
             logger.debug(f"Expiry dates for {chemical_name}, {brand_name}, {dose_volume}: {formatted_expiry_dates}")
             return JsonResponse({"suggestions": formatted_expiry_dates})
 
@@ -5519,7 +5563,6 @@ def get_discarded_medicines(request):
 def add_discarded_medicine(request):
     """ Record a discarded medicine and reduce stock accordingly. """
     if request.method == "POST":
-        print("I am leo")
         try:
             data = json.loads(request.body.decode('utf-8'))
 
@@ -5533,7 +5576,7 @@ def add_discarded_medicine(request):
             dose_volume = data.get("dose_volume")
 
             # 2. Special Category Logic
-            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+            special_categories = [""]
 
             if medicine_form in special_categories:
                 chemical_name = None
@@ -5725,7 +5768,7 @@ def add_ward_consumable(request):
             # -------------------------
             # 2. Special Category Logic
             # -------------------------
-            special_categories = ["Suture & Procedure Items", "Dressing Items"]
+            special_categories = []
 
             if medicine_form in special_categories:
                 chemical_name = None
@@ -5930,7 +5973,7 @@ def add_ambulance_consumable(request):
         # ----------------------------------------------------
         # 2. Special Category Logic
         # ----------------------------------------------------
-        special_categories = ["Suture & Procedure Items", "Dressing Items"]
+        special_categories = []
 
         if medicine_form in special_categories:
             # For special categories, ignore chemical_name and dose_volume
@@ -6527,7 +6570,6 @@ def map_excel_headers_to_model_fields(excel_data_type):
     mapping = {
         'BASIC DETAILS_Aadhar / Doc No.-Foreigner': 'aadhar', 
         'BASIC DETAILS_NAME': 'name',
-        'BASIC DETAILS_Aadhar / Doc No.-Foreigner_Name of Father / Mother / Guardian': 'guardian',
         'BASIC DETAILS_Name of Father / Mother / Guardian': 'guardian',
         'BASIC DETAILS_Date of Birth': 'dob',
         'BASIC DETAILS_Sex': 'sex',
@@ -6536,7 +6578,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
         'BASIC DETAILS_Identification Mark 1': 'identification_marks1',
         'BASIC DETAILS_Identification Mark 2': 'identification_marks2',
         'BASIC DETAILS_Nationality': 'nationality',
-        'BASIC DETAILS_DocName': 'docName',
+        'BASIC DETAILS_Foreign Document Name': 'docName',
         'BASIC DETAILS_Foreigner_Other Document_Site ID': 'other_site_id'
     }
 
@@ -6563,27 +6605,25 @@ def map_excel_headers_to_model_fields(excel_data_type):
         # Mappings specific to Employee and Associate
         mapping.update({
             'Employment Details_Contractor Status': 'contractor_status',
-            # 'Employment Details_Contractor Number': 'contractorName',
             'Employment Details_Current Employer': 'employer',
-            'Employment Details_Current Designation_Location': 'location', # Combined header
+            'Employment Details_Current Location': 'location', 
             'Employment Details_Designation': 'designation',
             'Employment Details_Department': 'department',
-            'Employment Details_Division' : 'division',
-            'Employment Details_Work Area' : 'workarea',
+            'Employment Details_Division(Mechanical, electrical, maintenance)' : 'division',
+            'Employment Details_Work area (control room, boiler, furnace, CNC cotrol room, paint shop)' : 'workarea',
             'Employment Details_Nature of Job': 'job_nature',
             'Employment Details_Date of Joining': 'doj',
             'Employment Details_Mode of Joining': 'moj',
             'Employment Details_Previous Employer': 'previousemployer',
             'Employment Details_Previous Location': 'previouslocation',
             'Employment Details_Employee Number': 'emp_no',
-            'Employment Details_Status': 'employee_status',
         })
 
     elif excel_data_type == 'contractor':
         # Mappings specific to Employee and Associate
         mapping.update({
-            'Employment Details_Current Employer': 'employer',
-            'Employment Details_Current Designation_Location': 'location', # Combined header
+            'Employment Details_Contract Employer': 'employer',
+            'Employment Details_Current Designation_Location': 'location',
             'Employment Details_Designation': 'designation',
             'Employment Details_Department': 'department',
             'Employment Details_Division' : 'division',
@@ -6593,7 +6633,7 @@ def map_excel_headers_to_model_fields(excel_data_type):
             'Employment Details_Mode of Joining': 'moj',
             'Employment Details_Previous Employer': 'previousemployer',
             'Employment Details_Previous Location': 'previouslocation',
-            'Employment Details_Employee Number': 'emp_no',
+            'Employment Details_Contract Employee Number': 'emp_no',
             'Employment Details_Status': 'contractor_status',
         })
     elif excel_data_type == 'visitor':
@@ -6696,7 +6736,6 @@ def hrupload(request, data_type):
             record = {}
 
             for excel_col, model_field in field_mapping.items():
-                print(excel_col, model_field, row.get(excel_col))
                 if excel_col not in row:
                     continue
 
@@ -6705,7 +6744,7 @@ def hrupload(request, data_type):
                 if model_field in ("dob", "doj"):
                     record[model_field] = parse_date(value)
 
-                elif model_field in ("aadhar", "mrdNo"):
+                elif model_field in ("aadhar", "mrdNo", "emp_no", "country_id", "other_site_id"):
                     record[model_field] = clean_id(value)
 
                 else:
@@ -6960,8 +6999,7 @@ BASIC_DETAILS_MAP = {
 
 # --- Test-specific Maps ---
 HAEMATOLOGY_MAP = {
-    # === Complex Tests (with RESULT/UNIT/RANGE) ===
-    # We only need to define the _RESULT key. The function will find the rest automatically.
+    
     'hemoglobin':       'HAEMATALOGY_Haemoglobin_RESULT',
     'total_rbc':        'HAEMATALOGY_Red Blood Cell (RBC) Count_RESULT',
     'total_wbc':        'HAEMATALOGY_WBC Count (TC)_RESULT',
@@ -7464,9 +7502,7 @@ MRI_MAP = {
     'mri_Lower_limb':      'MRI_Lower limb_NORMAL / ABNORMAL',
     'mri_Lower_limb_comments':'MRI_Lower limb_COMMENTS (If Abnormal)',
 }
-# ==============================================================================
-# PYTHON-BASED EXCEL PARSER
-# ==============================================================================
+
 def parse_hierarchical_excel_py(worksheet):
 
     header_row1 = [cell.value for cell in worksheet[1]]
@@ -7503,9 +7539,7 @@ def parse_hierarchical_excel_py(worksheet):
             
     return json_data
 
-# ==============================================================================
-# DATA PROCESSING HELPER FUNCTIONS
-# ==============================================================================
+
 def _populate_data(model, model_map, row_data):
     """
     Populates model data without parsing/splitting reference ranges.
@@ -7530,7 +7564,7 @@ def _populate_data(model, model_map, row_data):
                     instance_data[unit_model_field] = str(row_data[unit_excel_key])
 
             # 3. Process COMMENTS
-            comments_excel_key = result_excel_key.replace('_RESULT', '_Comments')
+            comments_excel_key = result_excel_key.replace('_RESULT', '_COMMENTS')
             if comments_excel_key in row_data and row_data[comments_excel_key] is not None:
                 comments_model_field = f"{model_field}_comments"
                 if hasattr(model, comments_model_field):
@@ -7542,12 +7576,12 @@ def _populate_data(model, model_map, row_data):
                 # We look for a field named like: hemoglobin_reference_range
                 range_model_field = f"{model_field}_reference_range"
                 
-                # Check if the model has this field
+                
                 if hasattr(model, range_model_field):
-                    # Direct copy of the string (e.g., "70 to 110", "Negative")
+                   
                     instance_data[range_model_field] = str(row_data[range_excel_key])
 
-        # --- Case 2: Handle simple/explicit maps ---
+        
         else:
             if excel_key in row_data and row_data[excel_key] is not None:
                 instance_data[model_field] = str(row_data[excel_key])
@@ -7556,11 +7590,9 @@ def _populate_data(model, model_map, row_data):
 
     
 def process_model_data(model, model_map, row_data, employee, entry_date):
-    """A generic function to process any model."""
+    
     data = _populate_data(model, model_map, row_data)
     if data:
-        # update_or_create ensures that if we upload the same file twice, 
-        # it updates the existing records for that specific visit (entry_date/mrdNo)
         model.objects.update_or_create(
             emp_no=employee.emp_no,
             aadhar=employee.aadhar,
@@ -7607,7 +7639,7 @@ class MedicalDataUploadView(View):
         success_count = 0
         error_count = 0
         errors = []
-
+        x = 1
         try:
             with transaction.atomic():
                 for i, row in enumerate(json_data):
@@ -7651,10 +7683,56 @@ class MedicalDataUploadView(View):
                         ).last()
 
                         if not employee:
-                            continue
+                            employee = employee_details.objects.filter(
+                            aadhar=aadhar_val
+                            ).first()
+                            if not employee:
+                                continue
+                            employee.year=year_val
+                            employee.batch=batch_val
+                            employee.hospitalName=hospital_val
+                            employee.type_of_visit = "Preventive"
+                            employee.register = "Annual / Periodical"
+                            employee.purpose = "Medical Examination"
+                            employee.pk = None
+                            employee.id = None
+                            mrd_no = str(x) + "12012026"
+                            if(x > 9999):
+                                mrd_no = "0"+ str(mrd_no)
+                            elif(x > 999):
+                                mrd_no = "00"+ str(mrd_no)
+                            elif(x > 99):
+                                mrd_no = "000"+ str(mrd_no)
+                            elif(x > 9):
+                                mrd_no = "0000"+ str(mrd_no)
+                            else:
+                                mrd_no = "00000"+ str(mrd_no)
+                            x += 1
+                            employee.mrdNo = mrd_no
+                            employee.save()
+                            Dashboard.objects.create(
+                                mrdNo = employee.mrdNo,
+                                type_of_visit = employee.type_of_visit,
+                                register = employee.register,
+                                purpose = employee.purpose,
+                                hospitalName = employee.hospitalName,
+                                batch = employee.batch,
+                                year = employee.year,
+                                emp_no = employee.emp_no,
+                                type = employee.type,
+                                entry_date = employee.entry_date,
+                                status = employee.status,
+                                date = timezone.now().date(),
+                                visitOutcome = "Annual Checkup Completed",
+                                aadhar = employee.aadhar
+                            )
+                            FitnessAssessment.objects.create(
+                                mrdNo = employee.mrdNo,
+                                status = FitnessAssessment.StatusChoices.COMPLETED,
+                                emp_no = employee.emp_no,
+                                aadhar = employee.aadhar
+                            )
                         
-                        # --- Step 3: Get MRD Number and Date ---
-                        # We don't update the employee details here; we just read them.
                         current_mrd = employee.mrdNo
                         current_entry_date = employee.entry_date
                         
@@ -7662,14 +7740,14 @@ class MedicalDataUploadView(View):
                             errors.append(f"{row_identifier}: Employee found but MRD Number is missing in database.")
                             error_count += 1
                             continue
-                        assessment_data = FitnessAssessment.objects.filter(
-                            mrdNo = current_mrd)
-                        if not assessment_data.exists():
-                            errors.append(f"{row_identifier}: No FitnessAssessment record found for MRD Number {current_mrd}.")
-                            error_count += 1
-                            continue
-                        assessment_data.status = FitnessAssessment.StatusChoices.COMPLETED
-                        assessment_data.save()
+                        # assessment_data = FitnessAssessment.objects.filter(
+                        #     mrdNo = current_mrd)
+                        # if not assessment_data.exists():
+                        #     errors.append(f"{row_identifier}: No FitnessAssessment record found for MRD Number {current_mrd}.")
+                        #     error_count += 1
+                        #     continue
+                        # assessment_data.status = FitnessAssessment.StatusChoices.COMPLETED
+                        # assessment_data.save()
 
                     except Exception as e:
                         errors.append(f"{row_identifier}: Database query error: {e}")
@@ -7682,26 +7760,26 @@ class MedicalDataUploadView(View):
                     try:
                         process_model_data(heamatalogy, HAEMATOLOGY_MAP, row, employee, current_entry_date)
                         process_model_data(RoutineSugarTests, SUGAR_TESTS_MAP, row, employee, current_entry_date)
-                        process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, current_entry_date)
-                        process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, current_entry_date)
-                        process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, current_entry_date)
-                        process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, current_entry_date)
-                        process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, current_entry_date)
-                        process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, current_entry_date)
-                        process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, current_entry_date)
-                        process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, current_entry_date)
-                        process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, current_entry_date)
-                        process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, current_entry_date)
-                        process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, current_entry_date)
-                        process_model_data(MensPack, MENS_PACK_MAP, row, employee, current_entry_date)
-                        process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, current_entry_date)
-                        process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, current_entry_date)
-                        process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, current_entry_date)
-                        process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, current_entry_date)
-                        process_model_data(XRay, XRAY_MAP, row, employee, current_entry_date)
-                        process_model_data(USGReport, USG_MAP, row, employee, current_entry_date)
-                        process_model_data(CTReport, CT_MAP, row, employee, current_entry_date)
-                        process_model_data(MRIReport, MRI_MAP, row, employee, current_entry_date)
+                        # process_model_data(RenalFunctionTest, RENAL_FUNCTION_MAP, row, employee, current_entry_date)
+                        # process_model_data(LipidProfile, LIPID_PROFILE_MAP, row, employee, current_entry_date)
+                        # process_model_data(LiverFunctionTest, LIVER_FUNCTION_MAP, row, employee, current_entry_date)
+                        # process_model_data(ThyroidFunctionTest, THYROID_FUNCTION_MAP, row, employee, current_entry_date)
+                        # process_model_data(AutoimmuneTest, AUTOIMMUNE_MAP, row, employee, current_entry_date)
+                        # process_model_data(CoagulationTest, COAGULATION_MAP, row, employee, current_entry_date)
+                        # process_model_data(EnzymesCardiacProfile, ENZYMES_CARDIAC_MAP, row, employee, current_entry_date)
+                        # process_model_data(UrineRoutineTest, URINE_ROUTINE_MAP, row, employee, current_entry_date)
+                        # process_model_data(SerologyTest, SEROLOGY_MAP, row, employee, current_entry_date)
+                        # process_model_data(MotionTest, MOTION_TEST_MAP, row, employee, current_entry_date)
+                        # process_model_data(CultureSensitivityTest, CULTURE_SENSITIVITY_MAP, row, employee, current_entry_date)
+                        # process_model_data(MensPack, MENS_PACK_MAP, row, employee, current_entry_date)
+                        # process_model_data(WomensPack, WOMENS_PACK_MAP, row, employee, current_entry_date)
+                        # process_model_data(OccupationalProfile, OCCUPATIONAL_PROFILE_MAP, row, employee, current_entry_date)
+                        # process_model_data(OthersTest, OTHERS_TEST_MAP, row, employee, current_entry_date)
+                        # process_model_data(OphthalmicReport, OPHTHALMIC_MAP, row, employee, current_entry_date)
+                        # process_model_data(XRay, XRAY_MAP, row, employee, current_entry_date)
+                        # process_model_data(USGReport, USG_MAP, row, employee, current_entry_date)
+                        # process_model_data(CTReport, CT_MAP, row, employee, current_entry_date)
+                        # process_model_data(MRIReport, MRI_MAP, row, employee, current_entry_date)
                         
                         success_count += 1
 
@@ -8157,36 +8235,49 @@ def get_unique_instruments(request):
     
 
 
+
 @csrf_exempt
 def delete_uploaded_file(request):
-    if request.method == "POST":
-        key = request.POST.get('key')
-        mrdNo = request.POST.get('mrdNo')
-
-        if not key or not mrdNo:
-            return JsonResponse({"error": "Missing 'key' or 'mrdNo' in request."}, status=400)
-
-        try:
-            vitals = vitals.objects.get(mrdNo=mrdNo)
-        except vitals.DoesNotExist:
-            return JsonResponse({"error": "Vitals record not found."}, status=404)
-
-       
-        if not hasattr(vitals, key):
-            return JsonResponse({"error": f"Field '{key}' not found on Vitals."}, status=400)
-
-        
-        file_field = getattr(vitals, key)
-        if not file_field:
-            return JsonResponse({"error": f"No file found in field '{key}'."}, status=400)
-        file_field.delete(save=False) 
-        setattr(vitals, key, None)
-        vitals.save()
-
-        return JsonResponse({"success": True, "message": f"File in '{key}' deleted successfully."})
-
-    else:
+    if request.method != "POST":
         return JsonResponse({"error": "Invalid method. Use POST."}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    key = data.get('key')
+    mrdNo = data.get('mrdNo')
+
+    if not key or not mrdNo:
+        return JsonResponse({"error": "Missing 'key' or 'mrdNo' in request."}, status=400)
+
+    try:
+        vitals_obj = vitals.objects.get(mrdNo=mrdNo)
+    except Vitals.DoesNotExist:
+        return JsonResponse({"error": "Vitals record not found."}, status=404)
+
+    if not hasattr(vitals_obj, key):
+        return JsonResponse({"error": f"Field '{key}' not found on Vitals."}, status=400)
+
+    file_field = getattr(vitals_obj, key)
+
+    if not file_field:
+        return JsonResponse({"error": f"No file found in field '{key}'."}, status=400)
+
+    # delete file from storage
+    file_field.delete(save=False)
+
+    # clear db field
+    setattr(vitals_obj, key, None)
+    vitals_obj.save()
+
+    return JsonResponse({
+        "success": True,
+        "message": f"File in '{key}' deleted successfully."
+    })
+
+
 
 
 @csrf_exempt
@@ -8340,3 +8431,353 @@ def update_employee_data(request):
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Invalid method'}, status=405)
+
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q, Max, Subquery, OuterRef
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from .models import *  # Ensure all your models are imported
+
+@csrf_exempt
+def get_filtered_data(request):
+    if request.method != "POST":
+        return JsonResponse({'error': 'Invalid method'}, status=405)
+
+    try:
+        filters_map = json.loads(request.body)
+        
+        # 1. Start with the latest record for every employee
+        latest_ids = (
+            employee_details.objects.values("aadhar")
+            .annotate(latest_id=Max("id"))
+            .values_list("latest_id", flat=True)
+        )
+        queryset = employee_details.objects.filter(id__in=latest_ids)
+
+        # 2. Basic Employee Details Filters
+        if filters_map.get('role'):
+            queryset = queryset.filter(type__iexact=filters_map['role'])
+        
+        # Simple Mapping for standard fields
+        simple_fields = {
+            'sex': 'sex__iexact',
+            'bloodgrp': 'bloodgrp',
+            'marital_status': 'marital_status__iexact',
+            'nationality': 'nationality__iexact',
+            'designation': 'designation__icontains',
+            'department': 'department__icontains',
+            'employer': 'employer__iexact',
+            'moj': 'moj__iexact',
+            'job_nature': 'job_nature__icontains',
+            'previousEmployer': 'previousemployer__icontains',
+            'previousLocation': 'previouslocation__icontains',
+            'dojFrom': 'doj__gte',
+            'dojTo': 'doj__lte',
+            'division': 'division__iexact',
+            'workarea': 'workarea__iexact',
+        }
+
+        for key, lookup in simple_fields.items():
+            if filters_map.get(key):
+                queryset = queryset.filter(**{lookup: filters_map[key]})
+
+        # Age Filter (Calculated from DOB)
+        if filters_map.get('ageFrom'):
+            start_date = date.today() - relativedelta(years=int(filters_map['ageFrom']))
+            queryset = queryset.filter(dob__lte=start_date)
+        if filters_map.get('ageTo'):
+            end_date = date.today() - relativedelta(years=int(filters_map['ageTo']) + 1)
+            queryset = queryset.filter(dob__gte=end_date)
+
+        # Status Filter
+        if filters_map.get('status'):
+            queryset = queryset.filter(status__iexact=filters_map['status'])
+            if filters_map['status'].lower() == 'transferred to' and filters_map.get('transferred_to'):
+                queryset = queryset.filter(transfer_details__icontains=filters_map['transferred_to'])
+            elif filters_map.get('from') or filters_map.get('to'):
+                if filters_map.get('from'): queryset = queryset.filter(since_date__gte=filters_map['from'])
+                if filters_map.get('to'): queryset = queryset.filter(since_date__lte=filters_map['to'])
+
+        # 3. Vitals Filters (Subquery)
+        for key, val in filters_map.items():
+            if key.startswith('param_'):
+                param = val.get('param')
+                if val.get('value'): # BMI Category Case
+                    v_aadhars = vitals.objects.filter(**{f"{param}_status__iexact": val.get('value')}).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=v_aadhars)    
+                else:
+                    v_query = Q(**{f"{param}__gte": val.get('from'), f"{param}__lte": val.get('to')})
+                    v_aadhars = vitals.objects.filter(v_query).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=v_aadhars)
+
+        
+        for habit in ['smoking', 'alcohol', 'paan/beetle']:
+            if filters_map.get(habit):
+                # Search inside the JSON structure: {"smoking": {"yesNo": "Yes"}}
+                print("Applying Habit Filter:", habit, filters_map[habit])
+                mh_aadhars = MedicalHistory.objects.filter(
+                    personal_history__contains={habit: {"yesNo": filters_map[habit]}}
+                ).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        # Diet
+        if filters_map.get('diet'):
+            mh_aadhars = MedicalHistory.objects.filter(
+                personal_history__diet__contains=filters_map['diet']
+            ).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        if filters_map.get('drugAllergy'):
+            print("Applying Drug Allergy Filter:", filters_map['drugAllergy'])
+            mh_aadhars = MedicalHistory.objects.filter(
+                allergy_fields__contains= {"drug": {"yesNo": filters_map['drugAllergy']}}
+            ).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        if filters_map.get('foodAllergy'):
+            print("Applying Food Allergy Filter:", filters_map['foodAllergy'])
+            mh_aadhars = MedicalHistory.objects.filter(
+                allergy_fields__contains= {"food": {"yesNo": filters_map['foodAllergy']}}
+            ).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        if filters_map.get('otherAllergies'):
+            print("Applying Other Allergy Filter:", filters_map['otherAllergies'])
+            mh_aadhars = MedicalHistory.objects.filter(
+                allergy_fields__contains= {"others": {"yesNo": filters_map['otherAllergies']}}
+            ).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        # Personal History Conditions (e.g., personal_HTN)
+        for key, val in filters_map.items():
+            if key.startswith('personal_'):
+                condition = key.replace('personal_', '')
+                # Filter if the medical_data JSON has entries for this condition
+                mh_aadhars = MedicalHistory.objects.filter(
+                    medical_data__has_key=condition
+                ).values_list('aadhar', flat=True)
+                if val == 'No':
+                    queryset = queryset.exclude(aadhar__in=mh_aadhars)
+                else:
+                    queryset = queryset.filter(aadhar__in=mh_aadhars)
+
+        # 5. Fitness Assessment
+        for key, val in filters_map.items():
+            if key.startswith('fitness_'):
+                # val is an object like {"tremors": "Positive", "overall_fitness": "fit"}
+                f_query = Q()
+                print("Applying Fitness Filter:", val)
+                for f_key, f_val in val.items():
+                    if f_key == "job_nature":
+                        f_query &= Q(**{f"{f_key}__icontains": f_val})
+                    else:
+                        f_query &= Q(**{f"{f_key}__iexact": f_val})
+                f_aadhars = FitnessAssessment.objects.filter(f_query).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=f_aadhars)
+
+        # 6. Special Cases & Shifting Ambulance
+        if filters_map.get('specialCase'):
+            sc_val = filters_map['specialCase']
+            sc_aadhars = FitnessAssessment.objects.filter(special_cases__iexact=sc_val).values_list('aadhar', flat=True)
+            c_aadhars = Consultation.objects.filter(special_cases__iexact=sc_val).values_list('aadhar', flat=True)
+            queryset = queryset.filter(Q(aadhar__in=sc_aadhars) | Q(aadhar__in=c_aadhars))
+
+        if filters_map.get('shiftingAmbulance'):
+            sa = filters_map['shiftingAmbulance']
+            if sa.get('from') and sa.get('to'):
+                sa_aadhars = Consultation.objects.filter(
+                    shifting_required__iexact=sa['val'],
+                    entry_date__gte=sa['from'],
+                    entry_date__lte=sa['to']
+                ).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=sa_aadhars)
+            else:
+                sa_aadhars = Consultation.objects.filter(
+                    shifting_required__iexact=sa['val']
+                ).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=sa_aadhars)
+
+
+        # 8. Statutory Forms
+        if filters_map.get('statutoryFormFilter'):
+            sf = filters_map['statutoryFormFilter']
+            form_model = globals()[sf['formType']] # Dynamically get Form17, Form38, etc.
+            sf_query = Q()
+            if sf.get('from'): sf_query &= Q(entry_date__gte=sf['from'])
+            if sf.get('to'): sf_query &= Q(entry_date__lte=sf['to'])
+            
+            sf_aadhars = form_model.objects.filter(sf_query).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=sf_aadhars)
+
+        # 9. Significant Notes
+        if filters_map.get('significantNotes'):
+            sn = filters_map['significantNotes']
+            sn_query = Q()
+            for sn_key, sn_val in sn.items():
+                sn_query &= Q(**{f"{sn_key}__iexact": sn_val})
+            sn_aadhars = SignificantNotes.objects.filter(sn_query).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=sn_aadhars)
+        
+        if any(k in filters_map for k in ['disease', 'vaccine', 'vaccine_status']):
+            v_query = Q()
+            if filters_map.get('disease'):
+                # Handle case sensitivity (e.g., Covid-19 vs COVID-19)
+                val = filters_map['disease']
+                v_query |= Q(vaccination__contains=[{'disease_name': val}])
+                v_query |= Q(vaccination__contains=[{'disease_name': val.upper()}])
+                v_query |= Q(vaccination__contains=[{'disease_name': val.capitalize()}])
+            
+            if filters_map.get('vaccine'):
+                print("Applying Vaccine Filter:", filters_map['vaccine'])
+                v_query &= Q(vaccination__contains=[{'prophylaxis': filters_map['vaccine']}])
+            
+            if filters_map.get('vaccine_status'):
+                v_query &= Q(vaccination__contains=[{'status': filters_map['vaccine_status']}])
+
+            vac_aadhars = VaccinationRecord.objects.filter(v_query).values_list('aadhar', flat=True)
+            queryset = queryset.filter(aadhar__in=vac_aadhars)
+        
+        for key, value in filters_map.items():
+            if key.startswith('investigation_'):
+                form_name = value.get('form')   # e.g., 'heamatalogy'
+                param = value.get('param')      # e.g., 'hemoglobin'
+                
+                # Dynamically find the model (handling case differences)
+                model_map = {
+                    'heamatalogy': heamatalogy,
+                    'routinesugartests': RoutineSugarTests,
+                    'lipidprofile': LipidProfile,
+                    'liverfunctiontest': LiverFunctionTest,
+                    'thyroidfunctiontest': ThyroidFunctionTest,
+                    'renalfunctiontests_and_electrolytes': RenalFunctionTest,
+                    'urineroutinetest': UrineRoutineTest,
+                    'autoimmunetest': AutoimmuneTest,
+                    'coagulationtest': CoagulationTest,
+                    'enzymescardiacprofile': EnzymesCardiacProfile,
+                    'urineroutinetest': UrineRoutineTest,
+                    'serologytest': SerologyTest,
+                    'motiontest': MotionTest,
+                    'culturesensitivitytest': CultureSensitivityTest,
+                    'menspack' : MensPack,
+                    'womenspack' : WomensPack,
+                    'occupationalprofile': OccupationalProfile,
+                    'otherstest': OthersTest,
+                    'opthalmicreport': OphthalmicReport,
+                    'xray': XRay,
+                    'usgreport' : USGReport,
+                    'ctreport' : CTReport,
+                    'mrireport' : MRIReport,    
+                }
+                
+                model_class = model_map.get(form_name.lower())
+                if model_class:
+                    inv_query = Q()
+                    # Range filter (numeric)
+                    if value.get('from') and value.get('to'):
+                        # Using icontains on the comments field as per your JS logic 
+                        # where values are often stored as strings in "param_comments"
+                        inv_query &= Q(**{f"{param}__gte": value['from']})
+                        inv_query &= Q(**{f"{param}__lte": value['to']})
+                    
+                    # Status filter (Normal/Abnormal)
+                    if value.get('status'):
+                        inv_query &= Q(**{f"{param}_comments__iexact": value['status']}) | Q(**{f"{param}_comments__iexact": value['status']})
+                    
+                    inv_aadhars = model_class.objects.filter(inv_query).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=inv_aadhars)
+                
+            if key.startswith('referrals_'):
+                print("Applying Referral Filter:", key, value)
+                ref = value
+                ref_query = Q()
+                if ref.get('referred') == 'No':
+                    ref_query = Q(referral__iexact='no') | Q(referral__isnull=True)
+                else:
+                    print("Applying Referral Filters:", ref)
+                    ref_query = Q(referral__iexact='yes')
+                    if ref.get('speciality'): ref_query &= Q(speciality__iexact=ref['speciality'])
+                    if ref.get('hospitalName'): ref_query &= Q(hospital_name__icontains=ref['hospitalName'])
+                    if ref.get('doctorName'): ref_query &= Q(doctor_name__icontains=ref['doctorName'])
+                
+                ref_aadhars = Consultation.objects.filter(ref_query).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=ref_aadhars)
+            
+            if key.startswith('statutory_'):
+                print("Applying Statutory Filter:", key, value)
+                form_type = value.get('formType')
+                from_date = value.get('from')
+                to_date = value.get('to')
+                
+                
+                model_map = {
+                    'Form17': Form17,
+                    'Form38': Form38,
+                    'Form39': Form39,
+                    'Form40': Form40,
+                    'Form27': Form27,
+                }
+                
+                model_class = model_map.get(form_type)
+                if model_class:
+                    stat_query = Q()
+                    
+                    if from_date and to_date:
+                        stat_query &= Q(entry_date__range=(from_date, to_date))
+                    
+                    stat_aadhars = model_class.objects.filter(stat_query).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=stat_aadhars)
+
+            if key.startswith('significant_'):
+                print("Applying Significant Notes Filter:", key, value)
+                sn = value
+                if sn.get('special_case'):
+                    print("Filtering Significant Notes by special_case:", sn['special_case'])
+                    sn_aadhars = Consultation.objects.filter(special_cases__iexact=sn['special_case']).values_list('aadhar', flat=True)
+                    sn_aadhars = list(sn_aadhars)
+                    sn_aadhars.extend(FitnessAssessment.objects.filter(special_cases__iexact=sn['special_case']).values_list('aadhar', flat=True))
+                    queryset = queryset.filter(aadhar__in=sn_aadhars)
+                if sn.get('communicable_disease'):
+                    print("Filtering Significant Notes by communicable_disease:", sn['communicable_disease'])
+                    sn_aadhars = SignificantNotes.objects.filter(communicable_disease__iexact=sn['communicable_disease']).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=sn_aadhars)
+                if sn.get('incident_type'):
+                    print("Filtering Significant Notes by incident_type:", sn['incident_type'])
+                    sn_aadhars = SignificantNotes.objects.filter(incident_type__iexact=sn['incident_type']).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=sn_aadhars)
+                if sn.get('incident'):
+                    print("Filtering Significant Notes by incident:", sn['incident'])
+                    sn_aadhars = SignificantNotes.objects.filter(incident__icontains=sn['incident']).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=sn_aadhars)
+                if sn.get('illness_type'):
+                    print("Filtering Significant Notes by illness_type:", sn['illness_type'])
+                    sn_aadhars = SignificantNotes.objects.filter(illness_type__iexact=sn['illness_type']).values_list('aadhar', flat=True)
+                    queryset = queryset.filter(aadhar__in=sn_aadhars)
+            
+            if key.startswith('purpose_'):
+                print("Applying Purpose Filter:", key, value)
+                purpose = value
+                p_query = Q()
+                if purpose.get('type_of_vsit'):
+                    p_query &= Q(visit_type__iexact=purpose['type_of_vsit'])
+                if purpose.get('register'):
+                    p_query &= Q(register__icontains=purpose['register'])
+                if purpose.get('fromDate'):
+                    p_query &= Q(date__gte=purpose['fromDate'])
+                if purpose.get('toDate'):
+                    p_query &= Q(date__lte=purpose['toDate'])
+
+                apt_aadhars = Dashboard.objects.filter(p_query).values_list('aadhar', flat=True)
+                queryset = queryset.filter(aadhar__in=apt_aadhars)
+
+        # Final serialization
+        results = list(queryset.values(
+            "id", "aadhar", "emp_no", "name", "sex", "dob", "type", "status", "nationality"
+        ).order_by("-id"))
+
+        return JsonResponse({'data': results, 'count': len(results)}, status=200)
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

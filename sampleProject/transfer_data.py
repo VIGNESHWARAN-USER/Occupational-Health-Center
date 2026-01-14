@@ -1,77 +1,61 @@
-# import os
-# import django
+import os
+import django
 
-# # Setup Django environment
-# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sampleProject.settings')
-# django.setup()
+# -----------------------------------
+# Setup Django Environment
+# -----------------------------------
+# os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'OHC.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sampleProject.settings')
 
-# # Import all models from jsw.models
-# from jsw.models import (
-#     user, employee_details, Dashboard, vitals, mockdrills, eventsandcamps,
-#     heamatalogy, RoutineSugarTests, RenalFunctionTest, LipidProfile,
-#     LiverFunctionTest, ThyroidFunctionTest, AutoimmuneTest, CoagulationTest,
-#     EnzymesCardiacProfile, UrineRoutineTest, SerologyTest, MotionTest,
-#     CultureSensitivityTest, MensPack, WomensPack, OccupationalProfile,
-#     OthersTest, OphthalmicReport, XRay, USGReport, CTReport, MRIReport,
-#     Appointment, FitnessAssessment, VaccinationRecord, ReviewCategory, Review,
-#     Member, MedicalHistory, Consultation, PharmacyStock, ExpiryRegister,
-#     DiscardedMedicine, WardConsumables, AmbulanceConsumables, PharmacyMedicine,
-#     InstrumentCalibration, Prescription, Form17, Form38, Form39, Form40, Form27,
-#     SignificantNotes, PharmacyStockHistory, DailyQuantity
-# )
+django.setup()
 
-# from django.db import transaction
+from django.apps import apps
+from django.db import transaction
 
-# # Function to transfer data for a single model
-# def transfer_model_data(model):
-#     objs = list(model.objects.using('mysql').all())
-#     for obj in objs:
-#         obj.pk = None  # Reset primary key to allow insertion as new record
-#     with transaction.atomic(using='default'):
-#         model.objects.using('default').bulk_create(objs, batch_size=500)
+MYSQL_DB = 'mysql'
+MSSQL_DB = 'default'
 
-# # Main function
-# def main():
-#     print("\n🚀 Starting MySQL → MSSQL Data Transfer...\n")
-
-#     # List of all models to transfer
-#     model_list = [
-#         user, employee_details, Dashboard, vitals, mockdrills, eventsandcamps,
-#         heamatalogy, RoutineSugarTests, RenalFunctionTest, LipidProfile,
-#         LiverFunctionTest, ThyroidFunctionTest, AutoimmuneTest, CoagulationTest,
-#         EnzymesCardiacProfile, UrineRoutineTest, SerologyTest, MotionTest,
-#         CultureSensitivityTest, MensPack, WomensPack, OccupationalProfile,
-#         OthersTest, OphthalmicReport, XRay, USGReport, CTReport, MRIReport,
-#         Appointment, FitnessAssessment, VaccinationRecord, ReviewCategory, Review,
-#         Member, MedicalHistory, Consultation, PharmacyStock, ExpiryRegister,
-#         DiscardedMedicine, WardConsumables, AmbulanceConsumables, PharmacyMedicine,
-#         InstrumentCalibration, Prescription, Form17, Form38, Form39, Form40, Form27,
-#         SignificantNotes, PharmacyStockHistory, DailyQuantity
-#     ]
-
-#     for model in model_list:
-#         model_name = model.__name__
-#         print(f"🔄 Transferring: {model_name}")
-#         try:
-#             transfer_model_data(model)
-#             print(f"✅ Done: {model_name}\n")
-#         except Exception as e:
-#             print(f"❌ Error in {model_name}: {str(e)}\n")
-
-#     print("\n✅ All transfers complete.\n")
-
-# if __name__ == "__main__":
-#     main()
-import pymssql
-
-def run_custom_query(query):
+# -----------------------------------
+# Transfer function
+# -----------------------------------
+def transfer_model_data(model):
+    model_name = model.__name__
     try:
-        conn = pymssql.connect(server='1.1.1.1', user='sa', password='j$w@dm!n123', database='OHC_JSW')
-        cursor = conn.cursor()
-        cursor.execute(query)
-        result = cursor.fetchall()
-        conn.close()
-        return result
+        queryset = model.objects.using(MYSQL_DB).all()
+        count = queryset.count()
+
+        if count == 0:
+            print(f"⚠️  {model_name}: No data found")
+            return
+
+        objs = []
+        for obj in queryset:
+            obj.pk = None  # Reset PK
+            objs.append(obj)
+
+        with transaction.atomic(using=MSSQL_DB):
+            model.objects.using(MSSQL_DB).bulk_create(objs, batch_size=500)
+
+        print(f"✅ {model_name}: {count} records transferred")
+
     except Exception as e:
-        print("DB connection error:", e)
-        return None
+        print(f"❌ {model_name}: {e}")
+
+# -----------------------------------
+# Main
+# -----------------------------------
+def main():
+    print("\n🚀 Starting FULL MySQL → MSSQL Migration (AUTO MODE)\n")
+
+    # Get all models from jsw app only
+    jsw_models = apps.get_app_config('jsw').get_models()
+
+    for model in jsw_models:
+        print(f"🔄 Processing {model.__name__}")
+        transfer_model_data(model)
+        print("-" * 60)
+
+    print("\n🎉 Migration completed for ALL models\n")
+
+if __name__ == "__main__":
+    main()

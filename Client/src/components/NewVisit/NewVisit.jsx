@@ -147,7 +147,7 @@ const NewVisit = () => {
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
         "Preventive - Follow Up Visits":"Follow Up Visits",
-        "Preventive Other": "Other",
+        "Preventive Other": "Preventive Other",
       },
       Curative: {
         "Illness": "Outpatient",
@@ -159,7 +159,7 @@ const NewVisit = () => {
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
-        "Curative Other": "Other",
+        "Curative Other": "Curative Other",
       }
     },
     Contractor: {
@@ -179,7 +179,7 @@ const NewVisit = () => {
         "Mock Drill": "Mock Drill",
         "BP Sugar Check  ( Normal Value)": "BP Sugar Check  ( Normal Value)",
         "Preventive - Follow Up Visits":"Follow Up Visits",
-        "Preventive Other": "Other",
+        "Preventive Other": "Preventive Other",
       },
       Curative: {
         "Illness": "Outpatient",
@@ -191,7 +191,7 @@ const NewVisit = () => {
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
-        "Curative Other": "Other",
+        "Curative Other": "Curative Other",
       },
     },
     Visitor: {
@@ -209,7 +209,7 @@ const NewVisit = () => {
         "BP Sugar ( Abnormal Value)": "BP Sugar Check  ( Abnormal Value)",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
-        "Curative Other": "Other",
+        "Curative Other": "Curative Other",
       }
     }
   };
@@ -362,6 +362,7 @@ const NewVisit = () => {
   const submissionData = {
     reference: reference || false,
     appointmentId: appointment ? appointment.id : null,
+    submitted_by_nurse: localStorage.getItem("userData"),
     formDataDashboard: {
       typeofVisit: visit,
       type: type,
@@ -379,6 +380,8 @@ const NewVisit = () => {
       profilepic: uploadedImage || profileImage,
     },
   };
+
+  console.log(submissionData);
 
   // Add extra fields based on register
   if (
@@ -435,6 +438,7 @@ const NewVisit = () => {
 
   // Submit data to backend
   try {
+    console.log(submissionData);
     const response = await axios.post(
       "http://localhost:8000/addEntries",
       submissionData,
@@ -442,6 +446,7 @@ const NewVisit = () => {
     );
 
     if (response.status === 200) {
+      console.log(response.data)
       const mrd = response.data.mrdNo;
 
       setMRDNo(mrd);
@@ -566,7 +571,7 @@ const NewVisit = () => {
         } else {
           handleClear(); // User clicked Cancel
         }
-        alert("No employee found with the provided Aadhar ID.");
+        
       }
     } catch (error) {
       console.error("Error during search:", error);
@@ -679,7 +684,7 @@ const NewVisit = () => {
         }
 
         // F. Other Register Custom Text
-        if (targetRegister === "Other") {
+        if (targetRegister === "Preventive Other" || targetRegister === "Curative Other") {
             setOtherRegister(appointment.other_purpose || appointment.otherPurpose || "");
         }
       }
@@ -1547,7 +1552,7 @@ const NewVisit = () => {
 
   if (accessLevel === "nurse" || accessLevel === "doctor") {
     return (
-      <div className="h-screen flex bg-[#8fcadd]">
+      <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
         <Sidebar />
         <div className="w-4/5 p-8 overflow-y-auto">
           <h2 className="text-4xl font-bold mb-8 text-gray-800">New Visit</h2>
@@ -1779,7 +1784,7 @@ const NewVisit = () => {
 
                 
 
-                {(register === "Other") && (
+                {(register === "Preventive Other"  || register === "Curative Other") && (
                   <div>
                     <label className="block text-gray-700 text-sm font-bold mb-2">
                       Other Purpose

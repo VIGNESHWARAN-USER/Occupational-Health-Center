@@ -82,6 +82,7 @@ urlpatterns = [
     path('significant_notes/add/', views.add_significant_notes, name='add_significant_note'),
     path('get_notes/<str:aadhar>', views.get_notes, name='get_notes_by_aadhar'),
     path('get_notes/', views.get_notes_all, name='get_notes_all'),
+    path('get_filtered_data', views.get_filtered_data, name='get_filtered_data'),
 
     # Forms (Using Aadhar from payload)
     path('form17/', views.create_form17, name='create_form17'),
@@ -123,6 +124,7 @@ urlpatterns = [
     path("add_ambulance_consumable/", views.add_ambulance_consumable, name="add_ambulance_consumable"),
     path("get-dose-volume/", views.get_dose_volume, name="get-dose-volume"),
     path("get-chemical-name-by-brand/", views.get_chemical_name_by_brand, name="get-chemical-name-by-brand"),
+    path("get-chemical-name-by-chemical/", views.get_chemical_name_by_chemical, name="get-chemical-name-by-chemical"),
     path("get_calibrations/", views.get_calibrations, name="get_calibrations"),
     path("get_calibration_history/", views.get_calibration_history, name="get_calibration_history"),
     path("complete_calibration/", views.complete_calibration, name="complete_calibration"),

@@ -94,6 +94,8 @@ const AllAppointments = () => {
         setSearchQuery("");
     };
 
+    const currentUser = localStorage.getItem("userData");
+
     const filteredAppointments = useMemo(() => {
         const lowerCaseQuery = searchQuery.toLowerCase().trim();
         if (!lowerCaseQuery) {
@@ -113,7 +115,7 @@ const AllAppointments = () => {
 
     const numberOfColumns = 18;
 
-    const downloadExcel = () => {
+    const downloadExcel = () => {   
         const data = filteredAppointments.map(appointment => ({
             'Appt No.': appointment.appointment_no || '-',
             'Booked Date': appointment.booked_date || '-',
@@ -246,7 +248,7 @@ const AllAppointments = () => {
                 <table className="min-w-full table-auto">
                     <thead className="bg-blue-50 text-blue-600">
                         <tr>
-                            <th className="px-3 py-2 font-semibold text-left text-xs sticky left-0 bg-blue-50 z-10">Appt No.</th>
+                            <th className="px-3 py-2 font-semibold text-left text-xs sticky left-0 top-0 bg-blue-50 z-10">Appt No.</th>
                             <th className="px-3 py-2 font-semibold text-left text-xs">Booked Date</th>
                             <th className="px-3 py-2 font-semibold text-left text-xs">MRD No.</th>
                             <th className="px-3 py-2 font-semibold text-left text-xs">Role</th>
@@ -277,7 +279,14 @@ const AllAppointments = () => {
                                 </td>
                             </tr>
                         ) : filteredAppointments.length > 0 ? (
-                            filteredAppointments.map((appointment) => (
+                            filteredAppointments.map((appointment) => {
+                                console.log(appointment.submitted_Dr, appointment.submitted_by_nurse)
+                                let owner = appointment.submitted_Dr;
+                                if(owner === undefined || owner === "") owner = appointment.submitted_by_nurse;
+                                const isLocked = appointment.status === 'inprogress' && currentUser !== owner;
+                                const isCompleted = appointment.status === 'completed';
+                                console.log(appointment.status, currentUser, isLocked, isCompleted);
+                                return(
                                 <tr key={appointment.id} className="border-b border-gray-100 hover:bg-gray-50 transition group">
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate sticky left-0 bg-white group-hover:bg-gray-50 z-10">{appointment.appointment_no || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.booked_date || '-'}</td>
@@ -298,21 +307,28 @@ const AllAppointments = () => {
                                     <td className="px-3 py-2 text-xs text-gray-700 text-left truncate">{appointment.status.toUpperCase() || '-'}</td>
                                     <td className="px-3 py-2 text-xs text-gray-700 text-center">
                                         <button
-                                            className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center ${
-                                                appointment.status === "initiate" ? "bg-red-500 text-white hover:bg-red-600" :
-                                                appointment.status === "inprogress" ? "bg-yellow-500 text-white hover:bg-yellow-600" :
-                                                "bg-green-500 text-white cursor-not-allowed opacity-70"
-                                            }`}
-                                            onClick={() => handleNavigate(appointment)}
-                                            disabled={appointment.status === 'completed'}
-                                        >
-                                            {appointment.status === "initiate" ? "Initiate" :
-                                                appointment.status === "inprogress" ? "View" :
-                                                "Completed"}
-                                        </button>
+                                className={`px-2 py-1 rounded text-xs font-semibold mx-auto w-20 text-center transition-all ${
+                                    appointment.status === "initiate" 
+                                        ? "bg-red-500 text-white hover:bg-red-600" 
+                                        : appointment.status === "inprogress" 
+                                            ? `bg-yellow-500 text-white ${isLocked ? "cursor-not-allowed opacity-50" : "hover:bg-yellow-600"}`
+                                            : appointment.status === "pending"?
+                                            `bg-yellow-500 text-white ${isLocked ? "cursor-not-allowed opacity-50" : "hover:bg-yellow-600"}`
+                                            : "bg-green-500 text-white cursor-not-allowed opacity-70"
+                                }`}
+                                onClick={() => handleNavigate(appointment)}
+                                disabled={isCompleted || isLocked}
+                                title={isLocked ? `Locked by ${owner}` : ""}
+                            >
+                                {appointment.status === "initiate" ? "Initiate" :
+                                appointment.status === "inprogress" ? "View" :
+                                appointment.status === "pending" ? "View" :
+                                "Completed"}
+                            </button>
                                     </td>
                                 </tr>
-                            ))
+                            )
+                            })
                         ) : (
                             <tr>
                                 <td colSpan={numberOfColumns} className="p-6 text-center text-gray-500">

@@ -171,7 +171,7 @@ const DataUpload = () => {
     }
 
     return (
-        <div className="h-screen flex bg-[#f0f4f8]">
+        <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
             <Sidebar />
             <div className="flex-1 p-8 overflow-y-auto">
                 {/* ... (Existing JSX header) */}

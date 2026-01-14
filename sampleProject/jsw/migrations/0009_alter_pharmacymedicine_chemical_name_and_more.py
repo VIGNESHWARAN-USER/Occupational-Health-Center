@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='pharmacymedicine',
             name='medicine_form',
-            field=models.CharField(choices=[('Tablet', 'Tablet'), ('Syrup', 'Syrup'), ('Injection', 'Injection'), ('Creams', 'Creams'), ('Lotions', 'Lotions'), ('Powder', 'Powder'), ('Respules', 'Respules'), ('Drops', 'Drops'), ('Fluids', 'Fluids'), ('Other', 'Other'), ('Suture & Procedure Items', 'Suture & Procedure Items'), ('Dressing Items', 'Dressing Items')], max_length=50),
+            field=models.CharField(choices=[('Tablet', 'Tablet'), ('Syrup', 'Syrup'), ('Injection', 'Injection'), ('Creams', 'Creams'), ('Lotions', 'Lotions'), ('Powder', 'Powder'), ('Respules', 'Respules'), ('Drops', 'Drops'), ('Fluids', 'Fluids'), ('Other', 'Other'), ('SutureAndProcedureItems', 'SutureAndProcedureItems'), ('Dressing Items', 'Dressing Items')], max_length=50),
         ),
         migrations.AlterField(
             model_name='pharmacystock',
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='pharmacystock',
             name='medicine_form',
-            field=models.CharField(choices=[('Tablet', 'Tablet'), ('Syrup', 'Syrup'), ('Injection', 'Injection'), ('Creams', 'Creams'), ('Drops', 'Drops'), ('Fluids', 'Fluids'), ('Other', 'Other'), ('Lotions', 'Lotions'), ('Powder', 'Powder'), ('Respules', 'Respules'), ('Suture & Procedure Items', 'Suture & Procedure Items'), ('Dressing Items', 'Dressing Items')], max_length=50),
+            field=models.CharField(choices=[('Tablet', 'Tablet'), ('Syrup', 'Syrup'), ('Injection', 'Injection'), ('Creams', 'Creams'), ('Drops', 'Drops'), ('Fluids', 'Fluids'), ('Other', 'Other'), ('Lotions', 'Lotions'), ('Powder', 'Powder'), ('Respules', 'Respules'), ('SutureAndProcedureItems', 'SutureAndProcedureItems'), ('Dressing Items', 'Dressing Items')], max_length=50),
         ),
         migrations.AlterField(
             model_name='pharmacystockhistory',

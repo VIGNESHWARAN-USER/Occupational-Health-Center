@@ -41,12 +41,14 @@ const Forgot = () => {
       });
 
       if (response.status === 200) {
+        setErr("")
         setOtpSent(true);
         setStep(2);
       } else {
         setErr("User not found");
       }
     } catch (error) {
+      console.log(error)
       setErr("Error sending OTP");
     } finally {
       setLoading(false);
