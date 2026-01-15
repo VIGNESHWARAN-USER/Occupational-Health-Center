@@ -1,26 +1,18 @@
-// src/components/PrescriptionIn.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import Sidebar from "../Sidebar"; // Adjust path if needed
+import Sidebar from "../Sidebar";
 import * as XLSX from 'xlsx';
-import { FaDownload, FaSave } from "react-icons/fa";
+import { FaDownload, FaSave, FaChevronLeft, FaChevronRight, FaSearch, FaCalendarDay } from "react-icons/fa";
+import { motion } from "framer-motion";
 
-// --- Helper Functions ---
+// --- Helper Functions (Preserved) ---
 const getDaysInMonth = (year, month) => {
-  // month is 0-indexed (0 = January)
-  if (isNaN(year) || isNaN(month) || month < 0 || month > 11) {
-    console.error("Invalid year or month provided to getDaysInMonth:", year, month);
-    return 0;
-  }
-  // Day 0 of next month gives the last day of the current month
+  if (isNaN(year) || isNaN(month) || month < 0 || month > 11) return 0;
   return new Date(year, month + 1, 0).getDate();
 };
 
 const parseDate = (dateInput) => {
-  // Parses ISO string or already a Date object, returns Date or null
   if (!dateInput) return null;
-  if (dateInput instanceof Date) {
-    return !isNaN(dateInput.getTime()) ? dateInput : null;
-  }
+  if (dateInput instanceof Date) return !isNaN(dateInput.getTime()) ? dateInput : null;
   if (typeof dateInput === 'string') {
     try {
       const isoDate = new Date(dateInput);
@@ -31,94 +23,57 @@ const parseDate = (dateInput) => {
                    return new Date(Date.UTC(year, month - 1, day));
                }
           }
-          return isoDate; // Return parsed date if it includes time/timezone info
+          return isoDate;
       }
-      // console.warn("Could not parse date string reliably:", dateInput); // Reduce noise
       return null;
-    } catch (error) {
-      console.error("Error parsing date:", dateInput, error);
-      return null;
-    }
+    } catch (error) { return null; }
   }
   return null;
 };
 
 const formatDateForAPI = (dateObj) => {
-    // Formats Date object to "YYYY-MM-DD" string for API, or null
-  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
-    return null;
-  }
+  if (!dateObj || !(dateObj instanceof Date) || isNaN(dateObj.getTime())) return null;
   try {
       const year = dateObj.getUTCFullYear();
       const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, '0');
       const day = dateObj.getUTCDate().toString().padStart(2, '0');
-      if (year < 1900 || year > 2100) {
-          console.warn("Year out of expected range during formatting:", year);
-          return null;
-      }
       return `${year}-${month}-${day}`;
-  } catch (error) {
-      console.error("Error formatting date for API:", dateObj, error);
-      return null;
-  }
+  } catch (error) { return null; }
 };
 
-// --- Component ---
 const PrescriptionIn = () => {
   const [prescriptionData, setPrescriptionData] = useState([]);
-  // State for the month currently BEING DISPLAYED
   const [displayedMonthInfo, setDisplayedMonthInfo] = useState({
-    monthName: '', year: 0, daysInMonth: 0, dayHeaders: [], monthIndex: 0 // 0-indexed month
+    monthName: '', year: 0, daysInMonth: 0, dayHeaders: [], monthIndex: 0
   });
-  // State to store today's actual date info for highlighting & update logic
   const [actualTodayInfo, setActualTodayInfo] = useState({
-      day: null, monthIndex: null, year: null // day is 1-31, monthIndex is 0-11
+      day: null, monthIndex: null, year: null
   });
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Separate state for data fetching
-  const [isUpdating, setIsUpdating] = useState(false); // Separate state for DB update
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
   const [updateStatus, setUpdateStatus] = useState('');
 
-  // --- Fetch combined stock and daily data ---
-  // Wrapped in useCallback to stabilize its identity if passed as prop or dependency
   const fetchDataForMonth = useCallback(async (year, monthZeroIndexed) => {
-    // Don't trigger loading state here if updateDisplayedMonth already set it
-    // setIsLoading(true); // Moved to updateDisplayedMonth
-    setError(null); setUpdateStatus(''); // Clear statuses on new fetch trigger
+    setError(null); setUpdateStatus('');
     const monthOneIndexed = monthZeroIndexed + 1;
-
     try {
-      console.log(`Fetching data for ${year}-${monthOneIndexed}...`);
-      // *** ADJUST URL TO YOUR DJANGO BACKEND ENDPOINT ***
       const response = await fetch(`http://localhost:8000/api/prescription-in-data/?year=${year}&month=${monthOneIndexed}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP error! Status: ${response.status} - ${errorText}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
       const data = await response.json();
-      if (!Array.isArray(data)) {
-        throw new Error("API response was not an array.");
-      }
-      console.log("Data received:", data);
-
+      
       const days = getDaysInMonth(year, monthZeroIndexed);
-      if (days === 0) { throw new Error(`Invalid month/year (${year}-${monthOneIndexed}) resulted in 0 days.`);}
-
-      // Process fetched data
       const processedData = data.map((chem, index) => ({
-          s_no: index + 1, // Ensure frontend has s_no if backend doesn't provide reliably
+          s_no: index + 1,
           ...chem,
           brands: Array.isArray(chem.brands) ? chem.brands.map(brand => {
-              const backendDailyQuantities = (typeof brand.daily_quantities === 'object' && brand.daily_quantities !== null)
-                                             ? brand.daily_quantities : {};
+              const backendDailyQuantities = brand.daily_quantities || {};
               const completeDailyQuantities = {};
               let calculatedTotal = 0;
               for (let i = 1; i <= days; i++) {
                   const dayKey = `day_${i}`;
-                  const qtyValue = backendDailyQuantities[dayKey] ?? ''; // Default ''
+                  const qtyValue = backendDailyQuantities[dayKey] ?? '';
                   completeDailyQuantities[dayKey] = qtyValue;
                   const numQty = parseInt(qtyValue, 10);
                   if (!isNaN(numQty)) calculatedTotal += numQty;
@@ -127,449 +82,233 @@ const PrescriptionIn = () => {
                   ...brand,
                   daily_quantities: completeDailyQuantities,
                   monthly_total: calculatedTotal,
-                  expiry_date: parseDate(brand.expiry_date), // Parse date string
+                  expiry_date: parseDate(brand.expiry_date),
               };
-          }) : [], // Default to empty array if brands is missing/invalid
+          }) : [],
       }));
-
-      console.log("Processed Data:", processedData);
-      setPrescriptionData(processedData); // Update state with processed data
-
+      setPrescriptionData(processedData);
     } catch (err) {
-      console.error("Error fetching data:", err);
       setError(`Failed to load data: ${err.message}`);
-      setPrescriptionData([]); // Clear data on error
+      setPrescriptionData([]);
     } finally {
-      setIsLoading(false); // Ensure loading is set to false after fetch completes/fails
+      setIsLoading(false);
     }
-  }, []); // Empty dependency array: doesn't rely on component state/props directly
+  }, []);
 
-  // --- Function to update month info and trigger fetch ---
-  // Needs fetchDataForMonth, so wrapped in useCallback that depends on it
   const updateDisplayedMonth = useCallback((newYear, newMonthIndex) => {
-    console.log(`Updating display to: ${newYear}-${newMonthIndex + 1}`);
-    setIsLoading(true); // Set loading true BEFORE fetch starts
-    setError(null); // Clear previous errors
-    setUpdateStatus(''); // Clear previous update statuses
+    setIsLoading(true);
+    setError(null);
+    setUpdateStatus('');
+    const days = getDaysInMonth(newYear, newMonthIndex);
+    const dateForMonthName = new Date(newYear, newMonthIndex, 1);
+    const monthName = dateForMonthName.toLocaleString('default', { month: 'long' });
+    const dayHeadersArray = Array.from({ length: days }, (_, i) => i + 1);
 
-    try {
-        const days = getDaysInMonth(newYear, newMonthIndex);
-        if (days === 0) throw new Error("Invalid month/year for calculation.");
+    setDisplayedMonthInfo({
+        monthName: monthName, year: newYear,
+        daysInMonth: days, dayHeaders: dayHeadersArray,
+        monthIndex: newMonthIndex,
+    });
+    fetchDataForMonth(newYear, newMonthIndex);
+  }, [fetchDataForMonth]);
 
-        const dateForMonthName = new Date(newYear, newMonthIndex, 1);
-        const monthName = dateForMonthName.toLocaleString('default', { month: 'long' });
-        const dayHeadersArray = Array.from({ length: days }, (_, i) => i + 1);
-
-        setDisplayedMonthInfo({
-            monthName: monthName, year: newYear,
-            daysInMonth: days, dayHeaders: dayHeadersArray,
-            monthIndex: newMonthIndex,
-        });
-
-        // Fetch data for the newly selected month
-        fetchDataForMonth(newYear, newMonthIndex);
-
-    } catch (err) {
-         console.error("Error updating displayed month:", err);
-         setError(`Could not change month: ${err.message}`);
-         setIsLoading(false); // Ensure loading stops if setup fails
-    }
-  }, [fetchDataForMonth]); // Depends on fetchDataForMonth
-
-  // --- Initialize: Set today's info and fetch current month's data ---
   useEffect(() => {
-    console.log("Initializing component...");
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth(); // 0-indexed
+    const currentMonth = today.getMonth();
     const currentDayOfMonth = today.getDate();
-
-    // Store today's actual date info
-    setActualTodayInfo({
-        day: currentDayOfMonth, monthIndex: currentMonth, year: currentYear,
-    });
-
-    // Set initial display and trigger fetch
+    setActualTodayInfo({ day: currentDayOfMonth, monthIndex: currentMonth, year: currentYear });
     updateDisplayedMonth(currentYear, currentMonth);
+  }, [updateDisplayedMonth]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updateDisplayedMonth]); // Run once on mount, relying on updateDisplayedMonth
-
-
-  // --- Handle Input Change (only updates quantity and total) ---
   const handleQuantityChange = (chemIndex, brandIndex, day, value) => {
     const numericValue = value === '' ? '' : Math.max(0, parseInt(value, 10) || 0);
     setPrescriptionData(prevData =>
         prevData.map((chem, cIndex) =>
             cIndex !== chemIndex ? chem : {
                 ...chem,
-                brands: Array.isArray(chem.brands) ? chem.brands.map((brand, bIndex) => {
+                brands: chem.brands.map((brand, bIndex) => {
                     if (bIndex !== brandIndex) return brand;
-                    const updatedDailyQuantities = { ...(brand.daily_quantities || {}), [`day_${day}`]: numericValue };
-                    const total = Object.values(updatedDailyQuantities).reduce((sum, qty) => {
-                        const numQty = parseInt(qty, 10);
-                        return sum + (isNaN(numQty) ? 0 : numQty);
-                    }, 0);
+                    const updatedDailyQuantities = { ...brand.daily_quantities, [`day_${day}`]: numericValue };
+                    const total = Object.values(updatedDailyQuantities).reduce((sum, qty) => sum + (parseInt(qty, 10) || 0), 0);
                     return { ...brand, daily_quantities: updatedDailyQuantities, monthly_total: total };
-                }) : []
+                })
             }
         )
     );
   };
 
-  // --- Handle Update Database (Sends ONLY Today's Data) ---
   const handleUpdateDatabase = async () => {
-    console.log("DEBUG: handleUpdateDatabase called (TODAY ONLY)");
     setIsUpdating(true); setUpdateStatus(''); setError(null);
-
-    // Use ACTUAL today's date info for update, but DISPLAYED month/year context
     const { day: currentDay, monthIndex: actualMonthIndex, year: actualYear } = actualTodayInfo;
-    const { year: displayedYear, monthIndex: displayedMonthIndex } = displayedMonthInfo;
-
-    // Validation
-    if (currentDay === null || actualMonthIndex === null || actualYear === null) {
-         setError("Cannot update: Today's date information is missing.");
-         setIsUpdating(false); console.error("Update cancelled: actualTodayInfo state invalid:", actualTodayInfo); return;
-    }
-     if (displayedMonthIndex === null || displayedYear === 0) {
-         setError("Cannot update: Displayed month/year state invalid.");
-         setIsUpdating(false); console.error("Update cancelled: displayedMonthInfo state invalid:", displayedMonthInfo); return;
-     }
-
-    const monthOneIndexedForPayload = actualMonthIndex + 1; // Use actual month for payload date
     const payload = [];
     const dayKey = `day_${currentDay}`;
 
-    prescriptionData.forEach((chemical, chemIndex) => {
-        if (!chemical || !Array.isArray(chemical.brands)) return;
-        chemical.brands.forEach((brand, brandIndex) => {
-            if (!brand) return;
-            const expiryDateFormatted = formatDateForAPI(brand.expiry_date); // Format current state expiry
-            const quantityStr = brand.daily_quantities?.[dayKey] ?? ''; // Get ONLY today's quantity
+    prescriptionData.forEach((chemical) => {
+        chemical.brands.forEach((brand) => {
+            const quantityStr = brand.daily_quantities?.[dayKey] ?? '';
             const quantity = quantityStr === '' ? 0 : parseInt(quantityStr, 10);
-
-            if (!isNaN(quantity)) {
-                payload.push({
-                    chemical_name: chemical.chemical_name, brand_name: brand.brand_name,
-                    dose_volume: brand.dosage, expiry_date: expiryDateFormatted,
-                    year: actualYear, // Use ACTUAL year for DB date
-                    month: monthOneIndexedForPayload, // Use ACTUAL month for DB date
-                    day: currentDay, // Use ACTUAL day for DB date
-                    quantity: quantity
-                });
-            } else { console.warn(`Skipping today's entry (${dayKey}) for ${chemical.chemical_name} - ${brand.brand_name}: invalid quantity '${quantityStr}'`); }
+            payload.push({
+                chemical_name: chemical.chemical_name, brand_name: brand.brand_name,
+                dose_volume: brand.dosage, expiry_date: formatDateForAPI(brand.expiry_date),
+                year: actualYear, month: actualMonthIndex + 1, day: currentDay, quantity: quantity
+            });
         });
     });
 
-    console.log(`Payload for update (Date: ${actualYear}-${monthOneIndexedForPayload}-${currentDay}):`, JSON.stringify(payload, null, 2));
-
-    if (payload.length === 0) {
-        console.warn("No valid data entries for today to send.");
-        setUpdateStatus("No data entered for today to update.");
-        setIsUpdating(false); return;
-    }
-
     try {
-        const response = await fetch('http://localhost:8000/api/update-daily-quantities/', { // ADJUST URL
+        const response = await fetch('http://localhost:8000/api/update-daily-quantities/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' /* Add CSRF */ },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-        let result = {};
-        try { result = await response.json(); }
-        catch (parseError) { const textResponse = await response.text(); console.error("Failed to parse JSON response:", textResponse); result = { error: textResponse || `Request failed with status ${response.status}` }; }
-        if (!response.ok) { throw new Error(result.error || `HTTP error! Status: ${response.status}`); }
-        console.log("Update successful (Today Only):", result);
-        setUpdateStatus(result.message || 'Update successful!');
-        // Re-fetch the *currently displayed* month to potentially show updated totals if needed
-        // Although only today was saved, re-fetching current view keeps consistency
-        fetchDataForMonth(displayedYear, displayedMonthIndex);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Update failed');
+        setUpdateStatus('Today\'s usage updated successfully!');
+        fetchDataForMonth(displayedMonthInfo.year, displayedMonthInfo.monthIndex);
     } catch (err) {
-        console.error("Error updating database:", err);
-        setError(`Update failed: ${err.message}`);
-        setUpdateStatus('');
-    } finally {
-        setIsUpdating(false);
-    }
+        setError(err.message);
+    } finally { setIsUpdating(false); }
   };
 
-
-  // --- Handle Export To Excel ---
   const handleExportToExcel = () => {
-    console.log("DEBUG: Export to Excel button clicked!"); setError(null);
-    if (!prescriptionData || !Array.isArray(prescriptionData) || prescriptionData.length === 0) { alert("No data available to export."); console.warn("Export cancelled: prescriptionData is empty."); return; }
-    if (!displayedMonthInfo || !displayedMonthInfo.dayHeaders || !Array.isArray(displayedMonthInfo.dayHeaders) || displayedMonthInfo.dayHeaders.length === 0) { alert("Month information not loaded correctly."); console.warn("Export cancelled: displayedMonthInfo invalid."); return; }
-    console.log("DEBUG: Current Displayed Month Info for Export:", displayedMonthInfo);
+    const wb = XLSX.utils.book_new();
+    let ws_data = [["S.No", "Chemical Name", "Brand Name", "Expiry Date", "Dosage", "Monthly Total", ...displayedMonthInfo.dayHeaders.map(day => `D${day}`)]];
 
-    try {
-        const wb = XLSX.utils.book_new();
-        const ws_name = `Prescription In ${displayedMonthInfo.monthName} ${displayedMonthInfo.year}`; // More specific name
-        let ws_data = [];
-        const headers = ["S.No", "Chemical Name", "Brand Name", "Expiry Date", "Dosage", "Monthly Total", ...displayedMonthInfo.dayHeaders.map(day => `D${day}`)];
-        ws_data.push(headers);
-
-        const filteredData = prescriptionData.filter(chemical =>
-            chemical?.chemical_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (Array.isArray(chemical?.brands) && chemical.brands.some(brand => brand?.brand_name?.toLowerCase().includes(searchTerm.toLowerCase())))
-        );
-
-        filteredData.forEach(chemical => {
-            if (!chemical || !Array.isArray(chemical.brands)) return;
-            chemical.brands.forEach(brand => {
-                 if (!brand) return;
-                const expiryFormatted = formatDateForAPI(brand.expiry_date);
-                const row = [
-                    chemical.s_no ?? '', chemical.chemical_name ?? '', brand.brand_name ?? '',
-                    expiryFormatted ?? 'N/A', brand.dosage ?? '', brand.monthly_total ?? 0,
-                    ...displayedMonthInfo.dayHeaders.map(day => brand.daily_quantities?.[`day_${day}`] ?? '')
-                ];
-                ws_data.push(row);
-            });
+    prescriptionData.filter(chemical =>
+        chemical?.chemical_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        chemical.brands.some(brand => brand?.brand_name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    ).forEach(chemical => {
+        chemical.brands.forEach(brand => {
+            ws_data.push([
+                chemical.s_no, chemical.chemical_name, brand.brand_name,
+                formatDateForAPI(brand.expiry_date) || 'N/A', brand.dosage, brand.monthly_total,
+                ...displayedMonthInfo.dayHeaders.map(day => brand.daily_quantities?.[`day_${day}`] ?? '')
+            ]);
         });
+    });
 
-        const ws = XLSX.utils.aoa_to_sheet(ws_data);
-        ws['!cols'] = [ { wch: 5 }, { wch: 30 }, { wch: 25 }, { wch: 12 }, { wch: 15 }, { wch: 10 }, ...displayedMonthInfo.dayHeaders.map(() => ({ wch: 5 })) ];
-        XLSX.utils.book_append_sheet(wb, ws, ws_name);
-        const fileName = `PrescriptionInData_${displayedMonthInfo.monthName}_${displayedMonthInfo.year}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        console.log(`DEBUG: Excel file "${fileName}" generation initiated.`);
-    } catch (excelError) {
-        console.error("Error generating Excel file:", excelError);
-        setError(`Failed to generate Excel file: ${excelError.message}`);
-    }
+    const ws = XLSX.utils.aoa_to_sheet(ws_data);
+    XLSX.utils.book_append_sheet(wb, ws, "Daily Usage");
+    XLSX.writeFile(wb, `DailyUsage_${displayedMonthInfo.monthName}_${displayedMonthInfo.year}.xlsx`);
   };
 
-  // --- Month Navigation Handlers ---
-  const handlePreviousMonth = () => {
-    let { year, monthIndex } = displayedMonthInfo;
-    if (monthIndex === 0) { monthIndex = 11; year -= 1; }
-    else { monthIndex -= 1; }
-    updateDisplayedMonth(year, monthIndex);
-  };
-
-  const handleNextMonth = () => {
-    let { year, monthIndex } = displayedMonthInfo;
-    // Prevent going to future months relative to ACTUAL current month
-    if (year > actualTodayInfo.year || (year === actualTodayInfo.year && monthIndex >= actualTodayInfo.monthIndex)) {
-        console.log("Navigation to next month disabled (future or current month).");
-        return;
-    }
-    if (monthIndex === 11) { monthIndex = 0; year += 1; }
-    else { monthIndex += 1; }
-    updateDisplayedMonth(year, monthIndex);
-  };
-
-  const handleCurrentMonth = () => {
-     const { year: currentYear, monthIndex: currentMonth } = actualTodayInfo;
-     if (currentYear === null || currentMonth === null) {
-         console.error("Cannot go to current month, actualTodayInfo not set.");
-         setError("Could not determine current month.");
-         return;
-     }
-     // Only trigger update if not already viewing the current month
-     if (displayedMonthInfo.year !== currentYear || displayedMonthInfo.monthIndex !== currentMonth) {
-        updateDisplayedMonth(currentYear, currentMonth);
-     }
-  };
-
-  // Determine if "Next Month" should be disabled (cannot view future months)
-  const isNextMonthDisabled = () => {
-     if (!actualTodayInfo.year || actualTodayInfo.monthIndex === null) return true; // Disable if today's info isn't ready
-     return displayedMonthInfo.year > actualTodayInfo.year || (displayedMonthInfo.year === actualTodayInfo.year && displayedMonthInfo.monthIndex >= actualTodayInfo.monthIndex);
-  };
-
-
-  // --- Render Logic ---
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-x-hidden overflow-y-auto  p-4 md:p-6">
-           {/* Header Section */}
-          <div className="mb-4 p-4 bg-white rounded shadow-sm">
-            <div className="flex justify-between items-center flex-wrap gap-y-2">
+      <div className="w-4/5 p-8 overflow-y-auto">
+        
+        {/* Header & Month Nav */}
+        <div className="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <h1 className="text-4xl font-bold text-gray-800">Daily Usage Tracker</h1>
+          
+          <div className="flex items-center bg-white p-2 rounded-xl shadow-md border border-blue-200">
+            <button onClick={() => updateDisplayedMonth(displayedMonthInfo.year, displayedMonthInfo.monthIndex - 1)} className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition">
+              <FaChevronLeft />
+            </button>
+            <div className="px-6 text-center min-w-[160px]">
+              <span className="block text-sm font-bold text-blue-500 uppercase tracking-widest">{displayedMonthInfo.year}</span>
+              <span className="text-xl font-bold text-gray-800">{displayedMonthInfo.monthName}</span>
+            </div>
+            <button 
+              disabled={displayedMonthInfo.year === actualTodayInfo.year && displayedMonthInfo.monthIndex === actualTodayInfo.monthIndex}
+              onClick={() => updateDisplayedMonth(displayedMonthInfo.year, displayedMonthInfo.monthIndex + 1)} 
+              className="p-2 hover:bg-blue-50 rounded-lg text-blue-600 transition disabled:opacity-30"
+            >
+              <FaChevronRight />
+            </button>
+            <button onClick={() => updateDisplayedMonth(actualTodayInfo.year, actualTodayInfo.monthIndex)} className="ml-2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition shadow-sm" title="Go to Current Month">
+              <FaCalendarDay />
+            </button>
+          </div>
+        </div>
 
-              {/* Titles & Month Navigation */}
-              <div className="flex items-center gap-4 flex-wrap mb-2 md:mb-0">
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 order-1">
-                  Daily Usage
-                </h1>
-
-                <div className="flex items-center gap-2 order-3 md:order-2">
-                  <button
-                    onClick={handlePreviousMonth}
-                    title="Previous Month"
-                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-                    disabled={isLoading || isUpdating}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-
-                  <h2 className="text-lg md:text-xl font-semibold text-gray-700 text-center w-36 min-w-[9rem]">
-                    {displayedMonthInfo.monthName} {displayedMonthInfo.year}
-                  </h2>
-
-                  <button
-                    onClick={handleNextMonth}
-                    title="Next Month"
-                    className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-                    disabled={isNextMonthDisabled() || isLoading || isUpdating}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-
-                  <button
-                    onClick={handleCurrentMonth}
-                    title="Go to Current Month"
-                    className="ml-2 px-2 py-1 border border-gray-300 rounded text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                    disabled={isLoading || isUpdating}
-                  >
-                    Today
-                  </button>
-                </div>
+        <motion.div 
+          className="bg-white p-8 rounded-lg shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Action Row */}
+          <div className="flex flex-col lg:flex-row justify-between items-end gap-4 mb-6">
+            <div className="w-full lg:w-1/3">
+              <label className="block text-gray-700 text-sm font-bold mb-2">Search Items</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><FaSearch size={14} /></span>
+                <input type="text" placeholder="Chemical or Brand..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
               </div>
+            </div>
 
-              {/* Actions & Status */}
-              <div className="flex items-center flex-wrap gap-2 justify-end flex-grow md:flex-grow-0 order-2 md:order-3">
-
-                <div className="w-full md:w-auto text-right mb-2 md:mb-0 md:mr-2 order-first md:order-none min-h-[1.25rem]">
-                  {isUpdating && <span className="text-blue-600 italic text-sm">Updating...</span>}
-                  {error && <span className="text-red-600 font-semibold text-sm">Error: {error}</span>}
-                  {updateStatus && <span className="text-green-600 font-semibold text-sm">{updateStatus}</span>}
-                </div>
-
-                {/* Update Button */}
-                <button
-                  onClick={handleUpdateDatabase}
-                  className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded text-sm flex items-center gap-2 ${isUpdating || isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={isUpdating || isLoading}
-                >
-                  <FaSave size={14} />
-                  {isUpdating ? "Saving..." : "Update Today's Count"}
-                </button>
-
-                {/* Export Button */}
-                <button
-                  onClick={handleExportToExcel}
-                  className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm flex items-center gap-2"
-                  disabled={isLoading || isUpdating}
-                >
-                  <FaDownload size={14} />
-                  Export to Excel
-                </button>
-
-                {/* Search Field */}
-                <input
-                  type="text"
-                  placeholder="Search Chemical or Brand"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="p-2 border border-gray-300 rounded w-full md:w-56 lg:w-64 text-sm"
-                />
-              </div>
+            <div className="flex gap-3">
+              <button onClick={handleExportToExcel} className="bg-blue-700 hover:bg-blue-800 text-white font-bold py-2.5 px-5 rounded-lg flex items-center gap-2 transition shadow-md">
+                <FaDownload /> Export Excel
+              </button>
             </div>
           </div>
 
-          {/* Loading / No Data / Error Messages */}
-          {isLoading && <div className="text-center py-10 text-gray-600">Loading data for {displayedMonthInfo.monthName} {displayedMonthInfo.year}...</div>}
-          {!isLoading && error && !updateStatus && <div className="text-center py-10 text-red-600 font-semibold">Error loading data: {error}</div>}
-          {!isLoading && !error && prescriptionData.length === 0 && (
-            <div className="text-center py-10 text-gray-500">No prescription data found for {displayedMonthInfo.monthName} {displayedMonthInfo.year}.</div>
-          )}
+          {/* Alert Messages */}
+          {error && <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">{error}</div>}
+          {updateStatus && <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg font-bold">{updateStatus}</div>}
 
-          {/* Table Section */}
-          {!isLoading && !error && prescriptionData.length > 0 && (
-            <div className="container mx-auto px-0">
-                <div className="py-4 overflow-x-auto">
-                  <div className="inline-block min-w-full shadow-md rounded-lg overflow-hidden border border-gray-300">
-                    <table className="min-w-full leading-normal border-collapse">
-                      <thead className="bg-gray-100 sticky top-0 z-10">
-                         {/* Header Row */}
-                         <tr>
-                           {["S.No", "Chemical Name", "Brand Name", "Expiry Date", "Dosage", "Total", /* Day Headers */
-                             ...(displayedMonthInfo.dayHeaders || []).map(day => `D${day}`) // Add check for dayHeaders
-                            ].map((headerText, index) => {
-                                const isActualTodayHeader = displayedMonthInfo.year === actualTodayInfo.year &&
-                                                    displayedMonthInfo.monthIndex === actualTodayInfo.monthIndex &&
-                                                    index > 5 && // Check only for day columns
-                                                    displayedMonthInfo.dayHeaders?.[index - 6] === actualTodayInfo.day; // Safe access
-                                return (
-                                    <th key={`header-${index}`} className={`px-2 py-2 border border-gray-300 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap ${index < 6 ? 'text-left' : 'text-center'} ${index === 0 ? 'w-10' : ''} ${index === 3 ? 'w-20' : ''} ${isActualTodayHeader ? 'bg-yellow-200' : ''}`} style={index > 5 ? { minWidth: '45px' } : {}} >
-                                        {headerText}
-                                    </th>
-                                );
-                            })}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {prescriptionData
-                          .filter(chemical => // Optional chaining for safety
-                            chemical?.chemical_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (Array.isArray(chemical?.brands) && chemical.brands.some(brand => brand?.brand_name?.toLowerCase().includes(searchTerm.toLowerCase())))
-                          )
-                          .map((chemical, chemIndex) => (
-                          <React.Fragment key={`chem-${chemical?.s_no ?? chemIndex}-${chemical?.chemical_name ?? 'unknown'}`}>
-                            {Array.isArray(chemical?.brands) && chemical.brands.map((brand, brandIndex) => (
-                              <tr key={`brand-${chemical?.s_no ?? chemIndex}-${brandIndex}-${brand?.brand_name ?? 'unknown'}`} className="hover:bg-gray-50">
-                                {/* S.No & Chemical Name */}
-                                {brandIndex === 0 && (
-                                  <>
-                                    <td className="px-2 py-1 border border-gray-300 bg-white text-sm align-top text-center" rowSpan={chemical.brands.length}>
-                                      {chemical.s_no ?? chemIndex + 1}
-                                    </td>
-                                    <td className="px-2 py-1 border border-gray-300 bg-white text-sm align-top" rowSpan={chemical.brands.length}>
-                                      {chemical.chemical_name ?? 'N/A'}
-                                    </td>
-                                  </>
-                                )}
-                                {/* Brand Specific Cells */}
-                                <td className="px-2 py-1 border border-gray-300 bg-white text-sm whitespace-nowrap">{brand?.brand_name ?? 'N/A'}</td>
-                                <td className="px-2 py-1 border border-gray-300 bg-white text-sm whitespace-nowrap text-center">{formatDateForAPI(brand?.expiry_date) ?? 'N/A'}</td>
-                                <td className="px-2 py-1 border border-gray-300 bg-white text-sm whitespace-nowrap">{brand?.dosage ?? 'N/A'}</td>
-                                <td className="px-2 py-1 border border-gray-300 bg-white text-sm font-semibold text-center whitespace-nowrap">{brand?.monthly_total ?? 0}</td>
-                                {/* Daily Quantity Inputs */}
-                                {(displayedMonthInfo.dayHeaders || []).map((day) => { // Add check for dayHeaders
-                                  // Check if the current cell's day/month/year matches ACTUAL today
-                                  const isActualTodayCell = displayedMonthInfo.year === actualTodayInfo.year &&
-                                                        displayedMonthInfo.monthIndex === actualTodayInfo.monthIndex &&
-                                                        day === actualTodayInfo.day;
-                                  const inputKey = `input-${chemical?.s_no ?? chemIndex}-${brandIndex}-day-${day}`;
-                                  return (
-                                    <td key={inputKey} className={`p-0 border border-gray-300 text-sm ${isActualTodayCell ? 'bg-yellow-100' : 'bg-white'}`}>
-                                      <div className="p-1 h-full">
-                                        <input
-                                          type="number"
-                                          min="0"
-                                          value={brand?.daily_quantities?.[`day_${day}`] ?? ''}
-                                          onChange={(e) => handleQuantityChange(chemIndex, brandIndex, day, e.target.value)}
-                                          className="w-full h-full text-center border-none focus:outline-none focus:ring-1 focus:ring-blue-500 rounded bg-transparent p-0"
-                                          style={{ appearance: 'textfield', MozAppearance: 'textfield' }}
-                                          disabled={isLoading || isUpdating}
-                                        />
-                                      </div>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            ))}
-                          </React.Fragment>
+          {/* Table Container */}
+          <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-inner bg-gray-50">
+            {isLoading ? (
+              <div className="py-20 text-center"><div className="inline-block h-10 w-10 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div></div>
+            ) : (
+              <table className="min-w-full border-collapse">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="sticky left-0 z-20 bg-gray-100 px-3 py-3 border-b text-left text-xs font-bold text-gray-500 uppercase">S.No</th>
+                    <th className="sticky left-[50px] z-20 bg-gray-100 px-4 py-3 border-b text-left text-xs font-bold text-gray-500 uppercase">Chemical Name</th>
+                    <th className="px-4 py-3 border-b text-left text-xs font-bold text-gray-500 uppercase min-w-[150px]">Brand Name</th>
+                    <th className="px-4 py-3 border-b text-center text-xs font-bold text-gray-500 uppercase">Expiry</th>
+                    <th className="px-4 py-3 border-b text-left text-xs font-bold text-gray-500 uppercase">Dosage</th>
+                    <th className="px-4 py-3 border-b text-center text-xs font-bold text-blue-600 uppercase">Total</th>
+                    {displayedMonthInfo.dayHeaders.map(day => (
+                      <th key={day} className={`px-2 py-3 border-b text-center text-[10px] font-bold min-w-[45px] ${displayedMonthInfo.monthIndex === actualTodayInfo.monthIndex && day === actualTodayInfo.day ? 'bg-yellow-200 text-yellow-800 border-x-2 border-yellow-400' : 'text-gray-500'}`}>
+                        D{day}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {prescriptionData.filter(chemical => 
+                    chemical.chemical_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    chemical.brands.some(b => b.brand_name.toLowerCase().includes(searchTerm.toLowerCase()))
+                  ).map((chemical, chemIdx) => (
+                    chemical.brands.map((brand, brandIdx) => (
+                      <tr key={`${chemIdx}-${brandIdx}`} className="hover:bg-blue-50 transition duration-150">
+                        {brandIdx === 0 && (
+                          <>
+                            <td className="sticky left-0 z-10 bg-white px-3 py-4 border-b text-sm text-gray-500 font-medium" rowSpan={chemical.brands.length}>{chemical.s_no}</td>
+                            <td className="sticky left-[50px] z-10 bg-white px-4 py-4 border-b text-sm font-bold text-gray-800" rowSpan={chemical.brands.length}>{chemical.chemical_name}</td>
+                          </>
+                        )}
+                        <td className="px-4 py-4 border-b text-sm text-gray-700">{brand.brand_name}</td>
+                        <td className="px-4 py-4 border-b text-xs text-center text-gray-500">{formatDateForAPI(brand.expiry_date)}</td>
+                        <td className="px-4 py-4 border-b text-sm text-gray-600">{brand.dosage}</td>
+                        <td className="px-4 py-4 border-b text-sm font-bold text-center text-blue-700 bg-blue-50/50">{brand.monthly_total}</td>
+                        {displayedMonthInfo.dayHeaders.map(day => (
+                          <td key={day} className={`p-1 border-b ${displayedMonthInfo.monthIndex === actualTodayInfo.monthIndex && day === actualTodayInfo.day ? 'bg-yellow-50 border-x-2 border-yellow-200' : ''}`}>
+                            <input 
+                              type="number" 
+                              value={brand.daily_quantities[`day_${day}`]} 
+                              onChange={(e) => handleQuantityChange(chemIdx, brandIdx, day, e.target.value)}
+                              className={`w-full text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 rounded p-1 bg-transparent ${brand.daily_quantities[`day_${day}`] > 0 ? 'text-gray-900' : 'text-gray-300'}`}
+                            />
+                          </td>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-            </div>
-          )}
-        </main>
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
-}
+};
 
 export default PrescriptionIn;

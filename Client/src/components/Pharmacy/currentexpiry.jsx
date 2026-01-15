@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "../Sidebar";
 import axios from "axios";
+import { motion } from "framer-motion";
+import { FaTrashAlt, FaCheckCircle } from "react-icons/fa";
 
 const CurrentExpiry = () => {
   const [expiryStock, setExpiryStock] = useState([]);
@@ -9,6 +11,7 @@ const CurrentExpiry = () => {
 
   // Fetch expiry stock
   const fetchExpiryStock = () => {
+    setLoading(true);
     axios
       .post("http://localhost:8000/current_expiry/")
       .then((response) => {
@@ -27,13 +30,13 @@ const CurrentExpiry = () => {
 
   // Remove expired medicine
   const handleRemove = async (id) => {
+    if (!window.confirm("Are you sure you want to mark this item as removed?")) return;
+    
     try {
       const response = await axios.post("http://localhost:8000/remove_expiry/", { id });
 
       if (response.data.success) {
-        alert("Medicine removed successfully!");
-
-        // Update UI: Set removed_month to today's date for the removed item
+        // Update UI: Set removed_date to today's date for the removed item
         setExpiryStock(expiryStock.map(med =>
           med.id === id ? { ...med, removed_date: new Date().toISOString().split("T")[0] } : med
         ));
@@ -47,61 +50,79 @@ const CurrentExpiry = () => {
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-auto">
-        <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Current Expiry Medicines</h2>
+      <div className="w-4/5 p-8 overflow-y-auto">
+        {/* Header Section */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-gray-800">Expiry Tracker</h1>
+        </div>
 
-        {/* Loading & Error Handling */}
-        {loading ? (
-          <p className="text-gray-600 text-center">Loading...</p>
-        ) : error ? (
-          <p className="text-red-500">{error}</p>
-        ) : expiryStock.length === 0 ? (
-              <p className="text-center text-gray-500">No expiring medicines next month.</p>
-          ) :(
-          
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-red-600 text-white">
-                  <th className="p-3 text-left">Medicine Form</th>
-                  <th className="p-3 text-left">Brand Name</th>
-                  <th className="p-3 text-left">Chemical Name</th>
-                  <th className="p-3 text-left">Dose/Volume</th>
-                  <th className="p-3 text-left">Total Quantity</th>
-                  <th className="p-3 text-left">Expiry Date</th>
-                  <th className="p-3 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expiryStock.map((item, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-3">{item.medicine_form}</td>
-                      <td className="p-3 font-bold">{item.brand_name}</td>
-                      <td className="p-3 text-gray-600">{item.chemical_name}</td>
-                      <td className="p-3">{item.dose_volume}</td>
-                      <td className="p-3 font-bold">{item.quantity}</td>
-                      <td className="p-3">{item.expiry_date}</td>
-                      <td className="p-3 text-center">
+        <motion.div 
+          className="bg-white p-8 rounded-lg shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-semibold mb-6 text-gray-700">
+            Current Expiry Medicines
+          </h2>
+
+          {loading ? (
+            <div className="w-full text-center py-10">
+              <div className="inline-block h-10 w-10 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+              <p className="mt-2 text-gray-500">Loading inventory...</p>
+            </div>
+          ) : error ? (
+            <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          ) : expiryStock.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 italic">
+              No expiring medicines found for the upcoming period.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto font-sans">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chemical Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dose</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {expiryStock.map((item, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition duration-150">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.medicine_form}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.brand_name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{item.chemical_name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.dose_volume}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-blue-600">{item.quantity}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-red-600 font-medium">{item.expiry_date}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-center">
                         {item.removed_date ? (
-                          <span className="px-3 py-2 bg-green-500 text-white font-semibold rounded-lg">
-                            Removed
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                            <FaCheckCircle /> Removed
                           </span>
                         ) : (
                           <button
                             onClick={() => handleRemove(item.id)}
-                            className="px-4 py-2 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-700 transition"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 text-white text-xs font-bold rounded-lg shadow hover:bg-red-600 transition duration-200"
                           >
-                            Remove
+                            <FaTrashAlt /> Remove
                           </button>
                         )}
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
-          
-        )}
-        </div>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </motion.div>
       </div>
     </div>
   );

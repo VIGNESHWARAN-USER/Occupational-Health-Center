@@ -1,25 +1,23 @@
 import React, { useEffect, useState, useCallback } from "react";
-import Sidebar from "../Sidebar"; // Assuming correct path
+import Sidebar from "../Sidebar";
 import axios from "axios";
 import * as XLSX from "xlsx";
-import { FaDownload, FaEraser } from "react-icons/fa";
+import { FaDownload, FaEraser, FaSearch, FaFilter } from "react-icons/fa";
+import { motion } from "framer-motion";
 
-// Define API endpoints centrally
-const API_BASE_URL = "http://localhost:8000"; // Or your actual base URL
+const API_BASE_URL = "http://localhost:8000";
 const CURRENT_STOCK_URL = `${API_BASE_URL}/current_stock/`;
 const STOCK_HISTORY_URL = `${API_BASE_URL}/stock_history/`;
 
 const StockHistory = () => {
-  // State variables
-  const [combinedStock, setCombinedStock] = useState([]); // Holds the unified raw data
-  const [filteredData, setFilteredData] = useState([]); // Data displayed in the table after ALL filters
+  const [combinedStock, setCombinedStock] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [fromDate, setFromDate] = useState(""); // State for From Date filter
-  const [toDate, setToDate] = useState("");     // State for To Date filter
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
-  // Fetch and combine data (remains largely the same)
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -32,117 +30,58 @@ const StockHistory = () => {
       const currentStock = (currentRes.data.stock || []).map(item => ({
         ...item,
         dataType: 'Current',
-        displayQuantity: item.quantity_expiry // Assuming this is correct from backend
+        displayQuantity: item.quantity_expiry
       }));
 
       const stockHistory = (historyRes.data.stock_history || []).map(item => ({
         ...item,
         dataType: 'Expired',
-        // Ensure field name matches backend response (total_quantity_recorded or total_quantity_sum)
         displayQuantity: item.total_quantity_recorded || item.total_quantity_sum
       }));
 
       const allData = [...currentStock, ...stockHistory];
 
       allData.sort((a, b) => {
-         // Keep existing sort or adjust as needed
          if (a.dataType !== b.dataType) return a.dataType.localeCompare(b.dataType);
          if (a.brand_name !== b.brand_name) return a.brand_name.localeCompare(b.brand_name);
-         if (a.chemical_name !== b.chemical_name) return a.chemical_name.localeCompare(b.chemical_name);
-         // Add entry_date sort if desired for consistent ordering within groups
-         if (a.entry_date !== b.entry_date) return new Date(b.entry_date) - new Date(a.entry_date); // Descending date
-         return 0;
+         return new Date(b.entry_date) - new Date(a.entry_date);
       });
 
-      console.log("Combined Data:", allData);
-
       setCombinedStock(allData);
-      // Initial filtering is done in the useEffect below
-
     } catch (err) {
-      console.error("Error fetching stock data:", err);
-      let errorMessage = "Error loading stock data. ";
-       if (err.response) {
-        errorMessage += `Server responded with status ${err.response.status}. ${err.response.data?.error || ''}`;
-      } else if (err.request) {
-        errorMessage += "No response received from server. Is it running?";
-      } else {
-        errorMessage += err.message;
-      }
-      setError(errorMessage);
+      setError("Error loading stock history. Please check your connection.");
       setCombinedStock([]);
-      setFilteredData([]);
     } finally {
       setLoading(false);
     }
-  }, []); // Empty dependency array - runs once on mount
+  }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Effect to apply ALL filters whenever dependencies change
   useEffect(() => {
     let result = combinedStock;
-
-    // Apply text search filter
     if (searchTerm) {
-      const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      result = result.filter(
-        (item) =>
-          item.brand_name?.toLowerCase().includes(lowerCaseSearchTerm) ||
-          item.chemical_name?.toLowerCase().includes(lowerCaseSearchTerm)
+      const lowerValue = searchTerm.toLowerCase();
+      result = result.filter(item =>
+          item.brand_name?.toLowerCase().includes(lowerValue) ||
+          item.chemical_name?.toLowerCase().includes(lowerValue)
       );
     }
-
-    // Apply 'From Date' filter
-    // Ensure item.entry_date is in 'YYYY-MM-DD' or comparable format
-    if (fromDate) {
-       result = result.filter(item => item.entry_date && item.entry_date >= fromDate);
-    }
-
-    // Apply 'To Date' filter
-    if (toDate) {
-       result = result.filter(item => item.entry_date && item.entry_date <= toDate);
-    }
-
+    if (fromDate) result = result.filter(item => item.entry_date && item.entry_date >= fromDate);
+    if (toDate) result = result.filter(item => item.entry_date && item.entry_date <= toDate);
     setFilteredData(result);
-
-  }, [combinedStock, searchTerm, fromDate, toDate]); // Re-run filter when these change
-
-
-  // --- Handlers ---
-
-  // Update search term state only
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
+  }, [combinedStock, searchTerm, fromDate, toDate]);
 
   const handleClearFilters = () => {
-  setSearchTerm("");
-  setFromDate("");
-  setToDate("");
-  setFilteredData(stockData); // Reset table back to original full dataset
-};
-
-  // Update from date state
-  const handleFromDateChange = (e) => {
-    setFromDate(e.target.value);
+    setSearchTerm("");
+    setFromDate("");
+    setToDate("");
   };
 
-  // Update to date state
-  const handleToDateChange = (e) => {
-    setToDate(e.target.value);
-  };
-
-  // Prepare FILTERED data and handle Excel Export
   const handleDownloadExcel = () => {
-    // Use filteredData for export
-    if (!filteredData || filteredData.length === 0) {
-      alert("No data available to export based on current filters.");
-      return;
-    }
-
+    if (!filteredData.length) return;
     const dataForExport = filteredData.map(item => ({
       "Type": item.dataType,
       "Medicine Form": item.medicine_form,
@@ -154,192 +93,128 @@ const StockHistory = () => {
       "Expiry Date": item.expiry_date,
     }));
 
-    // ---------- Generate Dynamic File Name with Date + Time ----------
     const now = new Date();
-    const day = now.getDate().toString().padStart(2, "0");
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const month = monthNames[now.getMonth()];
-    const year = now.getFullYear();
-
-    let hours = now.getHours();
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    const formattedTime = `${hours}.${minutes} ${ampm}`;
-    const fileName = `Pharmacy Filtered Stock Report - ${day}-${month}-${year} @ ${formattedTime}.xlsx`;
-
-    // ---------- Create Sheet and Download ----------
+    const fileName = `Stock_Report_${now.getDate()}_${now.getMonth()+1}_${now.getFullYear()}.xlsx`;
     const ws = XLSX.utils.json_to_sheet(dataForExport);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "FilteredStockReport");
-
+    XLSX.utils.book_append_sheet(wb, ws, "StockReport");
     XLSX.writeFile(wb, fileName);
   };
 
-  // --- Render ---
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="flex-1 p-4 md:p-6 overflow-auto flex flex-col">
-        {/* <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          Stock Report (Current & History)
-        </h2> */}
+      <div className="w-4/5 p-8 overflow-y-auto">
+        
+        {/* Header Section */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-gray-800">Stock Report</h1>
+        </div>
 
-        {/* Filters Row */}
-        <div className="mb-4 p-4 bg-white rounded-lg shadow flex flex-col gap-4">
-
-          {/* Title INSIDE the box and centered */}
-          <h2 className="text-2xl font-bold text-gray-800 text-center">
-            Stock Report (Current & History)
-          </h2>
+        <motion.div 
+          className="bg-white p-8 rounded-lg shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-semibold mb-6 text-gray-700">Detailed Inventory History</h2>
 
           {/* Filters Row */}
-          <div className="flex flex-wrap items-end gap-4 justify-center">
-
-            {/* Search Field */}
-            <div className="flex-grow min-w-[220px]">
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                Search
-              </label>
-              <input
-                id="search"
-                type="text"
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder="Brand or Chemical Name..."
-                className="w-full p-2 border border-gray-300 rounded-md shadow-sm 
-                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
+          <div className="mb-8 flex flex-wrap items-end gap-4 border-b border-gray-100 pb-6">
+            <div className="flex-grow min-w-[250px]">
+              <label className="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-wide">Search Medicines</label>
+              <div className="relative">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><FaSearch size={13} /></span>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Brand or chemical name..."
+                  className="w-full pl-10 p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm"
+                />
+              </div>
             </div>
 
-            {/* From Date */}
-            <div className="flex-shrink-0">
-              <label htmlFor="fromDate" className="block text-sm font-medium text-gray-700 mb-1">
-                From Entry Date
-              </label>
-              <input
-                id="fromDate"
-                type="date"
-                value={fromDate}
-                onChange={handleFromDateChange}
-                className="p-2 border border-gray-300 rounded-md shadow-sm 
-                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
+            <div>
+              <label className="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-wide">From Date</label>
+              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
             </div>
 
-            {/* To Date */}
-            <div className="flex-shrink-0">
-              <label htmlFor="toDate" className="block text-sm font-medium text-gray-700 mb-1">
-                To Entry Date
-              </label>
-              <input
-                id="toDate"
-                type="date"
-                value={toDate}
-                min={fromDate}
-                onChange={handleToDateChange}
-                className="p-2 border border-gray-300 rounded-md shadow-sm 
-                focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-              />
+            <div>
+              <label className="block text-gray-700 text-xs font-bold mb-2 uppercase tracking-wide">To Date</label>
+              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm" />
             </div>
 
-            {/* Button Row */}
-            <div className="flex items-center gap-3">
-
-              {/* Clear Filter Button */}
-              <button
-                onClick={handleClearFilters}
-                disabled={!fromDate && !toDate && !searchTerm}
-                className={`bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow 
-                flex items-center gap-2 transition duration-150 ${
-                  (!fromDate && !toDate && !searchTerm) ? "opacity-40 cursor-not-allowed" : ""
-                }`}
+            <div className="flex gap-2">
+              <button 
+                onClick={handleClearFilters} 
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold transition shadow-md"
               >
-                <FaEraser size={16} />
-                Clear
+                <FaEraser size={14} /> Clear
               </button>
-
-              {/* Download Button */}
-              <button
-                onClick={handleDownloadExcel}
-                disabled={loading || filteredData.length === 0}
-                className={`bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-md shadow 
-                flex items-center gap-2 transition duration-150 ${
-                  loading || filteredData.length === 0
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
+              <button 
+                onClick={handleDownloadExcel} 
+                disabled={loading || !filteredData.length}
+                className="bg-blue-700 hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 text-sm font-bold transition shadow-md disabled:opacity-50"
               >
-                <FaDownload size={16} />
-                Download Excel
+                <FaDownload size={14} /> Export Excel
               </button>
-
             </div>
-
           </div>
-        </div>
 
-        {/* Data Display Area */}
-        <div className="flex-grow overflow-x-auto bg-white shadow-lg rounded-lg">
+          {/* Table Section */}
           {loading ? (
-            <div className="flex justify-center items-center h-40"> {/* Reduced height */}
-                <p className="text-gray-600 text-lg">Loading Stock Data...</p>
+            <div className="w-full text-center py-20">
+              <div className="inline-block h-10 w-10 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+              <p className="mt-2 text-gray-500 font-medium">Aggregating records...</p>
             </div>
           ) : error ? (
-             <div className="flex justify-center items-center h-40 p-4"> {/* Reduced height */}
-                 <p className="text-red-600 bg-red-100 p-4 rounded border border-red-300 text-center">{error}</p>
-             </div>
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center font-medium">{error}</div>
           ) : (
-            <table className="w-full min-w-[800px]">
-              <thead className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md z-10">
-                <tr>
-                  {/* Headers remain the same */}
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Type</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Medicine Form</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Brand Name</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Chemical Name</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Dose/Volume</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Quantity</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Entry Date</th>
-                  <th className="p-3 text-left text-sm font-semibold tracking-wider">Expiry Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                 {/* Render filteredData */}
-                {filteredData.length > 0 ? (
-                  filteredData.map((item, index) => (
-                    <tr key={`${item.dataType}-${item.brand_name}-${item.chemical_name}-${item.expiry_date}-${item.entry_date}-${index}`} // Enhanced key
-                        className={`hover:bg-gray-50 transition duration-150 ${index % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}`}
-                    >
-                      <td className="p-3 whitespace-nowrap">
-                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                           item.dataType === 'Current' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                         }`}>
-                             {item.dataType}
-                         </span>
-                      </td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{item.medicine_form}</td>
-                      <td className="p-3 whitespace-nowrap text-sm font-medium text-gray-900">{item.brand_name}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-600">{item.chemical_name}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-700">{item.dose_volume}</td>
-                      {/* Ensure displayQuantity has a value */}
-                      <td className="p-3 whitespace-nowrap text-sm font-bold text-indigo-700">{item.displayQuantity ?? 'N/A'}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-500">{item.entry_date}</td>
-                      <td className="p-3 whitespace-nowrap text-sm text-gray-500">{item.expiry_date}</td>
-                    </tr>
-                  ))
-                ) : (
+            <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-inner">
+              <table className="min-w-full table-auto font-sans">
+                <thead className="bg-gray-50">
                   <tr>
-                    <td colSpan="8" className="p-6 text-center text-gray-500">
-                      {searchTerm || fromDate || toDate ? "No items match your filters." : "No stock data found."}
-                    </td>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Form</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Brand Name</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Chemical</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Dose</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Qty</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Entry</th>
+                    <th className="px-4 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Expiry</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filteredData.length > 0 ? (
+                    filteredData.map((item, index) => (
+                      <tr key={index} className="hover:bg-blue-50 transition duration-150">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase rounded-full shadow-sm ${
+                            item.dataType === 'Current' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                          }`}>
+                            {item.dataType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{item.medicine_form}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.brand_name}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{item.chemical_name}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{item.dose_volume}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-blue-700">{item.displayQuantity ?? '0'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-500 font-medium">{item.entry_date}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-xs text-gray-500 font-medium">{item.expiry_date}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="p-10 text-center text-gray-500 italic">No records found matching your filters.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

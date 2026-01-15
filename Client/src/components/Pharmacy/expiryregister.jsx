@@ -3,6 +3,7 @@ import Sidebar from "../Sidebar";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { FaDownload, FaFilter, FaEraser } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 const ExpiryRegister = () => {
   const [expiryRegister, setExpiryRegister] = useState([]);
@@ -39,9 +40,13 @@ const ExpiryRegister = () => {
   };
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return "Not Removed";
-    const fullDateStr = `01-${dateStr}`;
+    if (!dateStr || dateStr === "Not Removed") return "Not Removed";
+    // Handle the month-year format by prepending a dummy day for parsing
+    const fullDateStr = dateStr.includes("-") && dateStr.split("-").length === 2 ? `01-${dateStr}` : dateStr;
     const date = new Date(fullDateStr);
+    
+    if (isNaN(date.getTime())) return dateStr;
+
     return date.toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -61,129 +66,128 @@ const ExpiryRegister = () => {
       "Chemical Name": item.chemical_name,
       "Dose/Volume": item.dose_volume,
       "Quantity": item.quantity,
-      "Total Quantity": item.total_quantity || item.Total_quantity, // fallback safety
+      "Total Quantity": item.total_quantity || item.Total_quantity,
       "Expiry Date": formatDate(item.expiry_date),
       "Removed Date": formatDate(item.removed_date),
     }));
 
-    // ---- Generate formatted timestamp ----
     const now = new Date();
     const day = now.getDate().toString().padStart(2, "0");
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const month = monthNames[now.getMonth()];
+    const month = now.toLocaleString('default', { month: 'short' });
     const year = now.getFullYear();
+    const formattedTime = `${now.getHours() % 12 || 12}.${now.getMinutes().toString().padStart(2, "0")} ${now.getHours() >= 12 ? 'PM' : 'AM'}`;
+    const fileName = `Pharmacy Expiry Register - ${day}-${month}-${year} @ ${formattedTime}.xlsx`;
 
-    let hours = now.getHours();
-    const minutes = now.getMinutes().toString().padStart(2, "0");
-    const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    const timeFormatted = `${hours}.${minutes} ${ampm}`;
-
-    const fileName = `Pharmacy Expiry Register - ${day}-${month}-${year} @ ${timeFormatted}.xlsx`;
-
-    // ---- Create and Save Excel ----
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "ExpiryRegister");
-
     XLSX.writeFile(wb, fileName);
   };
 
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-auto">
-      <div className="w-full flex flex-wrap items-center justify-between mb-4 gap-4">
-        {/* Centered Filters */}
-        <div className="flex flex-wrap justify-center gap-2 flex-1">
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="border rounded px-2 py-1"
-          />
-          <span className="text-gray-700">to</span>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="border rounded px-2 py-1"
-          />
-          <button
-            onClick={fetchExpiryRegister}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded"
-          >
-            <FaFilter size={14} />
-            Filter
-          </button>
-
-          <button
-            onClick={handleClearFilters}
-            className="flex items-center gap-2 bg-gray-500 hover:bg-gray-400 text-white px-3 py-1 rounded"
-          >
-            <FaEraser size={14} />
-            Clear
-          </button>
+      <div className="w-4/5 p-8 overflow-y-auto">
+        
+        {/* Header Section */}
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-gray-800">Expiry Ledger</h1>
         </div>
 
-        {/* Right-aligned Download */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleDownloadExcel}
-            className="flex items-center gap-2 bg-green-500 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-md shadow"
-          >
-            <FaDownload size={16} />
-            <span>Download Excel</span>
-          </button>
-        </div>
+        <motion.div 
+          className="bg-white p-8 rounded-lg shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-semibold mb-6 text-gray-700">Expiry History</h2>
 
-      </div>
+          {/* Filter Section */}
+          <div className="mb-6 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-end">
+            <div>
+              <label className="block text-gray-700 text-xs font-bold mb-1">From Date</label>
+              <input 
+                type="date" 
+                value={fromDate} 
+                onChange={(e) => setFromDate(e.target.value)} 
+                className="p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+            </div>
+            <div>
+              <label className="block text-gray-700 text-xs font-bold mb-1">To Date</label>
+              <input 
+                type="date" 
+                value={toDate} 
+                onChange={(e) => setToDate(e.target.value)} 
+                className="p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
+              />
+            </div>
+            <button 
+              onClick={fetchExpiryRegister} 
+              className="bg-blue-500 text-white px-5 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2 text-sm transition font-semibold"
+            >
+              <FaFilter size={12} /> Get
+            </button>
+            <button 
+              onClick={handleClearFilters} 
+              className="bg-gray-500 text-white px-5 py-2 rounded-md hover:bg-gray-600 flex items-center gap-2 text-sm transition font-semibold"
+            >
+              <FaEraser size={12} /> Clear
+            </button>
+            <button 
+              onClick={handleDownloadExcel} 
+              className="bg-blue-700 text-white px-5 py-2 rounded-md hover:bg-blue-800 flex items-center gap-2 text-sm transition ml-auto font-semibold"
+            >
+              <FaDownload size={12} /> Export to Excel
+            </button>
+          </div>
 
-        {/* Table Section */}
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg p-4">
-            <h2 className="text-2xl font-bold mb-4 text-center">Expiry Register</h2>  
-        {loading ? (
-          <p className="text-gray-600 text-center">Loading...</p>
-        ) : error ? (
-          <p className="text-red-500">{error}</p>
-        ) : expiryRegister.length === 0 ? (
-              <p className="text-center text-gray-500">No expired medicines recorded.</p>
+          {/* Table Section */}
+          {loading ? (
+            <div className="w-full text-center py-10">
+              <div className="inline-block h-10 w-10 text-blue-500 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em]"></div>
+            </div>
+          ) : error ? (
+            <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">{error}</div>
+          ) : expiryRegister.length === 0 ? (
+            <div className="text-center py-10 text-gray-500 italic border-2 border-dashed border-gray-100 rounded-xl">
+              No expired medicines recorded for this period.
+            </div>
           ) : (
-          
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-blue-600 text-white">
-                  <th className="p-3 text-left">Medicine Form</th>
-                  <th className="p-3 text-left">Brand Name</th>
-                  <th className="p-3 text-left">Chemical Name</th>
-                  <th className="p-3 text-left">Dose/Volume</th>
-                  <th className="p-3 text-left">Quantity</th>
-                  <th className="p-3 text-left">Total_quantity</th>
-                  <th className="p-3 text-left">Expiry Date</th>
-                  <th className="p-3 text-left">Removed Date</th>
-                </tr>
-              </thead>
-              <tbody>
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto font-sans">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chemical</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dose</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Removed Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {expiryRegister.map((item, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="p-3">{item.medicine_form}</td>
-                      <td className="p-3 font-bold">{item.brand_name}</td>
-                      <td className="p-3 text-gray-600">{item.chemical_name}</td>
-                      <td className="p-3">{item.dose_volume}</td>
-                      <td className="p-3 font-bold">{item.quantity}</td>
-                      <td className="p-3 font-bold">{item.total_quantity}</td>
-                      <td className="p-3">{formatDate(item.expiry_date)}</td>
-                      <td className="p-3 text-green-700 font-semibold">
+                    <tr key={index} className="hover:bg-gray-50 transition duration-150">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{item.medicine_form}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.brand_name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{item.chemical_name}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">{item.dose_volume}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-red-500">{item.quantity}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">{item.total_quantity}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(item.expiry_date)}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-green-700 font-semibold italic">
                         {formatDate(item.removed_date)}
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
-          
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </motion.div>
       </div>
     </div>
   );

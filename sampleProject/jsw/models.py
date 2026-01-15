@@ -1748,10 +1748,10 @@ class PharmacyStock(BaseModel):
 # --- Expiry Register Model ---
 # No emp_no, so no aadhar added here
 class ExpiryRegister(BaseModel):
-    medicine_form = models.CharField(max_length=20)
-    brand_name = models.CharField(max_length=255)
-    chemical_name = models.CharField(max_length=255)
-    dose_volume = models.CharField(max_length=50)
+    medicine_form = models.CharField(max_length=255, null=True, blank=True)
+    brand_name = models.CharField(max_length=255, null=True, blank=True)
+    chemical_name = models.CharField(max_length=255, null=True, blank=True)
+    dose_volume = models.CharField(max_length=50, null=True, blank=True)
     quantity = models.PositiveIntegerField()
     expiry_date = models.DateField()
     removed_date = models.DateField(null=True, blank=True)

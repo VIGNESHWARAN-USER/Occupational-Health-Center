@@ -3658,7 +3658,7 @@ def uploadAppointment(request):
     try:
         data = json.loads(request.body.decode('utf-8'))
         appointments_data = data.get("appointments", [])
-
+        booked_by = data.get("bookedBy", "")
         # Expecting at least header + 1 row
         if not appointments_data or len(appointments_data) < 2:
             return JsonResponse({"error": "No valid data found in Excel."}, status=400)
@@ -3674,26 +3674,25 @@ def uploadAppointment(request):
                 # 6: Year, 7: Batch, 8: Hospital, 9: Camp, 10: Booked By
                 
                 aadhar_no = get_cell(row, 0)
-                role = get_cell(row, 1)
-                register = get_cell(row, 2)
+                register = get_cell(row, 1)
                 
                 # Validation
                 if not aadhar_no or len(aadhar_no) != 12:
                     raise ValueError(f"Invalid Aadhar No: {aadhar_no}")
-                if not role or not register:
-                    raise ValueError("Missing Role or Register")
+                if not register:
+                    raise ValueError("Missing Register")
 
                 # Parse Date/Time
-                booked_date = parse_excel_date(row[4] if len(row) > 4 else None)
-                booked_time = parse_excel_time(row[5] if len(row) > 5 else None)
+                booked_date = parse_excel_date(row[3] if len(row) > 3 else None)
+                booked_time = parse_excel_time(row[4] if len(row) > 4 else None)
 
                 # --- 2. Retrieve Employee Details ---
                 worker = employee_details.objects.filter(aadhar=aadhar_no).last()
-                
+                if worker: 
+                    role = worker.type 
                 if not worker:
-                    # If visitor, we might accept manual input, but for Employee/Contractor we need DB
                     if role == "Visitor":
-                        name = "Visitor " + aadhar_no[-4:] # Fallback
+                        name = "Visitor " + aadhar_no[-4:] 
                         emp_id = ""
                         organization = "Visitor Org"
                         contractor_name = ""
@@ -3710,7 +3709,7 @@ def uploadAppointment(request):
 
                 # --- 4. Handle Conditional Fields ---
                 # "Follow Up Reason" column (Index 3) is overloaded based on Register
-                col_dynamic_val = get_cell(row, 3) 
+                col_dynamic_val = get_cell(row, 2) 
                 
                 bp_sugar_status = ""
                 bp_sugar_reason = ""
@@ -3724,11 +3723,10 @@ def uploadAppointment(request):
                     followup_reason = col_dynamic_val # e.g., "Illness"
 
                 # Other Conditionals (Index 6, 7, 8, 9)
-                year = get_cell(row, 6)
-                batch = get_cell(row, 7)
-                hospital_name = get_cell(row, 8)
-                camp_name = get_cell(row, 9)
-                booked_by = get_cell(row, 10)
+                year = get_cell(row, 5)
+                batch = get_cell(row, 6)
+                hospital_name = get_cell(row, 7)
+                camp_name = get_cell(row, 8)
 
                 # --- 5. Save to Database ---
                 with transaction.atomic():
@@ -4840,27 +4838,24 @@ def get_current_expiry(request):
             current_month = today.month; current_year = today.year
             next_month_date = today + relativedelta(months=1)
             next_month = next_month_date.month; next_year = next_month_date.year
-
             with transaction.atomic():
                 # Find medicines expiring exactly in the current month OR exactly in the next month
                 expiry_medicines = PharmacyStock.objects.select_for_update().filter(
                     Q(expiry_date__year=current_year, expiry_date__month=current_month) |
                     Q(expiry_date__year=next_year, expiry_date__month=next_month)
                 )
-
                 medicines_processed_count = 0
                 for medicine in expiry_medicines:
-                    # Create ExpiryRegister entry
+                    print("Medicine to expire: ",medicine)
                     ExpiryRegister.objects.create(
-                        entry_date=medicine.entry_date, # Preserve original entry date
+                        entry_date=medicine.entry_date, 
                         medicine_form=medicine.medicine_form, brand_name=medicine.brand_name,
                         chemical_name=medicine.chemical_name, dose_volume=medicine.dose_volume,
                         quantity=medicine.quantity, # Record the quantity at time of expiry flagging
                         expiry_date=medicine.expiry_date,
                         total_quantity = medicine.total_quantity
-                        # removed_date is initially null
                     )
-                    medicine.delete() # Remove from active stock
+                    medicine.delete() 
                     medicines_processed_count += 1
 
                 logger.info(f"Processed {medicines_processed_count} soon-to-expire medicines.")
@@ -5765,9 +5760,7 @@ def add_ward_consumable(request):
             chemical_name = data.get("chemical_name")
             dose_volume = data.get("dose_volume")
 
-            # -------------------------
-            # 2. Special Category Logic
-            # -------------------------
+            
             special_categories = []
 
             if medicine_form in special_categories:
@@ -5785,9 +5778,7 @@ def add_ward_consumable(request):
                     return JsonResponse({"error": "All fields including Chemical Name and Dose/Volume are required."},
                                         status=400)
 
-            # -------------------------
-            # 3. Parse Numbers & Dates
-            # -------------------------
+            
             try:
                 quantity_to_consume = int(quantity_str)
                 if quantity_to_consume <= 0:
@@ -5796,7 +5787,8 @@ def add_ward_consumable(request):
                 return JsonResponse({"error": "Invalid quantity."}, status=400)
 
             try:
-                expiry_date = datetime.strptime(f"{expiry_date_str}-01", "%Y-%m-%d").date()
+                print("Parsing expiry date:", expiry_date_str)
+                expiry_date = datetime.strptime(expiry_date_str, "%Y-%m-%d").date()
             except:
                 return JsonResponse({"error": "Invalid expiry date format. Use YYYY-MM."}, status=400)
 

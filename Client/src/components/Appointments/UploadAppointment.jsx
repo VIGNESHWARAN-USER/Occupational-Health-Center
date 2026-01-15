@@ -52,13 +52,13 @@ const UploadAppointmentPage = () => {
       return;
     }
 
-    setIsProcessing(true); // Start loading indicator
-    setUploadStatus(null); // Reset status
+    setIsProcessing(true); 
+    setUploadStatus(null); 
     try {
       const response = await fetch("http://localhost:8000/uploadAppointment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ appointments: excelData }),
+        body: JSON.stringify({ appointments: excelData, bookedBy: localStorage.getItem("userData") }),
       });
 
       const result = await response.json();

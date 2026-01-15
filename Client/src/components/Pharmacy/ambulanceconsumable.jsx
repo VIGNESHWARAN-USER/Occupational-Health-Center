@@ -3,7 +3,8 @@ import axios from "axios";
 import { debounce } from "lodash";
 import Sidebar from "../Sidebar";
 import * as XLSX from 'xlsx';
-import { FaPlus, FaFilter, FaEraser, FaDownload } from "react-icons/fa";
+import { FaPlus, FaFilter, FaEraser, FaDownload, FaArrowLeft } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 const AmbulanceConsumables = () => {
   const [showForm, setShowForm] = useState(false);
@@ -18,9 +19,10 @@ const AmbulanceConsumables = () => {
   });
 
   const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
   
   // Suggestion States
-  const [suggestions, setSuggestions] = useState([]); // Brand suggestions
+  const [suggestions, setSuggestions] = useState([]); 
   const [chemicalSuggestions, setChemicalSuggestions] = useState([]);
   const [doseSuggestions, setDoseSuggestions] = useState([]);
   const [expirySuggestions, setExpirySuggestions] = useState([]);
@@ -48,8 +50,6 @@ const AmbulanceConsumables = () => {
     "DressingItems", "Other"
   ];
 
-  const getTodayDate = () => new Date().toISOString().split("T")[0];
-
   const fetchAmbulanceConsumables = async () => {
     try {
       setLoading(true);
@@ -71,7 +71,6 @@ const AmbulanceConsumables = () => {
   }, []);
 
   // --- Suggestion Fetchers ---
-
   const fetchChemicalSuggestions = debounce(async (chemicalName, medicineForm) => {
     if (chemicalName.length < 3 || !medicineForm) return;
     try {
@@ -127,7 +126,6 @@ const AmbulanceConsumables = () => {
   }, 500);
 
   // --- Handlers ---
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -181,27 +179,37 @@ const AmbulanceConsumables = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const isSpecialForm = ["SutureAndProcedureItems", "DressingItems"].includes(formData.medicine_form);
+    setMessage("");
+    setIsError(false);
 
+    const isSpecialForm = ["SutureAndProcedureItems", "DressingItems"].includes(formData.medicine_form);
     if (isSpecialForm) {
       if (!formData.brand_name || !formData.quantity || !formData.expiry_date) {
         setMessage("Item Name, Quantity, and Expiry are required.");
+        setIsError(true);
         return;
       }
     } else {
       if (!formData.chemical_name || !formData.brand_name || !formData.dose_volume || !formData.quantity || !formData.expiry_date) {
         setMessage("All fields are required.");
+        setIsError(true);
         return;
       }
     }
 
     try {
       await axios.post("http://localhost:8000/add_ambulance_consumable/", formData);
-      setMessage("Ambulance consumable added successfully!");
+      alert("Consumable added successfully!");
       setShowForm(false);
       fetchAmbulanceConsumables();
+      setFormData({
+        medicine_form: "", chemical_name: "", brand_name: "",
+        dose_volume: "", quantity: "", expiry_date: "",
+        consumed_date: new Date().toISOString().split("T")[0],
+      });
     } catch (err) {
       setMessage(err.response?.data?.error || "Error adding record.");
+      setIsError(true);
     }
   };
 
@@ -224,127 +232,178 @@ const AmbulanceConsumables = () => {
   return (
     <div className="h-screen w-full flex bg-gradient-to-br from-blue-300 to-blue-400">
       <Sidebar />
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="w-4/5 p-8 overflow-y-auto">
+        
+        <div className="mb-8 flex justify-between items-center">
+          <h1 className="text-4xl font-bold text-gray-800">Ambulance Items</h1>
+          {!showForm && (
+             <button 
+                onClick={() => setShowForm(true)} 
+                className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 flex items-center gap-2 transition shadow-md"
+              >
+               <FaPlus size={14} /> Add Consumed Item
+             </button>
+          )}
+        </div>
+
         {!showForm ? (
-          <div>
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-              <button onClick={() => setShowForm(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                <FaPlus size={14} /> Add Consumed Item
-              </button>
-              <div className="flex gap-2 items-center">
-                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="border px-2 py-1 rounded" />
-                <span>to</span>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="border px-2 py-1 rounded" />
-                <button onClick={fetchAmbulanceConsumables} className="bg-blue-600 text-white px-3 py-1 rounded flex items-center gap-1"><FaFilter size={12}/> Filter</button>
-                <button onClick={() => {setFromDate(""); setToDate(""); fetchAmbulanceConsumables();}} className="bg-gray-500 text-white px-3 py-1 rounded flex items-center gap-1"><FaEraser size={12}/> Clear</button>
+          <motion.div 
+            className="bg-white p-8 rounded-lg shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-6 flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-end">
+              <div>
+                <label className="block text-gray-700 text-xs font-bold mb-1">From Date</label>
+                <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="p-2 border border-gray-300 rounded-md text-sm" />
               </div>
-              <button onClick={handleDownloadExcel} className="bg-green-500 text-white px-4 py-2 rounded flex items-center gap-2">
-                <FaDownload size={14} /> Download Excel
+              <div>
+                <label className="block text-gray-700 text-xs font-bold mb-1">To Date</label>
+                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="p-2 border border-gray-300 rounded-md text-sm" />
+              </div>
+              <button onClick={fetchAmbulanceConsumables} className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-1 text-sm transition">
+                <FaFilter size={12}/> Get
+              </button>
+              <button onClick={() => {setFromDate(""); setToDate(""); fetchAmbulanceConsumables();}} className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center gap-1 text-sm transition">
+                <FaEraser size={12}/> Clear
+              </button>
+              <button onClick={handleDownloadExcel} className="bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800 flex items-center gap-2 text-sm transition ml-auto">
+                <FaDownload size={12} /> Export to Excel
               </button>
             </div>
 
-            <div className="bg-white shadow-md rounded-lg p-4">
-              <h2 className="text-2xl font-bold mb-4 text-center">Ambulance Consumables</h2>
-              <table className="w-full border-collapse">
-                <thead className="bg-blue-600 text-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-full table-auto font-sans">
+                <thead className="bg-gray-50">
                   <tr>
-                    <th className="p-3 text-left">Form</th>
-                    <th className="p-3 text-left">Chemical</th>
-                    <th className="p-3 text-left">Brand</th>
-                    <th className="p-3 text-left">Dose</th>
-                    <th className="p-3 text-left">Qty</th>
-                    <th className="p-3 text-left">Expiry</th>
-                    <th className="p-3 text-left">Consumed Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Form</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chemical</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dose</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Consumed</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {ambulanceConsumables.map((item, idx) => (
-                    <tr key={idx} className="border-b hover:bg-gray-50">
-                      <td className="p-3">{item.medicine_form}</td>
-                      <td className="p-3">{item.chemical_name}</td>
-                      <td className="p-3">{item.brand_name}</td>
-                      <td className="p-3">{item.dose_volume}</td>
-                      <td className="p-3 font-bold">{item.quantity}</td>
-                      <td className="p-3">{item.expiry_date}</td>
-                      <td className="p-3 text-red-600 font-semibold">{new Date(item.consumed_date).toLocaleDateString("en-GB")}</td>
-                    </tr>
-                  ))}
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {loading ? (
+                    <tr><td colSpan="7" className="text-center py-4">Loading...</td></tr>
+                  ) : ambulanceConsumables.length > 0 ? (
+                    ambulanceConsumables.map((item, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.medicine_form}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.chemical_name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.brand_name}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.dose_volume}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-blue-600">{item.quantity}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{item.expiry_date}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600 font-semibold">
+                          {new Date(item.consumed_date).toLocaleDateString("en-GB")}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr><td colSpan="7" className="text-center py-4 text-gray-500">No records found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-bold mb-6">Add Ambulance Consumable</h2>
-            {message && <p className="mb-4 text-red-600">{message}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block font-medium">Medicine Form</label>
-                <select name="medicine_form" value={formData.medicine_form} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg">
-                  <option value="">Select</option>
-                  {medicineOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
+          <motion.div 
+            className="bg-white p-8 rounded-lg shadow-lg"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <button onClick={() => setShowForm(false)} className="text-blue-500 hover:text-blue-700">
+                <FaArrowLeft size={20} />
+              </button>
+              <h2 className="text-2xl font-semibold text-gray-700">Add Ambulance Consumable</h2>
+            </div>
+
+            {message && (
+              <div className={`mb-4 p-4 rounded border ${isError ? "bg-red-100 border-red-400 text-red-700" : "bg-green-100 border-green-400 text-green-700"}`}>
+                {message}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Category */}
+                <div>
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Medicine Form</label>
+                  <select name="medicine_form" value={formData.medicine_form} onChange={handleChange} className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">Select Category</option>
+                    {medicineOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                  </select>
+                </div>
+
+                {/* Chemical */}
+                <div className="relative">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Chemical Name</label>
+                  <input type="text" name="chemical_name" value={formData.chemical_name} onChange={handleChange} placeholder="Search chemical..." className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" autoComplete="off" />
+                  {showChemicalSuggestions && chemicalSuggestions.length > 0 && (
+                    <ul className="absolute z-20 w-full bg-white border border-gray-300 mt-1 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                      {chemicalSuggestions.map(s => <li key={s} onClick={() => handleChemicalSuggestionClick(s)} className="p-3 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>)}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Brand */}
+                <div className="relative">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Brand / Item Name</label>
+                  <input type="text" name="brand_name" value={formData.brand_name} onChange={handleChange} placeholder="Search brand..." className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" autoComplete="off" />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul className="absolute z-20 w-full bg-white border border-gray-300 mt-1 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                      {suggestions.map(s => <li key={s} onClick={() => handleBrandSuggestionClick(s)} className="p-3 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>)}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Dose */}
+                <div className="relative">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Dose / Volume</label>
+                  <input type="text" name="dose_volume" value={formData.dose_volume} onChange={handleChange} placeholder="e.g. 500mg" className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" autoComplete="off" />
+                  {showDoseSuggestions && doseSuggestions.length > 0 && (
+                    <ul className="absolute z-20 w-full bg-white border border-gray-300 mt-1 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                      {doseSuggestions.map(s => <li key={s} onClick={() => handleDoseSuggestionClick(s)} className="p-3 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>)}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Expiry */}
+                <div className="relative">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Expiry Date</label>
+                  <input type="text" name="expiry_date" value={formData.expiry_date} onChange={handleChange} placeholder="YYYY-MM-DD" className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  {showExpirySuggestions && expirySuggestions.length > 0 && (
+                    <ul className="absolute z-20 w-full bg-white border border-gray-300 mt-1 rounded-lg shadow-xl max-h-40 overflow-y-auto">
+                      {expirySuggestions.map(s => <li key={s} onClick={() => handleExpirySuggestionClick(s)} className="p-3 hover:bg-blue-50 cursor-pointer text-sm">{s}</li>)}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Quantity */}
+                <div className="relative">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Quantity Consumed</label>
+                  <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  {showQuantitySuggestions && quantitySuggestions.length > 0 && (
+                    <ul className="absolute z-20 w-full bg-white border border-gray-200 mt-1 rounded-lg shadow-xl">
+                      {quantitySuggestions.map(s => <li key={s} onClick={() => handleQuantitySuggestionClick(s)} className="p-3 bg-yellow-50 text-yellow-800 font-bold cursor-pointer text-sm">Stock Available: {s}</li>)}
+                    </ul>
+                  )}
+                </div>
               </div>
 
-              {/* Chemical Name */}
-              <div className="relative">
-                <label className="block font-medium">Chemical Name</label>
-                <input type="text" name="chemical_name" value={formData.chemical_name} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" autoComplete="off" />
-                {showChemicalSuggestions && (
-                  <ul className="absolute z-10 w-full bg-white border max-h-40 overflow-y-auto shadow-lg">
-                    {chemicalSuggestions.map(s => <li key={s} onClick={() => handleChemicalSuggestionClick(s)} className="p-2 hover:bg-gray-100 cursor-pointer">{s}</li>)}
-                  </ul>
-                )}
+              <div className="mt-8">
+                <button type="submit" className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 transition font-bold shadow-md">
+                  Submit Consumed Data
+                </button>
               </div>
-
-              {/* Brand Name */}
-              <div className="relative">
-                <label className="block font-medium">Brand/Item Name</label>
-                <input type="text" name="brand_name" value={formData.brand_name} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" autoComplete="off" />
-                {showSuggestions && (
-                  <ul className="absolute z-10 w-full bg-white border max-h-40 overflow-y-auto shadow-lg">
-                    {suggestions.map(s => <li key={s} onClick={() => handleBrandSuggestionClick(s)} className="p-2 hover:bg-gray-100 cursor-pointer">{s}</li>)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Dose */}
-              <div className="relative">
-                <label className="block font-medium">Dose/Volume</label>
-                <input type="text" name="dose_volume" value={formData.dose_volume} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" autoComplete="off" />
-                {showDoseSuggestions && (
-                  <ul className="absolute z-10 w-full bg-white border max-h-40 overflow-y-auto shadow-lg">
-                    {doseSuggestions.map(s => <li key={s} onClick={() => handleDoseSuggestionClick(s)} className="p-2 hover:bg-gray-100 cursor-pointer">{s}</li>)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Expiry */}
-              <div className="relative">
-                <label className="block font-medium">Expiry Date</label>
-                <input type="text" name="expiry_date" value={formData.expiry_date} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" placeholder="YYYY-MM-DD" />
-                {showExpirySuggestions && (
-                  <ul className="absolute z-10 w-full bg-white border max-h-40 overflow-y-auto shadow-lg">
-                    {expirySuggestions.map(s => <li key={s} onClick={() => handleExpirySuggestionClick(s)} className="p-2 hover:bg-gray-100 cursor-pointer">{s}</li>)}
-                  </ul>
-                )}
-              </div>
-
-              {/* Quantity */}
-              <div className="relative">
-                <label className="block font-medium">Quantity (Available shown in list)</label>
-                <input type="number" name="quantity" value={formData.quantity} onChange={handleChange} className="w-full border px-3 py-2 rounded-lg" />
-                {showQuantitySuggestions && (
-                  <ul className="absolute z-10 w-full bg-white border max-h-40 overflow-y-auto shadow-lg">
-                    {quantitySuggestions.map(s => <li key={s} onClick={() => handleQuantitySuggestionClick(s)} className="p-2 hover:bg-gray-100 cursor-pointer">Stock Available: {s}</li>)}
-                  </ul>
-                )}
-              </div>
-
-              <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold">Add Consumable</button>
             </form>
-            <button className="mt-4 text-blue-600" onClick={() => setShowForm(false)}>Back to List</button>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
