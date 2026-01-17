@@ -155,7 +155,7 @@ const NewVisit = () => {
         "Injury": "Outpatient",
         "Over Counter Injury": "Outpatient",
         "Curative - Follow Up Visits": "Follow Up Visits",
-        "BP Sugar Chart (Abormal Value) (Abormal Value)": "Outpatient",
+        "BP Sugar Chart (Abormal Value)": "Outpatient",
         "Injury Outside the Premises": "Outpatient",
         "Over Counter Injury Outside the Premises": "Outpatient",
         "Alcohol Abuse": "Alcohol Abuse",
@@ -197,7 +197,7 @@ const NewVisit = () => {
     Visitor: {
       Preventive: {
         "Fitness": "Fitness",
-        "BP Sugar ( Normal Value)": "BP Sugar Check  ( Normal Value)",
+        "BP Sugar Check ( Normal Value)": "BP Sugar Check  ( Normal Value)",
         "Preventive - Follow Up Visits":"Follow Up Visits",
       },
       Curative: {

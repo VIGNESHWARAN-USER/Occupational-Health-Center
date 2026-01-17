@@ -11,6 +11,7 @@ import Vaccination from './NewVisitProf/Vaccination'
 import ConsultationDisplay from './NewVisitProf/Consultation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSpinner } from '@fortawesome/free-solid-svg-icons';
+import PrescriptionDisplay from './NewVisitProf/PrescriptionDisplay';
 
 const Summary = () => {
     const {mrdNo} = useLocation().state || "";
@@ -55,7 +56,7 @@ const Summary = () => {
                                   <p className="text-gray-600 font-semibold text-lg animate-pulse">Preparing summary...</p>
                                 </div>
                         ):
-                        ((visitData.employee.type_of_visit === "Curative") ?(
+                        ((visitData.dashboard.type_of_visit === "Curative") ?(
                         <>
                             <BasicDetails  data = {visitData.employee}/>
                             <Vitals data = {visitData.vitals}/>
@@ -64,6 +65,7 @@ const Summary = () => {
                             
                             <Vaccination data = {visitData.vaccination}/>
                             <ConsultationDisplay data = {visitData.consultation}/>
+                            <PrescriptionDisplay data = {visitData.prescription}/>
                         </>
                         ):(
                         <> 

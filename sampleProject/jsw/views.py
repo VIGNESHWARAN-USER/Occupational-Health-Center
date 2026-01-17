@@ -1489,7 +1489,7 @@ def fetchVisitDataWithDate(request, mrdNo):
             # 3. Fetch Employee Details (Static Profile) using the found Aadhar
             # Employee details usually don't have an mrdNo, they are linked by Aadhar
             if found_aadhar:
-                employee_instance = employee_details.objects.filter(aadhar=found_aadhar).first()
+                employee_instance = employee_details.objects.filter(aadhar=found_aadhar, mrdNo=mrdNo).first()
                 response_data["employee"] = serialize_model_instance(employee_instance)
             else:
                 response_data["employee"] = None
